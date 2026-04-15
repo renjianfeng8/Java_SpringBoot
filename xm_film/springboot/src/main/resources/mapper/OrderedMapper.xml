@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.springboot.mapper.OrderedMapper">
+
+    <!-- 查询操作 -->
+    <select id="selectAll" resultType="com.example.springboot.entity.Ordered">
+        SELECT
+        ordered.*,
+        user.name as userName,
+        film.title as filmName,
+        cinema.name as cinemaName,
+        IFNULL(room.name, '暂未关联影厅') as roomName
+        FROM ordered
+        LEFT JOIN user ON ordered.user_id = user.id
+        LEFT JOIN film ON ordered.film_id = film.id
+        LEFT JOIN cinema ON ordered.cinema_id = cinema.id
+        LEFT JOIN room ON ordered.room_id = room.id
+        <where>
+            <if test="orders != null and orders != ''">AND ordered.orders LIKE CONCAT('%', #{orders}, '%')</if>
+            <if test="status != null">AND ordered.status = #{status}</if>
+            <if test="userId != null">AND ordered.user_id = #{userId} </if>
+            <if test="filmId != null">AND ordered.film_id = #{filmId} </if>
+            <if test="cinemaId != null">AND ordered.cinema_id = #{cinemaId} </if>
+            <if test="roomId != null">AND ordered.room_id = #{roomId} </if>
+        </where>
+        ORDER BY id DESC
+    </select>
+
+    <!-- 插入操作 -->
+    <insert id="insert" parameterType="com.example.springboot.entity.Ordered"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO ordered
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="orders != null">orders,</if>
+            <if test="userId != null">user_id,</if>
+            <if test="filmId != null">film_id,</if>
+            <if test="img != null">img,</if>
+            <if test="cinemaId != null">cinema_id,</if>
+            <if test="roomId != null">room_id,</if>
+            <if test="appointment != null">appointment,</if>
+            <if test="total != null">total,</if>
+            <if test="number != null">number,</if>
+            <if test="status != null">status,</if>
+            <if test="start != null">start,</if>
+            <if test="seat != null">seat,</if>
+        </trim>
+        VALUES
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="orders != null">#{orders},</if>
+            <if test="userId != null">#{userId},</if>
+            <if test="filmId != null">#{filmId},</if>
+            <if test="img != null">#{img},</if>
+            <if test="cinemaId != null">#{cinemaId},</if>
+            <if test="roomId != null">#{roomId},</if>
+            <if test="appointment != null">#{appointment},</if>
+            <if test="total != null">#{total},</if>
+            <if test="number != null">#{number},</if>
+            <if test="status != null">#{status},</if>
+            <if test="start != null">#{start},</if>
+            <if test="seat != null">#{seat},</if>
+        </trim>
+    </insert>
+
+    <!-- 更新操作 -->
+    <update id="updateById" parameterType="com.example.springboot.entity.Ordered">
+        UPDATE ordered
+        <set>
+            <if test="orders != null">orders = #{orders},</if>
+            <if test="userId != null">user_id = #{userId},</if>
+            <if test="filmId != null">film_id = #{filmId},</if>
+            <if test="img != null">img = #{img},</if>
+            <if test="cinemaId != null">cinema_id = #{cinemaId},</if>
+            <if test="roomId != null">room_id = #{roomId},</if>
+            <if test="appointment != null">appointment = #{appointment},</if>
+            <if test="total != null">total = #{total},</if>
+            <if test="number != null">number = #{number},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="start != null">start = #{start},</if>
+            <if test="seat != null">seat = #{seat},</if>
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <!-- 删除操作 -->
+    <delete id="deleteById" parameterType="java.lang.Integer">
+        DELETE FROM ordered WHERE id = #{id}
+    </delete>
+
+</mapper>

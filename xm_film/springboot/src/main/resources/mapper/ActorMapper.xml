@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.springboot.mapper.ActorMapper">
+
+    <!-- 查询操作 -->
+    <select id="selectAll" resultType="com.example.springboot.entity.Actor">
+        SELECT * FROM actor
+        <where>
+            <if test="actor != null">
+                AND actor LIKE CONCAT('%', #{actor}, '%')
+            </if>
+        </where>
+        ORDER BY id DESC
+    </select>
+
+
+    <!-- 插入操作 -->
+    <insert id="insert" parameterType="com.example.springboot.entity.Actor">
+        INSERT INTO actor
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="title != null">title,</if>
+            <if test="img != null">img,</if>
+            <if test="actor != null">actor,</if>
+            <if test="figure != null">figure,</if>
+            <if test="picture != null">picture,</if>
+            <if test="grade != null">grade,</if>
+            <if test="video != null">video,</if>
+        </trim>
+        VALUES
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="title != null">#{title},</if>
+            <if test="img != null">#{img},</if>
+            <if test="actor != null">#{actor},</if>
+            <if test="figure != null">#{figure},</if>
+            <if test="picture != null">#{picture},</if>
+            <if test="grade != null">#{grade},</if>
+            <if test="video != null">#{video},</if>
+        </trim>
+    </insert>
+
+
+    <!-- 更新操作 -->
+    <update id="updateById" parameterType="com.example.springboot.entity.Actor">
+        UPDATE actor
+        <set>
+            <if test="title != null">title = #{title},</if>
+            <if test="img != null">img = #{img},</if>
+            <if test="actor != null">actor = #{actor},</if>
+            <if test="figure != null">figure = #{figure},</if>
+            <if test="picture != null">picture = #{picture},</if>
+            <if test="grade != null">grade = #{grade},</if>
+            <if test="video != null">grade = #{video},</if>
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <!-- 删除操作 -->
+    <delete id="deleteById" parameterType="java.lang.Integer">
+        DELETE FROM actor WHERE id = #{id}
+    </delete>
+
+</mapper>

@@ -1,0 +1,15 @@
+INSERT INTO `area` (`id`, `title`) VALUES (1, '中国大陆');
+INSERT INTO `area` (`id`, `title`) VALUES (2, '美国');
+INSERT INTO `area` (`id`, `title`) VALUES (3, '日本');
+INSERT INTO `area` (`id`, `title`) VALUES (4, '德国');
+INSERT INTO `area` (`id`, `title`) VALUES (5, '法国');
+INSERT INTO `area` (`id`, `title`) VALUES (6, '韩国');
+INSERT INTO `area` (`id`, `title`) VALUES (7, '中国香港');
+INSERT INTO `area` (`id`, `title`) VALUES (8, '波兰');
+INSERT INTO `area` (`id`, `title`) VALUES (9, '西班牙');
+INSERT INTO `area` (`id`, `title`) VALUES (10, '意大利');
+INSERT INTO `area` (`id`, `title`) VALUES (11, '印度');
+INSERT INTO `area` (`id`, `title`) VALUES (12, '俄罗斯');
+INSERT INTO `area` (`id`, `title`) VALUES (13, '英国');
+INSERT INTO `area` (`id`, `title`) VALUES (14, '中国台湾');
+INSERT INTO `area` (`id`, `title`) VALUES (15, '葡萄牙');

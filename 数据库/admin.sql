@@ -1,0 +1,1 @@
+INSERT INTO `admin` (`id`, `username`, `password`, `role`, `name`, `avatar`, `phone`, `email`) VALUES (1, '999', '999', 'ADMIN', '任建峰', 'http://localhost:9090/files/fac908b2-616f-42e2-b880-a0df7b09ce56.jpg', '19815303389', '2145345678@qq.com');

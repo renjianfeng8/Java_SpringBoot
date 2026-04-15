@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.springboot.mapper.AreaMapper">
+
+    <!-- 查询操作 -->
+    <select id="selectAll" resultType="com.example.springboot.entity.Area">
+        SELECT * FROM area
+        <where>
+            <if test="title != null">
+                AND title LIKE CONCAT('%', #{title}, '%')
+            </if>
+        </where>
+        ORDER BY id DESC
+    </select>
+
+
+    <!-- 插入操作 -->
+    <insert id="insert" parameterType="com.example.springboot.entity.Area">
+        INSERT INTO area (id, title)
+        VALUES (#{id}, #{title})
+    </insert>
+
+
+    <!-- 更新操作 -->
+    <update id="updateById" parameterType="com.example.springboot.entity.Area">
+        UPDATE area
+        <set>
+            <if test="title != null">title = #{title},</if>
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <!-- 删除操作 -->
+    <delete id="deleteById" parameterType="com.example.springboot.entity.Area">
+        DELETE FROM area WHERE id = #{id}
+    </delete>
+
+</mapper>

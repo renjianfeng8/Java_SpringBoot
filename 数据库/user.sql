@@ -1,0 +1,3 @@
+INSERT INTO `user` (`id`, `username`, `password`, `name`, `role`, `avatar`, `phone`, `email`) VALUES (6, 'zhangsan', 'user123', '张三', 'USER', 'http://localhost:9090/files/770d8a2f-6940-4bd2-9250-9d283365b4b8.jpg', '18800009999', 'zhangsan@xm.com');
+INSERT INTO `user` (`id`, `username`, `password`, `name`, `role`, `avatar`, `phone`, `email`) VALUES (7, 'wangwu', 'user123', '王五', 'USER', 'http://localhost:9090/files/d95314a7-b2fb-4040-8741-99909d26c58d.jpg', '15677778888', 'wangwu@xm.com');
+INSERT INTO `user` (`id`, `username`, `password`, `name`, `role`, `avatar`, `phone`, `email`) VALUES (8, 'lisi', '123', '李四', 'USER', 'http://localhost:9090/files/2dd39a8a-3ef0-4a37-a6fc-42c618dd7f15.jpg', '18855556666', 'lisi@xm.com');

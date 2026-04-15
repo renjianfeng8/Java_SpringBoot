@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.springboot.mapper.VideoMapper">
+
+    <!-- 查询操作 -->
+    <select id="selectAll" resultType="com.example.springboot.entity.Video">
+        SELECT * FROM video
+        <where>
+            <if test="title != null">
+                AND title LIKE CONCAT('%', #{title}, '%')
+            </if>
+        </where>
+        ORDER BY id DESC
+    </select>
+
+
+    <!-- 插入操作 -->
+    <insert id="insert" parameterType="com.example.springboot.entity.Video">
+        INSERT INTO video (id, title, img, name, preview, start)
+        VALUES (#{id}, #{title}, #{img}, #{name}, #{preview}, #{start})
+    </insert>
+
+
+    <!-- 更新操作 -->
+    <update id="updateById" parameterType="com.example.springboot.entity.Video">
+        UPDATE video
+        <set>
+            <if test="title != null">title = #{title},</if>
+            <if test="img != null">img = #{img},</if>
+            <if test="name != null">name = #{name},</if>
+            <if test="preview != null">preview = #{preview},</if>
+            <if test="start != null">start = #{start},</if>
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <!-- 删除操作 -->
+    <delete id="deleteById" parameterType="java.lang.Integer">
+        DELETE FROM video WHERE id = #{id}
+    </delete>
+
+</mapper>

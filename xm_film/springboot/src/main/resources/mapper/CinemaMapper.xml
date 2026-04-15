@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.springboot.mapper.CinemaMapper">
+
+    <!-- 查询操作 -->
+    <select id="selectAll" resultType="com.example.springboot.entity.Cinema">
+        SELECT * FROM cinema
+        <where>
+            <if test="name != null">
+                AND name LIKE CONCAT('%', #{name}, '%')
+            </if>
+        </where>
+        ORDER BY id DESC
+    </select>
+
+
+
+
+    <!-- 查询管理员名字   -->
+    <select id="selectByUsername" parameterType="java.lang.String" resultType="com.example.springboot.entity.Cinema">
+        SELECT * FROM cinema WHERE username = #{username}
+    </select>
+
+    <!-- 新增：根据电影ID筛选影院 -->
+    <select id="selectByFilmId" resultType="com.example.springboot.entity.Cinema">
+        SELECT DISTINCT c.* FROM cinema c
+        <!-- 关联中间表：只有当filmId不为空时才进行关联 -->
+        <if test="filmId != null">
+            INNER JOIN cinema_film cf ON c.id = cf.cinema_id
+        </if>
+        <where>
+            <!-- 原有影院自身条件 -->
+            <if test="cinema.name != null">
+                AND c.name LIKE CONCAT('%', #{cinema.name}, '%')
+            </if>
+            <!-- 电影筛选条件 -->
+            <if test="filmId != null">
+                AND cf.film_id = #{filmId}
+            </if>
+        </where>
+        ORDER BY c.id DESC
+    </select>
+
+    <!-- 删除操作 -->
+    <delete id="deleteById" parameterType="com.example.springboot.entity.Cinema">
+        DELETE FROM cinema WHERE id = #{id}
+    </delete>
+
+    <!-- 更新操作 -->
+    <update id="updateById" parameterType="com.example.springboot.entity.Cinema">
+        UPDATE cinema
+        <set>
+            <if test="username != null">username = #{username},</if>
+            <if test="password != null">password = #{password},</if>
+            <if test="role != null">role = #{role},</if>
+            <if test="name != null">name = #{name},</if>
+            <if test="avatar != null">avatar = #{avatar},</if>
+            <if test="email != null">email = #{email},</if>
+            <if test="address != null">address = #{address},</if>
+            <if test="leader != null">leader = #{leader},</if>
+            <if test="code != null">code = #{code},</if>
+            <if test="certificate != null">certificate = #{certificate},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="phone != null">phone = #{phone},</if>
+            <if test="description != null">description = #{description},</if>
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <insert id="insert" parameterType="com.example.springboot.entity.Cinema">
+        INSERT INTO cinema
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="username != null">username,</if>
+            <if test="password != null">password,</if>
+            <if test="role != null">role,</if>
+            <if test="name != null">name,</if>
+            <if test="avatar != null">avatar,</if>
+            <if test="email != null">email,</if>
+            <if test="address != null">address,</if>
+            <if test="leader != null">leader,</if>
+            <if test="code != null">code,</if>
+            <if test="certificate != null">certificate,</if>
+            <if test="status != null">status,</if>
+            <if test="phone != null">phone,</if>
+            <if test="description != null">description,</if>
+        </trim>
+        VALUES
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="username != null">#{username},</if>
+            <if test="password != null">#{password},</if>
+            <if test="role != null">#{role},</if>
+            <if test="name != null">#{name},</if>
+            <if test="avatar != null">#{avatar},</if>
+            <if test="email != null">#{email},</if>
+            <if test="address != null">#{address},</if>
+            <if test="leader != null">#{leader},</if>
+            <if test="code != null">#{code},</if>
+            <if test="certificate != null">#{certificate},</if>
+            <if test="status != null">#{status},</if>
+            <if test="phone != null">#{phone},</if>
+            <if test="description != null">#{description},</if>
+        </trim>
+    </insert>
+
+</mapper>

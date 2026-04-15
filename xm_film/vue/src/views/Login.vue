@@ -1,0 +1,122 @@
+<template>
+  <div class="login-container">
+    <div class="login-box">
+      <div class="login-form-wrapper">
+        <div style="margin-bottom: 20px; font-size: 20px; color: #4A90E2; font-weight: bold; text-align: center;">欢迎登录电影购票系统</div>
+        <el-form ref="formRef" :rules="data.rules" :model="data.form" style="width: 380px">
+          <el-form-item prop="username">
+            <el-input v-model="data.form.username" placeholder="请输入账号" prefix-icon="User"></el-input>
+          </el-form-item>
+          <el-form-item prop="password">
+            <el-input show-password v-model="data.form.password" placeholder="请输入密码" prefix-icon="Lock"></el-input>
+          </el-form-item>
+          <el-form-item prop="role">
+            <el-select v-model="data.form.role" style="width: 100%">
+              <el-option value="ADMIN" label="管理员"></el-option>
+              <el-option value="CINEMA" label="电影院"></el-option>
+              <el-option value="USER" label="用户"></el-option>
+            </el-select>
+          </el-form-item>
+          <div style="margin-bottom: 15px">
+            <el-button @click="login" type="primary" style="width: 100%" size="large">登 录</el-button>
+          </div>
+          <div style="text-align: right">还没有账号? 请<a href="/register" style="color: red; text-decoration: none">注 册</a></div>
+        </el-form>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { reactive, ref } from "vue";
+import request from "@/utils/request.js";
+import { ElMessage } from "element-plus";
+
+const data = reactive({
+  form: {
+    username: "",
+    password: "",
+    role: "ADMIN"
+  },
+  rules: {
+    username: [
+      { required: true, message: '请输入账号', trigger: 'blur' }
+    ],
+    password: [
+      { required: true, message: '请输入密码', trigger: 'blur' }
+    ],
+    role: [
+      { required: true, message: '请选择角色', trigger: 'blur' }
+    ]
+  }
+})
+
+const formRef = ref()
+
+const login = () => {
+  formRef.value.validate((valid) => {
+    if (valid) {
+      request.post('/login', data.form).then(res => {
+        if (res.code === '200') {
+          ElMessage.success('登录成功')
+          setTimeout(() => {
+            localStorage.setItem('xm-pro-user', JSON.stringify(res.data))
+            if (res.data.role === 'USER') {
+              location.href = '/front/home'
+            } else if (res.data.role === 'CINEMA') {
+              location.href = '/back/home'
+            } else {
+              location.href = '/manage/home'
+            }
+          }, 1000);
+        } else {
+          ElMessageBox({
+            message: res.msg || '登录失败，请检查账号或密码是否正确',
+            title: '登录失败',
+            type: 'error',
+            showCancelButton: false,
+            confirmButtonText: '确定'
+          });
+        }
+      })
+    }
+  })
+}
+</script>
+
+<style scoped>
+.login-container {
+  position: relative;
+  height: 100vh;
+  overflow: hidden;
+  background-image: url('@/assets/imgs/bg_login.jpg');
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+}
+
+/* 核心修改：将登录框居中 */
+.login-box {
+  position: absolute;
+  /* 定位到父容器50%位置 */
+  top: 50%;
+  left: 50%;
+  /* 回移自身50%实现居中 */
+  transform: translate(-50%, -50%);
+  /* 保留原有宽度和内边距，确保表单显示正常 */
+  width: 40%;
+  max-width: 400px; /* 限制最大宽度，避免在大屏幕上过宽 */
+  display: flex;
+  justify-content: center;
+  padding: 60px;
+}
+
+.login-form-wrapper {
+  width: 100%;
+  max-width: 380px;
+  background-color: rgba(255, 255, 255, 0.8);
+  border-radius: 10px;
+  padding: 40px;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.2);
+}
+</style>

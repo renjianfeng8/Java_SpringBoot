@@ -1,0 +1,11 @@
+INSERT INTO `room` (`id`, `title`, `name`) VALUES (1, '万象城影院', '一号厅');
+INSERT INTO `room` (`id`, `title`, `name`) VALUES (2, '万象城影院', '二号厅');
+INSERT INTO `room` (`id`, `title`, `name`) VALUES (4, '万象城影院', '三号厅');
+INSERT INTO `room` (`id`, `title`, `name`) VALUES (5, '丁丁影城（乐客来店）', '一号厅');
+INSERT INTO `room` (`id`, `title`, `name`) VALUES (6, '丁丁影城（乐客来店）', '二号厅');
+INSERT INTO `room` (`id`, `title`, `name`) VALUES (7, '奥斯卡赛影城', '一号厅');
+INSERT INTO `room` (`id`, `title`, `name`) VALUES (8, '奥斯卡赛影城', '二号厅');
+INSERT INTO `room` (`id`, `title`, `name`) VALUES (9, '奥斯卡赛影城', '三号厅');
+INSERT INTO `room` (`id`, `title`, `name`) VALUES (10, '万达影城', '一号厅');
+INSERT INTO `room` (`id`, `title`, `name`) VALUES (11, '万达影城', '二号厅');
+INSERT INTO `room` (`id`, `title`, `name`) VALUES (12, '万达影城', '三号厅');

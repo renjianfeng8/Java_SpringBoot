@@ -1,0 +1,75 @@
+<component name="InspectionProjectProfileManager">
+  <profile version="1.0">
+    <option name="myName" value="Project Default" />
+    <inspection_tool class="AutoCloseableResource" enabled="true" level="WARNING" enabled_by_default="true">
+      <option name="METHOD_MATCHER_CONFIG" value="java.util.Formatter,format,java.io.Writer,append,com.google.common.base.Preconditions,checkNotNull,org.hibernate.Session,close,java.io.PrintWriter,printf,java.io.PrintStream,printf,java.lang.foreign.Arena,ofAuto,java.lang.foreign.Arena,global,com.github.pagehelper.page.PageMethod,startPage" />
+    </inspection_tool>
+    <inspection_tool class="Eslint" enabled="true" level="WARNING" enabled_by_default="true" />
+    <inspection_tool class="HtmlUnknownAttribute" enabled="false" level="WARNING" enabled_by_default="false">
+      <option name="myValues">
+        <value>
+          <list size="10">
+            <item index="0" class="java.lang.String" itemvalue="scoped" />
+            <item index="1" class="java.lang.String" itemvalue="setup" />
+            <item index="2" class="java.lang.String" itemvalue="#dropdowm" />
+            <item index="3" class="java.lang.String" itemvalue=":src" />
+            <item index="4" class="java.lang.String" itemvalue="#title" />
+            <item index="5" class="java.lang.String" itemvalue="#content" />
+            <item index="6" class="java.lang.String" itemvalue="v-slot:" />
+            <item index="7" class="java.lang.String" itemvalue="v-slot" />
+            <item index="8" class="java.lang.String" itemvalue="#footer" />
+            <item index="9" class="java.lang.String" itemvalue="v-if" />
+          </list>
+        </value>
+      </option>
+      <option name="myCustomValuesEnabled" value="true" />
+    </inspection_tool>
+    <inspection_tool class="HtmlUnknownTag" enabled="false" level="WARNING" enabled_by_default="false">
+      <option name="myValues">
+        <value>
+          <list size="17">
+            <item index="0" class="java.lang.String" itemvalue="nobr" />
+            <item index="1" class="java.lang.String" itemvalue="noembed" />
+            <item index="2" class="java.lang.String" itemvalue="comment" />
+            <item index="3" class="java.lang.String" itemvalue="noscript" />
+            <item index="4" class="java.lang.String" itemvalue="embed" />
+            <item index="5" class="java.lang.String" itemvalue="script" />
+            <item index="6" class="java.lang.String" itemvalue="RouterView" />
+            <item index="7" class="java.lang.String" itemvalue="el-sub-menu" />
+            <item index="8" class="java.lang.String" itemvalue="User" />
+            <item index="9" class="java.lang.String" itemvalue="UserFilled" />
+            <item index="10" class="java.lang.String" itemvalue="Lock" />
+            <item index="11" class="java.lang.String" itemvalue="SwitchButton" />
+            <item index="12" class="java.lang.String" itemvalue="PieChart" />
+            <item index="13" class="java.lang.String" itemvalue="CaretBottom" />
+            <item index="14" class="java.lang.String" itemvalue="Ticket" />
+            <item index="15" class="java.lang.String" itemvalue="Building" />
+            <item index="16" class="java.lang.String" itemvalue="HomeFilled" />
+          </list>
+        </value>
+      </option>
+      <option name="myCustomValuesEnabled" value="true" />
+    </inspection_tool>
+    <inspection_tool class="VulnerableLibrariesLocal" enabled="true" level="WARNING" enabled_by_default="true">
+      <option name="isIgnoringEnabled" value="true" />
+      <option name="ignoredModules">
+        <list>
+          <option value="springboot" />
+          <option value="springboot" />
+        </list>
+      </option>
+      <option name="ignoredPackages">
+        <list>
+          <option value="org.apache.tomcat.embed:tomcat-embed-core:10.1.42" />
+          <option value="org.springframework:spring-webmvc:6.1.21" />
+        </list>
+      </option>
+      <option name="ignoredReasons">
+        <list>
+          <option value="其他" />
+          <option value="其他" />
+        </list>
+      </option>
+    </inspection_tool>
+  </profile>
+</component>
