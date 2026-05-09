@@ -18,4 +18,5 @@ public class Account {
     private String role;
     private String name;
     private String newPassword;
+    private String token; // JWT令牌
 }

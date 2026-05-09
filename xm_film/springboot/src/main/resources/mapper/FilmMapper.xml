@@ -56,6 +56,31 @@
         SELECT * FROM film WHERE title LIKE CONCAT('%', #{title}, '%')
     </select>
 
+    <select id="selectBoxOfficeTop" resultType="com.example.springboot.entity.Film">
+        SELECT
+            film.*,
+            area.title as areaName,
+            CONCAT(actor.id, ':', actor.actor) as actorInfo
+        FROM film
+        LEFT JOIN area ON film.area_id = area.id
+        LEFT JOIN actor ON film.actor_id = actor.id
+        ORDER BY film.boxOffice DESC
+        LIMIT #{topNum}
+    </select>
+
+    <select id="selectMarkTop" resultType="com.example.springboot.entity.Film">
+        SELECT
+            film.*,
+            area.title as areaName,
+            CONCAT(actor.id, ':', actor.actor) as actorInfo
+        FROM film
+        LEFT JOIN area ON film.area_id = area.id
+        LEFT JOIN actor ON film.actor_id = actor.id
+        WHERE film.score IS NOT NULL
+        ORDER BY film.score DESC
+        LIMIT #{topNum}
+    </select>
+
     <insert id="insert" parameterType="com.example.springboot.entity.Film">
         INSERT INTO film
         <trim prefix="(" suffix=")" suffixOverrides=",">

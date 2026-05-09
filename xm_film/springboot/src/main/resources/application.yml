@@ -4,7 +4,7 @@ server:
 spring:
   datasource:
     username: root  # 数据库连接用户名
-    password: 123456  # 数据库连接密码
+    password: 123456  # 数据库连接密码（生产环境建议通过环境变量注入）
     driver-class-name: com.mysql.cj.jdbc.Driver  # MySQL 8.0驱动类
     url: jdbc:mysql://localhost:3306/xm-film?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
 
@@ -15,8 +15,8 @@ spring:
     # - allowPublicKeyRetrieval=true ：允许从服务器获取公钥，解决SSL握手时的公钥获取问题
   servlet:
     multipart:
-      max-file-size: 1000MB
-      max-request-size: 1000MB
+      max-file-size: 50MB
+      max-request-size: 50MB
 
 mybatis:
   configuration:
@@ -25,6 +25,11 @@ mybatis:
   mapper-locations: classpath:mapper/*.xml
 
 fileBaseUrl: http://localhost:${server.port}
+
+# JWT配置
+jwt:
+  secret: xm-film-secret-key-2024-springboot-vue3-jwt-auth
+  expire: 86400000  # token过期时间（毫秒），默认24小时
 
 # 文件上传配置
 file:

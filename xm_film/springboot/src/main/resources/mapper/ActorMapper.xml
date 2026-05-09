@@ -52,7 +52,7 @@
             <if test="figure != null">figure = #{figure},</if>
             <if test="picture != null">picture = #{picture},</if>
             <if test="grade != null">grade = #{grade},</if>
-            <if test="video != null">grade = #{video},</if>
+            <if test="video != null">video = #{video},</if>
         </set>
         WHERE id = #{id}
     </update>

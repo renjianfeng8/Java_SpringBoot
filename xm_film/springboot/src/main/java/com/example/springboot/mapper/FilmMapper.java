@@ -23,4 +23,8 @@ public interface FilmMapper {
 
 
     List<Film> selectByCinema(@Param("cinemaId") Integer cinemaId, @Param("filmId") Integer filmId);
+
+    List<Film> selectBoxOfficeTop(@Param("topNum") Integer topNum);
+
+    List<Film> selectMarkTop(@Param("topNum") Integer topNum);
 }
