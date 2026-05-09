@@ -35,6 +35,13 @@ public class TypeService {
         return PageInfo.of(list);
     }
 
+    public List<Type> selectByIds(List<Integer> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return new ArrayList<>();
+        }
+        return typeMapper.selectByIds(ids);
+    }
+
     public void add(Type type) {
         typeMapper.insert(type);
     }

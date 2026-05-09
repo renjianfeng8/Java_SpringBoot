@@ -29,8 +29,8 @@
         UPDATE notice
         <set>
             <if test="title != null">title = #{title},</if>
-            <if test="content != null">title = #{content},</if>
-            <if test="time != null">title = #{time},</if>
+            <if test="content != null">content = #{content},</if>
+            <if test="time != null">time = #{time},</if>
         </set>
         WHERE id = #{id}
     </update>

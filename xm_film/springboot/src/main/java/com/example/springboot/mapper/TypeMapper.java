@@ -12,6 +12,8 @@ public interface TypeMapper {
     @Select("select * from type where id = #{id}")
     Type selectById(Integer id);
 
+    List<Type> selectByIds(List<Integer> ids);
+
     void insert(Type type);
 
     void updateById(Type type);

@@ -13,10 +13,11 @@ public class CorsConfig {
     public CorsFilter corsFilter() {
         // 创建CORS配置对象，用于配置跨域规则
         CorsConfiguration config = new CorsConfiguration();
-        config.addAllowedOriginPattern("*"); // 允许所有域名进行跨域调用（生产环境建议指定具体域名）
+        config.addAllowedOriginPattern("*"); // 允许所有域名进行跨域调用
         config.addAllowedHeader("*");        // 允许请求携带任何头信息
-        config.addAllowedMethod("*");        // 允许使用任何HTTP请求方法（GET、POST等）
-        config.setAllowCredentials(true);    // 允许携带认证凭证（如Cookie）
+        config.addAllowedMethod("*");        // 允许使用任何HTTP请求方法
+        config.setAllowCredentials(true);    // 允许携带认证凭证
+        config.setMaxAge(3600L);             // 预检请求缓存时间（秒）
 
         // 配置URL映射源，将CORS规则应用到所有接口
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();

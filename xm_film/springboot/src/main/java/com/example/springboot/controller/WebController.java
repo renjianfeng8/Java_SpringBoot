@@ -1,5 +1,6 @@
 package com.example.springboot.controller;
 
+import com.example.springboot.common.JwtUtils;
 import com.example.springboot.common.Result;
 import com.example.springboot.common.enums.RoleEnum;
 import com.example.springboot.entity.Account;
@@ -32,6 +33,9 @@ public class WebController {
     @Resource
     private UserService userService;
 
+    @Resource
+    private JwtUtils jwtUtils;
+
     /**
      * 登录接口
      * 根据账户角色调用不同的服务实现登录验证
@@ -51,6 +55,11 @@ public class WebController {
         if (RoleEnum.USER.name().equals(account.getRole())) {
             result = userService.login(account);
         }
+        if (result == null) {
+            return Result.error("500", "账号或密码错误");
+        }
+        String token = jwtUtils.generateToken(result.getId(), result.getRole());
+        result.setToken(token);
         return Result.success(result);
     }
 

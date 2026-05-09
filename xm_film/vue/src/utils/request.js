@@ -19,8 +19,19 @@ const request = axios.create({
  */
 request.interceptors.request.use(
     config => {
-        // 设置请求头，指定内容类型为 JSON
         config.headers['Content-Type'] = 'application/json;charset=utf-8';
+        // 添加JWT令牌认证
+        const userStr = localStorage.getItem('xm-pro-user');
+        if (userStr) {
+            try {
+                const user = JSON.parse(userStr);
+                if (user.token) {
+                    config.headers['Authorization'] = 'Bearer ' + user.token;
+                }
+            } catch (e) {
+                console.error('解析用户信息失败', e);
+            }
+        }
         return config;
     },
     error => {
