@@ -1,0 +1,32 @@
+<!DOCTYPE html><html lang="zh-CN">
+<head><meta charset="UTF-8"><title>E2E 测试报告</title>
+<style>
+  body{font-family:-apple-system,sans-serif;max-width:1200px;margin:0 auto;padding:20px;background:#f5f5f5}
+  h1{color:#333;border-bottom:2px solid #4A90E2;padding-bottom:10px}
+  .summary{display:grid;grid-template-columns:repeat(4,1fr);gap:15px;margin:20px 0}
+  .summary div{background:#fff;padding:20px;border-radius:8px;text-align:center;box-shadow:0 2px 4px rgba(0,0,0,.1)}
+  .summary .num{font-size:28px;font-weight:bold}
+  .summary .lb{font-size:13px;color:#666}
+  table{width:100%;border-collapse:collapse;background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.1)}
+  th{background:#4A90E2;color:#fff;padding:10px 15px;text-align:left}
+  td{padding:8px 15px;border-bottom:1px solid #eee}
+  .pass{color:#4caf50;font-weight:bold} .fail{color:#f44336;font-weight:bold}
+  .ss-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(350px,1fr));gap:15px;margin-top:20px}
+  .ss{background:#fff;padding:10px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,.1)}
+  .ss h4{margin:0 0 8px;text-transform:capitalize}
+  .ss img{width:100%;border:1px solid #ddd;border-radius:4px}
+  .footer{text-align:center;color:#999;margin:30px 0;font-size:13px}
+</style></head><body>
+<h1>🎬 影院管理系统 E2E 测试报告</h1>
+<p>测试时间: 2026/5/9 19:09:57</p>
+<div class="summary">
+  <div><div class="num" style="color:#2196f3">32</div><div class="lb">总用例</div></div>
+  <div><div class="num" style="color:#4caf50">30</div><div class="lb">通过</div></div>
+  <div><div class="num" style="color:#f44336">2</div><div class="lb">失败</div></div>
+  <div><div class="num" style="color:#ff9800">93.8%</div><div class="lb">通过率</div></div>
+</div>
+<h2>📋 测试明细</h2>
+<table><thead><tr><th>#</th><th>用例</th><th>结果</th><th>详情</th></tr></thead><tbody><tr><td>1</td><td>GET /getYear</td><td class="pass">✅ 通过</td><td>11 years</td></tr><tr><td>2</td><td>POST /login</td><td class="pass">✅ 通过</td><td>token: true</td></tr><tr><td>3</td><td>GET /type/selectPage</td><td class="fail">❌ 失败</td><td>total: undefined</td></tr><tr><td>4</td><td>根路径跳转 /login</td><td class="pass">✅ 通过</td><td>http://localhost:5173/login</td></tr><tr><td>5</td><td>登录页渲染</td><td class="pass">✅ 通过</td><td>-</td></tr><tr><td>6</td><td>登录成功跳转</td><td class="pass">✅ 通过</td><td>http://localhost:5173/manage/home</td></tr><tr><td>7</td><td>localStorage 存有用户信息</td><td class="pass">✅ 通过</td><td>有token: true</td></tr><tr><td>8</td><td>页面 "系统首页"</td><td class="pass">✅ 通过</td><td>/manage/home</td></tr><tr><td>9</td><td>页面 "管理员信息"</td><td class="pass">✅ 通过</td><td>/manage/admin</td></tr><tr><td>10</td><td>页面 "影院信息"</td><td class="pass">✅ 通过</td><td>/manage/cinema</td></tr><tr><td>11</td><td>页面 "用户信息"</td><td class="pass">✅ 通过</td><td>/manage/user</td></tr><tr><td>12</td><td>页面 "电影分类"</td><td class="pass">✅ 通过</td><td>/manage/type</td></tr><tr><td>13</td><td>页面 "电影信息"</td><td class="pass">✅ 通过</td><td>/manage/film</td></tr><tr><td>14</td><td>页面 "演职人员"</td><td class="pass">✅ 通过</td><td>/manage/actor</td></tr><tr><td>15</td><td>页面 "电影区域"</td><td class="pass">✅ 通过</td><td>/manage/area</td></tr><tr><td>16</td><td>页面 "系统公告"</td><td class="pass">✅ 通过</td><td>/manage/notice</td></tr><tr><td>17</td><td>页面 "影厅房间"</td><td class="pass">✅ 通过</td><td>/manage/room</td></tr><tr><td>18</td><td>页面 "放映记录"</td><td class="pass">✅ 通过</td><td>/manage/record</td></tr><tr><td>19</td><td>页面 "购票订单"</td><td class="pass">✅ 通过</td><td>/manage/ordered</td></tr><tr><td>20</td><td>页面 "用户评价"</td><td class="pass">✅ 通过</td><td>/manage/mark</td></tr><tr><td>21</td><td>页面 "电影预告视频"</td><td class="pass">✅ 通过</td><td>/manage/video</td></tr><tr><td>22</td><td>页面 "个人资料"</td><td class="pass">✅ 通过</td><td>/manage/person</td></tr><tr><td>23</td><td>页面 "修改密码"</td><td class="pass">✅ 通过</td><td>/manage/password</td></tr><tr><td>24</td><td>分类表格有数据</td><td class="pass">✅ 通过</td><td>10 行</td></tr><tr><td>25</td><td>新增分类</td><td class="pass">✅ 通过</td><td>E2E分类_1778324980863</td></tr><tr><td>26</td><td>编辑分类</td><td class="pass">✅ 通过</td><td>-</td></tr><tr><td>27</td><td>删除分类</td><td class="pass">✅ 通过</td><td>-</td></tr><tr><td>28</td><td>管理员表格有数据</td><td class="pass">✅ 通过</td><td>1 行</td></tr><tr><td>29</td><td>新增管理员</td><td class="pass">✅ 通过</td><td>e2e_1778324988284</td></tr><tr><td>30</td><td>删除管理员</td><td class="pass">✅ 通过</td><td>-</td></tr><tr><td>31</td><td>分页按钮可见</td><td class="fail">❌ 失败</td><td>没有第二页</td></tr><tr><td>32</td><td>查询功能</td><td class="pass">✅ 通过</td><td>-</td></tr></tbody></table>
+<h2>📸 截图</h2><div class="ss-grid"><div class="ss"><h4>01-login-page</h4><img src="screenshots/01-01-login-page.png" loading="lazy"></div><div class="ss"><h4>02-login-success</h4><img src="screenshots/02-02-login-success.png" loading="lazy"></div><div class="ss"><h4>03-</h4><img src="screenshots/03-03-.png" loading="lazy"></div><div class="ss"><h4>04-</h4><img src="screenshots/04-04-.png" loading="lazy"></div><div class="ss"><h4>05-type-list</h4><img src="screenshots/05-05-type-list.png" loading="lazy"></div><div class="ss"><h4>05-type-add</h4><img src="screenshots/06-05-type-add.png" loading="lazy"></div><div class="ss"><h4>05-type-edit</h4><img src="screenshots/07-05-type-edit.png" loading="lazy"></div><div class="ss"><h4>05-type-del</h4><img src="screenshots/08-05-type-del.png" loading="lazy"></div><div class="ss"><h4>06-admin-list</h4><img src="screenshots/09-06-admin-list.png" loading="lazy"></div><div class="ss"><h4>06-admin-add-dialog</h4><img src="screenshots/10-06-admin-add-dialog.png" loading="lazy"></div><div class="ss"><h4>06-admin-add</h4><img src="screenshots/11-06-admin-add.png" loading="lazy"></div><div class="ss"><h4>07-pagination</h4><img src="screenshots/12-07-pagination.png" loading="lazy"></div><div class="ss"><h4>08-film-list</h4><img src="screenshots/13-08-film-list.png" loading="lazy"></div><div class="ss"><h4>09-login-final</h4><img src="screenshots/14-09-login-final.png" loading="lazy"></div><div class="ss"><h4>ss-15</h4><img src="screenshots/15-ss-15.png" loading="lazy"></div><div class="ss"><h4>ss-16</h4><img src="screenshots/16-ss-16.png" loading="lazy"></div><div class="ss"><h4>ss-17</h4><img src="screenshots/17-ss-17.png" loading="lazy"></div><div class="ss"><h4>ss-18</h4><img src="screenshots/18-ss-18.png" loading="lazy"></div><div class="ss"><h4>ss-19</h4><img src="screenshots/19-ss-19.png" loading="lazy"></div></div>
+<div class="footer">影院管理系统 · Playwright E2E · 2026-05-09</div>
+</body></html>
