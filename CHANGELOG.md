@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-05-14
+
+### Changed
+
+- **数据库脚本重构**: 移除 `数据库/` 中文目录（14 个 INSERT-only 文件），新建 `xm_film/sql/` 英文目录
+  - `schema.sql` — 新增完整 CREATE TABLE 定义（字段类型、注释、默认值）
+  - `data.sql` — 所有初始数据合并为单文件，按表分区管理
+  - `init.sql` — 一键初始化入口（建库 → 建表 → 导数据）
+  - `application.yml` — 新增 `spring.sql.init` 配置，支持自动初始化
+  - `CLAUDE.md`、`README.md`、`Bug.md` — 同步更新文档引用
+
 ## [0.2.0] - 2026-05-09
 
 ### Added
