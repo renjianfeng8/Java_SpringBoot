@@ -35,7 +35,7 @@ public class GlobalExceptionHandler {
     @ResponseBody
     public Result error(CustomException e) {
         // 使用WARN级别记录业务异常（可根据需要调整为ERROR）
-        logger.warn("业务异常: code={}, message={}", e.getCode(), e.getMessage(), e);
-        return Result.error(e.getCode(), e.getMessage());
+        logger.warn("业务异常: code={}, message={}", e.getCode(), e.getMsg(), e);
+        return Result.error(e.getCode(), e.getMsg());
     }
 }
