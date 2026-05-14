@@ -169,7 +169,7 @@ xm_film/
 CREATE DATABASE `xm-film` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 ```
 
-执行项目提供的 `xm-film.sql` 初始化脚本。
+执行项目提供的 `xm_film/sql/init.sql` 一键初始化脚本（或依次执行 `schema.sql` + `data.sql`）。
 
 ### 2. 启动后端
 

@@ -36,7 +36,7 @@
 - **Bug 描述**: `POST /login` 返回 500，提示"账号不存在"；Playwright 测试中管理员登录流程失败
 - **根因分析**: `admin.sql` 脚本未执行，`admin` 表中没有 username='999' 的记录；`AdminService.login()` 查询返回 `null` 后抛出异常
 - **解决方案**: 手动执行 `INSERT INTO admin (username, password, role, name) VALUES ('999', '999', 'ADMIN', '任建峰')`；长期方案在项目初始化文档中强调 SQL 导入步骤
-- **相关文件**: `数据库/admin.sql`、`xm_film/springboot/src/main/java/com/example/springboot/service/AdminService.java`
+- **相关文件**: `xm_film/sql/data.sql`、`xm_film/springboot/src/main/java/com/example/springboot/service/AdminService.java`
 - **状态**: 已修复
 
 ---
@@ -75,9 +75,30 @@
 
 ---
 
+### BUG-006: 数据库脚本目录结构不规范（schema 与数据混放）
+
+- **日期**: 2026-05-14
+- **Bug 描述**: `数据库/` 目录下的 14 个 SQL 文件仅含 INSERT 语句，无 CREATE TABLE 建表语句；目录名为中文，与项目其他英文命名不统一；新环境部署需逐个手动执行，缺少一键初始化入口
+- **根因分析**: 项目初期从数据库工具导出时仅导出 INSERT 语句，未包含表结构定义；中文目录名在跨平台/CI 中存在路径编码风险
+- **解决方案**:
+  - 移除 `数据库/` 目录，新建 `xm_film/sql/` 英文目录
+  - 新增 `schema.sql`：14 张表的完整 CREATE TABLE（含字段类型、注释、默认值）
+  - 合并数据为 `data.sql`：所有初始数据按表分区、统一管理
+  - 新增 `init.sql`：一键初始化入口（建库 → 建表 → 导数据）
+  - 在 `src/main/resources/db/` 下放置副本，支持 `spring.sql.init` 自动初始化
+- **相关文件**:
+  - `xm_film/sql/schema.sql`、`xm_film/sql/data.sql`、`xm_film/sql/init.sql`
+  - `xm_film/springboot/src/main/resources/db/schema.sql`、`db/data.sql`
+  - `xm_film/springboot/src/main/resources/application.yml`
+  - `CLAUDE.md`
+- **提交记录**: `9525efa4`
+- **状态**: 已修复
+
+---
+
 ## Bug 预防清单
 
-1. **数据库初始化**: 新环境部署时务必执行 `数据库/` 目录下的所有 SQL 脚本
+1. **数据库初始化**: 新环境部署时务必执行 `xm_film/sql/init.sql`（或依次执行 `schema.sql` + `data.sql`）
 2. **代理环境变量**: 本地开发测试时注意 `http_proxy`/`https_proxy` 是否会影响 `localhost` 请求
 3. **Playwright 变量类型**: `isVisible()` 返回 `boolean`，`locator()` 返回 `Locator`，不可混用
 4. **异常日志**: `RuntimeException` 子类构造函数需调用 `super(message)` 以确保 `getMessage()` 可用
