@@ -238,3 +238,28 @@ npx playwright test e2e-tests/e2e-scan.spec.mjs --config=e2e-tests/playwright.co
 8. **CI/CD**：已配置 GitHub Actions，可按需集成自动化部署
 9. **错误边界**：前端可引入 Vue ErrorBoundary 机制处理渲染异常
 10. **权限校验**：前端路由守卫当前仅设置页面标题，建议添加强角色权限控制
+
+## Git 提交历史
+
+### 约定式提交规范
+本仓库遵循 [Conventional Commits](https://www.conventionalcommits.org/) 规范：
+`<type>: <description>`
+
+| 类型 | 说明 |
+|------|------|
+| `feat` | 新功能 |
+| `fix` | 修复 |
+| `docs` | 文档 |
+| `test` | 测试 |
+| `refactor` | 重构 |
+| `chore` | 构建/工具 |
+
+### 最近提交
+```
+28646785 feat: 全栈自动化工程化构建 — CI/CLAUDE.md/E2E测试/启动脚本
+
+- 新增 CLAUDE.md 完整项目文档
+- 新增 GitHub Actions CI 配置
+- 新增 Playwright 全量 E2E 测试（53 用例，100% 通过）
+- 新增 start-dev.bat / run-e2e-tests.bat 一键启动脚本
+- 新增 scan-project.sh 全栈项目扫描脚本
