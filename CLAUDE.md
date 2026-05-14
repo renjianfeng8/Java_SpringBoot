@@ -272,6 +272,15 @@ npx playwright test e2e-tests/e2e-scan.spec.mjs --config=e2e-tests/playwright.co
 
 ### 最近提交
 ```
+89d94a93 docs: 同步更新 .md 文档中的数据库路径引用 (BUG-002/006)
+
+9525efa4 refactor: 数据库脚本重构 — 目录规范化 + schema/data 分离 (BUG-002)
+
+- 移除 数据库/ 中文目录，新建 xm_film/sql/（schema.sql + data.sql + init.sql）
+- 新增完整 CREATE TABLE 定义（14 张表，含字段类型/注释/默认值）
+- 配置 spring.sql.init 自动初始化支持
+- 更新 CLAUDE.md 目录树和初始化指引
+
 28646785 feat: 全栈自动化工程化构建 — CI/CLAUDE.md/E2E测试/启动脚本
 
 - 新增 CLAUDE.md 完整项目文档
