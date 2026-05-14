@@ -36,6 +36,7 @@ project_02/
 ├── CLAUDE.md                          # 项目文档（本文件）
 ├── README.md                          # 项目说明
 ├── CHANGELOG.md                       # 变更日志
+├── Bug.md                             # Bug 修复记录（修复前先查阅）
 ├── xm_film/                           # 项目主目录
 │   ├── springboot/                    # 后端（Spring Boot）
 │   │   ├── pom.xml                    # Maven 依赖配置
@@ -238,6 +239,10 @@ npx playwright test e2e-tests/e2e-scan.spec.mjs --config=e2e-tests/playwright.co
 8. **CI/CD**：已配置 GitHub Actions，可按需集成自动化部署
 9. **错误边界**：前端可引入 Vue ErrorBoundary 机制处理渲染异常
 10. **权限校验**：前端路由守卫当前仅设置页面标题，建议添加强角色权限控制
+
+## 相关文档
+
+- [Bug 修复记录](Bug.md) — 已修复 Bug 的根因与解决方案，遇到相似问题优先查阅
 
 ## Git 提交历史
 
