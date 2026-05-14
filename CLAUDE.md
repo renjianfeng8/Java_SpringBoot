@@ -83,11 +83,14 @@ project_02/
 │   │       ├── e2e-scan.spec.mjs       # 全量测试脚本
 │   │       ├── test.mjs                # 旧版测试脚本
 │   │       └── screenshots/            # 截图目录
+│   ├── sql/                           # 数据库初始化脚本
+│   │   ├── README.md                  # 数据库说明
+│   │   ├── schema.sql                 # 14张表建表语句
+│   │   ├── data.sql                   # 初始数据
+│   │   └── init.sql                   # 一键初始化入口
 │   ├── package.json
-│   └── package-lock.json
-├── 数据库/                              # 数据库初始化脚本（14个表）
-└── start_claude.bat                    # Claude 启动脚本
-```
+│   ├── package-lock.json
+│   └── start_claude.bat               # Claude 启动脚本
 
 ## 核心模块说明
 
@@ -184,10 +187,18 @@ npx playwright show-report xm_film/vue/e2e-tests/playwright-report
 - JDK 17+、Maven 3.6+、MySQL 8.0+、Node.js 18+、npm 9+
 
 ### 1. 初始化数据库
+```bash
+cd xm_film/sql
+mysql -u root -p < init.sql
+```
+或手动执行：
 ```sql
 CREATE DATABASE `xm-film` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE `xm-film`;
+SOURCE xm_film/sql/schema.sql;
+SOURCE xm_film/sql/data.sql;
+SOURCE xm_film/sql/data.sql;
 ```
-按顺序执行 `数据库/` 目录下的 SQL 脚本。
 
 ### 2. 启动后端
 ```bash

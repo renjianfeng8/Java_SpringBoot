@@ -9,10 +9,20 @@ spring:
     url: jdbc:mysql://localhost:3306/xm-film?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
 
     # 数据库连接URL详细说明：
-    # - xm-pro ：目标数据库名称（需提前在MySQL中创建）
+    # - xm-film ：目标数据库名称（需提前在MySQL中创建，执行 xm_film/sql/init.sql 初始化）
     # - useSSL=false ：禁用SSL加密连接（生产环境建议启用并配置证书）
     # - serverTimezone=UTC ：设置服务器时区，避免Java与MySQL时间转换异常（可选值：Asia/Shanghai 为中国时区）
     # - allowPublicKeyRetrieval=true ：允许从服务器获取公钥，解决SSL握手时的公钥获取问题
+
+  # 数据库初始化配置（开发环境使用）
+  # 首次部署时执行 xm_film/sql/init.sql 后，可关闭此配置
+  sql:
+    init:
+      mode: never  # 可选: always(每次启动执行) | never(关闭) | embedded(仅内嵌数据库)
+      schema-locations: classpath:db/schema.sql
+      data-locations: classpath:db/data.sql
+      continue-on-error: true  # 表已存在时继续执行，避免启动报错
+
   servlet:
     multipart:
       max-file-size: 50MB
