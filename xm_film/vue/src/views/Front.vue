@@ -10,7 +10,7 @@
       <div class="front-header-center">
         <nav class="main-nav">
           <router-link
-              to="home"
+              to="/front/home"
               class="nav-item"
               :class="{ 'active': activePath === '/home' }"
           >
@@ -145,7 +145,7 @@ const userName = computed(() => userData.value.username)
 const userAvatar = computed(() => {
   const avatar = userData.value.avatar
   if (!avatar) return null
-  return avatar.startsWith('http') ? avatar : `https://your-domain.com${avatar}`
+  return avatar.startsWith('http') ? avatar : `http://localhost:9090${avatar}`
 })
 
 // 登出方法

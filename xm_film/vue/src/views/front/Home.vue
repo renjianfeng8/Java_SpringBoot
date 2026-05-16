@@ -291,7 +291,7 @@ const loadFilmMarkTop = () => {
 // 模拟今日票房刷新
 const refreshTodayBoxOffice = () => {
   setTimeout(() => {
-    totalPrice.total = (totalPrice.total + (Math.random() - 0.5) * 0.1).toFixed(2);//使用随机数模拟
+    totalPrice.total = parseFloat((totalPrice.total + (Math.random() - 0.5) * 0.1).toFixed(2));//使用随机数模拟
     updateTime.value = new Date().toLocaleString();
     ElMessage.success('已更新最新今日票房数据');
   }, 500);
@@ -299,7 +299,7 @@ const refreshTodayBoxOffice = () => {
 
 // 电影数据加载
 const load = () => {
-  request.get('film/selectAll').then(res => {
+  request.get('/film/selectAll').then(res => {
     if (res.code === '200') {
       data.data1 = res.data.filter(v => v.status === '已上映');
       data.data2 = res.data.filter(v => v.status === '待上映');

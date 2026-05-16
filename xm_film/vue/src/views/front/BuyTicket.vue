@@ -249,11 +249,6 @@ onMounted(() => {
   }
 });
 
-// 监听登录状态变化（如其他页面登录后返回，自动刷新状态）
-watchEffect(() => {
-  initUserInfo();
-});
-
 // 初始化座位状态
 const initSeats = () => {
   return new Promise((resolve) => {

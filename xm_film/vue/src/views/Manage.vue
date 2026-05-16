@@ -210,7 +210,7 @@ onMounted(() => {
         ...user, // 合并本地存储的用户数据
         // 处理头像路径（如果是相对路径需要拼接域名）
         avatar: user.avatar && !user.avatar.startsWith('http')
-            ? `https://your-domain.com${user.avatar}`
+            ? `http://localhost:9090${user.avatar}`
             : user.avatar || userData.value.avatar
       }
     } catch (error) {

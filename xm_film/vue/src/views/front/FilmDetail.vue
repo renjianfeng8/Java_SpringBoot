@@ -323,7 +323,7 @@ const fetchFilmDetail = () => {
             score: data.score || 0,
             start: data.start || '未知上映时间',
             types: data.typeIds
-                ? JSON.parse(data.typeIds).map(id => typeMap[id] || `未知类型(${id})`)
+                ? (() => { try { return JSON.parse(data.typeIds).map(id => typeMap[id] || `未知类型(${id})`); } catch { return []; } })()
                 : [],
             area: data.areaId
                 ? (areaMap[data.areaId] || `未知地区(${data.areaId})`)
