@@ -5,6 +5,69 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - 2026-05-16
+
+### Fixed
+
+- **全栈批量 Bug 修复** (BUG-003): 修复 35 个运行时/逻辑 Bug
+  - 后端 11 个 Service 的 `selectList()` 返回 `null` → 改为调用 `mapper.selectAll(entity)`
+  - Admin/User/Cinema 实体所有子类添加 `@JsonProperty(WRITE_ONLY)` 防止密码序列化泄露
+  - Admin/User/Cinema Service 添加 `@Transactional` 事务支持
+  - CinemaController 添加 `@RequestParam(required = false)` 注解
+  - Vue 页面修复 ElMessage 导入、JSON.parse 安全包装、emit 参数、路由路径等
+
+- **后端安全加固** (BUG-004): RBAC/密码保护/批量赋值防护
+  - AuthInterceptor 添加 `/admin/**` 路径的 ADMIN 角色校验（403 拒绝非管理员）
+  - Service 层 `update()` 方法置空 password/role，防止批量赋值修改敏感字段
+  - `WebController.updatePassword()` 改为从 JWT 请求属性读取 userId
+
+- **前端 14 处 Bug 修复** (BUG-005)
+  - `front/Home.vue` — `.toFixed()` 返回 string 导致类型混淆，`parseFloat()` 包裹
+  - `Front.vue` — router-link 相对路径 → 绝对路径 `/front/home`
+  - `manage/Cinema.vue` — 影院状态映射反向逻辑修复
+  - `back/Room.vue` — `el-form-item prop` 与 `v-model` 不匹配修复
+  - `Front/Back/Manage.vue` — `https://your-domain.com` 占位域名替换
+  - `front/Movie.vue`(4处)、`front/Home.vue` — API 路径缺少前导 `/` 修复
+  - `front/BuyTicket.vue` — 移除无依赖的死 `watchEffect`
+  - `back/Ordered.vue` — initLoad 竞态条件，`await Promise.all()` 修复
+  - `front/FilmDetail.vue`、`front/FilmCinema.vue` — `JSON.parse` try-catch 保护
+
+### Changed
+
+- **代码质量优化** (BUG-006)
+  - 命名规范：13 个 Controller 中 `selectByID` → `selectById`
+  - Javadoc：修复 11 个 Controller 中拷贝粘贴的类级/方法级文档（"管理员"→ 正确实体名）
+  - 事务：为 10 个 Service 添加 `@Transactional(rollbackFor = Exception.class)`
+  - 日志：AuthInterceptor 空 catch → SLF4J `log.warn`
+  - 日志：9 个 Controller 的 `System.out.println` / `e.printStackTrace` → SLF4J `log.info` / `log.error`
+  - 删除 2 个 Service 中未使用的 `@Resource TypeService` 注入
+  - 删除 17 个 Vue 文件中 30+ 条 `console.log()` 调试语句
+
+### Added
+
+- **环境配置**: 创建 `vue/.env`，定义 `VITE_API_BASE_URL` 环境变量
+- **预防清单**: Bug.md 补充 3 条预防项（密码明文兼容、.toFixed 类型、API 路径前导斜杠）
+
+### Removed
+
+- 删除 11 处硬编码 `http://localhost:9090`（统一通过 `VITE_API_BASE_URL` 配置）
+- 删除 FilmMapper.xml、CinemaMapper.xml 中过时/误导性注释
+
+## [0.4.0] - 2026-05-15
+
+### Security
+
+- AuthInterceptor 添加角色访问控制（`/admin/**` → ADMIN）
+- `@JsonProperty(WRITE_ONLY)` 添加到所有子类实体，防止密码泄露
+- Service 层 `update()` 置空 password/role，防止批量赋值篡改
+
+### Fixed
+
+- 11 个 Service 的 `selectList()` 返回 `null` → 改为 `mapper.selectAll(entity)`
+- CinemaController 添加 `@RequestParam(required = false)` 参数注解
+- 前端 Vue 页面修复：ElMessage 导入缺失、JSON.parse 未捕获、emit 参数丢失等
+- 登录密码兼容：保持 BCrypt 明文回退路径（兼容 data.sql 明文密码）
+
 ## [0.3.0] - 2026-05-14
 
 ### Changed

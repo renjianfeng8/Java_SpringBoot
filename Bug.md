@@ -96,6 +96,97 @@
 
 ---
 
+### BUG-007: 全栈批量修复 — NPE/崩溃/数据丢失/竞态条件 (BUG-003)
+
+- **日期**: 2026-05-15
+- **Bug 描述**: 全栈扫描发现约 35 个 Bug，涵盖 NPE、崩溃、数据丢失、竞态条件等严重问题
+- **根因分析**: 后端 Service 中 `selectList()` 返回 `null`（前端调用无数据）；`AdminService/UserService/CinemaService` 缺少 `@Transactional`；`OrderedService.update()` 未置空 `status`；`CinemaController.selectPage` 未标注 `@RequestParam` 导致参数必填；`Account.java` 缺少 `@JsonProperty(WRITE_ONLY)` 导致密码序列化泄露；前端口令修改/个人资料页面缺少 `ElMessage` 导入、`localStorage` 解析未做 try-catch、路由路径错误等
+- **解决方案**:
+  - 后端 11 个 Service 的 `selectList()` 改为调用 `mapper.selectAll(entity)`
+  - Admin/User/Cinema Service 添加 `@Transactional(rollbackFor = Exception.class)`
+  - Account/Admin/User/Cinema 实体添加 `@JsonProperty(access = WRITE_ONLY)`
+  - CinemaController 添加 `@RequestParam(required = false)` 注解
+  - OrderedService.update() 置空 status 防止意外更新
+  - 前端口令修改/个人资料/404 页面修复 ElMessage 导入、JSON.parse 安全包装、emit 修复
+  - Login.vue 补充 ElMessageBox 导入
+- **相关文件**: 涉及 30+ 文件（后端 11 个 Service、4 个 Entity、3 个 Controller；前端 7 个 Vue 页面）
+- **提交记录**: `3ba277f4`
+- **状态**: 已修复
+
+---
+
+### BUG-008: 后端安全加固 — RBAC/密码保护/批量赋值/事务 (BUG-004)
+
+- **日期**: 2026-05-15
+- **Bug 描述**: 后端 API 缺少角色访问控制、密码通过 API 响应泄露、缺少批量赋值防护、部分操作无事务保护
+- **根因分析**: AuthInterceptor 仅验证 JWT 有效性，未做基于路径的角色校验；`@JsonProperty(WRITE_ONLY)` 仅在 Account 基类有效，子类（Admin/User/Cinema）重新声明 password 字段，覆盖了注解；`AdminService.update()` 允许通过 `@RequestBody` 更新 password；10 个 Service 无 `@Transactional`
+- **解决方案**:
+  - AuthInterceptor 添加 `/admin/**` 路径的 ADMIN 角色校验（403 拒绝非管理员）
+  - 为 Admin/User/Cinema 实体类所有子类的 password 字段添加 `@JsonProperty(WRITE_ONLY)`
+  - Service 层 `update()` 方法中置空 password/role，防止通过更新接口修改
+  - WebController.updatePassword() 改为从 JWT 请求属性读取 userId，而非请求体传入
+  - 为 10 个 Service 添加 `@Transactional(rollbackFor = Exception.class)`
+- **相关文件**:
+  - `AuthInterceptor.java`、`WebMvcConfig.java`
+  - `Account.java`、`Admin.java`、`User.java`、`Cinema.java`
+  - `AdminService.java`、`UserService.java`、`CinemaService.java`、`OrderedService.java`
+  - `WebController.java`
+- **提交记录**: `abeedd04`
+- **状态**: 已修复
+
+---
+
+### BUG-009: 前端 14 处 Bug — 类型转换/路由/路径/竞态条件/JSON 解析 (BUG-005)
+
+- **日期**: 2026-05-16
+- **Bug 描述**: 前端代码扫描发现 14 个运行时/逻辑 Bug
+- **根因分析**:
+  - `front/Home.vue:294` — `.toFixed()` 返回 string 而非 number，导致后续数值运算类型混淆
+  - `Front.vue:13` — `<router-link to="home">` 使用相对路径，路由匹配失败
+  - `manage/Cinema.vue:339` — 影院状态映射反向：`已审批 → 未审核`
+  - `back/Room.vue:50` — `el-form-item prop="title"` 与 `v-model="data.form.name"` 不匹配，表单验证失效
+  - `Front/Back/Manage.vue` — 头像地址使用 `https://your-domain.com` 占位域名
+  - `front/Movie.vue:124,143,153,163` — API 路径缺少前导 `/`
+  - `front/BuyTicket.vue:253` — `watchEffect` 无响应式依赖，等价于普通函数调用
+  - `back/Ordered.vue:285` — initLoad 未 await load* 函数，产生竞态条件
+  - `front/FilmDetail.vue:326`、`FilmCinema.vue:259` — `JSON.parse()` 无 try-catch 保护
+- **解决方案**: 逐一修复上述 14 个问题（parseFloat 包裹、绝对路由、修复映射、修正 prop、替换域名、补前导斜杠、移除死代码、Promise.all 等待、JSON.parse try-catch）
+- **相关文件**: 13 个 Vue 文件
+- **提交记录**: `4c5e916c`
+- **状态**: 已修复
+
+---
+
+### BUG-010: 代码质量优化 — 命名/Javadoc/事务/日志/环境配置 (BUG-006)
+
+- **日期**: 2026-05-16
+- **Bug 描述**: 代码审计发现大量拷贝粘贴 Javadoc、命名不一致、调试输出残留、硬编码地址、空 catch 块等可维护性问题
+- **根因分析**:
+  - 13 个 Controller 中 `selectByID()` 违反 Java camelCase 规范（应为 `selectById`）
+  - 11 个 Controller 类级 Javadoc 拷贝自 AdminController："管理员管理API控制器" — 即使管理的是电影/类型/演员
+  - AuthInterceptor 中 `catch (Exception ignored) {}` 静默吞掉 JWT 解析异常
+  - 9 个 Controller 的 upload 方法使用 `System.out.println` / `e.printStackTrace()`（无结构化日志）
+  - 17 个 Vue 文件残留 30+ 条 `console.log()` 调试语句
+  - 11 处硬编码 `http://localhost:9090`（切换后端地址需修改多处）
+  - 2 个 Service 注入未使用的 `TypeService`
+- **解决方案**:
+  - 所有 Controller 方法重命名 `selectByID` → `selectById`
+  - 修复 11 个 Controller 的 Javadoc（"管理员"→ 正确实体名）
+  - AuthInterceptor 空 catch 改为 `log.warn`
+  - 9 个 Controller 添加 SLF4J Logger，替换 `System.out` / `e.printStackTrace`
+  - 创建 `.env` + `VITE_API_BASE_URL`，更新 11 处引用
+  - 删除 30+ 条 `console.log()` 和 2 个未使用的 `@Resource`
+  - 为 10 个 Service 补充 `@Transactional`
+- **相关文件**:
+  - 13 个 Controller、10 个 Service、AuthInterceptor
+  - `vue/.env`、`request.js`、`Front/Back/Manage.vue` + 6 个 manage 视图
+  - 17 个 Vue 视图文件（console.log 删除）
+  - `FilmMapper.xml`、`CinemaMapper.xml`
+- **提交记录**: `0df50934`
+- **状态**: 已修复
+
+---
+
 ## Bug 预防清单
 
 1. **数据库初始化**: 新环境部署时务必执行 `xm_film/sql/init.sql`（或依次执行 `schema.sql` + `data.sql`）
@@ -103,3 +194,6 @@
 3. **Playwright 变量类型**: `isVisible()` 返回 `boolean`，`locator()` 返回 `Locator`，不可混用
 4. **异常日志**: `RuntimeException` 子类构造函数需调用 `super(message)` 以确保 `getMessage()` 可用
 5. **JWT Token**: 所有需认证的后端 API 测试务必先获取 token 并传入请求头
+6. **密码明文兼容**: `data.sql` 中使用明文密码时，`login()` / `updatePassword()` 需保留 BCrypt 明文回退逻辑
+7. **JS .toFixed() 类型**: `.toFixed()` 返回 `string` 而非 `number`，数值运算需用 `parseFloat()` 包裹
+8. **API 路径前导斜杠**: axios GET 请求路径必须以 `/` 开头（如 `'/film/selectAll'`），否则拼接 baseURL 后路径错误
