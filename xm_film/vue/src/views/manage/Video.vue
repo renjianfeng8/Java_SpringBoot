@@ -145,7 +145,7 @@ import request from "@/utils/request.js";
 import { ElMessage, ElMessageBox, FormRules } from "element-plus";
 
 // 基础URL配置
-const baseUrl = import.meta.env.DEV ? 'http://localhost:9090' : import.meta.env.VITE_BASE_API || '';
+const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:9090';
 
 // 表单数据类型定义
 interface FormData {

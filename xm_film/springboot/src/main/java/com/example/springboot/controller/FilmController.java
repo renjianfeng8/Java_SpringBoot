@@ -11,10 +11,12 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.List;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * 管理员管理API控制器
- * 提供管理员信息的增删改查及分页查询功能
+ * 电影管理API控制器
+ * 提供电影信息的增删改查及分页查询功能
  */
 @RestController
 @RequestMapping("/film")
@@ -30,6 +32,8 @@ public class FilmController {
     // 注入文件访问前缀配置
     @Value("${file.access-prefix}")
     private String accessPrefix;
+
+    private static final Logger log = LoggerFactory.getLogger(FilmController.class);
 
 
 
@@ -91,7 +95,7 @@ public class FilmController {
 
 
     @GetMapping("/selectById/{id}")
-    public Result selectByID(@PathVariable Integer id) {
+    public Result selectById(@PathVariable Integer id) {
         Film film = filmService.selectById(id);
         return Result.success(film);
     }
@@ -149,16 +153,16 @@ public class FilmController {
             String fileUrl = accessPrefix + fileName;
 
             // 打印调试信息
-            System.out.println("生成的文件URL: " + fileUrl);
+            log.info("生成的文件URL: {}", fileUrl);
 
             return Result.success(fileUrl);
         } catch (IllegalArgumentException e) {
             return Result.error("400", e.getMessage());
         } catch (IOException e) {
-            e.printStackTrace();
+            log.error("File upload failed", e);
             return Result.error("500", "文件上传失败: " + e.getMessage());
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("File upload failed", e);
             return Result.error("500", "服务器内部错误");
         }
     }

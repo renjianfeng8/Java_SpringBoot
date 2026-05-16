@@ -11,10 +11,12 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.List;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * 管理员管理API控制器
- * 提供管理员信息的增删改查及分页查询功能
+ * 预告视频管理API控制器
+ * 提供预告视频信息的增删改查及分页查询功能
  */
 @RestController
 @RequestMapping("/video")
@@ -30,12 +32,14 @@ public class VideoController {
     // 注入文件访问前缀配置
     @Value("${file.access-prefix}")
     private String accessPrefix;
+
+    private static final Logger log = LoggerFactory.getLogger(VideoController.class);
     
 
     /**
-     * 查询管理员列表（支持条件筛选）
-     * @param video 包含筛选条件的管理员对象（如用户名、状态等）
-     * @return 返回符合条件的管理员列表
+     * 查询预告视频列表（支持条件筛选）
+     * @param video 包含筛选条件的预告视频对象（如用户名、状态等）
+     * @return 返回符合条件的预告视频列表
      */
     @GetMapping("/selectAll")
     public Result selectAll(Video video) {
@@ -44,20 +48,20 @@ public class VideoController {
     }
 
     /**
-     * 根据ID查询单个管理员
-     * @param id 管理员ID
-     * @return 返回对应管理员信息
+     * 根据ID查询单个预告视频
+     * @param id 预告视频ID
+     * @return 返回对应预告视频信息
      */
     @GetMapping("/selectById/{id}")
-    public Result selectByID(@PathVariable Integer id) {
+    public Result selectById(@PathVariable Integer id) {
         Video video = videoService.selectById(id);
         return Result.success(video);
     }
 
     /**
-     * 查询管理员列表（轻量版，可能不含敏感字段）
-     * @param video 包含筛选条件的管理员对象
-     * @return 返回符合条件的管理员列表（可能为精简信息）
+     * 查询预告视频列表（轻量版，可能不含敏感字段）
+     * @param video 包含筛选条件的预告视频对象
+     * @return 返回符合条件的预告视频列表（可能为精简信息）
      */
     @GetMapping("/selectList")
     public Result selectList(Video video) {
@@ -66,8 +70,8 @@ public class VideoController {
     }
 
     /**
-     * 分页查询管理员列表
-     * @param video 包含筛选条件的管理员对象
+     * 分页查询预告视频列表
+     * @param video 包含筛选条件的预告视频对象
      * @param pageNum 页码，默认第1页
      * @param pageSize 每页数量，默认10条
      * @return 返回分页结果（包含总数、当前页数据等信息）
@@ -81,8 +85,8 @@ public class VideoController {
     }
 
     /**
-     * 添加新管理员
-     * @param video 管理员信息（需包含必要字段）
+     * 添加新预告视频
+     * @param video 预告视频信息（需包含必要字段）
      * @return 返回操作结果
      */
     @PostMapping("/add")
@@ -92,8 +96,8 @@ public class VideoController {
     }
 
     /**
-     * 更新管理员信息
-     * @param video 包含更新内容的管理员信息（需包含ID）
+     * 更新预告视频信息
+     * @param video 包含更新内容的预告视频信息（需包含ID）
      * @return 返回操作结果
      */
     @PutMapping("/update")
@@ -103,8 +107,8 @@ public class VideoController {
     }
 
     /**
-     * 根据ID删除管理员
-     * @param id 管理员ID
+     * 根据ID删除预告视频
+     * @param id 预告视频ID
      * @return 返回操作结果
      */
     @DeleteMapping("/delete/{id}")
@@ -114,8 +118,8 @@ public class VideoController {
     }
 
     /**
-     * 批量删除管理员
-     * @param ids 包含多个管理员ID的列表
+     * 批量删除预告视频
+     * @param ids 包含多个预告视频ID的列表
      * @return 返回操作结果
      */
     @DeleteMapping("/deleteBatch")
@@ -134,15 +138,15 @@ public class VideoController {
             String fileName = videoService.uploadFile(file, uploadDir);
             String fileUrl = accessPrefix + fileName;
             // 打印调试信息
-            System.out.println("生成的文件URL: " + fileUrl);
+            log.info("生成的文件URL: {}", fileUrl);
             return Result.success(fileUrl);
         } catch (IllegalArgumentException e) {
             return Result.error("400", e.getMessage());
         } catch (IOException e) {
-            e.printStackTrace();
+            log.error("File upload failed", e);
             return Result.error("500", "文件上传失败: " + e.getMessage());
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("File upload failed", e);
             return Result.error("500", "服务器内部错误");
         }
     }

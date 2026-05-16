@@ -7,8 +7,8 @@ import { ElMessage } from 'element-plus'
  * - timeout: 请求超时时间（毫秒）
  */
 const request = axios.create({
-    baseURL: 'http://localhost:9090',
-    timeout: 30000, // 请求超时时间
+    baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:9090',
+    timeout: 30000,
 })
 
 /**

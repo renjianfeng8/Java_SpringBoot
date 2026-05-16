@@ -10,8 +10,8 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 /**
- * 管理员管理API控制器
- * 提供管理员信息的增删改查及分页查询功能
+ * 公告管理API控制器
+ * 提供公告信息的增删改查及分页查询功能
  */
 @RestController
 @RequestMapping("/notice")
@@ -22,9 +22,9 @@ public class NoticeController {
     
 
     /**
-     * 查询管理员列表（支持条件筛选）
-     * @param notice 包含筛选条件的管理员对象（如用户名、状态等）
-     * @return 返回符合条件的管理员列表
+     * 查询公告列表（支持条件筛选）
+     * @param notice 包含筛选条件的公告对象（如用户名、状态等）
+     * @return 返回符合条件的公告列表
      */
     @GetMapping("/selectAll")
     public Result selectAll(Notice notice) {
@@ -33,21 +33,21 @@ public class NoticeController {
     }
 
     /**
-     * 根据ID查询单个管理员
-     * @param id 管理员ID
-     * @return 返回对应管理员信息
+     * 根据ID查询单个公告
+     * @param id 公告ID
+     * @return 返回对应公告信息
      */
     @GetMapping("/selectById/{id}")
-    public Result selectByID(@PathVariable Integer id) {
+    public Result selectById(@PathVariable Integer id) {
         Notice notice = noticeService.selectById(id);
         return Result.success(notice);
     }
 
 
     /**
-     * 查询管理员列表（轻量版，可能不含敏感字段）
-     * @param notice 包含筛选条件的管理员对象
-     * @return 返回符合条件的管理员列表（可能为精简信息）
+     * 查询公告列表（轻量版，可能不含敏感字段）
+     * @param notice 包含筛选条件的公告对象
+     * @return 返回符合条件的公告列表（可能为精简信息）
      */
     @GetMapping("/selectList")
     public Result selectList(Notice notice) {
@@ -56,8 +56,8 @@ public class NoticeController {
     }
 
     /**
-     * 分页查询管理员列表
-     * @param notice 包含筛选条件的管理员对象
+     * 分页查询公告列表
+     * @param notice 包含筛选条件的公告对象
      * @param pageNum 页码，默认第1页
      * @param pageSize 每页数量，默认10条
      * @return 返回分页结果（包含总数、当前页数据等信息）
@@ -71,8 +71,8 @@ public class NoticeController {
     }
 
     /**
-     * 添加新管理员
-     * @param notice 管理员信息（需包含必要字段）
+     * 添加新公告
+     * @param notice 公告信息（需包含必要字段）
      * @return 返回操作结果
      */
     @PostMapping("/add")
@@ -82,8 +82,8 @@ public class NoticeController {
     }
 
     /**
-     * 更新管理员信息
-     * @param notice 包含更新内容的管理员信息（需包含ID）
+     * 更新公告信息
+     * @param notice 包含更新内容的公告信息（需包含ID）
      * @return 返回操作结果
      */
     @PutMapping("/update")
@@ -93,8 +93,8 @@ public class NoticeController {
     }
 
     /**
-     * 根据ID删除管理员
-     * @param id 管理员ID
+     * 根据ID删除公告
+     * @param id 公告ID
      * @return 返回操作结果
      */
     @DeleteMapping("/delete/{id}")
@@ -104,8 +104,8 @@ public class NoticeController {
     }
 
     /**
-     * 批量删除管理员
-     * @param ids 包含多个管理员ID的列表
+     * 批量删除公告
+     * @param ids 包含多个公告ID的列表
      * @return 返回操作结果
      */
     @DeleteMapping("/deleteBatch")

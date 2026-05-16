@@ -194,7 +194,6 @@ const load = () => {
 
 const handleSelectionChange = (rows: FormData[]) => {
   data.ids = rows.map(row => row.id).filter((id): id is number => id !== undefined);
-  console.log(data.ids);
 }
 
 const reset = () => {

@@ -169,7 +169,6 @@ const delBatch = () => {
 
 const handleSelectionChange = (rows: Record[]) => {
   data.ids = rows.map(row => row.id).filter((id): id is number => id !== undefined);
-  console.log(data.ids);
 };
 
 const reset = () => {

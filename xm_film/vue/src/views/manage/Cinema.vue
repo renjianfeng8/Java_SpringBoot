@@ -150,7 +150,7 @@ import { Delete, Edit, Search } from "@element-plus/icons-vue";
 import request from "@/utils/request.js";
 import { ElMessage, ElMessageBox, FormRules } from "element-plus";
 
-const baseUrl = import.meta.env.DEV ? 'http://localhost:9090' : import.meta.env.VITE_BASE_API || '';
+const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:9090';
 
 interface FormData {
   id?: number;
@@ -303,7 +303,6 @@ const delBatch = () => {
 
 const handleSelectionChange = (rows: FormData[]) => {
   data.ids = rows.map(row => row.id).filter((id): id is number => id !== undefined);
-  console.log(data.ids);
 }
 
 const handleFileUpload = (res: any) => {

@@ -10,8 +10,8 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 /**
- * 管理员管理API控制器
- * 提供管理员信息的增删改查及分页查询功能
+ * 区域管理API控制器
+ * 提供区域信息的增删改查及分页查询功能
  */
 @RestController
 @RequestMapping("/area")
@@ -22,9 +22,9 @@ public class AreaController {
     
 
     /**
-     * 查询管理员列表（支持条件筛选）
-     * @param area 包含筛选条件的管理员对象（如用户名、状态等）
-     * @return 返回符合条件的管理员列表
+     * 查询区域列表（支持条件筛选）
+     * @param area 包含筛选条件的区域对象（如用户名、状态等）
+     * @return 返回符合条件的区域列表
      */
     @GetMapping("/selectAll")
     public Result selectAll(Area area) {
@@ -33,20 +33,20 @@ public class AreaController {
     }
 
     /**
-     * 根据ID查询单个管理员
-     * @param id 管理员ID
-     * @return 返回对应管理员信息
+     * 根据ID查询单个区域
+     * @param id 区域ID
+     * @return 返回对应区域信息
      */
     @GetMapping("/selectById/{id}")
-    public Result selectByID(@PathVariable Integer id) {
+    public Result selectById(@PathVariable Integer id) {
         Area area = areaService.selectById(id);
         return Result.success(area);
     }
 
     /**
-     * 查询管理员列表（轻量版，可能不含敏感字段）
-     * @param area 包含筛选条件的管理员对象
-     * @return 返回符合条件的管理员列表（可能为精简信息）
+     * 查询区域列表（轻量版，可能不含敏感字段）
+     * @param area 包含筛选条件的区域对象
+     * @return 返回符合条件的区域列表（可能为精简信息）
      */
     @GetMapping("/selectList")
     public Result selectList(Area area) {
@@ -55,8 +55,8 @@ public class AreaController {
     }
 
     /**
-     * 分页查询管理员列表
-     * @param area 包含筛选条件的管理员对象
+     * 分页查询区域列表
+     * @param area 包含筛选条件的区域对象
      * @param pageNum 页码，默认第1页
      * @param pageSize 每页数量，默认10条
      * @return 返回分页结果（包含总数、当前页数据等信息）
@@ -70,8 +70,8 @@ public class AreaController {
     }
 
     /**
-     * 添加新管理员
-     * @param area 管理员信息（需包含必要字段）
+     * 添加新区域
+     * @param area 区域信息（需包含必要字段）
      * @return 返回操作结果
      */
     @PostMapping("/add")
@@ -81,8 +81,8 @@ public class AreaController {
     }
 
     /**
-     * 更新管理员信息
-     * @param area 包含更新内容的管理员信息（需包含ID）
+     * 更新区域信息
+     * @param area 包含更新内容的区域信息（需包含ID）
      * @return 返回操作结果
      */
     @PutMapping("/update")
@@ -92,8 +92,8 @@ public class AreaController {
     }
 
     /**
-     * 根据ID删除管理员
-     * @param id 管理员ID
+     * 根据ID删除区域
+     * @param id 区域ID
      * @return 返回操作结果
      */
     @DeleteMapping("/delete/{id}")
@@ -103,8 +103,8 @@ public class AreaController {
     }
 
     /**
-     * 批量删除管理员
-     * @param ids 包含多个管理员ID的列表
+     * 批量删除区域
+     * @param ids 包含多个区域ID的列表
      * @return 返回操作结果
      */
     @DeleteMapping("/deleteBatch")
