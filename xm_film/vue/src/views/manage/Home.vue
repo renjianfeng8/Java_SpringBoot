@@ -70,7 +70,7 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, onMounted, computed, ref, watch, nextTick } from "vue";
+import { reactive, onMounted, onUnmounted, computed, ref, watch, nextTick } from "vue";
 import { useRouter } from "vue-router";
 import request from "@/utils/request.js";
 import { ElMessage } from "element-plus";
@@ -87,6 +87,14 @@ const goToPage = (path: string) => {
 // ECharts 容器引用
 const cinemaStatusChart = ref<HTMLElement | null>(null);
 const filmTypeChart = ref<HTMLElement | null>(null);
+
+// 统一的页面resize处理函数（避免重复添加/累积监听器）
+const handleResize = () => {
+  const statusChart = echarts.getInstanceByDom(cinemaStatusChart.value!);
+  if (statusChart) statusChart.resize();
+  const typeChart = echarts.getInstanceByDom(filmTypeChart.value!);
+  if (typeChart) typeChart.resize();
+};
 
 // 页面核心数据
 const data = reactive({
@@ -251,7 +259,6 @@ const initCinemaStatusChart = () => {
   };
 
   chart.setOption(option, true);
-  window.addEventListener('resize', () => chart.resize());
 };
 
 
@@ -303,7 +310,6 @@ const initFilmTypeChart = () => {
     color: ['#c8517a']
   };
   chart.setOption(option, true);
-  window.addEventListener('resize', () => chart.resize());
 };
 
 // 加载电影列表数据
@@ -362,6 +368,12 @@ watch(
 // 页面挂载初始化
 onMounted(() => {
   initData();
+  window.addEventListener('resize', handleResize);
+});
+
+// 页面卸载时移除resize监听器
+onUnmounted(() => {
+  window.removeEventListener('resize', handleResize);
 });
 </script>
 

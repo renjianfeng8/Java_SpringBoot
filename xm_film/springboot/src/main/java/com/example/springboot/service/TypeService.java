@@ -26,8 +26,7 @@ public class TypeService {
     }
 
     public List<Type> selectList(Type type) {
-        System.out.println(type);
-        return null;
+        return typeMapper.selectAll(type);
     }
 
     public PageInfo<Type> selectPage( Type type, Integer pageNum, Integer pageSize) {

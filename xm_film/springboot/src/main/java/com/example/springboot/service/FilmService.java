@@ -42,8 +42,7 @@ public class FilmService {
     }
 
     public List<Film> selectList(Film film) {
-        System.out.println(film);
-        return null;
+        return filmMapper.selectAll(film);
     }
 
     public PageInfo<Film> selectPage(Film film, Integer pageNum, Integer pageSize) {
@@ -106,7 +105,9 @@ public class FilmService {
         for (Film film : filmList) {
             List<Integer> ids = JSON.parseArray(film.getTypeIds(), Integer.class);
             film.setIds(ids);
-            allTypeIds.addAll(ids);
+            if (ids != null) {
+                allTypeIds.addAll(ids);
+            }
         }
         if (allTypeIds.isEmpty()) {
             return;

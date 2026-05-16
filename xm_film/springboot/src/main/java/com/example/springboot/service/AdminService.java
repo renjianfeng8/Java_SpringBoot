@@ -34,8 +34,7 @@ public class AdminService {
     }
 
     public List<Admin> selectList(Admin admin) {
-        System.out.println(admin);
-        return null;
+        return adminMapper.selectAll(admin);
     }
 
     public PageInfo<Admin> selectPage( Admin admin, Integer pageNum, Integer pageSize) {
@@ -96,6 +95,9 @@ public class AdminService {
     public void updatePassword(Account account) {
         Integer id = account.getId();
         Admin admin = this.selectById(id);
+        if (admin == null) {
+            throw new CustomException("500", "账号不存在");
+        }
         if (!passwordEncoder.matches(account.getPassword(), admin.getPassword())) {
             // 兼容旧版明文密码
             if (!admin.getPassword().equals(account.getPassword())) {

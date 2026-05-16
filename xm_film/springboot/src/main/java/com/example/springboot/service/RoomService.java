@@ -25,8 +25,7 @@ public class RoomService {
     }
 
     public List<Room> selectList(Room room) {
-        System.out.println(room);
-        return null;
+        return roomMapper.selectAll(room);
     }
 
     public PageInfo<Room> selectPage( Room room, Integer pageNum, Integer pageSize) {

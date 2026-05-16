@@ -222,7 +222,7 @@ onMounted(() => {
     seatError.value = '参数无效，无法加载购票信息';
     loading.value = false;
     ElMessage.error(seatError.value);
-    setTimeout(() => router.push('/front/cinemaList'), 1500);
+    setTimeout(() => router.push('/front/cinema'), 1500);
     return;
   }
 

@@ -30,7 +30,7 @@
               <el-descriptions-item label="电影名称">{{props.row.filmName}}</el-descriptions-item>
               <el-descriptions-item label="影院名称">{{props.row.cinemaName}}</el-descriptions-item>
               <!-- 修改展开面板中的影厅房间字段 -->
-              <el-descriptions-item label="影厅房间">{{ getRoomName(props.row.id) }}</el-descriptions-item>
+              <el-descriptions-item label="影厅房间">{{ getRoomName(props.row.roomId) }}</el-descriptions-item>
               <el-descriptions-item label="座位号">{{props.row.seat}}</el-descriptions-item>
               <el-descriptions-item label="预约时间">{{props.row.start}}</el-descriptions-item>
               <el-descriptions-item label="电影票数量">{{props.row.number}}</el-descriptions-item>
@@ -61,7 +61,7 @@
         <!-- 修改影厅名称列的参数 -->
         <el-table-column label="影厅名称">
           <template #default="prop">
-            {{ getRoomName(prop.row.id) }}
+            {{ getRoomName(prop.row.roomId) }}
           </template>
         </el-table-column>
         <el-table-column label="预约时间" prop="start" show-overflow-tooltip />

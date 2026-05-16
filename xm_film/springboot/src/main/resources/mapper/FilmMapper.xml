@@ -44,7 +44,7 @@
         LEFT JOIN actor ON film.actor_id = actor.id
         <where>
             <if test="title != null and title != ''">AND film.title LIKE CONCAT('%', #{title}, '%')</if>
-            <if test="typeId != null">AND film.type_ids LIKE CONCAT('%', #{typeId}, '%')</if>
+            <if test="typeId != null">AND (film.type_ids LIKE CONCAT('%,', #{typeId}, ',%') OR film.type_ids LIKE CONCAT('[', #{typeId}, ',%') OR film.type_ids LIKE CONCAT('%,', #{typeId}, ']') OR film.type_ids = CONCAT('[', #{typeId}, ']'))</if>
             <if test="year != null">AND film.start LIKE CONCAT('%', #{year}, '%')</if>
             <if test="areaId != null">AND film.area_id = #{areaId}</if>
             <if test="actorId != null">AND film.actor_id = #{actorId}</if>
@@ -99,6 +99,7 @@
             <if test="score != null">score,</if>
             <if test="boxOffice != null">boxOffice,</if>
             <if test="video != null">video,</if>
+            <if test="actorId != null">actor_id,</if>
         </trim>
         VALUES
         <trim prefix="(" suffix=")" suffixOverrides=",">
@@ -117,6 +118,7 @@
             <if test="score != null">#{score},</if>
             <if test="boxOffice != null">#{boxOffice},</if>
             <if test="video != null">#{video},</if>
+            <if test="actorId != null">#{actorId},</if>
         </trim>
     </insert>
 
@@ -138,6 +140,7 @@
             <if test="score != null">score = #{score},</if>
             <if test="boxOffice != null">boxOffice = #{boxOffice},</if>
             <if test="video != null">video = #{video},</if>
+            <if test="actorId != null">actor_id = #{actorId},</if>
         </set>
         WHERE id = #{id}
     </update>

@@ -25,8 +25,7 @@ public class NoticeService {
     }
 
     public List<Notice> selectList(Notice notice) {
-        System.out.println(notice);
-        return null;
+        return noticeMapper.selectAll(notice);
     }
 
     public PageInfo<Notice> selectPage( Notice notice, Integer pageNum, Integer pageSize) {

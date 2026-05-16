@@ -25,8 +25,7 @@ public class AreaService {
     }
 
     public List<Area> selectList(Area area) {
-        System.out.println(area);
-        return null;
+        return areaMapper.selectAll(area);
     }
 
     public PageInfo<Area> selectPage( Area area, Integer pageNum, Integer pageSize) {

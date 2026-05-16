@@ -27,6 +27,7 @@
 
 import {reactive, ref} from "vue";
 import request from "@/utils/request.js";
+import { ElMessage } from "element-plus";
 
 
 const formRef = ref()
@@ -42,7 +43,7 @@ const validatePass = (rule,value,callback) => {
 }
 
 const data = reactive({
-  user: JSON.parse(localStorage.getItem('xm-pro-user')),
+  user: (() => { try { return JSON.parse(localStorage.getItem('xm-pro-user')); } catch { return {}; } })(),
   form: {},
   rules: {
     password: [

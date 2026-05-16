@@ -67,9 +67,10 @@ public class WebController {
     public Result register(@RequestBody Account account) {
         if (RoleEnum.CINEMA.name().equals(account.getRole())) {
             cinemaService.register(account);
-        }
-        if (RoleEnum.USER.name().equals(account.getRole())) {
+        } else if (RoleEnum.USER.name().equals(account.getRole())) {
             userService.register(account);
+        } else {
+            throw new CustomException("400", "无效的角色类型");
         }
         return Result.success();
     }

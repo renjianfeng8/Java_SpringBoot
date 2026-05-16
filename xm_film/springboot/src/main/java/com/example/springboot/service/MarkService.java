@@ -28,8 +28,7 @@ public class MarkService {
     }
 
     public List<Mark> selectList(Mark mark) {
-        System.out.println(mark);
-        return null;
+        return markMapper.selectAll(mark);
     }
 
 

@@ -30,7 +30,7 @@
 <script setup>
 import { reactive, ref } from "vue";
 import request from "@/utils/request.js";
-import { ElMessage } from "element-plus";
+import { ElMessage, ElMessageBox } from "element-plus";
 
 const data = reactive({
   form: {

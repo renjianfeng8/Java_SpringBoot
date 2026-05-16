@@ -28,8 +28,7 @@ public class ActorService {
     }
 
     public List<Actor> selectList(Actor actor) {
-        System.out.println(actor);
-        return null;
+        return actorMapper.selectAll(actor);
     }
 
     public PageInfo<Actor> selectPage( Actor actor, Integer pageNum, Integer pageSize) {
