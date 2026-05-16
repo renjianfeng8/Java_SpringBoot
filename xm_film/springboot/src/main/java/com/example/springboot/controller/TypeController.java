@@ -10,8 +10,8 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 /**
- * 管理员管理API控制器
- * 提供管理员信息的增删改查及分页查询功能
+ * 电影分类管理API控制器
+ * 提供电影分类信息的增删改查及分页查询功能
  */
 @RestController
 @RequestMapping("/type")
@@ -22,9 +22,9 @@ public class TypeController {
     
 
     /**
-     * 查询管理员列表（支持条件筛选）
-     * @param type 包含筛选条件的管理员对象（如用户名、状态等）
-     * @return 返回符合条件的管理员列表
+     * 查询电影分类列表（支持条件筛选）
+     * @param type 包含筛选条件的电影分类对象（如用户名、状态等）
+     * @return 返回符合条件的电影分类列表
      */
     @GetMapping("/selectAll")
     public Result selectAll(Type type) {
@@ -33,20 +33,20 @@ public class TypeController {
     }
 
     /**
-     * 根据ID查询单个管理员
-     * @param id 管理员ID
-     * @return 返回对应管理员信息
+     * 根据ID查询单个电影分类
+     * @param id 电影分类ID
+     * @return 返回对应电影分类信息
      */
     @GetMapping("/selectById/{id}")
-    public Result selectByID(@PathVariable Integer id) {
+    public Result selectById(@PathVariable Integer id) {
         Type type = typeService.selectById(id);
         return Result.success(type);
     }
 
     /**
-     * 查询管理员列表（轻量版，可能不含敏感字段）
-     * @param type 包含筛选条件的管理员对象
-     * @return 返回符合条件的管理员列表（可能为精简信息）
+     * 查询电影分类列表（轻量版，可能不含敏感字段）
+     * @param type 包含筛选条件的电影分类对象
+     * @return 返回符合条件的电影分类列表（可能为精简信息）
      */
     @GetMapping("/selectList")
     public Result selectList(Type type) {
@@ -55,8 +55,8 @@ public class TypeController {
     }
 
     /**
-     * 分页查询管理员列表
-     * @param type 包含筛选条件的管理员对象
+     * 分页查询电影分类列表
+     * @param type 包含筛选条件的电影分类对象
      * @param pageNum 页码，默认第1页
      * @param pageSize 每页数量，默认10条
      * @return 返回分页结果（包含总数、当前页数据等信息）
@@ -70,8 +70,8 @@ public class TypeController {
     }
 
     /**
-     * 添加新管理员
-     * @param type 管理员信息（需包含必要字段）
+     * 添加新电影分类
+     * @param type 电影分类信息（需包含必要字段）
      * @return 返回操作结果
      */
     @PostMapping("/add")
@@ -81,8 +81,8 @@ public class TypeController {
     }
 
     /**
-     * 更新管理员信息
-     * @param type 包含更新内容的管理员信息（需包含ID）
+     * 更新电影分类信息
+     * @param type 包含更新内容的电影分类信息（需包含ID）
      * @return 返回操作结果
      */
     @PutMapping("/update")
@@ -92,8 +92,8 @@ public class TypeController {
     }
 
     /**
-     * 根据ID删除管理员
-     * @param id 管理员ID
+     * 根据ID删除电影分类
+     * @param id 电影分类ID
      * @return 返回操作结果
      */
     @DeleteMapping("/delete/{id}")
@@ -103,8 +103,8 @@ public class TypeController {
     }
 
     /**
-     * 批量删除管理员
-     * @param ids 包含多个管理员ID的列表
+     * 批量删除电影分类
+     * @param ids 包含多个电影分类ID的列表
      * @return 返回操作结果
      */
     @DeleteMapping("/deleteBatch")

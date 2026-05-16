@@ -229,7 +229,6 @@ const del = (id: number) => {
 // 处理选中行变更
 const handleSelectionChange = (rows: CategoryForm[]) => {
   data.ids = rows.map(row => row.id).filter((id): id is number => id !== undefined);
-  console.log('选中的分类ID:', data.ids);
 }
 
 // 批量删除电影分类

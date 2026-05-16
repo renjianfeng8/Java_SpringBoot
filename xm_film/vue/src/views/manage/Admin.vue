@@ -99,7 +99,7 @@ import { Delete, Edit, Search } from "@element-plus/icons-vue";
 import request from "@/utils/request.js";
 import { ElMessage, ElMessageBox, FormRules } from "element-plus";
 
-const baseUrl = import.meta.env.DEV ? 'http://localhost:9090' : import.meta.env.VITE_BASE_API || '';
+const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:9090';
 
 // 管理员表单数据类型
 interface AdminForm {
@@ -245,7 +245,6 @@ const del = (id: number) => {
 // 处理选中行变更
 const handleSelectionChange = (rows: AdminForm[]) => {
   data.ids = rows.map(row => row.id).filter((id): id is number => id !== undefined);
-  console.log('选中的管理员ID:', data.ids);
 }
 
 // 批量删除管理员

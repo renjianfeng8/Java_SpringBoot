@@ -5,11 +5,15 @@ import io.jsonwebtoken.Claims;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
 
 @Component
 public class AuthInterceptor implements HandlerInterceptor {
+
+    private static final Logger log = LoggerFactory.getLogger(AuthInterceptor.class);
 
     @Resource
     private JwtUtils jwtUtils;
@@ -38,7 +42,8 @@ public class AuthInterceptor implements HandlerInterceptor {
                     return false;
                 }
                 return true;
-            } catch (Exception ignored) {
+            } catch (Exception e) {
+                log.warn("JWT token parsing failed: {}", e.getMessage());
             }
         }
 

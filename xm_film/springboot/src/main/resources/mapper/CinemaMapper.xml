@@ -19,12 +19,12 @@
 
 
 
-    <!-- 查询管理员名字   -->
+    <!-- 根据用户名查询影院 -->
     <select id="selectByUsername" parameterType="java.lang.String" resultType="com.example.springboot.entity.Cinema">
         SELECT * FROM cinema WHERE username = #{username}
     </select>
 
-    <!-- 新增：根据电影ID筛选影院 -->
+    <!-- 根据电影ID筛选影院 -->
     <select id="selectByFilmId" resultType="com.example.springboot.entity.Cinema">
         SELECT DISTINCT c.* FROM cinema c
         <!-- 关联中间表：只有当filmId不为空时才进行关联 -->

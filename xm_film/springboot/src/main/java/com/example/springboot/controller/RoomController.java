@@ -10,8 +10,8 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 /**
- * 管理员管理API控制器
- * 提供管理员信息的增删改查及分页查询功能
+ * 影厅管理API控制器
+ * 提供影厅信息的增删改查及分页查询功能
  */
 @RestController
 @RequestMapping("/room")
@@ -22,9 +22,9 @@ public class RoomController {
     
 
     /**
-     * 查询管理员列表（支持条件筛选）
-     * @param room 包含筛选条件的管理员对象（如用户名、状态等）
-     * @return 返回符合条件的管理员列表
+     * 查询影厅列表（支持条件筛选）
+     * @param room 包含筛选条件的影厅对象（如用户名、状态等）
+     * @return 返回符合条件的影厅列表
      */
     @GetMapping("/selectAll")
     public Result selectAll(Room room) {
@@ -33,20 +33,20 @@ public class RoomController {
     }
 
     /**
-     * 根据ID查询单个管理员
-     * @param id 管理员ID
-     * @return 返回对应管理员信息
+     * 根据ID查询单个影厅
+     * @param id 影厅ID
+     * @return 返回对应影厅信息
      */
     @GetMapping("/selectById/{id}")
-    public Result selectByID(@PathVariable Integer id) {
+    public Result selectById(@PathVariable Integer id) {
         Room room = roomService.selectById(id);
         return Result.success(room);
     }
 
     /**
-     * 查询管理员列表（轻量版，可能不含敏感字段）
-     * @param room 包含筛选条件的管理员对象
-     * @return 返回符合条件的管理员列表（可能为精简信息）
+     * 查询影厅列表（轻量版，可能不含敏感字段）
+     * @param room 包含筛选条件的影厅对象
+     * @return 返回符合条件的影厅列表（可能为精简信息）
      */
     @GetMapping("/selectList")
     public Result selectList(Room room) {
@@ -55,8 +55,8 @@ public class RoomController {
     }
 
     /**
-     * 分页查询管理员列表
-     * @param room 包含筛选条件的管理员对象
+     * 分页查询影厅列表
+     * @param room 包含筛选条件的影厅对象
      * @param pageNum 页码，默认第1页
      * @param pageSize 每页数量，默认10条
      * @return 返回分页结果（包含总数、当前页数据等信息）
@@ -70,8 +70,8 @@ public class RoomController {
     }
 
     /**
-     * 添加新管理员
-     * @param room 管理员信息（需包含必要字段）
+     * 添加新影厅
+     * @param room 影厅信息（需包含必要字段）
      * @return 返回操作结果
      */
     @PostMapping("/add")
@@ -81,8 +81,8 @@ public class RoomController {
     }
 
     /**
-     * 更新管理员信息
-     * @param room 包含更新内容的管理员信息（需包含ID）
+     * 更新影厅信息
+     * @param room 包含更新内容的影厅信息（需包含ID）
      * @return 返回操作结果
      */
     @PutMapping("/update")
@@ -92,8 +92,8 @@ public class RoomController {
     }
 
     /**
-     * 根据ID删除管理员
-     * @param id 管理员ID
+     * 根据ID删除影厅
+     * @param id 影厅ID
      * @return 返回操作结果
      */
     @DeleteMapping("/delete/{id}")
@@ -103,8 +103,8 @@ public class RoomController {
     }
 
     /**
-     * 批量删除管理员
-     * @param ids 包含多个管理员ID的列表
+     * 批量删除影厅
+     * @param ids 包含多个影厅ID的列表
      * @return 返回操作结果
      */
     @DeleteMapping("/deleteBatch")

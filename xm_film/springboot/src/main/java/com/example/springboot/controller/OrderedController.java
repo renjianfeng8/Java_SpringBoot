@@ -11,10 +11,12 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.List;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * 管理员管理API控制器
- * 提供管理员信息的增删改查及分页查询功能
+ * 订单管理API控制器
+ * 提供订单信息的增删改查及分页查询功能
  */
 @RestController
 @RequestMapping("/ordered")
@@ -31,12 +33,13 @@ public class OrderedController {
     @Value("${file.access-prefix}")
     private String accessPrefix;
 
+    private static final Logger log = LoggerFactory.getLogger(OrderedController.class);
 
 
     /**
-     * 查询管理员列表（支持条件筛选）
-     * @param ordered 包含筛选条件的管理员对象（如用户名、状态等）
-     * @return 返回符合条件的管理员列表
+     * 查询订单列表（支持条件筛选）
+     * @param ordered 包含筛选条件的订单对象（如用户名、状态等）
+     * @return 返回符合条件的订单列表
      */
     @GetMapping("/selectAll")
     public Result selectAll(Ordered ordered) {
@@ -45,12 +48,12 @@ public class OrderedController {
     }
 
     /**
-     * 根据ID查询单个管理员
-     * @param id 管理员ID
-     * @return 返回对应管理员信息
+     * 根据ID查询单个订单
+     * @param id 订单ID
+     * @return 返回对应订单信息
      */
     @GetMapping("/selectById/{id}")
-    public Result selectByID(@PathVariable Integer id) {
+    public Result selectById(@PathVariable Integer id) {
         Ordered ordered = orderedService.selectById(id);
         return Result.success(ordered);
     }
@@ -63,8 +66,8 @@ public class OrderedController {
     }
 
     /**
-     * 分页查询管理员列表
-     * @param ordered 包含筛选条件的管理员对象
+     * 分页查询订单列表
+     * @param ordered 包含筛选条件的订单对象
      * @param pageNum 页码，默认第1页
      * @param pageSize 每页数量，默认10条
      * @return 返回分页结果（包含总数、当前页数据等信息）
@@ -78,8 +81,8 @@ public class OrderedController {
     }
 
     /**
-     * 添加新管理员
-     * @param ordered 管理员信息（需包含必要字段）
+     * 添加新订单
+     * @param ordered 订单信息（需包含必要字段）
      * @return 返回操作结果
      */
     @PostMapping("/add")
@@ -89,8 +92,8 @@ public class OrderedController {
     }
 
     /**
-     * 更新管理员信息
-     * @param ordered 包含更新内容的管理员信息（需包含ID）
+     * 更新订单信息
+     * @param ordered 包含更新内容的订单信息（需包含ID）
      * @return 返回操作结果
      */
     @PutMapping("/update")
@@ -100,8 +103,8 @@ public class OrderedController {
     }
 
     /**
-     * 根据ID删除管理员
-     * @param id 管理员ID
+     * 根据ID删除订单
+     * @param id 订单ID
      * @return 返回操作结果
      */
     @DeleteMapping("/delete/{id}")
@@ -111,8 +114,8 @@ public class OrderedController {
     }
 
     /**
-     * 批量删除管理员
-     * @param ids 包含多个管理员ID的列表
+     * 批量删除订单
+     * @param ids 包含多个订单ID的列表
      * @return 返回操作结果
      */
     @DeleteMapping("/deleteBatch")
@@ -136,16 +139,16 @@ public class OrderedController {
             String fileUrl = accessPrefix + fileName;
 
             // 打印调试信息
-            System.out.println("生成的文件URL: " + fileUrl);
+            log.info("生成的文件URL: {}", fileUrl);
 
             return Result.success(fileUrl);
         } catch (IllegalArgumentException e) {
             return Result.error("400", e.getMessage());
         } catch (IOException e) {
-            e.printStackTrace();
+            log.error("File upload failed", e);
             return Result.error("500", "文件上传失败: " + e.getMessage());
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("File upload failed", e);
             return Result.error("500", "服务器内部错误");
         }
     }

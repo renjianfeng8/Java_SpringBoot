@@ -195,7 +195,6 @@ const loadRoom = () => {
   return request.get('/room/selectAll').then(res => {
     if(res.code === '200') {
       data.RoomData = res.data;
-      console.log('加载的影厅数据:', data.RoomData);
     } else {
       ElMessage.error(res.msg)
     }
@@ -217,8 +216,6 @@ const load = () => {
     if (res && res.data) {
       data.tableData = res.data.list || [];
       data.total = res.data.total || 0;
-      // 打印订单数据，确认id字段是否存在
-      console.log('订单数据:', data.tableData);
     }
   }).catch(error => {
     console.error('加载数据失败:', error);
@@ -228,11 +225,9 @@ const load = () => {
 
 // 获取影厅名称的方法保持不变，但传入的参数变为row.id
 const getRoomName = (roomId?: number) => {
-  console.log('当前影厅ID:', roomId);
   if (!roomId) return '无ID';
   const room = data.RoomData.find(room => room.id === roomId);
   if (!room) {
-    console.log('未找到对应的影厅记录，ID:', roomId);
     return '未知影厅';
   }
   return room.name;
@@ -272,7 +267,6 @@ const delBatch = () => {
 
 const handleSelectionChange = (rows: Ordered[]) => {
   data.ids = rows.map(row => row.id).filter((id): id is number => id !== undefined);
-  console.log(data.ids);
 }
 
 const reset = () => {

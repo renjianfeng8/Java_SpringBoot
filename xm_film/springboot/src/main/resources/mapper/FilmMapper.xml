@@ -5,7 +5,7 @@
 
 <mapper namespace="com.example.springboot.mapper.FilmMapper">
 
-    <!-- 完善：根据影院ID查询上映电影 -->
+    <!-- 根据影院ID查询上映电影 -->
     <select id="selectByCinema" resultType="com.example.springboot.entity.Film">
         SELECT
         f.*,
@@ -22,7 +22,6 @@
         ORDER BY f.id DESC
     </select>
 
-    <!-- 其他原有方法保持不变 -->
     <select id="selectById" parameterType="java.lang.Integer" resultType="com.example.springboot.entity.Film">
         SELECT
             film.*,

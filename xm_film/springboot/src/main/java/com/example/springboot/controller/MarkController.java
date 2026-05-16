@@ -11,10 +11,12 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.List;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * 管理员管理API控制器
- * 提供管理员信息的增删改查及分页查询功能
+ * 评价管理API控制器
+ * 提供评价信息的增删改查及分页查询功能
  */
 @RestController
 @RequestMapping("/mark")
@@ -30,12 +32,14 @@ public class MarkController {
     // 注入文件访问前缀配置
     @Value("${file.access-prefix}")
     private String accessPrefix;
+
+    private static final Logger log = LoggerFactory.getLogger(MarkController.class);
     
 
     /**
-     * 查询管理员列表（支持条件筛选）
-     * @param mark 包含筛选条件的管理员对象（如用户名、状态等）
-     * @return 返回符合条件的管理员列表
+     * 查询评价列表（支持条件筛选）
+     * @param mark 包含筛选条件的评价对象（如用户名、状态等）
+     * @return 返回符合条件的评价列表
      */
     @GetMapping("/selectAll")
     public Result selectAll(Mark mark) {
@@ -44,20 +48,20 @@ public class MarkController {
     }
 
     /**
-     * 根据ID查询单个管理员
-     * @param id 管理员ID
-     * @return 返回对应管理员信息
+     * 根据ID查询单个评价
+     * @param id 评价ID
+     * @return 返回对应评价信息
      */
     @GetMapping("/selectById/{id}")
-    public Result selectByID(@PathVariable Integer id) {
+    public Result selectById(@PathVariable Integer id) {
         Mark mark = markService.selectById(id);
         return Result.success(mark);
     }
 
     /**
-     * 查询管理员列表（轻量版，可能不含敏感字段）
-     * @param mark 包含筛选条件的管理员对象
-     * @return 返回符合条件的管理员列表（可能为精简信息）
+     * 查询评价列表（轻量版，可能不含敏感字段）
+     * @param mark 包含筛选条件的评价对象
+     * @return 返回符合条件的评价列表（可能为精简信息）
      */
     @GetMapping("/selectList")
     public Result selectList(Mark mark) {
@@ -66,8 +70,8 @@ public class MarkController {
     }
 
     /**
-     * 分页查询管理员列表
-     * @param mark 包含筛选条件的管理员对象
+     * 分页查询评价列表
+     * @param mark 包含筛选条件的评价对象
      * @param pageNum 页码，默认第1页
      * @param pageSize 每页数量，默认10条
      * @return 返回分页结果（包含总数、当前页数据等信息）
@@ -81,8 +85,8 @@ public class MarkController {
     }
 
     /**
-     * 添加新管理员
-     * @param mark 管理员信息（需包含必要字段）
+     * 添加新评价
+     * @param mark 评价信息（需包含必要字段）
      * @return 返回操作结果
      */
     @PostMapping("/add")
@@ -92,8 +96,8 @@ public class MarkController {
     }
 
     /**
-     * 更新管理员信息
-     * @param mark 包含更新内容的管理员信息（需包含ID）
+     * 更新评价信息
+     * @param mark 包含更新内容的评价信息（需包含ID）
      * @return 返回操作结果
      */
     @PutMapping("/update")
@@ -103,8 +107,8 @@ public class MarkController {
     }
 
     /**
-     * 根据ID删除管理员
-     * @param id 管理员ID
+     * 根据ID删除评价
+     * @param id 评价ID
      * @return 返回操作结果
      */
     @DeleteMapping("/delete/{id}")
@@ -114,8 +118,8 @@ public class MarkController {
     }
 
     /**
-     * 批量删除管理员
-     * @param ids 包含多个管理员ID的列表
+     * 批量删除评价
+     * @param ids 包含多个评价ID的列表
      * @return 返回操作结果
      */
     @DeleteMapping("/deleteBatch")
@@ -139,16 +143,16 @@ public class MarkController {
             String fileUrl = accessPrefix + fileName;
 
             // 打印调试信息
-            System.out.println("生成的文件URL: " + fileUrl);
+            log.info("生成的文件URL: {}", fileUrl);
 
             return Result.success(fileUrl);
         } catch (IllegalArgumentException e) {
             return Result.error("400", e.getMessage());
         } catch (IOException e) {
-            e.printStackTrace();
+            log.error("File upload failed", e);
             return Result.error("500", "文件上传失败: " + e.getMessage());
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("File upload failed", e);
             return Result.error("500", "服务器内部错误");
         }
     }

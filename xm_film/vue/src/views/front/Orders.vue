@@ -181,11 +181,9 @@ const loadFilm = () => {
 
 // 关键修改4：函数逻辑优化，兜底文本和后端保持一致
 const getRoomName = (roomId?: number) => {
-  console.log('当前影厅ID:', roomId);
   if (!roomId) return '暂未关联影厅'; // 改为和后端一致的兜底文本
   const room = data.RoomData.find(room => room.id === roomId);
   if (!room) {
-    console.log('未找到对应的影厅记录，ID:', roomId);
     return '暂未关联影厅'; // 改为和后端一致的兜底文本
   }
   return room.name;
@@ -223,8 +221,6 @@ const load = () => {
     if (res && res.data) {
       data.tableData = res.data.list || [];
       data.total = res.data.total || 0;
-      // 可选：打印返回数据，确认roomName是否存在
-      console.log('订单列表数据:', data.tableData);
     }
   }).catch(error => {
     console.error('加载数据失败:', error);
@@ -248,7 +244,6 @@ const del = (id: number) => {
 
 const handleSelectionChange = (rows: Ordered[]) => {
   data.ids = rows.map(row => row.id).filter((id): id is number => id !== undefined);
-  console.log(data.ids);
 }
 
 const reset = () => {

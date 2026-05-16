@@ -145,7 +145,7 @@ const userName = computed(() => userData.value.username)
 const userAvatar = computed(() => {
   const avatar = userData.value.avatar
   if (!avatar) return null
-  return avatar.startsWith('http') ? avatar : `http://localhost:9090${avatar}`
+  return avatar.startsWith('http') ? avatar : `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:9090'}${avatar}`
 })
 
 // 登出方法

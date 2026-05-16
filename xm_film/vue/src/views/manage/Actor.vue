@@ -129,7 +129,7 @@ import { Delete, Edit, Search } from "@element-plus/icons-vue";
 import request from "@/utils/request.js";
 import { ElMessage, ElMessageBox, FormRules } from "element-plus";
 
-const baseUrl = import.meta.env.DEV ? 'http://localhost:9090' : import.meta.env.VITE_BASE_API || '';
+const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:9090';
 
 // 演职人员表单数据类型
 interface ActorForm {
@@ -188,12 +188,6 @@ const handleCurrentChange = (newPage: number) => {
 
 // 加载演职人员列表
 const load = () => {
-  console.log('查询参数:', {
-    pageNum: data.pageNumber,
-    pageSize: data.pageSize,
-    actor: data.actor
-  });
-
   request.get('/actor/selectPage', {
     params: {
       pageNum: data.pageNumber,
@@ -293,7 +287,6 @@ const del = (id: number) => {
 // 处理选中行变更
 const handleSelectionChange = (rows: ActorForm[]) => {
   data.ids = rows.map(row => row.id).filter((id): id is number => id !== undefined);
-  console.log('选中的演职人员ID:', data.ids);
 }
 
 // 批量删除演职人员

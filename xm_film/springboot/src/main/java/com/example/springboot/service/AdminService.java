@@ -17,7 +17,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.util.List;
 
-@Service//标记为服务层组件
+@Service
 @Transactional(rollbackFor = Exception.class)
 public class AdminService {
 

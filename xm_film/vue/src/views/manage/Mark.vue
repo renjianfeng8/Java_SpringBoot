@@ -159,7 +159,6 @@ const delBatch = () => {
 
 const handleSelectionChange = (rows: MarkData[]) => {
   data.ids = rows.map(row => row.id).filter((id): id is number => id !== undefined);
-  console.log(data.ids);
 }
 
 const reset = () => {
