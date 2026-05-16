@@ -2,6 +2,8 @@
 
 基于 **Spring Boot 3.3 + Vue 3 + MySQL** 构建的在线电影购票管理平台，支持三端角色分离运营（管理员后台、影院端、用户端），提供完整的影片管理、影厅排片、在线选座购票、订单评价等功能闭环。
 
+**代码质量**: 全栈 E2E 自动化测试覆盖（53 用例，100% 通过率），BCrypt 密码加密 + JWT 认证 + RBAC 权限控制。
+
 ---
 
 ## 目录
@@ -14,7 +16,9 @@
 - [API 概览](#api-概览)
 - [数据库设计](#数据库设计)
 - [安全机制](#安全机制)
+- [E2E 测试](#e2e-测试)
 - [部署指南](#部署指南)
+- [相关文档](#相关文档)
 
 ---
 
@@ -189,15 +193,17 @@ npm install
 npm run dev
 ```
 
-前端默认启动在 `http://localhost:5173`。
+前端默认启动在 `http://localhost:5173`（端口可能因占用自增为 5174/5175）。
 
 ### 4. 默认账号
 
 | 角色 | 用户名 | 密码 | 说明 |
 |------|--------|------|------|
-| ADMIN | admin | 123456 | 系统管理员 |
-| CINEMA | (注册) | cinema123 | 影院管理员 |
-| USER | (注册) | user123 | 普通用户 |
+| ADMIN | 999 | 999 | 系统管理员 |
+| USER | zhangsan | user123 | 普通用户 |
+| CINEMA | (注册) | cinema123 | 影院管理员（默认密码） |
+
+> 管理员账号 `999` 通过 `data.sql` 初始化。影院账号需在管理后台审核通过后使用。
 
 ---
 
@@ -229,6 +235,8 @@ file:
 ```
 
 > 生产环境建议通过环境变量注入数据库密码与 JWT Secret。
+>
+> 前端后端地址在 `vue/.env` 中通过 `VITE_API_BASE_URL` 配置，修改一处即可切换环境。
 
 ---
 
@@ -258,19 +266,35 @@ file:
 
 ## API 概览
 
+### 通用 CRUD 接口（每个资源模块）
+
+| 路径 | 方法 | 说明 |
+|------|------|------|
+| `/xxx/selectAll` | GET | 查询全部（支持筛选） |
+| `/xxx/selectById/{id}` | GET | 按 ID 查询 |
+| `/xxx/selectList` | GET | 查询列表（精简版） |
+| `/xxx/selectPage` | GET | 分页查询 |
+| `/xxx/add` | POST | 新增 |
+| `/xxx/update` | PUT | 更新 |
+| `/xxx/delete/{id}` | DELETE | 删除 |
+| `/xxx/deleteBatch` | DELETE | 批量删除 |
+| `/xxx/upload` | POST | 文件上传 |
+
+> `xxx` 取值：`admin`、`user`、`cinema`、`film`、`actor`、`area`、`type`、`notice`、`room`、`record`、`ordered`、`mark`、`video`
+
+### 业务接口
+
 | 路径 | 方法 | 说明 | 认证 |
 |------|------|------|------|
 | `/login` | POST | 用户登录 | - |
 | `/register` | POST | 用户注册 | - |
 | `/updatePassword` | PUT | 修改密码 | Bearer |
 | `/getYear` | GET | 获取年份列表 | - |
-| `/api/admin/**` | * | 管理员 CRUD | Bearer |
-| `/api/user/**` | * | 用户 CRUD | Bearer |
-| `/api/film/**` | * | 影片 CRUD | Bearer |
-| `/api/cinema/**` | * | 影院 CRUD | Bearer |
-| `/api/ordered/**` | * | 订单 CRUD | Bearer |
-| `/api/record/**` | * | 排片 CRUD | Bearer |
-| `/api/mark/**` | * | 评价 CRUD | Bearer |
+| `/film/getAllBoxOfficeTop` | GET | 票房排行榜 | - |
+| `/film/getAllMarkTop` | GET | 评分排行榜 | - |
+| `/film/selectByTitle` | GET | 按标题搜索 | - |
+| `/film/selectByCinema` | GET | 按影院查询电影 | Bearer |
+| `/cinema/selectPage` | GET | 影院分页（支持按电影筛选） | - |
 
 统一响应格式：
 
@@ -311,9 +335,13 @@ file:
 
 ## 安全机制
 
-- **密码加密** — BCrypt 哈希存储，`add()` 自动加密，`login()` 通过 `matches()` 验证
-- **JWT 令牌** — 登录成功返回 Bearer Token，前端存储在 localStorage 并在每次请求时携带
+- **密码加密** — BCrypt 哈希存储，`add()` 自动加密，`login()` 通过 `matches()` 验证（兼容 `data.sql` 明文密码迁移）
+- **JWT 令牌** — 基于 JJWT 的 Bearer Token 认证，24 小时过期，密钥可配置
 - **认证拦截** — `AuthInterceptor` 拦截除登录/注册/文件外的所有接口，校验 Token 有效性
+- **角色访问控制** — `AuthInterceptor` 对 `/admin/**` 路径校验 ADMIN 角色，非管理员返回 403
+- **批量赋值防护** — Service 层 `update()` 方法置空 `password`/`role`，防止通过 `@RequestBody` 篡改敏感字段
+- **密码序列化防护** — `@JsonProperty(WRITE_ONLY)` 注解阻止密码字段在 API 响应中泄露
+- **事务保护** — 所有 Service 类均标注 `@Transactional(rollbackFor = Exception.class)`，确保数据一致性
 - **XSS 防护** — 前端使用 Element Plus 内置转义
 - **上传限制** — 文件大小限制 50MB，防恶意大文件上传
 - **CORS 配置** — 统一跨域处理，预检缓存 1 小时
@@ -376,18 +404,27 @@ server {
 
 ---
 
-## 开发说明
+## E2E 测试
+
+项目使用 Playwright 进行全栈自动化扫描测试（53 个用例，覆盖后端 API、前端页面渲染、CRUD 流程、分页、搜索等）。
 
 ```bash
-# 后端热部署（DevTools 已集成）
-# 修改代码后自动重启
-
-# 前端开发模式
 cd xm_film/vue
-npm run dev     # HMR 热更新
+npm install
+npx playwright install chromium
+node e2e-tests/e2e-scan.spec.mjs
 ```
 
-> 前端请求已配置代理到 `http://localhost:9090`，开发时需确保后端服务运行。
+> 运行前需确保后端服务运行在 `http://localhost:9090`，前端运行在 `http://localhost:5173`。
+> 测试报告输出为 `e2e-tests/e2e-scan-report.html`，截图保存至 `e2e-tests/screenshots/`。
+
+---
+
+## 相关文档
+
+- [变更日志](CHANGELOG.md) — 版本历史与功能变更
+- [Bug 修复记录](Bug.md) — 已修复 Bug 的根因分析与解决方案
+- [数据库说明](xm_film/sql/README.md) — 数据库表设计与初始化指引
 
 ---
 
