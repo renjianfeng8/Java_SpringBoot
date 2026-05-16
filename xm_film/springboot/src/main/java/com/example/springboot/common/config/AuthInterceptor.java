@@ -25,8 +25,18 @@ public class AuthInterceptor implements HandlerInterceptor {
             token = token.substring(7);
             try {
                 Claims claims = jwtUtils.parseToken(token);
+                String role = claims.get("role", String.class);
                 request.setAttribute("userId", claims.getSubject());
-                request.setAttribute("role", claims.get("role"));
+                request.setAttribute("role", role);
+
+                // 基于路径的角色访问控制
+                String path = request.getRequestURI();
+                if (path.startsWith("/admin/") && !"ADMIN".equals(role)) {
+                    response.setStatus(403);
+                    response.setContentType("application/json;charset=UTF-8");
+                    response.getWriter().write("{\"code\":\"403\",\"msg\":\"权限不足，仅管理员可访问\"}");
+                    return false;
+                }
                 return true;
             } catch (Exception ignored) {
             }

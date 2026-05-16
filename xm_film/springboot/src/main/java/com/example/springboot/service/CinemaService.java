@@ -12,11 +12,13 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.List;
 @Service
+@Transactional(rollbackFor = Exception.class)
 public class CinemaService {
 
     @Resource
@@ -67,6 +69,8 @@ public class CinemaService {
     }
 
     public void update(Cinema cinema) {
+        cinema.setPassword(null);
+        cinema.setRole(null);
         cinemaMapper.updateById(cinema);
     }
 
@@ -89,7 +93,7 @@ public class CinemaService {
         //数据库存在这个账号
         String password = account.getPassword();
         if (!passwordEncoder.matches(password, dbCinema.getPassword())) {
-            // 兼容旧版明文密码（迁移过渡）
+            // 兼容 data.sql 明文初始密码
             if (!dbCinema.getPassword().equals(password)) {
                 throw new CustomException("500","账号或密码错误");
             }
@@ -104,7 +108,7 @@ public class CinemaService {
             throw new CustomException("500", "账号不存在");
         }
         if (!passwordEncoder.matches(account.getPassword(), cinema.getPassword())) {
-            // 兼容旧版明文密码
+            // 兼容 data.sql 明文初始密码
             if (!cinema.getPassword().equals(account.getPassword())) {
                 throw new CustomException("500","原密码错误");
             }

@@ -74,7 +74,7 @@ public class CinemaController {
     @GetMapping("/selectPage")
     public Result selectPage(
             Cinema cinema,
-            Integer filmId, // 新增：接收电影ID参数
+            @RequestParam(required = false) Integer filmId, // 新增：接收电影ID参数
             @RequestParam(defaultValue = "1") Integer pageNum,
             @RequestParam(defaultValue = "10") Integer pageSize) {
         PageInfo<Cinema> pageInfo = cinemaService.selectPage(cinema, filmId, pageNum, pageSize);

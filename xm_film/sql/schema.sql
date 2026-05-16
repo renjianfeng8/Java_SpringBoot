@@ -15,7 +15,7 @@
 DROP TABLE IF EXISTS `admin`;
 CREATE TABLE `admin` (
     `id`       INT          AUTO_INCREMENT PRIMARY KEY COMMENT '管理员ID',
-    `username` VARCHAR(50)  NOT NULL                    COMMENT '用户名',
+    `username` VARCHAR(50)  NOT NULL UNIQUE           COMMENT '用户名',
     `password` VARCHAR(100) NOT NULL                    COMMENT '密码',
     `role`     VARCHAR(20)  DEFAULT 'ADMIN'             COMMENT '角色',
     `name`     VARCHAR(50)                              COMMENT '姓名',
@@ -30,7 +30,7 @@ CREATE TABLE `admin` (
 DROP TABLE IF EXISTS `user`;
 CREATE TABLE `user` (
     `id`       INT          AUTO_INCREMENT PRIMARY KEY COMMENT '用户ID',
-    `username` VARCHAR(50)  NOT NULL                    COMMENT '用户名',
+    `username` VARCHAR(50)  NOT NULL UNIQUE           COMMENT '用户名',
     `password` VARCHAR(100) NOT NULL                    COMMENT '密码',
     `name`     VARCHAR(50)                              COMMENT '姓名',
     `role`     VARCHAR(20)  DEFAULT 'USER'              COMMENT '角色',
@@ -45,7 +45,7 @@ CREATE TABLE `user` (
 DROP TABLE IF EXISTS `cinema`;
 CREATE TABLE `cinema` (
     `id`           INT          AUTO_INCREMENT PRIMARY KEY COMMENT '影院ID',
-    `username`     VARCHAR(50)  NOT NULL                    COMMENT '影院账号',
+    `username`     VARCHAR(50)  NOT NULL UNIQUE           COMMENT '影院账号',
     `password`     VARCHAR(100) NOT NULL                    COMMENT '密码',
     `avatar`       VARCHAR(500)                             COMMENT '影院头像',
     `role`         VARCHAR(20)  DEFAULT 'CINEMA'            COMMENT '角色',

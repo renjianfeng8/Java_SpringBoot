@@ -11,12 +11,14 @@ import jakarta.annotation.Resource;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.List;
 
 @Service//标记为服务层组件
+@Transactional(rollbackFor = Exception.class)
 public class AdminService {
 
     @Resource
@@ -62,6 +64,8 @@ public class AdminService {
     }
 
     public void update(Admin admin) {
+        admin.setPassword(null);
+        admin.setRole(null);
         adminMapper.updateById(admin);
     }
 
@@ -84,7 +88,7 @@ public class AdminService {
         //数据库存在这个账号
         String password = account.getPassword();
         if (!passwordEncoder.matches(password, dbAdmin.getPassword())) {
-            // 兼容旧版明文密码（迁移过渡）
+            // 兼容 data.sql 明文初始密码
             if (!dbAdmin.getPassword().equals(password)) {
                 throw new CustomException("500","账号或密码错误");
             }
@@ -99,7 +103,7 @@ public class AdminService {
             throw new CustomException("500", "账号不存在");
         }
         if (!passwordEncoder.matches(account.getPassword(), admin.getPassword())) {
-            // 兼容旧版明文密码
+            // 兼容 data.sql 明文初始密码
             if (!admin.getPassword().equals(account.getPassword())) {
                 throw new CustomException("500","原密码错误");
             }
