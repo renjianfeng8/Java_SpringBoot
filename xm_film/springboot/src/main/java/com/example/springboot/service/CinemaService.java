@@ -33,8 +33,7 @@ public class CinemaService {
     }
 
     public List<Cinema> selectList(Cinema cinema) {
-        System.out.println(cinema);
-        return null;
+        return cinemaMapper.selectAll(cinema);
     }
 
     public PageInfo<Cinema> selectPage(Cinema cinema, Integer filmId, Integer pageNum, Integer pageSize) {
@@ -101,6 +100,9 @@ public class CinemaService {
     public void updatePassword(Account account) {
         Integer id = account.getId();
         Cinema cinema = this.selectById(id);
+        if (cinema == null) {
+            throw new CustomException("500", "账号不存在");
+        }
         if (!passwordEncoder.matches(account.getPassword(), cinema.getPassword())) {
             // 兼容旧版明文密码
             if (!cinema.getPassword().equals(account.getPassword())) {

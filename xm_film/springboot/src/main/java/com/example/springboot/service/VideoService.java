@@ -28,8 +28,7 @@ public class VideoService {
     }
 
     public List<Video> selectList(Video video) {
-        System.out.println(video);
-        return null;
+        return videoMapper.selectAll(video);
     }
 
     public PageInfo<Video> selectPage( Video video, Integer pageNum, Integer pageSize) {

@@ -21,9 +21,13 @@ const router = useRouter();
 const goHome = () => {
   // 从本地存储获取用户信息（JSON字符串）并解析为对象
   const userStr = localStorage.getItem('xm-pro-user');
-
-  const userInfo = JSON.parse(userStr); // 解析JSON字符串为对象
-  const userRole = userInfo.role; // 获取角色信息
+  let userRole = 'USER';
+  try {
+    const userInfo = userStr ? JSON.parse(userStr) : null;
+    userRole = userInfo?.role || 'USER';
+  } catch (e) {
+    // 默认USER角色
+  }
 
   // 根据用户角色跳转到对应的主页
   if (userRole === 'USER') {

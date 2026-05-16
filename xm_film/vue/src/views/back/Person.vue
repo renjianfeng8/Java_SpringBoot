@@ -37,6 +37,7 @@
 
 import {reactive , ref} from "vue";
 import request from "@/utils/request.js";
+import { ElMessage } from "element-plus";
 
 
 const formRef = ref()
@@ -44,7 +45,7 @@ const data = reactive ({
   form: {
     sex: '男'
   },
-  user: JSON.parse(localStorage.getItem('xm-pro-user')),
+  user: (() => { try { return JSON.parse(localStorage.getItem('xm-pro-user')); } catch { return {}; } })(),
   rules: {
     username: [
       { required: true ,message: '请输入账号', trigger: 'blur'}
@@ -61,7 +62,7 @@ const data = reactive ({
 const emit = defineEmits(['updateUser'])
 
 if (data.user.role === 'USER') {
-  request.get('/user/selectById/ '+ data.user.id).then(res => {
+  request.get('/user/selectById/' + data.user.id).then(res => {
     data.form = res.data
   })
 } else {
@@ -76,7 +77,7 @@ const updateUser = () => {
         //更新缓存数据
         localStorage.setItem('xm-pro-user',JSON.stringify(data.form))
         //触发父级从缓存里面取到最新的数据
-        emit('updateUser')
+        emit('updateUser', data.form)
       } else {
         ElMessage.error(res.msg)
       }
@@ -88,7 +89,7 @@ const updateUser = () => {
         //更新缓存数据
         localStorage.setItem('xm-pro-user',JSON.stringify(data.form))
         //触发父级从缓存里面取到最新的数据
-        emit('updateUser')
+        emit('updateUser', data.form)
       } else {
         ElMessage.error(res.msg)
       }
@@ -100,7 +101,7 @@ const updateUser = () => {
         //更新缓存数据
         localStorage.setItem('xm-pro-user',JSON.stringify(data.form))
         //触发父级从缓存里面取到最新的数据
-        emit('updateUser')
+        emit('updateUser', data.form)
       } else {
         ElMessage.error(res.msg)
       }

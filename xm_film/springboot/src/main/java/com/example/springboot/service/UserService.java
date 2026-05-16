@@ -35,8 +35,7 @@ public class UserService {
     }
 
     public List<User> selectList(User user) {
-        System.out.println(user);
-        return null;
+        return userMapper.selectAll(user);
     }
 
     public PageInfo<User> selectPage( User user, Integer pageNum, Integer pageSize) {
@@ -100,6 +99,9 @@ public class UserService {
     public void updatePassword(Account account) {
         Integer id = account.getId();
         User user = this.selectById(id);
+        if (user == null) {
+            throw new CustomException("500", "账号不存在");
+        }
         if (!passwordEncoder.matches(account.getPassword(), user.getPassword())) {
             // 兼容旧版明文密码
             if (!user.getPassword().equals(account.getPassword())) {

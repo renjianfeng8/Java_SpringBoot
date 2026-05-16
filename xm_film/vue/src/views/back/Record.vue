@@ -275,7 +275,7 @@ const getStatusType = (status: string | undefined) => {
 
 
 const loadCinema = () => {
-  request.get('/cinema/selectAll').then(res => {
+  return request.get('/cinema/selectAll').then(res => {
     if(res.code === '200') {
       data.cinemaData = res.data;
     } else {
@@ -286,7 +286,7 @@ const loadCinema = () => {
 
 
 const loadRoom = () => {
-  request.get('/room/selectAll').then(res => {
+  return request.get('/room/selectAll').then(res => {
     if(res.code === '200') {
       data.roomData = res.data;
     } else {
@@ -298,14 +298,8 @@ const loadRoom = () => {
 const init = async () => {
   // 等待影院和影厅数据加载完成
   await Promise.all([
-    new Promise(resolve => {
-      loadCinema();
-      resolve(true);
-    }),
-    new Promise(resolve => {
-      loadRoom();
-      resolve(true);
-    })
+    loadCinema(),
+    loadRoom()
   ]);
   // 再加载表格数据
   load();
@@ -320,12 +314,12 @@ const formRef = ref();
 const handleAdd = () => {
   data.formVisible = true;
   // 初始化空表单数据
-  data.form = {} as RoomForm;
+  data.form = {};
 }
 
 
-const handleUpdate = (row: RoomForm) => {
-  data.form = JSON.parse(JSON.stringify(row)) as RoomForm;
+const handleUpdate = (row) => {
+  data.form = JSON.parse(JSON.stringify(row));
   data.formVisible = true;
 }
 
