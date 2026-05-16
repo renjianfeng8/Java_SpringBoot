@@ -121,7 +121,7 @@ const goToFilmDetail = (filmId) => {
 }
 
 const load = () => {
-  request.get('film/selectPage',{
+  request.get('/film/selectPage',{
     params: {
       pageNum: data.pageNum,
       pageSize: data.pageSize,
@@ -140,7 +140,7 @@ const load = () => {
 }
 
 const loadType = () => {
-  request.get('type/selectAll').then(res => {
+  request.get('/type/selectAll').then(res => {
     if (res.code === '200') {
       data.typeData = res.data
     } else {
@@ -150,7 +150,7 @@ const loadType = () => {
 }
 
 const loadArea = () => {
-  request.get('area/selectAll').then(res => {
+  request.get('/area/selectAll').then(res => {
     if (res.code === '200') {
       data.areaData = res.data
     } else {
@@ -160,7 +160,7 @@ const loadArea = () => {
 }
 
 const loadYear = () => {
-  request.get('getYear').then(res => {
+  request.get('/getYear').then(res => {
     if (res.code === '200') {
       data.yearData = res.data
     } else {

@@ -256,7 +256,7 @@ const fetchFilmFullInfo = () => {
             score: data.score || 0,
             boxOffice: data.boxOffice || 0,
             // 处理类型数组（后端返回typeIds为JSON字符串，需解析）
-            types: data.typeIds ? JSON.parse(data.typeIds).map(id => typeMap[id] || `未知类型(${id})`) : [],
+            types: data.typeIds ? (() => { try { return JSON.parse(data.typeIds).map(id => typeMap[id] || `未知类型(${id})`); } catch { return []; } })() : [],
             // 处理地区（后端返回areaId，映射为地区名称）
             area: data.areaId ? (areaMap[data.areaId] || `未知地区(${data.areaId})`) : '未知地区',
             time: data.time ? `${data.time}分钟` : '未知时长',

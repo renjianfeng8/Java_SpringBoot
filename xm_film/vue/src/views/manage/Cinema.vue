@@ -336,7 +336,7 @@ load();
 const getTransformedStatus = (status: string | undefined) => {
   if (!status) return '未知状态';
   // 核心转换逻辑
-  if (status === '已审批') return '未审核';
+  if (status === '未审核') return '待审核';
   // 兼容其他状态别名
   if (status === '审核通过') return '已审核';
   return status;

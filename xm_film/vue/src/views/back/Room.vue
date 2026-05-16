@@ -47,7 +47,7 @@
         <el-form-item label="影院名称" prop="title">
           <el-input v-model="data.form.title" autocomplete="off" placeholder="请输入影院名称"/>
         </el-form-item>
-        <el-form-item label="影厅名称" prop="title">
+        <el-form-item label="影厅名称" prop="name">
           <el-input v-model="data.form.name" autocomplete="off" placeholder="请输入影厅名称"/>
         </el-form-item>
       </el-form>

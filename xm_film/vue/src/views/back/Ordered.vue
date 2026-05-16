@@ -162,7 +162,7 @@ const data = reactive({
 
 // 加载数据的方法保持不变...
 const loadUser = () => {
-  request.get('/user/selectAll').then(res => {
+  return request.get('/user/selectAll').then(res => {
     if(res.code === '200') {
       data.UserData = res.data
     } else {
@@ -172,7 +172,7 @@ const loadUser = () => {
 }
 
 const loadFilm = () => {
-  request.get('/film/selectAll').then(res => {
+  return request.get('/film/selectAll').then(res => {
     if(res.code === '200') {
       data.FilmData = res.data
     } else {
@@ -182,7 +182,7 @@ const loadFilm = () => {
 }
 
 const loadCinema = () => {
-  request.get('/cinema/selectAll').then(res => {
+  return request.get('/cinema/selectAll').then(res => {
     if(res.code === '200') {
       data.CinemaData = res.data
     } else {
@@ -192,7 +192,7 @@ const loadCinema = () => {
 }
 
 const loadRoom = () => {
-  request.get('/room/selectAll').then(res => {
+  return request.get('/room/selectAll').then(res => {
     if(res.code === '200') {
       data.RoomData = res.data;
       console.log('加载的影厅数据:', data.RoomData);
@@ -206,7 +206,7 @@ const loadRoom = () => {
 }
 
 const load = () => {
-  request.get('/ordered/selectPage', {
+  return request.get('/ordered/selectPage', {
     params: {
       pageNum: data.pageNumber,
       pageSize: data.pageSize,
@@ -283,10 +283,12 @@ const reset = () => {
 
 // 调整加载顺序，确保影厅数据先加载
 const initLoad = async () => {
-  loadRoom(); // 先加载影厅数据
-  loadUser();
-  loadFilm();
-  loadCinema();
+  await Promise.all([
+    loadRoom(),
+    loadUser(),
+    loadFilm(),
+    loadCinema()
+  ]);
   load(); // 最后加载订单数据
 }
 
