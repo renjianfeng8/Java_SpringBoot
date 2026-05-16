@@ -52,6 +52,7 @@ public class OrderedService {
 
 
     public void update(Ordered ordered) {
+        ordered.setStatus(null);
         orderedMapper.updateById(ordered);
     }
 

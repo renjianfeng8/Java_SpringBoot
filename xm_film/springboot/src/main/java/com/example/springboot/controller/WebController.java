@@ -9,6 +9,7 @@ import com.example.springboot.service.AdminService;
 import com.example.springboot.service.CinemaService;
 import com.example.springboot.service.UserService;
 import jakarta.annotation.Resource;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -84,7 +85,12 @@ public class WebController {
      * @throws CustomException 当角色非法时抛出异常
      */
     @PutMapping("/updatePassword")
-    public Result updatePassword(@RequestBody Account account){
+    public Result updatePassword(@RequestBody Account account, HttpServletRequest request){
+        // 从JWT中读取认证用户ID，防止篡改请求体中的id
+        String userId = (String) request.getAttribute("userId");
+        if (userId != null) {
+            account.setId(Integer.valueOf(userId));
+        }
         if ("ADMIN".equals(account.getRole())) {
             adminService.updatePassword(account);
         } else if ("CINEMA".equals(account.getRole())) {
