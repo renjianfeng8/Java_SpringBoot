@@ -30,14 +30,15 @@ start_claude.bat
 backend.log
 frontend.log
 
-# === 数据库 ===
-*.sql
+# === 数据库备份 ===
+*backup*.sql
+*.sql.bak
 
 # === E2E 测试产出 ===
-e2e-tests/screenshots/
-e2e-tests/playwright-report/
-e2e-tests/*.html
-e2e-tests/test-output.txt
+**/e2e-tests/screenshots/
+**/e2e-tests/playwright-report/
+**/e2e-tests/*.html
+**/e2e-tests/test-output.txt
 test-results/
 
 # === Claude ===
