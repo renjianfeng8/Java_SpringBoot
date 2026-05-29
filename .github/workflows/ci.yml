@@ -30,8 +30,8 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
-      - name: Maven 打包
-        run: mvn clean package -DskipTests -q
+      - name: Maven 打包（含单元测试）
+        run: mvn clean package -q
 
       - name: 上传后端 artifact
         uses: actions/upload-artifact@v4

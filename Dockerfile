@@ -1,0 +1,30 @@
+# ============================================================
+# 影院购票管理系统 — Docker 多阶段构建
+# ============================================================
+
+# ---- Stage 1: Maven 构建 ----
+FROM maven:3.9-eclipse-temurin-17 AS builder
+WORKDIR /build
+COPY xm_film/springboot/pom.xml .
+RUN mvn dependency:go-offline -q
+COPY xm_film/springboot/src ./src
+RUN mvn clean package -DskipTests -q
+
+# ---- Stage 2: JRE 运行 ----
+FROM eclipse-temurin:17-jre
+WORKDIR /app
+COPY --from=builder /build/target/*.jar app.jar
+RUN mkdir -p /app/uploads
+
+EXPOSE 9090
+
+ENV DB_HOST=localhost \
+    DB_PASSWORD=123456 \
+    JWT_SECRET=docker-secret-key-for-cinema-system \
+    FILE_UPLOAD_DIR=/app/uploads \
+    MYBATIS_LOG_LEVEL=INFO
+
+HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
+  CMD curl -s http://localhost:9090/api/v1/auth/years > /dev/null || exit 1
+
+ENTRYPOINT ["java", "-jar", "app.jar"]
