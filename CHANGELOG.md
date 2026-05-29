@@ -10,7 +10,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - **SpringDoc OpenAPI (Swagger)**: 新增 `swagger-config` + 15 个 Controller `@Tag` + BaseController `@Operation` 注解，自动生成 API 文档
-  - 访问地址: `http://localhost:9090/swagger-ui/index.html`
+  - 使用 `springdoc-openapi-starter-webmvc-api`（不含 UI 依赖，避免 Spring 6.1 类兼容问题）
+  - Swagger UI 通过静态页面从 CDN 加载，访问地址: `http://localhost:9090/swagger-ui.html`
   - 安全方案: Bearer JWT 认证配置
   
 - **Docker 容器化部署**: 多阶段构建 `Dockerfile`（Maven 构建 + JRE 运行）+ `docker-compose.yml`（MySQL 8.0 + 后端）
