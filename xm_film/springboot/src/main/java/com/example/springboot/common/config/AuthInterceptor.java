@@ -35,7 +35,7 @@ public class AuthInterceptor implements HandlerInterceptor {
 
                 // 基于路径的角色访问控制
                 String path = request.getRequestURI();
-                if (path.startsWith("/admin/") && !"ADMIN".equals(role)) {
+                if (path.startsWith("/api/v1/admins/") && !"ADMIN".equals(role)) {
                     response.setStatus(403);
                     response.setContentType("application/json;charset=UTF-8");
                     response.getWriter().write("{\"code\":\"403\",\"msg\":\"权限不足，仅管理员可访问\"}");

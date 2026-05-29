@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div style="width: 100%; margin: 0 auto;">
     <!-- 1. 加载状态提示 -->
     <div v-if="loading" style="padding: 50px; text-align: center; color: #666;">
@@ -372,7 +372,7 @@ const loadFilmList = () => {
     requestParams.filmId = Number(filmId.value);
   }
 
-  request.get('/film/selectByCinema', {params: requestParams})
+  request.get('/api/v1/films/by-cinema', {params: requestParams})
       .then(res => {
         if (res.code === '200') {
           filmData.films = res.data || [];
@@ -434,7 +434,7 @@ const fetchRecordList = (cinemaId, filmId) => {
     pageNum: recordData[filmId].pageNum,
     pageSize: recordData[filmId].pageSize
   };
-  request.get('/record/selectPage', {params: requestParams})
+  request.get('/api/v1/records/page', {params: requestParams})
       .then(res => {
         if (res.code === '200' && res.data) {
           // 适配后端PageInfo格式：{ list: [], total: 0, pageNum: 1, pageSize: 5 }

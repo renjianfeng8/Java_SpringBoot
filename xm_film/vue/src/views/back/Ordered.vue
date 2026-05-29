@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div>
     <div class="card" style="margin-bottom: 5px">
       <el-input v-model="data.orders" placeholder="请输入订单号" style="width: 300px; margin-right:10px" :prefix-icon="Search"/>
@@ -162,7 +162,7 @@ const data = reactive({
 
 // 加载数据的方法保持不变...
 const loadUser = () => {
-  return request.get('/user/selectAll').then(res => {
+  return request.get('/api/v1/users').then(res => {
     if(res.code === '200') {
       data.UserData = res.data
     } else {
@@ -172,7 +172,7 @@ const loadUser = () => {
 }
 
 const loadFilm = () => {
-  return request.get('/film/selectAll').then(res => {
+  return request.get('/api/v1/films').then(res => {
     if(res.code === '200') {
       data.FilmData = res.data
     } else {
@@ -182,7 +182,7 @@ const loadFilm = () => {
 }
 
 const loadCinema = () => {
-  return request.get('/cinema/selectAll').then(res => {
+  return request.get('/api/v1/cinemas').then(res => {
     if(res.code === '200') {
       data.CinemaData = res.data
     } else {
@@ -192,7 +192,7 @@ const loadCinema = () => {
 }
 
 const loadRoom = () => {
-  return request.get('/room/selectAll').then(res => {
+  return request.get('/api/v1/rooms').then(res => {
     if(res.code === '200') {
       data.RoomData = res.data;
     } else {
@@ -205,7 +205,7 @@ const loadRoom = () => {
 }
 
 const load = () => {
-  return request.get('/ordered/selectPage', {
+  return request.get('/api/v1/orders/page', {
     params: {
       pageNum: data.pageNumber,
       pageSize: data.pageSize,
@@ -236,7 +236,7 @@ const getRoomName = (roomId?: number) => {
 // 其他方法保持不变...
 const del = (id: number) => {
   ElMessageBox.confirm('删除数据后无法恢复,您确认删除吗?', '删除确认', { type: 'warning' }).then(() => {
-    request.delete(`/ordered/delete/${id}`).then(res => {
+    request.delete(`/api/v1/orders/${id}`).then(res => {
       if (res.code === '200') {
         ElMessage.success('操作成功')
         load()
@@ -254,7 +254,7 @@ const delBatch = () => {
     return
   }
   ElMessageBox.confirm('删除数据后无法恢复,您确认删除吗?', '删除确认', { type: 'warning' }).then(() => {
-    request.delete('/ordered/deleteBatch', { data: data.ids }).then(res => {
+    request.delete('/api/v1/orders/batch', { data: data.ids }).then(res => {
       if (res.code === '200') {
         ElMessage.success('操作成功')
         load()
@@ -300,3 +300,4 @@ const getStatusType = (status: string | undefined) => {
 
 <style scoped>
 </style>
+

@@ -62,7 +62,7 @@
     </div>
 
     <div class="front-content">
-      <RouterView @updateUser="updateUser" />
+      <RouterView />
     </div>
 
     <!-- 页脚 -->
@@ -117,45 +117,32 @@
 </template>
 
 <script setup>
-import {ref, computed, onMounted, watch, reactive} from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Phone, Message, CaretBottom } from '@element-plus/icons-vue'
-import request from "@/utils/request.js";
-
+import { useAuth } from '@/composables/useAuth'
 
 const router = useRouter()
 const route = useRoute()
-const searchKeyword = ref('') // 存储用户输入的电影名称
-const activePath = ref('') // 用于存储当前激活的路由路径
+const { user, logout: authLogout } = useAuth()
 
-const data = reactive({
-  filmList: [],    // 电影列表（用于存储搜索结果）
-});
+const searchKeyword = ref('')
+const activePath = ref('')
 
-// 用户数据状态
-const userData = ref({
-  username: null,
-  avatar: null,
-  role: null
-})
-
-const userName = computed(() => userData.value.username)
+const userName = computed(() => user.value?.username || '')
 
 const userAvatar = computed(() => {
-  const avatar = userData.value.avatar
+  const avatar = user.value?.avatar
   if (!avatar) return null
   return avatar.startsWith('http') ? avatar : `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:9090'}${avatar}`
 })
 
-// 登出方法
 const logout = () => {
   ElMessageBox.confirm('确定要退出登录吗？', '提示', {
-    confirmButtonText: '确定',
-    cancelButtonText: '取消',
-    type: 'warning'
+    confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning'
   }).then(() => {
-    localStorage.removeItem('xm-pro-user')
+    authLogout()
     router.push('/login')
     ElMessage.success('退出成功')
   }).catch(() => {
@@ -163,74 +150,26 @@ const logout = () => {
   })
 }
 
-// 更新用户信息
-const updateUser = (newUserInfo) => {
-  if (newUserInfo) {
-    userData.value = {...userData.value, ...newUserInfo}
-    localStorage.setItem('xm-pro-user', JSON.stringify(userData.value))
-  }
-}
-
-
-// 搜索处理函数
 const handleSearch = () => {
-  // 使用searchKeyword进行验证，与输入框绑定保持一致
   if (!searchKeyword.value.trim()) {
-    ElMessage.warning('请输入电影名称');
-    return;
+    ElMessage.warning('请输入电影名称')
+    return
   }
-
-  request.get('/film/selectByTitle', {
-    params: {
-      title: searchKeyword.value.trim() // 使用searchKeyword作为查询参数
-    }
-  }).then(res => {
-    if (res.code === '200') {
-      data.filmList = res.data;
-      // 跳转到搜索结果页，将搜索结果传递过去
-      router.push({
-        path: '/front/search',
-        query: {title: searchKeyword.value.trim()}
-      })
-
-      if (data.filmList.length === 0) {
-        ElMessage.info('未找到匹配的电影');
-      }
-    } else {
-      ElMessage.error(res.msg || '查询电影失败');
-    }
-  }).catch(err => {
-    ElMessage.error('网络错误，查询失败');
-    console.error(err);
-  });
+  router.push({
+    path: '/front/search',
+    query: { title: searchKeyword.value.trim() }
+  })
 }
 
-// 生命周期钩子：组件挂载后初始化
 onMounted(() => {
-  // 从本地存储获取用户信息
-  const storedUser = localStorage.getItem('xm-pro-user')
-  if (storedUser) {
-    try {
-      const user = JSON.parse(storedUser)
-      userData.value = {...userData.value, ...user}
-    } catch (error) {
-      console.error('解析用户数据失败', error)
-      ElMessage.error('获取用户信息失败')
-    }
-  }
-
-  // 初始化激活路径
   updateActivePath(route.path)
 })
 
-// 监听路由变化，更新菜单激活状态
 watch(() => route.path, (newPath) => {
   updateActivePath(newPath)
 })
 
-// 更新激活路径的方法
 const updateActivePath = (path) => {
-  // 处理嵌套路由的情况，获取一级路径
   if (path.startsWith('/front/movie')) {
     activePath.value = '/front/movie'
   } else if (path.startsWith('/front/cinema')) {
@@ -240,13 +179,10 @@ const updateActivePath = (path) => {
   } else if (path.startsWith('/front/orders')) {
     activePath.value = '/front/orders'
   } else if (path.startsWith('/front/search')) {
-    // 搜索页路由激活“电影”菜单
     activePath.value = '/front/movie'
   } else if (path.startsWith('/front')) {
-    // 其他/front开头的路径，默认激活首页
     activePath.value = '/home'
   } else {
-    // 直接匹配根路径
     activePath.value = path === '/' ? '/home' : path
   }
 }

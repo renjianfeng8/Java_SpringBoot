@@ -15,7 +15,7 @@
 DROP TABLE IF EXISTS `admin`;
 CREATE TABLE `admin` (
     `id`       INT          AUTO_INCREMENT PRIMARY KEY COMMENT '管理员ID',
-    `username` VARCHAR(50)  NOT NULL                    COMMENT '用户名',
+    `username` VARCHAR(50)  NOT NULL UNIQUE           COMMENT '用户名',
     `password` VARCHAR(100) NOT NULL                    COMMENT '密码',
     `role`     VARCHAR(20)  DEFAULT 'ADMIN'             COMMENT '角色',
     `name`     VARCHAR(50)                              COMMENT '姓名',
@@ -30,7 +30,7 @@ CREATE TABLE `admin` (
 DROP TABLE IF EXISTS `user`;
 CREATE TABLE `user` (
     `id`       INT          AUTO_INCREMENT PRIMARY KEY COMMENT '用户ID',
-    `username` VARCHAR(50)  NOT NULL                    COMMENT '用户名',
+    `username` VARCHAR(50)  NOT NULL UNIQUE           COMMENT '用户名',
     `password` VARCHAR(100) NOT NULL                    COMMENT '密码',
     `name`     VARCHAR(50)                              COMMENT '姓名',
     `role`     VARCHAR(20)  DEFAULT 'USER'              COMMENT '角色',
@@ -45,7 +45,7 @@ CREATE TABLE `user` (
 DROP TABLE IF EXISTS `cinema`;
 CREATE TABLE `cinema` (
     `id`           INT          AUTO_INCREMENT PRIMARY KEY COMMENT '影院ID',
-    `username`     VARCHAR(50)  NOT NULL                    COMMENT '影院账号',
+    `username`     VARCHAR(50)  NOT NULL UNIQUE           COMMENT '影院账号',
     `password`     VARCHAR(100) NOT NULL                    COMMENT '密码',
     `avatar`       VARCHAR(500)                             COMMENT '影院头像',
     `role`         VARCHAR(20)  DEFAULT 'CINEMA'            COMMENT '角色',
@@ -87,8 +87,7 @@ CREATE TABLE `film` (
     `title`     VARCHAR(100)  NOT NULL                    COMMENT '电影中文标题',
     `english`   VARCHAR(200)                              COMMENT '电影英文标题',
     `start`     DATE                                      COMMENT '上映日期',
-    `time`      VARCHAR(20)                               COMMENT '片长（分钟）',
-    `type_ids`  VARCHAR(50)                               COMMENT '类型ID集合（JSON数组格式，如[17,5,14]）',
+    `time`      SMALLINT UNSIGNED NOT NULL DEFAULT 0      COMMENT '片长（分钟）',
     `language`  VARCHAR(50)                               COMMENT '语言',
     `resolution` VARCHAR(50)                              COMMENT '版本/分辨率',
     `content`   TEXT                                      COMMENT '剧情简介',
@@ -99,7 +98,11 @@ CREATE TABLE `film` (
     `score`     DECIMAL(3,1)  DEFAULT 0.0                 COMMENT '评分',
     `box_office` DECIMAL(10,1) DEFAULT 0.0                COMMENT '票房（万元）',
     `actor_id`   INT                                      COMMENT '关联演员ID',
-    `video`     VARCHAR(500)                              COMMENT '预告片URL'
+    `video`     VARCHAR(500)                              COMMENT '预告片URL',
+    INDEX idx_area_id (area_id),
+    INDEX idx_status (status),
+    INDEX idx_start (start),
+    FULLTEXT INDEX idx_title (title)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='电影表';
 
 -- ---------------------------
@@ -108,17 +111,32 @@ CREATE TABLE `film` (
 DROP TABLE IF EXISTS `actor`;
 CREATE TABLE `actor` (
     `id`      INT          AUTO_INCREMENT PRIMARY KEY COMMENT '演员ID',
+    `film_id` INT                                       COMMENT '关联电影ID',
     `title`   VARCHAR(100) NOT NULL                   COMMENT '所属电影标题',
     `img`     VARCHAR(500)                            COMMENT '电影海报URL',
     `actor`   VARCHAR(50)                             COMMENT '演员姓名',
     `figure`  VARCHAR(50)                             COMMENT '饰演角色名',
     `picture` VARCHAR(500)                            COMMENT '演员照片URL',
     `grade`   VARCHAR(20)                             COMMENT '演员级别（如主演、二级演员）',
-    `video`   VARCHAR(500)                            COMMENT '相关视频URL'
+    `video`   VARCHAR(500)                            COMMENT '相关视频URL',
+    FOREIGN KEY (film_id) REFERENCES film(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='演员表';
 
 -- ---------------------------
--- 8. 影院-电影关联表 (cinema_film)
+-- 8. 电影类型关联表 (film_type)
+-- ---------------------------
+DROP TABLE IF EXISTS `film_type`;
+CREATE TABLE `film_type` (
+    `film_id` INT NOT NULL COMMENT '电影ID',
+    `type_id` INT NOT NULL COMMENT '类型ID',
+    PRIMARY KEY (film_id, type_id),
+    INDEX idx_type_id (type_id),
+    FOREIGN KEY (film_id) REFERENCES film(id) ON DELETE CASCADE,
+    FOREIGN KEY (type_id) REFERENCES type(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='电影-类型关联表';
+
+-- ---------------------------
+-- 9. 影院-电影关联表 (cinema_film)
 -- ---------------------------
 DROP TABLE IF EXISTS `cinema_film`;
 CREATE TABLE `cinema_film` (
@@ -128,7 +146,7 @@ CREATE TABLE `cinema_film` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='影院-电影关联表';
 
 -- ---------------------------
--- 9. 放映厅表 (room)
+-- 10. 放映厅表 (room)
 -- ---------------------------
 DROP TABLE IF EXISTS `room`;
 CREATE TABLE `room` (
@@ -138,7 +156,7 @@ CREATE TABLE `room` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='放映厅表';
 
 -- ---------------------------
--- 10. 放映记录表 (record)
+-- 11. 放映记录表 (record)
 -- ---------------------------
 DROP TABLE IF EXISTS `record`;
 CREATE TABLE `record` (
@@ -152,7 +170,7 @@ CREATE TABLE `record` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='放映记录表（排片/场次）';
 
 -- ---------------------------
--- 11. 订单表 (ordered)
+-- 12. 订单表 (ordered)
 -- ---------------------------
 DROP TABLE IF EXISTS `ordered`;
 CREATE TABLE `ordered` (
@@ -172,7 +190,7 @@ CREATE TABLE `ordered` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='订单表';
 
 -- ---------------------------
--- 12. 评分表 (mark)
+-- 13. 评分表 (mark)
 -- ---------------------------
 DROP TABLE IF EXISTS `mark`;
 CREATE TABLE `mark` (
@@ -184,7 +202,7 @@ CREATE TABLE `mark` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='评分表';
 
 -- ---------------------------
--- 13. 通知公告表 (notice)
+-- 14. 通知公告表 (notice)
 -- ---------------------------
 DROP TABLE IF EXISTS `notice`;
 CREATE TABLE `notice` (
@@ -195,7 +213,7 @@ CREATE TABLE `notice` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='通知公告表';
 
 -- ---------------------------
--- 14. 视频/预告片表 (video)
+-- 15. 视频/预告片表 (video)
 -- ---------------------------
 DROP TABLE IF EXISTS `video`;
 CREATE TABLE `video` (

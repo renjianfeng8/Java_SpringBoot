@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div style="width: 100%; margin: 0 auto;">
     <!-- 1. 加载状态提示 -->
     <div v-if="loading" style="padding: 50px; text-align: center; color: #666;">
@@ -312,7 +312,7 @@ const fetchFilmDetail = () => {
   }
   loading.value = true;
   errorMsg.value = '';
-  request.get(`/film/selectById/${filmId}`).then(res => {
+  request.get(`/api/v1/films/${filmId}`).then(res => {
         if (res.code === '200' && res.data) {
           const data = res.data;
           // 电影数据映射
@@ -375,7 +375,7 @@ const fetchCastBySingleId = (actorId) => {
   castList.value = []; // 清空历史数据
 
   // 调用后端接口：按单个演员ID查询详情（含角色类型）
-  request.get(`/actor/selectById/${actorId}`)
+  request.get(`/api/v1/actors/${actorId}`)
       .then(res => {
         if (res.code === '200' && res.data) {
           const actorData = res.data;
@@ -495,3 +495,4 @@ onMounted(() => {
 
 }
 </style>
+

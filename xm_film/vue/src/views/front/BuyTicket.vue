@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <!-- 整个页面统一外层盒子 -->
   <div style="width: 100%; padding: 20px 0; background-color: #f9f9f9;">
     <div style="width: 70%; margin: 0 auto; background-color: white; padding: 30px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
@@ -253,7 +253,7 @@ onMounted(() => {
 const initSeats = () => {
   return new Promise((resolve) => {
     // 1. 先查询该场次已售座位（通过订单接口反向获取）
-    request.get('/ordered/selectAll', {
+    request.get('/api/v1/orders', {
       params: {
         cinemaId: Number(cinemaId),
         filmId: Number(filmId),
@@ -444,7 +444,7 @@ const confirmBooking = () => {
   };
 
   // 调用后端/add接口提交订单
-  request.post('/ordered/add', orderData)
+  request.post('/api/v1/orders', orderData)
       .then(res => {
         if (res.code === '200') {
           ElMessage.success('订单创建成功！即将跳转到订单详情');

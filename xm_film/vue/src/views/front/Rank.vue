@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div style="width: 80%; margin: 20px auto;">
     <!-- 页面标题 -->
     <h2 style="text-align: center; margin-bottom: 28px; font-size: 26px; color: #333; font-weight: 600;">电影排行榜</h2>
@@ -156,7 +156,7 @@ const formatBoxOffice = (num) => {
 
 const loadFilmBoxOfficeTop = () => {
   loading.boxOffice = true;
-  request.get('/film/getAllBoxOfficeTop', {
+  request.get('/api/v1/films/box-office/top', {
     params: { topNum: 10 }
   }).then(res => {
     if (res.code === '200') {
@@ -174,7 +174,7 @@ const loadFilmBoxOfficeTop = () => {
 
 const loadFilmMarkTop = () => {
   loading.mark = true;
-  request.get('/film/getAllMarkTop', {
+  request.get('/api/v1/films/mark/top', {
     params: { topNum: 10 }
   }).then(res => {
     if (res.code === '200') {

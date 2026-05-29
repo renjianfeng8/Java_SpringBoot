@@ -72,7 +72,7 @@ onMounted(() => {
 const updateUser = () => {
   formRef.value.validate((valid) => {
     if (valid) {
-      request.put("/user/update", formData).then((res) => {
+      request.put("/api/v1/users", formData).then((res) => {
         if (res.code === "200") {
           ElMessage.success("更新成功");
           // 更新缓存数据

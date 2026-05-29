@@ -102,88 +102,44 @@
 
       <!-- 主内容区 -->
       <div class="manage-content">
-        <RouterView @updateUser="updateUser" />
+        <RouterView />
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { useAuth } from '@/composables/useAuth'
 
-
-// 获取路由实例
 const router = useRouter()
+const { user, logout: authLogout } = useAuth()
 
-
-// 用户数据状态
-const userData = ref({
-  username: null,
-  avatar: null,
-  role: null
-})
-
-const userName = computed(() => userData.value.username)
+const userName = computed(() => user.value?.username || '')
 
 const userAvatar = computed(() => {
-  return userData.value.avatar || null
+  return user.value?.avatar || null
 })
 
-// 展开的菜单key
 const openedMenuKeys = ref(['1', '2'])
 
-
-// 导航方法
 const navigateTo = (path) => {
   router.push(path)
 }
 
-// 登出方法
 const logout = () => {
   ElMessageBox.confirm('确定要退出登录吗？', '提示', {
-    confirmButtonText: '确定',
-    cancelButtonText: '取消',
-    type: 'warning'
+    confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning'
   }).then(() => {
-    localStorage.removeItem('xm-pro-user')
+    authLogout()
     router.push('/login')
     ElMessage.success('退出成功')
   }).catch(() => {
     ElMessage.info('已取消退出')
   })
 }
-
-// 更新用户信息
-const updateUser = (newUserInfo) => {
-  if (newUserInfo) {
-    userData.value = { ...userData.value, ...newUserInfo }
-    localStorage.setItem('xm-pro-user', JSON.stringify(userData.value))
-  }
-}
-
-// 生命周期钩子：组件挂载后初始化
-onMounted(() => {
-  // 从本地存储获取用户信息
-  const storedUser = localStorage.getItem('xm-pro-user')
-  if (storedUser) {
-    try {
-      const user = JSON.parse(storedUser)
-      userData.value = {
-        ...userData.value,
-        ...user, // 合并本地存储的用户数据
-        // 处理头像路径（如果是相对路径需要拼接域名）
-        avatar: user.avatar && !user.avatar.startsWith('http')
-            ? `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:9090'}${user.avatar}`
-            : user.avatar || userData.value.avatar
-      }
-    } catch (error) {
-      console.error('解析用户数据失败', error)
-      ElMessage.error('获取用户信息失败')
-    }
-  }
-})
 </script>
 
 <style scoped>

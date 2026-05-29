@@ -43,7 +43,7 @@
         LEFT JOIN actor ON film.actor_id = actor.id
         <where>
             <if test="title != null and title != ''">AND film.title LIKE CONCAT('%', #{title}, '%')</if>
-            <if test="typeId != null">AND (film.type_ids LIKE CONCAT('%,', #{typeId}, ',%') OR film.type_ids LIKE CONCAT('[', #{typeId}, ',%') OR film.type_ids LIKE CONCAT('%,', #{typeId}, ']') OR film.type_ids = CONCAT('[', #{typeId}, ']'))</if>
+            <if test="typeId != null">AND EXISTS (SELECT 1 FROM film_type ft WHERE ft.film_id = film.id AND ft.type_id = #{typeId})</if>
             <if test="year != null">AND film.start LIKE CONCAT('%', #{year}, '%')</if>
             <if test="areaId != null">AND film.area_id = #{areaId}</if>
             <if test="actorId != null">AND film.actor_id = #{actorId}</if>
@@ -80,7 +80,7 @@
         LIMIT #{topNum}
     </select>
 
-    <insert id="insert" parameterType="com.example.springboot.entity.Film">
+    <insert id="insert" parameterType="com.example.springboot.entity.Film" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO film
         <trim prefix="(" suffix=")" suffixOverrides=",">
             <if test="title != null">title,</if>
@@ -88,7 +88,6 @@
             <if test="time != null">time,</if>
             <if test="english != null">english,</if>
             <if test="start != null">start,</if>
-            <if test="typeIds != null">type_ids,</if>
             <if test="language != null">language,</if>
             <if test="resolution != null">resolution,</if>
             <if test="img != null">img,</if>
@@ -107,7 +106,6 @@
             <if test="time != null">#{time},</if>
             <if test="english != null">#{english},</if>
             <if test="start != null">#{start},</if>
-            <if test="typeIds != null">#{typeIds},</if>
             <if test="language != null">#{language},</if>
             <if test="resolution != null">#{resolution},</if>
             <if test="img != null">#{img},</if>
@@ -129,7 +127,6 @@
             <if test="time != null">time = #{time},</if>
             <if test="english != null">english = #{english},</if>
             <if test="start != null">start = #{start},</if>
-            <if test="typeIds != null">type_ids = #{typeIds},</if>
             <if test="language != null">language = #{language},</if>
             <if test="resolution != null">resolution = #{resolution},</if>
             <if test="img != null">img = #{img},</if>
@@ -146,6 +143,34 @@
 
     <delete id="deleteById" parameterType="java.lang.Integer">
         DELETE FROM film WHERE id = #{id}
+    </delete>
+
+    <delete id="deleteBatch">
+        DELETE FROM film WHERE id IN
+        <foreach collection="list" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+
+    <select id="selectFilmTypeJoin" resultType="java.util.Map">
+        SELECT ft.film_id, ft.type_id, t.title AS type_title
+        FROM film_type ft
+        INNER JOIN type t ON ft.type_id = t.id
+        WHERE ft.film_id IN
+        <foreach collection="filmIds" item="filmId" open="(" separator="," close=")">
+            #{filmId}
+        </foreach>
+    </select>
+
+    <insert id="insertFilmTypes">
+        INSERT INTO film_type (film_id, type_id) VALUES
+        <foreach collection="typeIds" item="typeId" separator=",">
+            (#{filmId}, #{typeId})
+        </foreach>
+    </insert>
+
+    <delete id="deleteFilmTypesByFilmId">
+        DELETE FROM film_type WHERE film_id = #{filmId}
     </delete>
 
 </mapper>

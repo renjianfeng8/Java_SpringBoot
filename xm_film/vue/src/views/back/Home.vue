@@ -1,4 +1,4 @@
-<template>
+﻿<template>
     <!-- 欢迎提示栏 -->
     <div class="welcome-card">
       <span>您好！欢迎使用电影购票管理系统！</span>
@@ -88,7 +88,7 @@ const formatTime = (time: string | number | undefined) => {
 
 // 加载公告列表（支持分页和搜索）
 const load = () => {
-  request.get("/notice/selectPage", {
+  request.get("/api/v1/notices/page", {
     params: {
       title: data.query.title // 搜索条件（模糊匹配公告名称）
     }

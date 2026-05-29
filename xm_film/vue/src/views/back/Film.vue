@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div>
     <div class="card" style="margin-bottom: 5px">
       <el-input v-model="data.title" placeholder="请输入电影名称查询" style="width: 300px; margin-right:10px" :prefix-icon="Search"/>
@@ -155,7 +155,7 @@ const data = reactive({
 const formRef = ref();
 
 const loadType = () => {
-  request.get('/type/selectAll').then(res => {
+  request.get('/api/v1/types').then(res => {
     if(res.code === '200') {
       data.typeData = res.data
     } else {
@@ -165,7 +165,7 @@ const loadType = () => {
 }
 
 const loadArea = () => {
-  request.get('/area/selectAll').then(res => {
+  request.get('/api/v1/areas').then(res => {
     if(res.code === '200') {
       data.areaData = res.data
     } else {
@@ -175,7 +175,7 @@ const loadArea = () => {
 }
 
 const load = () => {
-  request.get('/film/selectPage', {
+  request.get('/api/v1/films/page', {
     params: {
       pageNum: data.pageNumber,
       pageSize: data.pageSize,
@@ -227,4 +227,5 @@ const getStatusType = (status: string | undefined) => {
 }
 
 </style>
+
 

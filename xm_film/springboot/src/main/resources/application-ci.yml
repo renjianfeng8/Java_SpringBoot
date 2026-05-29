@@ -1,0 +1,34 @@
+server:
+  port: 9090
+
+spring:
+  datasource:
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:123456}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://${DB_HOST:127.0.0.1}:3306/xm-film?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 50MB
+
+mybatis:
+  configuration:
+    log-impl: org.apache.ibatis.logging.slf4j.Slf4jImpl
+    map-underscore-to-camel-case: true
+  mapper-locations: classpath:mapper/*.xml
+
+fileBaseUrl: http://localhost:${server.port}
+
+jwt:
+  secret: ${JWT_SECRET:ci-test-secret-key-for-github-actions}
+  expire: ${JWT_EXPIRE:86400000}
+
+file:
+  upload-dir: /tmp/xm-film-uploads
+  access-prefix: ${fileBaseUrl}/files/
+
+logging:
+  level:
+    com.example.springboot.mapper: INFO

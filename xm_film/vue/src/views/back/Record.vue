@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div>
     <div class="card" style="margin-bottom: 5px">
       <el-input v-model="data.title"  placeholder="请输入电影名称查询" style="width: 300px; margin-right:10px" :prefix-icon="Search"/>
@@ -156,7 +156,7 @@ const delBatch = () => {
     return
   }
   ElMessageBox.confirm('删除数据后无法恢复,您确认删除吗?', '删除确认', { type: 'warning' }).then(() => {
-    request.delete('/record/deleteBatch', { data: data.ids }).then(res => {
+    request.delete('/api/v1/records/batch', { data: data.ids }).then(res => {
       if (res.code === '200') {
         ElMessage.success('操作成功')
         load()
@@ -179,7 +179,7 @@ const reset = () => {
 };
 
 const load = () => {
-  request.get('/record/selectPage', {
+  request.get('/api/v1/records/page', {
     params: {
       pageNum: data.pageNumber,
       pageSize: data.pageSize,
@@ -213,7 +213,7 @@ const load = () => {
 
 const del = (id: number) => {
   ElMessageBox.confirm('删除数据后无法恢复,您确认删除吗?', '删除确认', { type: 'warning' }).then(() => {
-    request.delete(`/record/delete/${id}`).then(res => {
+    request.delete(`/api/v1/records/${id}`).then(res => {
       if (res.code === '200') {
         ElMessage.success('操作成功');
         load();
@@ -227,7 +227,7 @@ const del = (id: number) => {
 
 
 const add = () => {
-  request.post('/record/add', data.form).then(res => {
+  request.post('/api/v1/records', data.form).then(res => {
     if (res.code === '200') {
       ElMessage.success('添加成功');
       data.formVisible = false;
@@ -241,7 +241,7 @@ const add = () => {
 }
 
 const update = () => {
-  request.put('/record/update', data.form).then(res => {
+  request.put('/api/v1/records', data.form).then(res => {
     if (res.code === '200') {
       ElMessage.success('更新成功');
       data.formVisible = false;
@@ -274,7 +274,7 @@ const getStatusType = (status: string | undefined) => {
 
 
 const loadCinema = () => {
-  return request.get('/cinema/selectAll').then(res => {
+  return request.get('/api/v1/cinemas').then(res => {
     if(res.code === '200') {
       data.cinemaData = res.data;
     } else {
@@ -285,7 +285,7 @@ const loadCinema = () => {
 
 
 const loadRoom = () => {
-  return request.get('/room/selectAll').then(res => {
+  return request.get('/api/v1/rooms').then(res => {
     if(res.code === '200') {
       data.roomData = res.data;
     } else {

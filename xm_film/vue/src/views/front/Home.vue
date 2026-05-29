@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div style="width: 75%; margin: 20px auto; display:flex">
 
     <!-- 左侧内容（完善跳转逻辑） -->
@@ -251,7 +251,7 @@ const formatBoxOffice = (num) => {
 // 加载总票房Top10数据
 const loadFilmBoxOfficeTop = () => {
   loading.boxOffice = true;
-  request.get('/film/getAllBoxOfficeTop', {
+  request.get('/api/v1/films/box-office/top', {
     params: {topNum: 10}
   }).then(res => {
     if (res.code === '200') {
@@ -271,7 +271,7 @@ const loadFilmBoxOfficeTop = () => {
 // 加载评分Top5数据
 const loadFilmMarkTop = () => {
   loading.mark = true;
-  request.get('/film/getAllMarkTop', {
+  request.get('/api/v1/films/mark/top', {
     params: {topNum: 10}
   }).then(res => {
     if (res.code === '200') {
@@ -299,7 +299,7 @@ const refreshTodayBoxOffice = () => {
 
 // 电影数据加载
 const load = () => {
-  request.get('/film/selectAll').then(res => {
+  request.get('/api/v1/films').then(res => {
     if (res.code === '200') {
       data.data1 = res.data.filter(v => v.status === '已上映');
       data.data2 = res.data.filter(v => v.status === '待上映');
