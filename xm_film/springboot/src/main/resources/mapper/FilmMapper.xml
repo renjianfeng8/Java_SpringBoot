@@ -63,7 +63,7 @@
         FROM film
         LEFT JOIN area ON film.area_id = area.id
         LEFT JOIN actor ON film.actor_id = actor.id
-        ORDER BY film.boxOffice DESC
+        ORDER BY film.box_office DESC
         LIMIT #{topNum}
     </select>
 
@@ -95,7 +95,7 @@
             <if test="areaId != null">area_id,</if>
             <if test="status != null">status,</if>
             <if test="score != null">score,</if>
-            <if test="boxOffice != null">boxOffice,</if>
+            <if test="boxOffice != null">box_office,</if>
             <if test="video != null">video,</if>
             <if test="actorId != null">actor_id,</if>
         </trim>
@@ -134,7 +134,7 @@
             <if test="areaId != null">area_id = #{areaId},</if>
             <if test="status != null">status = #{status},</if>
             <if test="score != null">score = #{score},</if>
-            <if test="boxOffice != null">boxOffice = #{boxOffice},</if>
+            <if test="boxOffice != null">box_office = #{boxOffice},</if>
             <if test="video != null">video = #{video},</if>
             <if test="actorId != null">actor_id = #{actorId},</if>
         </set>
