@@ -1,0 +1,49 @@
+# ============================================================
+# 影院购票管理系统 — Docker Compose
+# 启动: docker-compose up -d
+# 停止: docker-compose down
+# ============================================================
+
+services:
+  # ---- MySQL 8.0 ----
+  mysql:
+    image: mysql:8.0
+    container_name: cinema-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-123456}
+      MYSQL_DATABASE: xm-film
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./xm_film/sql/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  # ---- Spring Boot 后端 ----
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: cinema-backend
+    ports:
+      - "9090:9090"
+    environment:
+      DB_HOST: mysql
+      DB_PASSWORD: ${DB_PASSWORD:-123456}
+      JWT_SECRET: ${JWT_SECRET:-docker-secret-key-for-cinema-system}
+      FILE_UPLOAD_DIR: /app/uploads
+    depends_on:
+      mysql:
+        condition: service_healthy
+    volumes:
+      - uploads:/app/uploads
+    restart: unless-stopped
+
+volumes:
+  mysql-data:
+  uploads:

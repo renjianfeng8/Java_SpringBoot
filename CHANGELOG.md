@@ -5,6 +5,35 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2026-05-29
+
+### Added
+
+- **SpringDoc OpenAPI (Swagger)**: 新增 `swagger-config` + 15 个 Controller `@Tag` + BaseController `@Operation` 注解，自动生成 API 文档
+  - 访问地址: `http://localhost:9090/swagger-ui/index.html`
+  - 安全方案: Bearer JWT 认证配置
+  
+- **Docker 容器化部署**: 多阶段构建 `Dockerfile`（Maven 构建 + JRE 运行）+ `docker-compose.yml`（MySQL 8.0 + 后端）
+  - `DB_HOST` 环境变量注入，支持容器内连接 MySQL 服务
+  - 健康检查 + 自动重启 + 持久化数据卷
+
+- **单元测试（33 用例）**: JUnit 5 + Mockito 纯单元测试，覆盖 4 个核心 Service
+  - `AdminServiceTest`（9 用例）: 登录/注册/密码修改/批量赋值防护
+  - `UserServiceTest`（6 用例）: 登录/注册/密码修改
+  - `CinemaServiceTest`（7 用例）: 登录/注册/默认值验证
+  - `FilmServiceTest`（11 用例）: 排行榜/搜索/类型关联维护
+
+- **README badges**: CI 状态、Swagger、Docker、Tests 徽章
+
+### Removed
+
+- **`WebController.java`**: 重构遗留死代码（旧路径 `/login`、`/register`），已被 `AuthController.java` 完全替代
+
+### Changed
+
+- **CI 流水线**: 后端构建阶段移除 `-DskipTests`，单元测试自动在 CI 中执行
+- **`application.yml`**: `DB_HOST` 环境变量注入（默认 `localhost`），支持 Docker/CI 多环境
+
 ## [1.0.0] - 2026-05-29
 
 ### Added

@@ -1,0 +1,31 @@
+# === Git ===
+.git/
+.gitignore
+
+# === Maven ===
+**/target/
+
+# === Node ===
+**/node_modules/
+**/dist/
+
+# === 本地文件 ===
+*.log
+*.bat
+*.md
+*.sql
+login.json
+
+# === IDE ===
+.idea/
+.vscode/
+*.iml
+
+# === OS ===
+.DS_Store
+Thumbs.db
+
+# === Docker ===
+Dockerfile
+docker-compose.yml
+.dockerignore

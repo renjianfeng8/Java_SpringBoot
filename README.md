@@ -1,5 +1,10 @@
 # 影院购票管理系统 🎬
 
+[![CI](https://github.com/renjianfeng8/Java_SpringBoot/actions/workflows/ci.yml/badge.svg)](https://github.com/renjianfeng8/Java_SpringBoot/actions/workflows/ci.yml)
+[![Swagger](https://img.shields.io/badge/API%20Docs-Swagger-brightgreen)](http://localhost:9090/swagger-ui.html)
+[![Docker](https://img.shields.io/badge/deployment-Docker-blue)](docker-compose.yml)
+[![Tests](https://img.shields.io/badge/tests-33%20unit%20%2B%2059%20E2E-brightgreen)](xm_film/springboot/src/test)
+
 基于 **Spring Boot 3.3 + Vue 3 + MySQL** 构建的在线电影购票管理平台，支持三端角色分离运营（管理员后台、影院端、用户端），提供完整的影片管理、影厅排片、在线选座购票、订单评价等功能闭环。
 
 **代码质量**: 全栈 E2E 自动化测试覆盖（59 用例，含负面测试，100% 通过率），BCrypt 密码加密 + JWT 认证 + RBAC 权限控制，GitHub Actions CI 流水线。
@@ -230,6 +235,24 @@ npm run dev
 
 > 管理员账号 `999` 和影院账号 `asks` 均通过 `data.sql` 初始化。
 
+### 5. API 文档（Swagger）
+
+启动后端后访问：
+
+```
+http://localhost:9090/swagger-ui/index.html
+```
+
+所有 API 接口自动生成文档，支持在线调试（需先获取 JWT Token 登录）。
+
+### 6. Docker 部署
+
+```bash
+docker-compose up -d
+```
+
+构建并启动 MySQL + 后端服务，访问 `http://localhost:9090/swagger-ui/index.html` 验证。
+
 ---
 
 ## 配置说明
@@ -440,9 +463,20 @@ server {
 
 ---
 
-## E2E 测试
+## 测试
 
-项目使用 Playwright 进行全栈自动化扫描测试（59 个用例，覆盖后端 API、前端页面渲染、CRUD 流程、分页、搜索、三端导航、负面场景等）。
+### 单元测试（33 用例）
+
+```bash
+cd xm_film/springboot
+mvn test
+```
+
+覆盖 4 个核心 Service（AdminService、UserService、CinemaService、FilmService），包括登录认证、密码加密、注册去重、密码修改、批量赋值防护、排行榜查询、类型关联维护等业务逻辑。
+
+### E2E 测试（59 用例）
+
+项目使用 Playwright 进行全栈自动化扫描测试，覆盖后端 API、前端页面渲染、CRUD 流程、分页、搜索、三端导航、负面场景等。
 
 ```bash
 cd xm_film/vue
