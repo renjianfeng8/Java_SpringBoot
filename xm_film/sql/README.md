@@ -39,7 +39,7 @@ SOURCE data.sql;
 - 字符集：`utf8mb4` + `utf8mb4_unicode_ci`
 - 引擎：`InnoDB`
 
-## 表清单（14张）
+## 表清单（15张）
 
 | # | 表名 | 说明 |
 |---|------|------|
@@ -49,11 +49,12 @@ SOURCE data.sql;
 | 4 | area | 区域/产地表 |
 | 5 | type | 电影类型表 |
 | 6 | film | 电影表 |
-| 7 | actor | 演员表 |
-| 8 | cinema_film | 影院-电影关联表 |
-| 9 | room | 放映厅表 |
-| 10 | record | 放映记录（排片）表 |
-| 11 | ordered | 订单表 |
-| 12 | mark | 评分表 |
-| 13 | notice | 通知公告表 |
-| 14 | video | 视频/预告片表 |
+| 7 | film_type | 电影-类型关联表（多对多） |
+| 8 | actor | 演员表 |
+| 9 | cinema_film | 影院-电影关联表 |
+| 10 | room | 放映厅表 |
+| 11 | record | 放映记录（排片）表 |
+| 12 | ordered | 订单表 |
+| 13 | mark | 评分表 |
+| 14 | notice | 通知公告表 |
+| 15 | video | 视频/预告片表 |
