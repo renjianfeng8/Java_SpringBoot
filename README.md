@@ -240,10 +240,12 @@ npm run dev
 启动后端后访问：
 
 ```
-http://localhost:9090/swagger-ui/index.html
+http://localhost:9090/swagger-ui.html
 ```
 
 所有 API 接口自动生成文档，支持在线调试（需先获取 JWT Token 登录）。
+
+> 注意：Swagger UI 从 CDN 加载，服务端无需额外依赖，首次加载需联网。
 
 ### 6. Docker 部署
 
