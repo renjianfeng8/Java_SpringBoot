@@ -130,6 +130,13 @@ jobs:
           timeout 60 bash -c 'until curl -s http://localhost:9090/api/v1/auth/years > /dev/null 2>&1; do sleep 1; done'
           echo "后端就绪"
 
+      - name: 启动前端
+        run: |
+          npx vite --host 0.0.0.0 --port 5173 &
+          echo "等待前端启动..."
+          timeout 30 bash -c 'until curl -s http://localhost:5173 > /dev/null 2>&1; do sleep 1; done'
+          echo "前端就绪"
+
       - name: 运行 E2E 测试
         run: node e2e-tests/e2e-scan.spec.mjs
 
