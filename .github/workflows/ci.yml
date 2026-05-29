@@ -121,10 +121,11 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: springboot-jar
+          path: ${{ github.workspace }}
 
       - name: 启动后端（CI 配置）
         run: |
-          java -jar springboot-0.0.1-SNAPSHOT.jar --spring.profiles.active=ci &
+          java -jar $GITHUB_WORKSPACE/springboot-0.0.1-SNAPSHOT.jar --spring.profiles.active=ci &
           echo "等待后端启动..."
           timeout 60 bash -c 'until curl -s http://localhost:9090/api/v1/auth/years > /dev/null 2>&1; do sleep 1; done'
           echo "后端就绪"
