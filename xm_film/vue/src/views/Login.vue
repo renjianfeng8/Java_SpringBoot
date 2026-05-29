@@ -59,7 +59,7 @@ const login = () => {
       const homePath = user.role === 'USER' ? '/front/home'
         : user.role === 'CINEMA' ? '/back/home'
         : '/manage/home'
-      setTimeout(() => router.push(homePath), 500)
+      window.location.href = homePath
     } catch (e) {
       ElMessageBox({
         message: e.message || '登录失败，请检查账号或密码是否正确',
