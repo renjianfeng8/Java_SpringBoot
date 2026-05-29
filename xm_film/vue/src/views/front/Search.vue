@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="search-results-container" style="padding: 20px; max-width: 1200px; margin: 0 auto;">
     <!-- 搜索信息栏 -->
     <div class="search-info" style="margin-bottom: 30px; padding-bottom: 15px; border-bottom: 1px solid #eee;">
@@ -68,7 +68,7 @@ const fetchSearchResults = async () => {
     const title = route.query.title || ''
     searchTitle.value = title
     if (!title.trim()) return
-    const response = await request.get('/film/selectByTitle', { params: { title } })
+    const response = await request.get('/api/v1/films/by-title', { params: { title } })
     filmList.value = response.code === '200' ? (response.data || []) : []
   } catch (error) {
     console.error('搜索请求出错:', error)

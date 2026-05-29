@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div style="width: 85%; margin: 20px auto;">
     <div>
       <div class="card" style="margin-bottom: 5px">
@@ -160,7 +160,7 @@ const data = reactive({
 });
 
 const loadUser = () => {
-  request.get('/user/selectAll').then(res => {
+  request.get('/api/v1/users').then(res => {
     if(res.code === '200') {
       data.UserData = res.data
     } else {
@@ -170,7 +170,7 @@ const loadUser = () => {
 }
 
 const loadFilm = () => {
-  request.get('/film/selectAll').then(res => {
+  request.get('/api/v1/films').then(res => {
     if(res.code === '200') {
       data.FilmData = res.data
     } else {
@@ -190,7 +190,7 @@ const getRoomName = (roomId?: number) => {
 }
 
 const loadCinema = () => {
-  request.get('/cinema/selectAll').then(res => {
+  request.get('/api/v1/cinemas').then(res => {
     if(res.code === '200') {
       data.CinemaData = res.data
     } else {
@@ -200,7 +200,7 @@ const loadCinema = () => {
 }
 
 const loadRoom = () => {
-  request.get('/room/selectAll').then(res => {
+  request.get('/api/v1/rooms').then(res => {
     if(res.code === '200') {
       data.RoomData = res.data
     } else {
@@ -210,7 +210,7 @@ const loadRoom = () => {
 }
 
 const load = () => {
-  request.get('/ordered/selectPage', {
+  request.get('/api/v1/orders/page', {
     params: {
       pageNum: data.pageNumber,
       pageSize: data.pageSize,
@@ -230,7 +230,7 @@ const load = () => {
 
 const del = (id: number) => {
   ElMessageBox.confirm('删除数据后无法恢复,您确认删除吗?', '删除确认', { type: 'warning' }).then(() => {
-    request.delete(`/ordered/delete/${id}`).then(res => {
+    request.delete(`/api/v1/orders/${id}`).then(res => {
       if (res.code === '200') {
         ElMessage.success('操作成功')
         load()

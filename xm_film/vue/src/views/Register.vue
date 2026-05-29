@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="register-container">
     <div class="register-box">
       <div class="register-form-wrapper">
@@ -83,7 +83,7 @@ const formRef = ref();
 const register = () => {
   formRef.value.validate((valid) => {
     if (valid) {
-      request.post('/register', data.form).then((res) => {
+      request.post('/api/v1/auth/register', data.form).then((res) => {
         if (res.code === '200') {
           ElMessage.success('注册成功');
           setTimeout(() => {

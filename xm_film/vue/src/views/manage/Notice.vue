@@ -1,47 +1,26 @@
 <template>
   <div>
     <div class="card mb-2">
-      <el-input
-          v-model="data.query.title"
-          placeholder="请输入公告标题"
-          class="mr-2 w-72"
-          :prefix-icon="Search"
-      />
-      <el-button type="primary" @click="load">查 询</el-button>
-      <el-button type="warning" @click="reset">重 置</el-button>
+      <el-input v-model="searchForm.title" placeholder="请输入公告标题" class="mr-2 w-72" :prefix-icon="Search" />
+      <el-button type="primary" @click="onSearch">查 询</el-button>
+      <el-button type="warning" @click="onReset">重 置</el-button>
     </div>
 
     <div class="card mb-2">
-      <el-button type="info" @click="handleAdd">新 增</el-button>
-      <el-button type="danger" @click="delBatch">批量删除</el-button>
+      <el-button type="info" @click="openAdd">新 增</el-button>
+      <el-button type="danger" @click="handleDelBatch">批量删除</el-button>
     </div>
 
     <div class="card mb-2">
-      <el-table
-          stripe
-          :data="data.tableData"
-          @selection-change="handleSelectionChange"
-      >
+      <el-table stripe :data="dataList" @selection-change="onSelectionChange">
         <el-table-column type="selection" width="55" />
         <el-table-column label="公告标题" prop="title" />
-        <el-table-column label="公告内容" prop="content" show-overflow-tooltip/>
+        <el-table-column label="公告内容" prop="content" show-overflow-tooltip />
         <el-table-column label="发布时间" prop="time" />
         <el-table-column label="操作">
           <template #default="scope">
-            <el-button
-                style="font-size: 18px"
-                link
-                :icon="Edit"
-                @click="handleUpdate(scope.row)"
-                type="primary"
-            />
-            <el-button
-                style="font-size: 18px"
-                link
-                :icon="Delete"
-                @click="() => del(scope.row.id)"
-                type="danger"
-            />
+            <el-button style="font-size: 18px" link :icon="Edit" @click="openEdit(scope.row)" type="primary" />
+            <el-button style="font-size: 18px" link :icon="Delete" @click="handleDel(scope.row.id)" type="danger" />
           </template>
         </el-table-column>
       </el-table>
@@ -49,266 +28,77 @@
 
     <div class="card mb-2">
       <el-pagination
-          @size-change="load"
-          @current-change="load"
-          v-model:current-page="data.pageNumber"
-          v-model:page-size="data.pageSize"
+          @size-change="onSizeChange"
+          @current-change="onPageChange"
+          v-model:current-page="pageNum"
+          v-model:page-size="pageSize"
           :page-sizes="[5, 10, 15, 20]"
           background
           layout="total, sizes, prev, pager, next, jumper"
-          :total="data.total"
+          :total="total"
       />
     </div>
 
-    <el-dialog
-        v-model="data.formVisible"
-        title="电影公告信息"
-        width="500"
-        destroy-on-close
-    >
-      <el-form
-          ref="formRef"
-          :rules="data.rules"
-          :model="data.form"
-          class="pt-5 pr-12"
-          label-width="80px"
-      >
+    <el-dialog v-model="dialogVisible" title="电影公告信息" width="500" destroy-on-close>
+      <el-form ref="formRef" :rules="rules" :model="form" class="pt-5 pr-12" label-width="80px">
         <el-form-item label="公告标题" prop="title">
-          <el-input
-              v-model="data.form.title"
-              autocomplete="off"
-              placeholder="请输入公告标题"
-          />
+          <el-input v-model="form.title" autocomplete="off" placeholder="请输入公告标题" />
         </el-form-item>
         <el-form-item label="公告内容" prop="content">
-          <el-input
-              v-model="data.form.content"
-              type="textarea"
-              :rows="4"
-              autocomplete="off"
-              placeholder="请输入公告内容"
-          />
+          <el-input v-model="form.content" type="textarea" :rows="4" autocomplete="off" placeholder="请输入公告内容" />
         </el-form-item>
         <el-form-item label="发布时间" prop="time">
-          <el-date-picker
-              v-model="data.form.time"
-              type="datetime"
-              placeholder="选择发布时间"
-              value-format="YYYY-MM-DD HH:mm:ss"
-          />
+          <el-date-picker v-model="form.time" type="datetime" placeholder="选择发布时间" value-format="YYYY-MM-DD HH:mm:ss" />
         </el-form-item>
       </el-form>
       <template #footer>
         <div class="dialog-footer">
-          <el-button @click="data.formVisible = false">取 消</el-button>
-          <el-button type="primary" @click="save">保 存</el-button>
+          <el-button @click="close">取 消</el-button>
+          <el-button type="primary" @click="submit">保 存</el-button>
         </div>
       </template>
     </el-dialog>
   </div>
 </template>
 
-<script setup lang="ts">
-import { reactive, ref } from "vue";
-import { Delete, Edit, Search } from "@element-plus/icons-vue";
-import request from "@/utils/request.js";
-import { ElMessage, ElMessageBox, FormRules } from "element-plus";
+<script setup>
+import { Delete, Edit, Search } from '@element-plus/icons-vue'
+import { ElMessageBox } from 'element-plus'
+import { useCrud } from '@/composables/useCrud'
+import { useFormDialog } from '@/composables/useFormDialog'
+import { API_PATHS } from '@/constants'
 
-// 电影公告表单数据类型
-interface CategoryForm {
-  id?: number;
-  title?: string;
-  content?: string;
-  time?: string;
-}
-
-// 表单验证规则
-const rules: FormRules = {
-  title: [
-    { required: true, message: '请输入公告标题', trigger: 'blur' }
-  ],
-  content: [
-    { required: true, message: '请输入公告内容', trigger: 'blur' }
-  ],
-  time: [
-    { required: true, message: '请选择发布时间', trigger: 'change' }
-  ]
-};
-
-// 响应式数据 - 将查询条件和表单数据分离
-const data = reactive({
-  tableData: [] as CategoryForm[],
-  pageNumber: 1,
-  pageSize: 10,
-  total: 0,
-  formVisible: false,
-  query: { // 查询条件
-    title: undefined
-  },
-  form: {} as CategoryForm, // 表单数据
-  ids: [] as number[],
-  rules: rules
-});
-
-// 表单引用
-const formRef = ref();
-
-// 加载电影公告列表
-const load = () => {
-  request.get('/notice/selectPage', {
-    params: {
-      pageNum: data.pageNumber,
-      pageSize: data.pageSize,
-      title: data.query.title
-    }
-  }).then(res => {
-    if (res && res.data) {
-      data.tableData = res.data.list || [];
-      data.total = res.data.total || 0;
-    }
-  }).catch(error => {
-    console.error('加载公告数据失败:', error);
-    ElMessage.error('加载数据失败，请重试');
-  });
-}
-
-// 重置查询条件
-const reset = () => {
-  data.query.title = undefined;
-  load();
-}
-
-// 初始加载数据
-load();
-
-// 处理新增电影公告
-const handleAdd = () => {
-  data.formVisible = true;
-  // 初始化空表单数据，默认发布时间为当前时间
-  data.form = {
-    time: new Date().toISOString().slice(0, 19).replace('T', ' ')
-  } as CategoryForm;
-}
-
-// 处理保存电影公告
-const save = () => {
-  formRef.value?.validate((valid: boolean) => {
-    if (valid) {
-      data.form.id ? update() : add();
-    } else {
-      ElMessage.warning('请完成必填字段');
-      return false;
-    }
-  });
-}
-
-// 新增电影公告
-const add = () => {
-  request.post('/notice/add', data.form).then(res => {
-    if (res.code === '200') {
-      ElMessage.success('公告添加成功');
-      data.formVisible = false;
-      load(); // 保持当前查询条件不变
-    } else {
-      ElMessage.error(res.msg || '添加失败，请重试');
-    }
-  }).catch(() => {
-    ElMessage.error('添加失败，请检查网络连接');
-  });
-}
-
-// 更新电影公告
-const update = () => {
-  request.put('/notice/update', data.form).then(res => {
-    if (res.code === '200') {
-      ElMessage.success('公告更新成功');
-      data.formVisible = false;
-      load(); // 保持当前查询条件不变
-    } else {
-      ElMessage.error(res.msg || '更新失败，请重试');
-    }
-  }).catch(() => {
-    ElMessage.error('更新失败，请检查网络连接');
-  });
-}
-
-// 处理编辑电影公告
-const handleUpdate = (row: CategoryForm) => {
-  data.form = JSON.parse(JSON.stringify(row)) as CategoryForm;
-  data.formVisible = true;
-}
-
-// 删除单个电影公告
-const del = (id: number) => {
-  ElMessageBox.confirm('删除数据后无法恢复，您确认删除吗?', '删除确认', { type: 'warning' })
-      .then(() => {
-        request.delete(`/notice/delete/${id}`).then(res => {
-          if (res.code === '200') {
-            ElMessage.success('删除成功');
-            load();
-          } else {
-            ElMessage.error(res.msg || '删除失败，请重试');
-          }
-        }).catch(() => {
-          ElMessage.error('删除失败，请检查网络连接');
-        });
-      })
-      .catch();
-}
-
-// 处理选中行变更
-const handleSelectionChange = (rows: CategoryForm[]) => {
-  data.ids = rows.map(row => row.id).filter((id): id is number => id !== undefined);
-}
-
-// 批量删除电影公告
-const delBatch = () => {
-  if (data.ids.length === 0) {
-    ElMessage.warning('请先选择要删除的公告');
-    return;
+const crud = useCrud(API_PATHS.NOTICES)
+const { dataList, total, pageNum, pageSize, searchForm, selectedIds,
+        del, delBatch, onSearch, onReset, onPageChange, onSizeChange, onSelectionChange } = crud
+const { dialogVisible, formRef, form, rules, openAdd, openEdit, submit, close } = useFormDialog(crud, {
+  defaultForm: { title: '', content: '', time: new Date().toISOString().slice(0, 19).replace('T', ' ') },
+  rules: {
+    title: [{ required: true, message: '请输入公告标题', trigger: 'blur' }],
+    content: [{ required: true, message: '请输入公告内容', trigger: 'blur' }],
+    time: [{ required: true, message: '请选择发布时间', trigger: 'change' }]
   }
-  ElMessageBox.confirm(`确定删除选中的 ${data.ids.length} 条数据吗？删除后无法恢复`, '删除确认', { type: 'warning' })
-      .then(() => {
-        request.delete('/notice/deleteBatch', { data: data.ids }).then(res => {
-          if (res.code === '200') {
-            ElMessage.success('批量删除成功');
-            load();
-          } else {
-            ElMessage.error(res.msg || '删除失败，请重试');
-          }
-        }).catch(() => {
-          ElMessage.error('删除失败，请检查网络连接');
-        });
-      })
-      .catch();
+})
+
+crud.load()
+
+function handleDel(id) {
+  ElMessageBox.confirm('删除数据后无法恢复，您确认删除吗?', '删除确认', { type: 'warning' })
+    .then(() => del(id)).catch()
+}
+
+function handleDelBatch() {
+  if (!selectedIds.length) return
+  ElMessageBox.confirm(`确定删除选中的 ${selectedIds.length} 条数据吗？`, '删除确认', { type: 'warning' })
+    .then(() => delBatch(selectedIds)).catch()
 }
 </script>
 
 <style scoped>
-.card {
-  box-shadow: 0 1px 4px rgba(0, 21, 41, 0.08);
-  border-radius: 4px;
-  padding: 10px;
-  background-color: #fff;
-}
-
-.mb-2 {
-  margin-bottom: 8px;
-}
-
-.mr-2 {
-  margin-right: 8px;
-}
-
-.w-72 {
-  width: 18rem;
-}
-
-.pt-5 {
-  padding-top: 1.25rem;
-}
-
-.pr-12 {
-  padding-right: 3rem;
-}
+.card { box-shadow: 0 1px 4px rgba(0,21,41,.08); border-radius: 4px; padding: 10px; background-color: #fff; }
+.mb-2 { margin-bottom: 8px; }
+.mr-2 { margin-right: 8px; }
+.w-72 { width: 18rem; }
+.pt-5 { padding-top: 1.25rem; }
+.pr-12 { padding-right: 3rem; }
 </style>

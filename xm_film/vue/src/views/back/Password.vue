@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div style="display: flex; justify-content: center; min-height: 50vh; padding: 20px;">
     <div class="card" style="width: 50%; max-width: 500px; padding: 40px 20px">
 
@@ -61,7 +61,7 @@ const updatePassword = () => {
   data.form.role = data.user.role
   formRef.value.validate((valid) =>{
     if (valid) {
-      request.put('/updatePassword',data.form).then(res => {
+      request.put('/api/v1/auth/password',data.form).then(res => {
         if (res.code === '200') {
           ElMessage.success('修改成功')
           localStorage.removeItem('xm-pro-user')

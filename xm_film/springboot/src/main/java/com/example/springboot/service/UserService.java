@@ -1,128 +1,94 @@
 package com.example.springboot.service;
 
-import com.example.springboot.common.FileUtil;
+import com.example.springboot.common.BaseMapper;
+import com.example.springboot.common.BaseService;
 import com.example.springboot.entity.Account;
 import com.example.springboot.entity.User;
 import com.example.springboot.exception.CustomException;
 import com.example.springboot.mapper.UserMapper;
-import com.github.pagehelper.PageHelper;
-import com.github.pagehelper.PageInfo;
 import jakarta.annotation.Resource;
 import org.springframework.beans.BeanUtils;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.multipart.MultipartFile;
-
-import java.io.IOException;
-import java.util.List;
 
 @Service
-@Transactional(rollbackFor = Exception.class)
-public class UserService {
+@Transactional(readOnly = true)
+public class UserService extends BaseService<User> {
 
     @Resource
     private UserMapper userMapper;
 
     private final PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
-    public List<User> selectAll(User user) {
-        return userMapper.selectAll(user);
+    @Override
+    protected BaseMapper<User> mapper() {
+        return userMapper;
     }
 
-    public User selectById(Integer id) {
-        return userMapper.selectById(id);
-
-    }
-
-    public List<User> selectList(User user) {
-        return userMapper.selectAll(user);
-    }
-
-    public PageInfo<User> selectPage( User user, Integer pageNum, Integer pageSize) {
-        PageHelper.startPage(pageNum, pageSize);
-        List<User> list = userMapper.selectAll(user);
-        return PageInfo.of(list);
-    }
-
+    @Override
+    @Transactional(rollbackFor = Exception.class)
     public void add(User user) {
-        String username = user.getUsername(); //账号
+        String username = user.getUsername();
         User dbUser = userMapper.selectByUsername(username);
-        if (dbUser != null) { //账号已存在
-            throw new CustomException("500","账号已存在,请更换别的账号");
+        if (dbUser != null) {
+            throw new CustomException("500", "账号已存在,请更换别的账号");
         }
-        if (user.getPassword() == null) { //密码没填
-            user.setPassword("user123"); //默认密码user123
+        if (user.getPassword() == null) {
+            user.setPassword("user123");
         }
-        if (user.getName() == null) { //名字
-            user.setName(user.getUsername());  //默认名称
+        if (user.getName() == null) {
+            user.setName(user.getUsername());
         }
-        //设置角色
-        user.setRole("USER"); //用户角色
-        user.setPassword(passwordEncoder.encode(user.getPassword())); // BCrypt加密密码
-        userMapper.insert(user);
+        user.setRole("USER");
+        user.setPassword(passwordEncoder.encode(user.getPassword()));
+        mapper().insert(user);
     }
 
+    @Override
+    @Transactional(rollbackFor = Exception.class)
     public void update(User user) {
-        if (user == null) {
-            throw new IllegalArgumentException("更新用户时，user对象不能为空");
-        }
         user.setPassword(null);
         user.setRole(null);
-        userMapper.updateById(user);
-    }
-
-    public void delete(Integer id) {
-        userMapper.deleteById(id);
-    }
-
-    public void deleteBatch(List<Integer> ids) {
-        for (Integer id : ids) {
-            this.delete(id);
-        }
+        mapper().updateById(user);
     }
 
     public User login(Account account) {
-        String username = account.getUsername(); //账号
+        String username = account.getUsername();
         User dbUser = userMapper.selectByUsername(username);
-        if (dbUser == null) { //没查询到账户
-            throw new CustomException("500","账号不存在");
+        if (dbUser == null) {
+            throw new CustomException("500", "账号不存在");
         }
-        //数据库存在这个账号
         String password = account.getPassword();
         if (!passwordEncoder.matches(password, dbUser.getPassword())) {
-            // 兼容 data.sql 明文初始密码
             if (!dbUser.getPassword().equals(password)) {
-                throw new CustomException("500","账号或密码错误");
+                throw new CustomException("500", "账号或密码错误");
             }
         }
         return dbUser;
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public void updatePassword(Account account) {
         Integer id = account.getId();
-        User user = this.selectById(id);
+        User user = selectById(id);
         if (user == null) {
             throw new CustomException("500", "账号不存在");
         }
         if (!passwordEncoder.matches(account.getPassword(), user.getPassword())) {
-            // 兼容 data.sql 明文初始密码
             if (!user.getPassword().equals(account.getPassword())) {
-                throw new CustomException("500","原密码错误");
+                throw new CustomException("500", "原密码错误");
             }
         }
-        user.setPassword(passwordEncoder.encode(account.getNewPassword()));  //设置加密后的新密码
-        this.update(user);
+        user.setPassword(passwordEncoder.encode(account.getNewPassword()));
+        update(user);
     }
 
-    public String uploadFile(MultipartFile file, String uploadDir) throws IOException {
-        return FileUtil.uploadFile(file, uploadDir);
-    }
-
+    @Transactional(rollbackFor = Exception.class)
     public void register(Account account) {
         User user = new User();
-        BeanUtils.copyProperties(account,user);
+        BeanUtils.copyProperties(account, user);
         add(user);
     }
 }

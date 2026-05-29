@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="home-container">
     <!-- ECharts 数据可视化分析区域 -->
     <div class="card mb-2">

@@ -28,9 +28,13 @@
 </template>
 
 <script setup>
-import { reactive, ref } from "vue";
-import request from "@/utils/request.js";
-import { ElMessage, ElMessageBox } from "element-plus";
+import { reactive, ref } from "vue"
+import { useRouter } from 'vue-router'
+import { useAuth } from "@/composables/useAuth"
+import { ElMessage, ElMessageBox } from "element-plus"
+
+const router = useRouter()
+const { login: authLogin } = useAuth()
 
 const data = reactive({
   form: {
@@ -39,45 +43,30 @@ const data = reactive({
     role: "ADMIN"
   },
   rules: {
-    username: [
-      { required: true, message: '请输入账号', trigger: 'blur' }
-    ],
-    password: [
-      { required: true, message: '请输入密码', trigger: 'blur' }
-    ],
-    role: [
-      { required: true, message: '请选择角色', trigger: 'blur' }
-    ]
+    username: [{ required: true, message: '请输入账号', trigger: 'blur' }],
+    password: [{ required: true, message: '请输入密码', trigger: 'blur' }],
+    role: [{ required: true, message: '请选择角色', trigger: 'blur' }]
   }
 })
 
 const formRef = ref()
 
 const login = () => {
-  formRef.value.validate((valid) => {
-    if (valid) {
-      request.post('/login', data.form).then(res => {
-        if (res.code === '200') {
-          ElMessage.success('登录成功')
-          setTimeout(() => {
-            localStorage.setItem('xm-pro-user', JSON.stringify(res.data))
-            if (res.data.role === 'USER') {
-              location.href = '/front/home'
-            } else if (res.data.role === 'CINEMA') {
-              location.href = '/back/home'
-            } else {
-              location.href = '/manage/home'
-            }
-          }, 1000);
-        } else {
-          ElMessageBox({
-            message: res.msg || '登录失败，请检查账号或密码是否正确',
-            title: '登录失败',
-            type: 'error',
-            showCancelButton: false,
-            confirmButtonText: '确定'
-          });
-        }
+  formRef.value.validate(async (valid) => {
+    if (!valid) return
+    try {
+      const user = await authLogin(data.form)
+      const homePath = user.role === 'USER' ? '/front/home'
+        : user.role === 'CINEMA' ? '/back/home'
+        : '/manage/home'
+      setTimeout(() => router.push(homePath), 500)
+    } catch (e) {
+      ElMessageBox({
+        message: e.message || '登录失败，请检查账号或密码是否正确',
+        title: '登录失败',
+        type: 'error',
+        showCancelButton: false,
+        confirmButtonText: '确定'
       })
     }
   })

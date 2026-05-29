@@ -1,6 +1,7 @@
 package com.example.springboot.service;
 
-import com.example.springboot.common.FileUtil;
+import com.example.springboot.common.BaseMapper;
+import com.example.springboot.common.BaseService;
 import com.example.springboot.entity.Film;
 import com.example.springboot.entity.Type;
 import com.example.springboot.mapper.FilmMapper;
@@ -9,30 +10,36 @@ import com.github.pagehelper.PageInfo;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import com.alibaba.fastjson.JSON;
-import org.springframework.util.ObjectUtils;
-import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
-@Transactional(rollbackFor = Exception.class)
-public class FilmService {
+@Transactional(readOnly = true)
+public class FilmService extends BaseService<Film> {
 
     @Resource
     private FilmMapper filmMapper;
 
-    @Resource
-    private  TypeService typeService;
-
-    public List<Film> selectAll(Film film) {
-        return filmMapper.selectAll(film);
+    @Override
+    protected BaseMapper<Film> mapper() {
+        return filmMapper;
     }
 
+    @Override
+    public List<Film> selectAll(Film film) {
+        List<Film> list = mapper().selectAll(film);
+        fillFilmTypes(list);
+        return list;
+    }
+
+    @Override
     public Film selectById(Integer id) {
-        return filmMapper.selectById(id);
+        Film film = mapper().selectById(id);
+        if (film != null) {
+            fillFilmTypes(List.of(film));
+        }
+        return film;
     }
 
     public List<Film> selectByCinema(Integer cinemaId, Integer filmId) {
@@ -43,10 +50,6 @@ public class FilmService {
         return filmMapper.selectByTitle(title);
     }
 
-    public List<Film> selectList(Film film) {
-        return filmMapper.selectAll(film);
-    }
-
     public PageInfo<Film> selectPage(Film film, Integer pageNum, Integer pageSize) {
         PageHelper.startPage(pageNum, pageSize);
         List<Film> list = filmMapper.selectAll(film);
@@ -54,33 +57,26 @@ public class FilmService {
         return new PageInfo<>(list);
     }
 
+    @Override
+    @Transactional(rollbackFor = Exception.class)
     public void add(Film film) {
-        String jsonStr = JSON.toJSONString(film.getIds());
-        film.setTypeIds(jsonStr);
-        filmMapper.insert(film);
-    }
-
-    public void update(Film film) {
-        String jsonStr = JSON.toJSONString(film.getIds());
-        film.setTypeIds(jsonStr);
-        filmMapper.updateById(film);
-    }
-
-    public void delete(Integer id) {
-        filmMapper.deleteById(id);
-    }
-
-    public void deleteBatch(List<Integer> ids) {
-        for (Integer id : ids) {
-            this.delete(id);
+        mapper().insert(film);
+        if (film.getTypeIds() != null && !film.getTypeIds().isEmpty()) {
+            filmMapper.insertFilmTypes(film.getId(), film.getTypeIds());
         }
     }
 
-
-    public String uploadFile(MultipartFile file, String uploadDir) throws IOException {
-        return FileUtil.uploadFile(file, uploadDir);
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void update(Film film) {
+        mapper().updateById(film);
+        if (film.getTypeIds() != null) {
+            filmMapper.deleteFilmTypesByFilmId(film.getId());
+            if (!film.getTypeIds().isEmpty()) {
+                filmMapper.insertFilmTypes(film.getId(), film.getTypeIds());
+            }
+        }
     }
-
 
     public List<Film> getBoxOfficeTop(Film film) {
         int topNum = film.getTopNum() != null ? film.getTopNum() : 10;
@@ -96,36 +92,27 @@ public class FilmService {
         return result;
     }
 
-    /**
-     * 批量填充电影类型名称（替代N+1循环查询）
-     */
     private void fillFilmTypes(List<Film> filmList) {
         if (filmList == null || filmList.isEmpty()) {
             return;
         }
-        Set<Integer> allTypeIds = new HashSet<>();
-        for (Film film : filmList) {
-            List<Integer> ids = JSON.parseArray(film.getTypeIds(), Integer.class);
-            film.setIds(ids);
-            if (ids != null) {
-                allTypeIds.addAll(ids);
-            }
-        }
-        if (allTypeIds.isEmpty()) {
+        List<Integer> filmIds = filmList.stream().map(Film::getId).collect(Collectors.toList());
+        List<Map<String, Object>> rows = filmMapper.selectFilmTypeJoin(filmIds);
+        if (rows == null || rows.isEmpty()) {
             return;
         }
-        List<Type> typeList = typeService.selectByIds(new ArrayList<>(allTypeIds));
-        Map<Integer, String> typeMap = typeList.stream()
-                .collect(Collectors.toMap(Type::getId, Type::getTitle));
+        Map<Integer, List<Integer>> filmTypeIdMap = new LinkedHashMap<>();
+        Map<Integer, List<Type>> filmTypeMap = new LinkedHashMap<>();
+        for (Map<String, Object> row : rows) {
+            Integer filmId = ((Number) row.get("film_id")).intValue();
+            Integer typeId = ((Number) row.get("type_id")).intValue();
+            String typeTitle = (String) row.get("type_title");
+            filmTypeIdMap.computeIfAbsent(filmId, k -> new ArrayList<>()).add(typeId);
+            filmTypeMap.computeIfAbsent(filmId, k -> new ArrayList<>()).add(new Type(typeId, typeTitle));
+        }
         for (Film film : filmList) {
-            List<String> tmpList = new ArrayList<>();
-            for (Integer typeId : film.getIds()) {
-                String title = typeMap.get(typeId);
-                if (title != null) {
-                    tmpList.add(title);
-                }
-            }
-            film.setTypes(tmpList);
+            film.setTypeIds(filmTypeIdMap.get(film.getId()));
+            film.setTypeList(filmTypeMap.get(film.getId()));
         }
     }
 }

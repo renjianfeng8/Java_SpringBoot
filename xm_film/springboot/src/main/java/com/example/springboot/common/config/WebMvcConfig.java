@@ -27,12 +27,21 @@ public class WebMvcConfig implements WebMvcConfigurer {
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
         registry.addInterceptor(authInterceptor)
-                .addPathPatterns("/**")
+                .addPathPatterns("/api/v1/**")
                 .excludePathPatterns(
-                        "/login",
-                        "/register",
-                        "/files/**",
-                        "/getYear"
+                        "/api/v1/auth/login",
+                        "/api/v1/auth/register",
+                        "/api/v1/auth/years",
+                        "/api/v1/files/**",
+                        "/api/v1/types",
+                        "/api/v1/areas",
+                        "/api/v1/films/page",
+                        "/api/v1/films/box-office/**",
+                        "/api/v1/films/mark/**",
+                        "/api/v1/films/by-title",
+                        "/api/v1/films/by-cinema",
+                        "/api/v1/cinemas/page",
+                        "/api/v1/notices/page"
                 );
     }
 }

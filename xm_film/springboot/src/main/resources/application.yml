@@ -3,25 +3,17 @@ server:
 
 spring:
   datasource:
-    username: root  # 数据库连接用户名
-    password: 123456  # 数据库连接密码（生产环境建议通过环境变量注入）
-    driver-class-name: com.mysql.cj.jdbc.Driver  # MySQL 8.0驱动类
-    url: jdbc:mysql://localhost:3306/xm-film?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:123456}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/xm-film?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
 
-    # 数据库连接URL详细说明：
-    # - xm-film ：目标数据库名称（需提前在MySQL中创建，执行 xm_film/sql/init.sql 初始化）
-    # - useSSL=false ：禁用SSL加密连接（生产环境建议启用并配置证书）
-    # - serverTimezone=UTC ：设置服务器时区，避免Java与MySQL时间转换异常（可选值：Asia/Shanghai 为中国时区）
-    # - allowPublicKeyRetrieval=true ：允许从服务器获取公钥，解决SSL握手时的公钥获取问题
-
-  # 数据库初始化配置（开发环境使用）
-  # 首次部署时执行 xm_film/sql/init.sql 后，可关闭此配置
   sql:
     init:
-      mode: never  # 可选: always(每次启动执行) | never(关闭) | embedded(仅内嵌数据库)
+      mode: never
       schema-locations: classpath:db/schema.sql
       data-locations: classpath:db/data.sql
-      continue-on-error: true  # 表已存在时继续执行，避免启动报错
+      continue-on-error: true
 
   servlet:
     multipart:
@@ -30,21 +22,26 @@ spring:
 
 mybatis:
   configuration:
-    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl  # 配置MyBatis日志输出到控制台（开发环境使用，生产环境建议改为SLF4J）
-    map-underscore-to-camel-case: true  # 启用驼峰命名法映射，如数据库字段user_name自动映射到Java属性userName
+    log-impl: ${MYBATIS_LOG_IMPL:org.apache.ibatis.logging.slf4j.Slf4jImpl}
+    map-underscore-to-camel-case: true
   mapper-locations: classpath:mapper/*.xml
+
+logging:
+  level:
+    com.example.springboot.mapper: ${MYBATIS_LOG_LEVEL:DEBUG}
+
+
+
 
 fileBaseUrl: http://localhost:${server.port}
 
-# JWT配置
 jwt:
-  secret: xm-film-secret-key-2024-springboot-vue3-jwt-auth
-  expire: 86400000  # token过期时间（毫秒），默认24小时
+  secret: ${JWT_SECRET:xm-film-secret-key-2024-springboot-vue3-jwt-auth}
+  expire: ${JWT_EXPIRE:86400000}
 
-# 文件上传配置
 file:
-  upload-dir: D:/project/picture  # 实际存储目录
-  access-prefix: ${fileBaseUrl}/files/  # 访问前缀改为/files/，与前端保持一致
+  upload-dir: ${FILE_UPLOAD_DIR:D:/project/picture}
+  access-prefix: ${fileBaseUrl}/files/
 
 
 

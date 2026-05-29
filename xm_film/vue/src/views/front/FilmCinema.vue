@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div style="width: 100%; margin: 0 auto;">
     <!-- 1. 加载状态提示 -->
     <div v-if="loading" style="padding: 50px; text-align: center; color: #666;">
@@ -291,7 +291,7 @@ const loadCinemaList = () => {
 
   loading.value = true;
   // 发起请求：携带 pageNum、pageSize、filmId 三个参数（与后端Controller参数对齐）
-  request.get('/cinema/selectPage', {
+  request.get('/api/v1/cinemas/page', {
     params: {
       pageNum: cinemaData.pageNum,   // 分页页码
       pageSize: cinemaData.pageSize, // 每页条数

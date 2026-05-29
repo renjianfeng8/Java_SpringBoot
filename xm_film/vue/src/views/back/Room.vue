@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div>
     <div class="card" style="margin-bottom: 5px">
       <el-input v-model="data.name" placeholder="请输入影厅名称" style="width: 300px; margin-right:10px" :prefix-icon="Search"/>
@@ -102,7 +102,7 @@ const data = reactive({
 
 // 加载电影分类列表
 const load = () => {
-  request.get('/room/selectPage', {
+  request.get('/api/v1/rooms/page', {
     params: {
       pageNum: data.pageNumber,
       pageSize: data.pageSize,
@@ -121,7 +121,7 @@ const load = () => {
 
 
 const add = () => {
-  request.post('/room/add', data.form).then(res => {
+  request.post('/api/v1/rooms', data.form).then(res => {
     if (res.code === '200') {
       ElMessage.success('添加成功');
       data.formVisible = false;
@@ -135,7 +135,7 @@ const add = () => {
 }
 
 const update = () => {
-  request.put('/room/update', data.form).then(res => {
+  request.put('/api/v1/rooms', data.form).then(res => {
     if (res.code === '200') {
       ElMessage.success('更新成功');
       data.formVisible = false;
@@ -182,7 +182,7 @@ const save = () => {
 const del = (id: number) => {
   ElMessageBox.confirm('删除数据后无法恢复，您确认删除吗?', '删除确认', { type: 'warning' })
       .then(() => {
-        request.delete(`/room/delete/${id}`).then(res => {
+        request.delete(`/api/v1/rooms/${id}`).then(res => {
           if (res.code === '200') {
             ElMessage.success('删除成功');
             load();
@@ -209,7 +209,7 @@ const delBatch = () => {
   }
   ElMessageBox.confirm(`确定删除选中的 ${data.ids.length} 条数据吗？删除后无法恢复`, '删除确认', { type: 'warning' })
       .then(() => {
-        request.delete('/room/deleteBatch', { data: data.ids }).then(res => {
+        request.delete('/api/v1/rooms/batch', { data: data.ids }).then(res => {
           if (res.code === '200') {
             ElMessage.success('批量删除成功');
             load();

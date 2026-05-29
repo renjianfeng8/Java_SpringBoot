@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div style="width: 55%; margin:20px auto ">
 
     <div style="border: 1px solid #ccc; padding: 20px 30px; border-radius: 5px">
@@ -121,7 +121,7 @@ const goToFilmDetail = (filmId) => {
 }
 
 const load = () => {
-  request.get('/film/selectPage',{
+  request.get('/api/v1/films/page',{
     params: {
       pageNum: data.pageNum,
       pageSize: data.pageSize,
@@ -140,7 +140,7 @@ const load = () => {
 }
 
 const loadType = () => {
-  request.get('/type/selectAll').then(res => {
+  request.get('/api/v1/types').then(res => {
     if (res.code === '200') {
       data.typeData = res.data
     } else {
@@ -150,7 +150,7 @@ const loadType = () => {
 }
 
 const loadArea = () => {
-  request.get('/area/selectAll').then(res => {
+  request.get('/api/v1/areas').then(res => {
     if (res.code === '200') {
       data.areaData = res.data
     } else {
@@ -160,7 +160,7 @@ const loadArea = () => {
 }
 
 const loadYear = () => {
-  request.get('/getYear').then(res => {
+  request.get('/api/v1/auth/years').then(res => {
     if (res.code === '200') {
       data.yearData = res.data
     } else {
@@ -226,3 +226,5 @@ load()
   border: none;
 }
 </style>
+
+

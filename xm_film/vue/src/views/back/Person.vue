@@ -1,4 +1,4 @@
-<template>
+﻿<template>
 
   <div style="display: flex; justify-content: center; min-height: 50vh; padding: 20px;">
     <div class="card" style="width: 50%; max-width: 500px; padding: 40px 20px">
@@ -62,7 +62,7 @@ const data = reactive ({
 const emit = defineEmits(['updateUser'])
 
 if (data.user.role === 'USER') {
-  request.get('/user/selectById/' + data.user.id).then(res => {
+  request.get('/api/v1/users/' + data.user.id).then(res => {
     data.form = res.data
   })
 } else {
@@ -71,7 +71,7 @@ if (data.user.role === 'USER') {
 
 const updateUser = () => {
   if (data.user.role === 'USER') {
-    request.put('/user/update',data.form).then(res =>{
+    request.put('/api/v1/users',data.form).then(res =>{
       if (res.code === '200') {
         ElMessage.success('更新成功')
         //更新缓存数据
@@ -83,7 +83,7 @@ const updateUser = () => {
       }
     })
   } else if (data.user.role === 'CINEMA') {
-    request.put('/cinema/update',data.form).then(res =>{
+    request.put('/api/v1/cinemas',data.form).then(res =>{
       if (res.code === '200') {
         ElMessage.success('更新成功')
         //更新缓存数据
@@ -95,7 +95,7 @@ const updateUser = () => {
       }
     })
   } else {
-    request.put('/admin/update',data.form).then(res =>{
+    request.put('/api/v1/admins',data.form).then(res =>{
       if (res.code === '200') {
         ElMessage.success('更新成功')
         //更新缓存数据

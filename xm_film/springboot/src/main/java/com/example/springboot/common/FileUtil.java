@@ -7,13 +7,24 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Set;
 import java.util.UUID;
 
 public class FileUtil {
 
+    private static final Set<String> ALLOWED_MIME_TYPES = Set.of(
+            "image/jpeg", "image/png", "image/webp", "image/gif",
+            "video/mp4", "video/webm"
+    );
+
     public static String uploadFile(MultipartFile file, String uploadDir) throws IOException {
         if (file == null || file.isEmpty()) {
             throw new IllegalArgumentException("上传的文件不能为空");
+        }
+
+        String contentType = file.getContentType();
+        if (contentType == null || !ALLOWED_MIME_TYPES.contains(contentType)) {
+            throw new IllegalArgumentException("不支持的文件类型: " + contentType);
         }
 
         File dir = new File(uploadDir);

@@ -86,19 +86,19 @@ let adminToken = ''; // 存储登录 token
   console.log('📡 1. 后端 API 健康检查');
 
   // 先登录获取 token
-  let loginRes = await apiPost('/login', { username: '999', password: '999', role: 'ADMIN' });
+  let loginRes = await apiPost('/api/v1/auth/login', { username: '999', password: '999', role: 'ADMIN' });
   adminToken = loginRes?.data?.token || '';
-  log('POST /login (管理员)', loginRes.code === '200' && !!adminToken, `token: ${!!adminToken}`);
+  log('POST /api/v1/auth/login (管理员)', loginRes.code === '200' && !!adminToken, `token: ${!!adminToken}`);
 
   // 如果第一次登录失败，可能是密码被 BCrypt 加密了，用注册接口创建一个新管理员
   if (!adminToken) {
-    loginRes = await apiPost('/login', { username: '999', password: '999', role: 'ADMIN' });
+    loginRes = await apiPost('/api/v1/auth/login', { username: '999', password: '999', role: 'ADMIN' });
     adminToken = loginRes?.data?.token || '';
   }
 
   const apiTests = [
-    { name: 'POST /register', fn: () => apiPost('/register', { username: `test_${Date.now()}`, password: '123456', role: 'USER' }), check: r => r.code === '200' },
-    { name: 'GET /getYear', fn: () => apiGet('/getYear'), check: r => r.code === '200' && Array.isArray(r.data) && r.data.length >= 10 },
+    { name: 'POST /api/v1/auth/register', fn: () => apiPost('/api/v1/auth/register', { username: `test_${Date.now()}`, password: '123456', role: 'USER' }), check: r => r.code === '200' },
+    { name: 'GET /api/v1/auth/years', fn: () => apiGet('/api/v1/auth/years'), check: r => r.code === '200' && Array.isArray(r.data) && r.data.length >= 10 },
   ];
 
   for (const t of apiTests) {
@@ -112,13 +112,13 @@ let adminToken = ''; // 存储登录 token
 
   // 需要认证的接口 - 使用登录token
   const authApiTests = [
-    { name: 'GET /type/selectAll (已认证)', fn: () => apiGet('/type/selectAll', adminToken), check: r => r.code === '200' && Array.isArray(r.data) },
-    { name: 'GET /area/selectAll (已认证)', fn: () => apiGet('/area/selectAll', adminToken), check: r => r.code === '200' && Array.isArray(r.data) },
-    { name: 'GET /film/selectAll (已认证)', fn: () => apiGet('/film/selectAll', adminToken), check: r => r.code === '200' && Array.isArray(r.data) },
-    { name: 'GET /cinema/selectAll (已认证)', fn: () => apiGet('/cinema/selectAll', adminToken), check: r => r.code === '200' && Array.isArray(r.data) },
-    { name: 'GET /film/getAllBoxOfficeTop (已认证)', fn: () => apiGet('/film/getAllBoxOfficeTop?topNum=10', adminToken), check: r => r.code === '200' && Array.isArray(r.data) },
-    { name: 'GET /film/getAllMarkTop (已认证)', fn: () => apiGet('/film/getAllMarkTop?topNum=5', adminToken), check: r => r.code === '200' && Array.isArray(r.data) },
-    { name: 'GET /notice/selectAll (已认证)', fn: () => apiGet('/notice/selectAll', adminToken), check: r => r.code === '200' && Array.isArray(r.data) },
+    { name: 'GET /api/v1/types (已认证)', fn: () => apiGet('/api/v1/types', adminToken), check: r => r.code === '200' && Array.isArray(r.data) },
+    { name: 'GET /api/v1/areas (已认证)', fn: () => apiGet('/api/v1/areas', adminToken), check: r => r.code === '200' && Array.isArray(r.data) },
+    { name: 'GET /api/v1/films (已认证)', fn: () => apiGet('/api/v1/films', adminToken), check: r => r.code === '200' && Array.isArray(r.data) },
+    { name: 'GET /api/v1/cinemas (已认证)', fn: () => apiGet('/api/v1/cinemas', adminToken), check: r => r.code === '200' && Array.isArray(r.data) },
+    { name: 'GET /api/v1/films/box-office/top (已认证)', fn: () => apiGet('/api/v1/films/box-office/top?topNum=10', adminToken), check: r => r.code === '200' && Array.isArray(r.data) },
+    { name: 'GET /api/v1/films/mark/top (已认证)', fn: () => apiGet('/api/v1/films/mark/top?topNum=5', adminToken), check: r => r.code === '200' && Array.isArray(r.data) },
+    { name: 'GET /api/v1/notices (已认证)', fn: () => apiGet('/api/v1/notices', adminToken), check: r => r.code === '200' && Array.isArray(r.data) },
   ];
 
   for (const t of authApiTests) {
@@ -430,6 +430,29 @@ let adminToken = ''; // 存储登录 token
 
   // ========== 9. 影院后台页面 ==========
   console.log('\n🏢 9. 影院后台页面');
+  // 先以影院管理员身份登录（ADMIN 无权访问影院后台）
+  try {
+    await page.goto(`${BASE}/login`, { timeout: 10000 });
+    await waitStable();
+    await page.fill('input[placeholder="请输入账号"]', 'asks');
+    await page.fill('input[placeholder="请输入密码"]', 'cinema123');
+    const sel = page.locator('.el-select .el-select__wrapper').first();
+    if (await sel.isVisible()) {
+      await sel.click();
+      await page.waitForTimeout(600);
+      const opts = page.locator('.el-select-dropdown__item');
+      const cnt = await opts.count();
+      for (let i = 0; i < cnt; i++) {
+        const text = await opts.nth(i).innerText();
+        if (text.includes('影院')) { await opts.nth(i).click(); break; }
+      }
+      await page.waitForTimeout(300);
+    }
+    await page.locator('button').filter({ hasText: '登 录' }).click();
+    await waitStable(2000);
+    log('影院管理员登录', page.url().includes('/back/home'), page.url());
+  } catch (e) { log('影院管理员登录', false, e.message); }
+
   const backPages = [
     '/back/home', '/back/film', '/back/room', '/back/record',
     '/back/ordered', '/back/person', '/back/password'
@@ -445,7 +468,95 @@ let adminToken = ''; // 存储登录 token
   }
   await ss('05-back-pages');
 
-  // ========== 10. 汇总 ==========
+  // ========== 10. 负面测试 ==========
+  console.log('\n⚠️  10. 负面测试 (Negative Cases)');
+
+  // 10.1 错误密码登录 → API 返回错误
+  {
+    const res = await apiPost('/api/v1/auth/login', { username: '999', password: 'wrong_password', role: 'ADMIN' });
+    log('错误密码登录应拒绝', res.code !== '200', `code: ${res.code}`);
+  }
+
+  // 10.2 无 token 访问需认证接口 → 返回 401
+  {
+    const res = await apiGet('/api/v1/admins');
+    log('无 token 访问受限接口', res.code !== '200', `code: ${res.code}`);
+  }
+
+  // 10.3 ADMIN 角色访问影院后台 → 路由守卫拦截
+  try {
+    // 先以管理员登录
+    await page.goto(`${BASE}/login`, { timeout: 10000 });
+    await waitStable();
+    await page.fill('input[placeholder="请输入账号"]', '999');
+    await page.fill('input[placeholder="请输入密码"]', '999');
+    const sel = page.locator('.el-select .el-select__wrapper').first();
+    if (await sel.isVisible()) {
+      await sel.click();
+      await page.waitForTimeout(600);
+      const opts = page.locator('.el-select-dropdown__item');
+      const cnt = await opts.count();
+      for (let i = 0; i < cnt; i++) {
+        const text = await opts.nth(i).innerText();
+        if (text.includes('管理员')) { await opts.nth(i).click(); break; }
+      }
+      await page.waitForTimeout(300);
+    }
+    await page.locator('button').filter({ hasText: '登 录' }).click();
+    await waitStable(2000);
+
+    // 尝试访问影院后台
+    await page.goto(`${BASE}/back/home`, { timeout: 10000 });
+    await waitStable(1500);
+    log('管理员无法访问影院后台', !page.url().includes('/back/home'), page.url());
+  } catch (e) { log('路由权限拦截', false, e.message); }
+
+  // 10.4 未选数据点击批量删除 → 弹出警告提示
+  try {
+    // 先重新登录管理员
+    await page.goto(`${BASE}/login`, { timeout: 10000 });
+    await waitStable();
+    await page.fill('input[placeholder="请输入账号"]', '999');
+    await page.fill('input[placeholder="请输入密码"]', '999');
+    const sel4 = page.locator('.el-select .el-select__wrapper').first();
+    if (await sel4.isVisible()) {
+      await sel4.click();
+      await page.waitForTimeout(600);
+      const opts = page.locator('.el-select-dropdown__item');
+      for (let i = 0; i < (await opts.count()); i++) {
+        const text = await opts.nth(i).innerText();
+        if (text.includes('管理员')) { await opts.nth(i).click(); break; }
+      }
+      await page.waitForTimeout(300);
+    }
+    await page.locator('button').filter({ hasText: '登 录' }).click();
+    await waitStable(2000);
+
+    // 进入演职人员页面（其 handleDelBatch 有 ElMessage.warning 提示）
+    await page.goto(`${BASE}/manage/actor`, { timeout: 10000 });
+    await waitStable(1000);
+    const batchBtn = page.locator('button').filter({ hasText: '批量删除' }).first();
+    if (await batchBtn.isVisible({ timeout: 3000 })) {
+      await batchBtn.click();
+      await page.waitForTimeout(400);
+      // Actor.vue: if (!selectedIds.value.length) { ElMessage.warning('请先选择要删除的演职人员'); return }
+      const hasWarning = await page.locator('text=请先选择要删除的演职人员').isVisible().catch(() => false);
+      log('未选择数据时批量删除有警告提示', hasWarning);
+    } else {
+      log('未选择数据时批量删除有警告提示', false, '批量删除按钮不可见');
+    }
+  } catch (e) { log('批量删除提示测试', false, e.message); }
+
+  // 10.5 未登录访问受保护页面 → 重定向到登录页
+  try {
+    await page.evaluate(() => localStorage.removeItem('xm-pro-user'));
+    await page.goto(`${BASE}/manage/home`, { timeout: 10000 });
+    await waitStable(1500);
+    log('未登录访问管理页重定向到登录', page.url().includes('/login'), page.url());
+  } catch (e) { log('未登录重定向', false, e.message); }
+  await ss('06-negative');
+
+  // ========== 11. 汇总 ==========
   console.log('\n' + '='.repeat(60));
   console.log('📊 E2E 全栈扫描测试汇总');
   console.log('='.repeat(60));
