@@ -205,8 +205,101 @@
   - `xm_film/springboot/src/main/java/com/example/springboot/controller/FilmController.java`
   - `xm_film/vue/src/views/manage/Type.vue`
   - `xm_film/vue/e2e-tests/e2e-scan.spec.mjs`
-- **提交记录**: 待提交
+- **提交记录**: `dc4fb9e7`
 - **状态**: 已修复（E2E 54/54 100% 通过）
+
+---
+
+### BUG-012: CI 数据库初始化 init.sql SOURCE 路径使用反斜杠，Linux 不识别
+
+- **日期**: 2026-05-29
+- **Bug 描述**: CI 中 `mysql < init.sql` 执行失败，SOURCE 命令找不到 schema.sql/data.sql
+- **根因分析**: init.sql 中 SOURCE 路径使用 Windows 风格反斜杠 `.\schema.sql`，Linux runner 不识别，应为 `./schema.sql`
+- **解决方案**: init.sql 中将所有 `.\` 替换为 `./`（跨平台兼容写法）
+- **相关文件**: `xm_film/sql/init.sql`
+- **提交记录**: `389b0bec`
+- **状态**: 已修复
+
+---
+
+### BUG-013: data.sql film 表第 26 行数据 VALUES 语法错误
+
+- **日期**: 2026-05-29
+- **Bug 描述**: 执行 data.sql 时 film 表第 26 行插入失败，导致初始化不完整
+- **根因分析**: film(id=26) 的 VALUES 结尾额外逗号导致语法截断；且 SQL 脚本被多次 SOURCE 执行时主键冲突
+- **解决方案**: 修复 VALUES 语法；data.sql 开头加 `TRUNCATE` 清理旧数据（避免重复执行冲突）
+- **相关文件**: `xm_film/sql/data.sql`
+- **提交记录**: `0bf666fd`、`b199e106`
+- **状态**: 已修复
+
+---
+
+### BUG-014: CI backend JAR 路径与 Maven 输出不匹配
+
+- **日期**: 2026-05-29
+- **Bug 描述**: CI 中 `java -jar` 指定的路径找不到 JAR 文件，后端启动失败
+- **根因分析**: `--spring.profiles.active=ci` 参数后的 JAR 路径使用相对路径，与 Maven 实际输出目录不匹配；`actions/download-artifact` 下载到 `$GITHUB_WORKSPACE` 但路径拼接错误
+- **解决方案**: 使用 `$GITHUB_WORKSPACE` 绝对路径引用 JAR 文件
+- **相关文件**: `.github/workflows/ci.yml`
+- **提交记录**: `fe05f0ae`
+- **状态**: 已修复
+
+---
+
+### BUG-015: CI 前端启动方式 — npm run preview 路径不匹配
+
+- **日期**: 2026-05-29
+- **Bug 描述**: CI 中前端启动后无法访问，Playwright 无法连接
+- **根因分析**: 最初使用 `npm run preview`（读取 dist 目录），但 dist 目录未正确构建或路径不匹配；改为 `npm run dev` 后 Vite 直接启动开发服务器，无需构建产物
+- **解决方案**: CI 前端启动从 `npm run preview` 改为 `npm run dev`
+- **相关文件**: `.github/workflows/ci.yml`
+- **提交记录**: `95d75cd8`
+- **状态**: 已修复
+
+---
+
+### BUG-016: springdoc-openapi WebJars 与 Spring Framework 6.1 不兼容
+
+- **日期**: 2026-05-29
+- **Bug 描述**: 后端启动时抛出 `NoClassDefFoundError: LiteWebJarsResourceResolver`，Spring Boot 无法启动；CI 后端健康检查失败
+- **根因分析**: `springdoc-openapi-starter-webmvc-ui:2.8.x` 传递依赖 `webjars-locator-lite`，该库引用了 `LiteWebJarsResourceResolver` 类，但 Spring Framework 6.1.x 已移除该类。Spring Boot 3.3.13 内置 Spring Framework 6.1.x，运行时触发 `NoClassDefFoundError`
+- **解决方案**: 移除 `springdoc-openapi-starter-webmvc-ui`，改用 `springdoc-openapi-starter-webmvc-api`（不包含 Swagger UI 依赖）；Swagger UI 通过 `static/swagger-ui.html` 静态页面从 CDN 加载
+- **相关文件**:
+  - `xm_film/springboot/pom.xml`（依赖切换）
+  - `xm_film/springboot/src/main/resources/static/swagger-ui.html`（新文件，CDN 加载 Swagger UI）
+- **提交记录**: `d48de68e`、`1ee0e2bb`
+- **状态**: 已修复
+
+---
+
+### BUG-017: FilmMapper.xml 列名 boxOffice 与 schema.sql 定义的 box_office 不匹配
+
+- **日期**: 2026-05-29
+- **Bug 描述**: `GET /api/v1/films/box-office/top?topNum=10` 返回 500 错误，E2E 测试失败
+- **根因分析**: FilmMapper.xml 中 ORDER BY/INSERT/UPDATE 使用了 camelCase 列名 `boxOffice`，但 schema.sql 定义的是 snake_case 列名 `box_office`。MyBatis `map-underscore-to-camel-case` 仅对 SELECT `film.*` 的自动映射有效，不影响 ORDER BY、INSERT、UPDATE 中的显式列名。本地 MySQL 是旧 schema（列名为 `boxOffice`），CI MySQL 从 schema.sql 创建（列名为 `box_office`），导致 CI 中 3 处显式引用报错
+- **解决方案**: FilmMapper.xml 中 3 处 `boxOffice` → `box_office`：
+  - 第 66 行: `ORDER BY film.boxOffice DESC` → `ORDER BY film.box_office DESC`
+  - 第 98 行: INSERT 列名 `boxOffice,` → `box_office,`
+  - 第 137 行: UPDATE SET `boxOffice = #{boxOffice},` → `box_office = #{boxOffice},`
+- **相关文件**: `xm_film/springboot/src/main/resources/mapper/FilmMapper.xml`
+- **提交记录**: `6f03c737`
+- **状态**: 已修复
+
+---
+
+### BUG-018: 登录页 setTimeout router.push 在 Playwright E2E 中不生效
+
+- **日期**: 2026-05-29
+- **Bug 描述**: 管理员/用户登录后页面未跳转，URL 停留在 `/login`，但 localStorage 中用户信息（含 token/role）已正确写入
+- **根因分析**: Login.vue 在登录成功后使用 `setTimeout(() => router.push(homePath), 500)` 执行路由跳转。在 Playwright headless Chromium 环境下，`router.push` 在 `setTimeout` 回调中未能触发 Vue Router 导航（`setTimeout` 回调中的 Vue Router navigation 在 E2E 上下文中被跳过）。而 `window.location.href` 是浏览器原生 API，在任何环境下都能可靠触发导航
+- **解决方案**: Login.vue 第 62 行 `setTimeout(() => router.push(homePath), 500)` 改为 `window.location.href = homePath`
+- **相关文件**: `xm_film/vue/src/views/Login.vue`
+- **提交记录**: `d1cace41`
+- **状态**: 已修复（E2E 59/59 100% 通过）
+
+---
+
+## 预防清单
 
 1. **数据库初始化**: 新环境部署时务必执行 `xm_film/sql/init.sql`（或依次执行 `schema.sql` + `data.sql`）
 2. **代理环境变量**: 本地开发测试时注意 `http_proxy`/`https_proxy` 是否会影响 `localhost` 请求
@@ -216,3 +309,6 @@
 6. **密码明文兼容**: `data.sql` 中使用明文密码时，`login()` / `updatePassword()` 需保留 BCrypt 明文回退逻辑
 7. **JS .toFixed() 类型**: `.toFixed()` 返回 `string` 而非 `number`，数值运算需用 `parseFloat()` 包裹
 8. **API 路径前导斜杠**: axios GET 请求路径必须以 `/` 开头（如 `'/film/selectAll'`），否则拼接 baseURL 后路径错误
+9. **SQL 列名一致**: MyBatis XML 中 ORDER BY/INSERT/UPDATE 的列名必须与数据库实际列名一致（snake_case），不能依赖 `map-underscore-to-camel-case` 自动映射（该配置仅对 SELECT 结果映射生效）
+10. **E2E 登录跳转**: 登录成功后的页面跳转使用 `window.location.href` 而非 `setTimeout + router.push`，确保在 Playwright headless 模式下可靠触发导航
+11. **依赖兼容性**: Spring Boot 3.3.x (Spring 6.1.x) 项目引入依赖时需确认其不引用已移除的 Spring 类（如 `LiteWebJarsResourceResolver`）
