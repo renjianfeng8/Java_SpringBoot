@@ -5,6 +5,42 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.0] - 2026-05-29
+
+### Added
+
+- **泛型三层架构（Phase 1）**: 新增 `BaseController`、`BaseService`、`BaseMapper` 抽象基类，消除 90% 重复 CRUD 代码
+  - 13 个 Controller 继承 `BaseController<T>`，每个仅 3-15 行代码
+  - 13 个 Service 继承 `BaseService<T>`，仅需实现 `mapper()` 方法
+  - 拆分 `AuthController`（登录/注册/密码修改）和 `FileUploadController`（文件上传）
+
+- **RESTful API 重构**: 所有接口从 RPC 风格迁移至 RESTful 风格
+  - `/xxx/selectAll` → `GET /api/v1/{resources}`
+  - `/login` → `POST /api/v1/auth/login`
+  - 统一 `/api/v1/{resources}` 命名规范（复数形式 + 连字符）
+
+- **前端 Composable 架构（Phase 3）**: 新增 `useAuth`、`useCrud`、`useFormDialog`
+  - CRUD 页面代码减少 40-50%
+  - 路由守卫 + 常量工具 + 状态格式化工具
+
+- **SLF4J + Logback 日志系统**: 包级别 SQL 日志控制，支持 `MYBATIS_LOG_LEVEL` 环境变量
+
+- **CI 全自动流水线**: 后端编译 → 前端构建 → MySQL 8.0 服务 → 初始化数据库 → 后端启动 → Playwright 59 例 E2E 测试 → 报告归档
+
+- **E2E 负面测试 5 例**: 错误密码登录、无 token 访问、路由越权、未选批量删除、未登录重定向
+
+### Changed
+
+- **数据库规范化**: film 表移除 `type_ids` 字段，改用 `film_type` 关联表实现多对多
+- **Actor 表**: `film_ids` 改为 `film_id`（单值外键），删除冗余字段
+- **索引优化**: 为 film/record/ordered 表添加查询常用字段索引
+- **密码安全**: 密码字段统一 `@JsonProperty(WRITE_ONLY)` 防止序列化泄露
+- **环境配置**: `application.yml` 支持 6 个环境变量注入（DB_PASSWORD/JWT_SECRET/FILE_UPLOAD_DIR/MYBATIS_LOG_IMPL/MYBATIS_LOG_LEVEL）
+
+### Removed
+
+- **Git 清理**: 添加 `.gitignore`，移除 75 个 `target/` 构建产物和 23398 个 `node_modules/` 文件
+
 ## [0.5.0] - 2026-05-16
 
 ### Fixed

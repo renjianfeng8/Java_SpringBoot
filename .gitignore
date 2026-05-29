@@ -1,0 +1,47 @@
+# ============================================================
+# 影院购票管理系统 — .gitignore
+# ============================================================
+
+# === Java / Maven ===
+target/
+*.class
+*.jar
+*.war
+
+# === Node.js ===
+node_modules/
+dist/
+
+# === 日志 ===
+*.log
+
+# === IDE ===
+.idea/
+*.iml
+.vscode/
+
+# === OS ===
+.DS_Store
+Thumbs.db
+
+# === 项目本地文件 ===
+/claude.log
+start_claude.bat
+backend.log
+frontend.log
+
+# === 数据库 ===
+*.sql
+
+# === E2E 测试产出 ===
+e2e-tests/screenshots/
+e2e-tests/playwright-report/
+e2e-tests/*.html
+e2e-tests/test-output.txt
+test-results/
+
+# === Claude ===
+.claude/
+
+# === 其他 ===
+login.json

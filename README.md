@@ -2,7 +2,7 @@
 
 基于 **Spring Boot 3.3 + Vue 3 + MySQL** 构建的在线电影购票管理平台，支持三端角色分离运营（管理员后台、影院端、用户端），提供完整的影片管理、影厅排片、在线选座购票、订单评价等功能闭环。
 
-**代码质量**: 全栈 E2E 自动化测试覆盖（53 用例，100% 通过率），BCrypt 密码加密 + JWT 认证 + RBAC 权限控制。
+**代码质量**: 全栈 E2E 自动化测试覆盖（59 用例，含负面测试，100% 通过率），BCrypt 密码加密 + JWT 认证 + RBAC 权限控制，GitHub Actions CI 流水线。
 
 ---
 
@@ -61,6 +61,9 @@ xm_film/
 ├── springboot/                        # 后端（Spring Boot）
 │   └── src/main/java/com/example/springboot/
 │       ├── common/                    # 公共组件
+│       │   ├── BaseController.java    # 泛型 CRUD 控制器基类（7 个标准接口）
+│       │   ├── BaseService.java       # 泛型 CRUD Service 基类
+│       │   ├── BaseMapper.java        # MyBatis 通用 Mapper 接口
 │       │   ├── config/
 │       │   │   ├── AuthInterceptor.java   # JWT 认证拦截器
 │       │   │   └── WebMvcConfig.java      # Web MVC 配置
@@ -68,21 +71,10 @@ xm_film/
 │       │   ├── FileUtil.java          # 文件上传工具类
 │       │   ├── JwtUtils.java          # JWT 令牌工具
 │       │   └── Result.java            # 统一响应封装
-│       ├── controller/                # 控制器层
-│       │   ├── WebController.java     # 登录/注册/密码修改
-│       │   ├── AdminController.java   # 管理员管理
-│       │   ├── UserController.java    # 用户管理
-│       │   ├── FilmController.java    # 电影管理
-│       │   ├── CinemaController.java  # 影院管理
-│       │   ├── ActorController.java   # 演职人员管理
-│       │   ├── AreaController.java    # 区域管理
-│       │   ├── TypeController.java    # 分类管理
-│       │   ├── NoticeController.java  # 公告管理
-│       │   ├── OrderedController.java # 订单管理
-│       │   ├── RecordController.java  # 放映记录管理
-│       │   ├── RoomController.java    # 影厅管理
-│       │   ├── MarkController.java    # 评价管理
-│       │   └── VideoController.java   # 预告片管理
+│       ├── controller/                # 控制器层（16个）
+│       │   ├── AuthController.java    # 登录/注册/密码修改（原 WebController）
+│       │   ├── FileUploadController.java # 文件上传
+│       │   └── 14 个资源 Controller    # 继承 BaseController，3-15 行代码
 │       ├── entity/                    # 实体类
 │       ├── mapper/                    # MyBatis Mapper 接口
 │       ├── service/                   # 业务逻辑层
@@ -150,10 +142,43 @@ xm_film/
 │       │       ├── Mark.vue           # 评价管理
 │       │       ├── Person.vue         # 个人资料
 │       │       └── Password.vue       # 修改密码
-│       ├── router/index.js            # 路由配置
-│       ├── utils/request.js           # Axios 封装
+│       ├── composables/               # 组合式 API
+│       │   ├── useAuth.js             # 认证状态管理
+│       │   ├── useCrud.js             # 通用 CRUD 操作
+│       │   └── useFormDialog.js       # 表单弹窗控制
+│       ├── constants/index.js         # 常量（角色/状态映射）
+│       ├── utils/
+│       │   ├── request.js             # Axios 封装
+│       │   ├── format.js              # 格式化工具
+│       │   └── status.js              # 状态工具函数
 │       └── assets/                    # 静态资源
 ```
+
+---
+
+## 架构设计
+
+### 后端泛型三层架构
+
+系统采用泛型基类抽象消除 90% 重复 CRUD 代码：
+
+| 层级 | 基类 | 职责 |
+|------|------|------|
+| Controller | `BaseController<T>` | 提供 7 个标准 RESTful 端点（list/getById/page/add/update/delete/deleteBatch） |
+| Service | `BaseService<T>` | 提供 CRUD 方法 + `@Transactional` 事务管理 |
+| Mapper | `BaseMapper<T>` | 提供 MyBatis CRUD 方法定义 |
+
+- 13 个 Service 全部继承 `BaseService<T>`，仅需实现 `mapper()` 方法
+- 13 个 Controller 继承 `BaseController<T>`，仅需声明 `@RequestMapping` + 构造函数注入（3-15 行代码）
+- 复杂业务（Film 排行榜、Cinema 按电影筛选）通过方法覆写实现
+
+### 前端 Composable 架构
+
+| Composable | 职责 |
+|------------|------|
+| `useAuth` | 认证状态管理、登录/登出、角色判断 |
+| `useCrud` | 通用 CRUD 操作（增删改查/分页/批量删除） |
+| `useFormDialog` | 表单弹窗状态控制（打开/关闭/提交） |
 
 ---
 
@@ -201,9 +226,9 @@ npm run dev
 |------|--------|------|------|
 | ADMIN | 999 | 999 | 系统管理员 |
 | USER | zhangsan | user123 | 普通用户 |
-| CINEMA | (注册) | cinema123 | 影院管理员（默认密码） |
+| CINEMA | asks | cinema123 | 影院管理员 |
 
-> 管理员账号 `999` 通过 `data.sql` 初始化。影院账号需在管理后台审核通过后使用。
+> 管理员账号 `999` 和影院账号 `asks` 均通过 `data.sql` 初始化。
 
 ---
 
@@ -234,9 +259,15 @@ file:
   max-file-size: 50MB                 # 单文件大小限制
 ```
 
-> 生产环境建议通过环境变量注入数据库密码与 JWT Secret。
+> 生产环境建议通过环境变量注入敏感配置：
+> - `DB_PASSWORD` — 数据库密码（默认 `123456`）
+> - `JWT_SECRET` — JWT 签名密钥
+> - `FILE_UPLOAD_DIR` — 文件上传存储路径
+> - `MYBATIS_LOG_LEVEL` — SQL 日志级别（默认 `DEBUG`）
 >
 > 前端后端地址在 `vue/.env` 中通过 `VITE_API_BASE_URL` 配置，修改一处即可切换环境。
+>
+> CI 环境使用 `application-ci.yml` 独立配置（MySQL host、日志级别、上传目录）。
 
 ---
 
@@ -266,35 +297,39 @@ file:
 
 ## API 概览
 
-### 通用 CRUD 接口（每个资源模块）
+### 通用 CRUD 接口（每个资源模块，继承 `BaseController<T>`）
 
 | 路径 | 方法 | 说明 |
 |------|------|------|
-| `/xxx/selectAll` | GET | 查询全部（支持筛选） |
-| `/xxx/selectById/{id}` | GET | 按 ID 查询 |
-| `/xxx/selectList` | GET | 查询列表（精简版） |
-| `/xxx/selectPage` | GET | 分页查询 |
-| `/xxx/add` | POST | 新增 |
-| `/xxx/update` | PUT | 更新 |
-| `/xxx/delete/{id}` | DELETE | 删除 |
-| `/xxx/deleteBatch` | DELETE | 批量删除 |
-| `/xxx/upload` | POST | 文件上传 |
+| `/api/v1/{resources}` | GET | 查询全部（支持筛选） |
+| `/api/v1/{resources}/{id}` | GET | 按 ID 查询 |
+| `/api/v1/{resources}/page` | GET | 分页查询 |
+| `/api/v1/{resources}` | POST | 新增 |
+| `/api/v1/{resources}` | PUT | 更新 |
+| `/api/v1/{resources}/{id}` | DELETE | 删除 |
+| `/api/v1/{resources}/batch` | DELETE | 批量删除 |
 
-> `xxx` 取值：`admin`、`user`、`cinema`、`film`、`actor`、`area`、`type`、`notice`、`room`、`record`、`ordered`、`mark`、`video`
+> `resources` 取值：`admins`、`users`、`cinemas`、`films`、`actors`、`areas`、`types`、`notices`、`rooms`、`records`、`orders`、`marks`、`videos`
+
+### 认证与公共接口
+
+| 路径 | 方法 | 说明 | 认证 |
+|------|------|------|------|
+| `/api/v1/auth/login` | POST | 用户登录（三端共用） | 否 |
+| `/api/v1/auth/register` | POST | 用户/影院注册 | 否 |
+| `/api/v1/auth/password` | PUT | 修改密码 | Bearer |
+| `/api/v1/auth/years` | GET | 获取年份列表 | 否 |
 
 ### 业务接口
 
 | 路径 | 方法 | 说明 | 认证 |
 |------|------|------|------|
-| `/login` | POST | 用户登录 | - |
-| `/register` | POST | 用户注册 | - |
-| `/updatePassword` | PUT | 修改密码 | Bearer |
-| `/getYear` | GET | 获取年份列表 | - |
-| `/film/getAllBoxOfficeTop` | GET | 票房排行榜 | - |
-| `/film/getAllMarkTop` | GET | 评分排行榜 | - |
-| `/film/selectByTitle` | GET | 按标题搜索 | - |
-| `/film/selectByCinema` | GET | 按影院查询电影 | Bearer |
-| `/cinema/selectPage` | GET | 影院分页（支持按电影筛选） | - |
+| `/api/v1/films/box-office/top` | GET | 票房排行榜 Top10 | 否 |
+| `/api/v1/films/mark/top` | GET | 评分排行榜 Top5 | 否 |
+| `/api/v1/films/search` | GET | 按标题搜索 | 否 |
+| `/api/v1/films/by-cinema` | GET | 按影院查询电影 | Bearer |
+| `/api/v1/cinemas/page` | GET | 影院分页（支持按电影筛选） | 否 |
+| `/api/v1/files/upload` | POST | 文件上传 | Bearer |
 
 统一响应格式：
 
@@ -310,14 +345,15 @@ file:
 
 ## 数据库设计
 
-系统共 14 张核心表：
+系统共 15 张核心表：
 
 | 表名 | 说明 | 关键字段 |
 |------|------|----------|
 | `admin` | 系统管理员 | username, password, name, role |
 | `user` | 普通用户 | username, password, name, phone |
 | `cinema` | 影院 | name, address, phone, status |
-| `film` | 电影 | title, content, score, boxOffice, type_ids |
+| `film` | 电影 | title, content, score, boxOffice（多对多关联 type） |
+| `film_type` | 电影-类型关联（多对多） | film_id, type_id |
 | `actor` | 演职人员 | actor, title, figure, grade |
 | `area` | 地区 | title |
 | `type` | 电影分类 | title |
@@ -336,9 +372,9 @@ file:
 ## 安全机制
 
 - **密码加密** — BCrypt 哈希存储，`add()` 自动加密，`login()` 通过 `matches()` 验证（兼容 `data.sql` 明文密码迁移）
-- **JWT 令牌** — 基于 JJWT 的 Bearer Token 认证，24 小时过期，密钥可配置
-- **认证拦截** — `AuthInterceptor` 拦截除登录/注册/文件外的所有接口，校验 Token 有效性
-- **角色访问控制** — `AuthInterceptor` 对 `/admin/**` 路径校验 ADMIN 角色，非管理员返回 403
+- **JWT 令牌** — 基于 JJWT 的 Bearer Token 认证，24 小时过期，密钥可环境变量配置
+- **认证拦截** — `AuthInterceptor` 拦截除公开路径外的所有接口，校验 Token 有效性
+- **角色访问控制** — `AuthInterceptor` 对 ADMIN/CINEMA/USER 路径校验对应角色，不匹配返回 403
 - **批量赋值防护** — Service 层 `update()` 方法置空 `password`/`role`，防止通过 `@RequestBody` 篡改敏感字段
 - **密码序列化防护** — `@JsonProperty(WRITE_ONLY)` 注解阻止密码字段在 API 响应中泄露
 - **事务保护** — 所有 Service 类均标注 `@Transactional(rollbackFor = Exception.class)`，确保数据一致性
@@ -406,7 +442,7 @@ server {
 
 ## E2E 测试
 
-项目使用 Playwright 进行全栈自动化扫描测试（53 个用例，覆盖后端 API、前端页面渲染、CRUD 流程、分页、搜索等）。
+项目使用 Playwright 进行全栈自动化扫描测试（59 个用例，覆盖后端 API、前端页面渲染、CRUD 流程、分页、搜索、三端导航、负面场景等）。
 
 ```bash
 cd xm_film/vue
