@@ -299,6 +299,18 @@
 
 ---
 
+### BUG-019: Front.vue 搜索框 handleSearch 使用 router.push 在 E2E 中不生效
+
+- **日期**: 2026-05-30
+- **Bug 描述**: 前台首页搜索框输入"哈利"后点击搜索按钮，URL 未跳转到 `/front/search`，仍停留在 `/front/home`；CI 中 E2E 搜索用例失败（Run #27，59 用例 58 通过 1 失败）
+- **根因分析**: `Front.vue` 的 `handleSearch()` 使用 `router.push({ path: '/front/search', query: { title } })` 导航。在 Playwright headless Chromium 下与 BUG-018 登录跳转是同一类问题——`router.push` 在某些调用上下文（非用户直接交互触发）中被跳过，而 `window.location.href` 是浏览器原生 API，在任何环境下都能可靠触发导航
+- **解决方案**: `handleSearch()` 中的 `router.push({ path, query })` 替换为 `window.location.href = '/front/search?title=' + encodeURIComponent(keyword)`
+- **相关文件**: `xm_film/vue/src/views/Front.vue`（第 153~162 行）
+- **提交记录**: 待提交
+- **状态**: 已修复
+
+---
+
 ## 预防清单
 
 1. **数据库初始化**: 新环境部署时务必执行 `xm_film/sql/init.sql`（或依次执行 `schema.sql` + `data.sql`）
@@ -310,5 +322,5 @@
 7. **JS .toFixed() 类型**: `.toFixed()` 返回 `string` 而非 `number`，数值运算需用 `parseFloat()` 包裹
 8. **API 路径前导斜杠**: axios GET 请求路径必须以 `/` 开头（如 `'/film/selectAll'`），否则拼接 baseURL 后路径错误
 9. **SQL 列名一致**: MyBatis XML 中 ORDER BY/INSERT/UPDATE 的列名必须与数据库实际列名一致（snake_case），不能依赖 `map-underscore-to-camel-case` 自动映射（该配置仅对 SELECT 结果映射生效）
-10. **E2E 登录跳转**: 登录成功后的页面跳转使用 `window.location.href` 而非 `setTimeout + router.push`，确保在 Playwright headless 模式下可靠触发导航
+10. **E2E 路由跳转**: 页面跳转（登录/搜索等）使用 `window.location.href` 而非 `router.push`，确保在 Playwright headless 模式下可靠触发导航
 11. **依赖兼容性**: Spring Boot 3.3.x (Spring 6.1.x) 项目引入依赖时需确认其不引用已移除的 Spring 类（如 `LiteWebJarsResourceResolver`）
