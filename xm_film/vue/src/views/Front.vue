@@ -151,14 +151,12 @@ const logout = () => {
 }
 
 const handleSearch = () => {
-  if (!searchKeyword.value.trim()) {
+  const keyword = searchKeyword.value.trim()
+  if (!keyword) {
     ElMessage.warning('请输入电影名称')
     return
   }
-  router.push({
-    path: '/front/search',
-    query: { title: searchKeyword.value.trim() }
-  })
+  window.location.href = '/front/search?title=' + encodeURIComponent(keyword)
 }
 
 onMounted(() => {
