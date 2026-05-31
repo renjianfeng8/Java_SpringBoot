@@ -93,7 +93,6 @@ project_02/
 │   │   └── init.sql                   # 一键初始化入口
 │   ├── package.json
 │   ├── package-lock.json
-│   └── start_claude.bat               # Claude 启动脚本
 
 ## 核心模块说明
 
