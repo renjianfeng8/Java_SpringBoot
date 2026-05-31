@@ -44,6 +44,9 @@ test-results/
 # === Claude ===
 .claude/
 
+# === 内部计划文档（非项目源码）===
+docs/superpowers/plans/
+
 # === 其他 ===
 login.json
 JIANLI.txt
