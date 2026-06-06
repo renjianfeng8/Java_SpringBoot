@@ -498,6 +498,7 @@ node e2e-tests/e2e-scan.spec.mjs
 - [Bug 修复记录](Bug.md) — 已修复 Bug 的根因分析与解决方案
 - [数据库说明](xm_film/sql/README.md) — 数据库表设计与初始化指引
 - [产品需求文档](docs/product/README.md) — 用户需求、业务需求、竞品分析、PRD 与优化路线图
+- [系统设计文档](docs/design/README.md) — 系统设计说明、架构图、数据库设计、接口安全与部署设计
 
 ---
 
