@@ -20,6 +20,7 @@
             <if test="status != null">AND record.status = #{status}</if>
             <if test="cinemaId != null">AND record.cinema_id = #{cinemaId} </if>
             <if test="roomId != null">AND record.room_id = #{roomId} </if>
+            <if test="filmId != null">AND record.film_id = #{filmId} </if>
         </where>
         ORDER BY id DESC
     </select>
@@ -31,6 +32,7 @@
         <trim prefix="(" suffix=")" suffixOverrides=",">
             <if test="cinemaId != null">cinema_id,</if>
             <if test="roomId != null">room_id,</if>
+            <if test="filmId != null">film_id,</if>
             <if test="title != null">title,</if>
             <if test="start != null">start,</if>
             <if test="price != null">price,</if>
@@ -40,6 +42,7 @@
         <trim prefix="(" suffix=")" suffixOverrides=",">
             <if test="cinemaId != null">#{cinemaId},</if>
             <if test="roomId != null">#{roomId},</if>
+            <if test="filmId != null">#{filmId},</if>
             <if test="title != null">#{title},</if>
             <if test="start != null">#{start},</if>
             <if test="price != null">#{price},</if>
@@ -53,6 +56,7 @@
         <set>
             <if test="cinemaId != null">cinema_id = #{cinemaId},</if>
             <if test="roomId != null">room_id = #{roomId},</if>
+            <if test="filmId != null">film_id = #{filmId},</if>
             <if test="title != null">title = #{title},</if>
             <if test="start != null">start = #{start},</if>
             <if test="price != null">price = #{price},</if>

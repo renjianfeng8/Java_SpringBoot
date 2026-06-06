@@ -39,6 +39,7 @@ import {reactive , ref} from "vue";
 import request from "@/utils/request.js";
 import { ElMessage } from "element-plus";
 import { API_PATHS, apiById } from '@/constants';
+import { getStoredUser, setStoredUser } from "@/utils/authStorage";
 
 
 const formRef = ref()
@@ -46,7 +47,7 @@ const data = reactive ({
   form: {
     sex: '男'
   },
-  user: (() => { try { return JSON.parse(localStorage.getItem('xm-pro-user')); } catch { return {}; } })(),
+  user: getStoredUser() || {},
   rules: {
     username: [
       { required: true ,message: '请输入账号', trigger: 'blur'}
@@ -76,7 +77,7 @@ const updateUser = () => {
       if (res.code === '200') {
         ElMessage.success('更新成功')
         //更新缓存数据
-        localStorage.setItem('xm-pro-user',JSON.stringify(data.form))
+        setStoredUser({ ...data.user, ...data.form })
         //触发父级从缓存里面取到最新的数据
         emit('updateUser', data.form)
       } else {
@@ -88,7 +89,7 @@ const updateUser = () => {
       if (res.code === '200') {
         ElMessage.success('更新成功')
         //更新缓存数据
-        localStorage.setItem('xm-pro-user',JSON.stringify(data.form))
+        setStoredUser({ ...data.user, ...data.form })
         //触发父级从缓存里面取到最新的数据
         emit('updateUser', data.form)
       } else {

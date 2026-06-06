@@ -319,7 +319,7 @@ public class AdminVO {
 - `POST /api/v1/auth/login`
 - `POST /api/v1/auth/register`
 - `PUT /api/v1/auth/password`
-- `GET /api/v1/years`
+- `GET /api/v1/auth/years`
 
 ### 2.6 安全加固
 
@@ -661,7 +661,7 @@ export const API_PATHS = {
     MARKS: '/api/v1/marks',
     VIDEOS: '/api/v1/videos',
     FILES: '/api/v1/files/upload',
-    YEARS: '/api/v1/years',
+    YEARS: '/api/v1/auth/years',
 };
 ```
 
@@ -727,7 +727,7 @@ e2e-tests:
         - name: Start backend
           run: |
             java -jar springboot-0.0.1-SNAPSHOT.jar --spring.profiles.active=ci &
-            timeout 30 bash -c 'until curl -s http://localhost:9090/api/v1/years > /dev/null 2>&1; do sleep 1; done'
+            timeout 30 bash -c 'until curl -s http://localhost:9090/api/v1/auth/years > /dev/null 2>&1; do sleep 1; done'
         - name: Run E2E tests
           run: |
             cd xm_film/vue

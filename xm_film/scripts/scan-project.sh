@@ -57,7 +57,7 @@ for ctrl in $(find "$BASE_DIR/xm_film/springboot/src/main/java" -name '*Controll
     if [ -n "$methods" ]; then
       echo "    $ctrl_name: $methods"
     else
-      echo "    $ctrl_name: /login /register /updatePassword /getYear"
+      echo "    $ctrl_name: /api/v1/auth/login /api/v1/auth/register /api/v1/auth/password /api/v1/auth/years"
     fi
   else
     echo "    $ctrl_name: $mapping/**"

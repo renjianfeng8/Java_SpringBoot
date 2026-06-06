@@ -1,9 +1,8 @@
 import { ref, computed } from 'vue'
 import { ElMessage } from 'element-plus'
 import request from '@/utils/request'
+import { getStoredUser, setStoredUser, clearStoredUser } from '@/utils/authStorage'
 import { AUTH_API } from '@/constants'
-
-const USER_KEY = 'xm-pro-user'
 
 const globalUser = ref(null)
 
@@ -20,21 +19,16 @@ export function useAuth() {
   const hasAnyRole = (...roles) => roles.includes(user.value?.role)
 
   function init() {
-    try {
-      const raw = localStorage.getItem(USER_KEY)
-      user.value = raw ? JSON.parse(raw) : null
-    } catch {
-      user.value = null
-    }
+    user.value = getStoredUser()
   }
 
   function setUser(userData) {
-    localStorage.setItem(USER_KEY, JSON.stringify(userData))
+    setStoredUser(userData)
     user.value = userData
   }
 
   function logout() {
-    localStorage.removeItem(USER_KEY)
+    clearStoredUser()
     user.value = null
   }
 

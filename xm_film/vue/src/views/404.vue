@@ -13,6 +13,7 @@
 
 <script setup>
 import { useRouter } from 'vue-router';
+import { getStoredUser } from '@/utils/authStorage';
 
 // 获取路由实例
 const router = useRouter();
@@ -20,10 +21,10 @@ const router = useRouter();
 // 跳转到对应角色的主页
 const goHome = () => {
   // 从本地存储获取用户信息（JSON字符串）并解析为对象
-  const userStr = localStorage.getItem('xm-pro-user');
+  const userStr = getStoredUser();
   let userRole = 'USER';
   try {
-    const userInfo = userStr ? JSON.parse(userStr) : null;
+    const userInfo = userStr;
     userRole = userInfo?.role || 'USER';
   } catch (e) {
     // 默认USER角色
