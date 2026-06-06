@@ -39,6 +39,8 @@
 | CINEMA | `/back/*` | 影院资料、影厅、排片、订单管理 |
 | ADMIN | `/manage/*` | 平台全局数据管理、影院审核、电影、订单、评价、公告等管理 |
 
+> 术语说明：角色定义详见[术语表 §1](./glossary.md#1-角色与权限)，业务实体定义详见[术语表 §2](./glossary.md#2-核心业务实体)。
+
 权限规则：
 
 - 路由层通过前端守卫拦截非授权访问。
@@ -83,7 +85,74 @@
 8. 提交订单。
 9. 查看我的订单。
 
-验收标准：
+**用户购票交互流程（泳道图）：**
+
+```mermaid
+sequenceDiagram
+    actor U as 用户
+    participant FE as 前端
+    participant BE as 后端API
+    participant DB as 数据库
+
+    U->>FE: 1. 登录
+    FE->>BE: POST /api/v1/auth/login
+    BE->>DB: 查询用户凭证
+    DB-->>BE: 用户信息
+    BE-->>FE: JWT Token
+    FE-->>U: 跳转首页
+
+    U->>FE: 2. 浏览/搜索电影
+    FE->>BE: GET /api/v1/films?search=&page=
+    BE->>DB: 分页查询电影
+    DB-->>BE: 电影列表
+    BE-->>FE: 分页数据
+    FE-->>U: 展示电影海报/信息
+
+    U->>FE: 3. 查看电影详情
+    FE->>BE: GET /api/v1/films/{id}
+    BE->>DB: 电影+演员+评分+预告
+    DB-->>BE: 完整数据
+    BE-->>FE: JSON 详情
+    FE-->>U: 详情页（含评分/演员/预告）
+
+    U->>FE: 4. 选择影院/排片
+    FE->>BE: GET /api/v1/films/by-cinema?id={id}
+    BE->>DB: 按电影查可放映影院+排片
+    DB-->>BE: 影院+排片列表
+    BE-->>FE: 场次列表（时间+价格+余座）
+    FE-->>U: 展示可选场次
+
+    U->>FE: 5. 选座
+    FE->>BE: GET /api/v1/records/{id}
+    BE->>DB: 查询排片详情+已售座位
+    DB-->>BE: 座位数据
+    BE-->>FE: 排片信息+已售列表
+    FE-->>U: 渲染 8×8 座位图
+
+    U->>FE: 6. 选择座位并提交
+    FE->>BE: POST /api/v1/orders
+    Note over BE: 校验座位未被占
+    BE->>DB: INSERT ordered（状态=待取票）
+    DB-->>BE: 订单ID
+    BE-->>FE: 订单创建成功
+    FE-->>U: 跳转订单详情页
+
+    rect rgb(255, 240, 240)
+        Note right of BE: --- 异常分支 ---
+        alt 座位已被占
+            BE-->>FE: 409 座位冲突
+            FE-->>U: 提示"座位已被选"，刷新座位图
+        else Token 过期
+            BE-->>FE: 401 未授权
+            FE-->>U: 跳转登录页
+        else 参数不合法
+            BE-->>FE: 400 参数错误
+            FE-->>U: 提示错误信息
+        end
+    end
+```
+
+**验收标准：**
 
 - 未登录用户访问购票相关页面会跳转登录。
 - 用户只能进入用户端页面。
@@ -195,6 +264,189 @@
 - 一个影院拥有多个影厅：`room.cinema_id`
 - 一个排片关联影院、影厅、电影：`record.cinema_id`、`record.room_id`、`record.film_id`
 - 一个订单关联用户、场次、电影、影院、影厅：`ordered.user_id`、`ordered.record_id`、`ordered.film_id`、`ordered.cinema_id`、`ordered.room_id`
+
+### 8.1 订单状态定义
+
+V1.0 订单状态（字段 `ordered.status`）枚举值：
+
+| 状态值 | 含义 | 触发条件 | 下一个可能状态 |
+|--------|------|----------|---------------|
+| `待取票` | 订单已生成，等待用户到影院取票 | 用户提交订单后默认进入 | 已取票、已取消 |
+| `已取票` | 影院已核销，用户已完成取票 | 影院管理员在后台核销 | —（终态） |
+| `已取消` | 订单被取消 | 用户主动取消 | —（终态） |
+
+**业务规则：**
+- 只有"待取票"状态的订单可以取消。
+- 只有"待取票"状态的订单可以核销为"已取票"。
+- 已取消的订单不可恢复。
+- 已取票的订单不可取消。
+
+> 扩展状态（待支付、已支付、退款中、已退款）规划见 [PRD 优化路线图 §3.1](./04-prd-optimization-roadmap.md#31-订单状态机)
+
+### 8.2 实体关系图 (ERD)
+
+以下是核心 14 张表之间的实体关系：
+
+```mermaid
+erDiagram
+    admin ||--o{ notice : "发布"
+    admin {
+        int id PK
+        string username
+        string password
+        string name
+        string phone
+        string email
+        string avatar
+        int role "固定=ADMIN"
+    }
+
+    user ||--o{ ordered : "购买"
+    user ||--o{ mark : "撰写"
+    user {
+        int id PK
+        string username
+        string password
+        string name
+        string phone
+        string email
+        string avatar
+        int role "固定=USER"
+    }
+
+    cinema ||--o{ room : "拥有"
+    cinema ||--o{ record : "排片"
+    cinema ||--o{ ordered : "接收订单"
+    cinema ||--o{ cinema_film : "关联可放映电影"
+    cinema {
+        int id PK
+        string username
+        string password
+        string name
+        string phone
+        string email
+        string avatar
+        int role "固定=CINEMA"
+        string address
+        string businessHours
+        int status "0-待审核 1-已审核"
+    }
+
+    film ||--o{ record : "被排片"
+    film ||--o{ mark : "被评价"
+    film ||--o{ film_type : "分类"
+    film ||--o{ cinema_film : "可在影院放映"
+    film ||--o{ actor : "主演" 
+    film ||--o{ video : "预告片"
+    film {
+        int id PK
+        string name
+        string cover
+        string duration "片长"
+        string description
+        double boxOffice "票房"
+        date releaseDate
+        int area_id FK
+    }
+
+    room ||--o{ record : "排片场次"
+    room {
+        int id PK
+        int cinema_id FK
+        string name "如: 1号厅"
+        int rowNum "默认8"
+        int colNum "默认8"
+    }
+
+    record ||--o{ ordered : "产生订单"
+    record {
+        int id PK
+        int cinema_id FK
+        int room_id FK
+        int film_id FK
+        datetime startTime
+        datetime endTime
+        double price
+        int status "0-待上映 1-上映中 2-已结束"
+    }
+
+    ordered {
+        int id PK
+        string orderId "对外订单号"
+        int user_id FK
+        int record_id FK
+        int film_id FK
+        int cinema_id FK
+        int room_id FK
+        string seat "座位坐标"
+        double price
+        string status "待取票/已取票/已取消"
+        datetime createTime
+    }
+
+    mark {
+        int id PK
+        int film_id FK
+        int user_id FK
+        int level "评分 1-5"
+        string content "评价内容"
+        datetime time
+    }
+
+    type ||--o{ film_type : "包含"
+    area ||--o{ film : "制片地区"
+
+    film_type {
+        int film_id FK
+        int type_id FK
+    }
+
+    cinema_film {
+        int cinema_id FK
+        int film_id FK
+    }
+
+    video ||--o{ film : "预告"
+    notice ||--o{ admin : "作者"
+
+    type {
+        int id PK
+        string name "如: 动作/喜剧"
+    }
+
+    area {
+        int id PK
+        string name "如: 中国大陆/美国"
+    }
+
+    actor {
+        int id PK
+        string name
+        string avatar
+    }
+
+    video {
+        int id PK
+        int film_id FK
+        string name
+        string url
+    }
+
+    notice {
+        int id PK
+        string title
+        string content
+        string author
+        datetime createTime
+    }
+```
+
+**关系说明：**
+- `film` ↔ `type`：多对多，通过 `film_type` 中间表关联
+- `cinema` ↔ `film`：多对多，通过 `cinema_film` 中间表关联
+- `film` ↔ `actor`：多对多，通过关联表实现（电影可有多个主演）
+- 购票主路径：`film → record → ordered`，一条 record 可产生多个 ordered
+- 影院资源路径：`cinema → room → record`，一个 cinema 可拥有多个 room
 
 ## 9. 接口需求
 
