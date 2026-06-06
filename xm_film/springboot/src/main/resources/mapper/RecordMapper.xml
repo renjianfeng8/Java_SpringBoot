@@ -25,6 +25,17 @@
         ORDER BY id DESC
     </select>
 
+    <select id="selectById" parameterType="java.lang.Integer" resultType="com.example.springboot.entity.Record">
+        SELECT
+        record.*,
+        cinema.name as cinemaName,
+        room.name as roomName
+        FROM record
+        LEFT JOIN cinema ON record.cinema_id = cinema.id
+        LEFT JOIN room ON record.room_id = room.id
+        WHERE record.id = #{id}
+    </select>
+
     <!-- 插入操作 -->
     <insert id="insert" parameterType="com.example.springboot.entity.Record"
             useGeneratedKeys="true" keyProperty="id">

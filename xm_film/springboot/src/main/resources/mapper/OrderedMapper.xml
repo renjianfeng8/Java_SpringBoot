@@ -30,6 +30,21 @@
         ORDER BY id DESC
     </select>
 
+    <select id="selectById" parameterType="java.lang.Integer" resultType="com.example.springboot.entity.Ordered">
+        SELECT
+        ordered.*,
+        user.name as userName,
+        film.title as filmName,
+        cinema.name as cinemaName,
+        IFNULL(room.name, '暂未关联影厅') as roomName
+        FROM ordered
+        LEFT JOIN user ON ordered.user_id = user.id
+        LEFT JOIN film ON ordered.film_id = film.id
+        LEFT JOIN cinema ON ordered.cinema_id = cinema.id
+        LEFT JOIN room ON ordered.room_id = room.id
+        WHERE ordered.id = #{id}
+    </select>
+
     <select id="selectActiveByRecordId" resultType="com.example.springboot.entity.Ordered">
         SELECT * FROM ordered
         WHERE record_id = #{recordId}

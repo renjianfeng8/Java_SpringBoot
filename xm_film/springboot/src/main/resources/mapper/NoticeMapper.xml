@@ -16,6 +16,9 @@
         ORDER BY id DESC
     </select>
 
+    <select id="selectById" parameterType="java.lang.Integer" resultType="com.example.springboot.entity.Notice">
+        SELECT * FROM notice WHERE id = #{id}
+    </select>
 
     <!-- 插入操作 -->
     <insert id="insert" parameterType="com.example.springboot.entity.Notice">

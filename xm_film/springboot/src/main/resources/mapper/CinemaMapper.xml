@@ -16,7 +16,9 @@
         ORDER BY id DESC
     </select>
 
-
+    <select id="selectById" parameterType="java.lang.Integer" resultType="com.example.springboot.entity.Cinema">
+        SELECT * FROM cinema WHERE id = #{id}
+    </select>
 
 
     <!-- 根据用户名查询影院 -->
