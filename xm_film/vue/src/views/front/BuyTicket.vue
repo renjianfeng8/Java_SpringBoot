@@ -255,11 +255,9 @@ onMounted(() => {
 const initSeats = () => {
   return new Promise((resolve) => {
     // 1. 先查询该场次已售座位（通过订单接口反向获取）
-    request.get(API_PATHS.ORDERS, {
+    request.get(`${API_PATHS.ORDERS}/seats`, {
       params: {
-        cinemaId: Number(cinemaId),
-        filmId: Number(filmId),
-        roomId: Number(roomId) || 1
+        recordId: Number(recordId)
       }
     }).then(res => {
       if (res.code === '200') {
@@ -291,19 +289,13 @@ const initSeats = () => {
         seats.value = seatMatrix;
         resolve();
       } else {
-        // 接口查询失败，生成默认座位矩阵（30%概率已售）
-        const seatMatrix = Array(8).fill().map(() =>
-            Array(8).fill().map(() => Math.random() < 0.3 ? 1 : 0)
-        );
-        seats.value = seatMatrix;
+        seatError.value = res.msg || '座位数据加载失败';
+        seats.value = Array(8).fill().map(() => Array(8).fill(0));
         resolve();
       }
     }).catch(() => {
-      // 网络错误，生成默认座位矩阵
-      const seatMatrix = Array(8).fill().map(() =>
-          Array(8).fill().map(() => Math.random() < 0.3 ? 1 : 0)
-      );
-      seats.value = seatMatrix;
+      seatError.value = '座位数据加载失败，请稍后重试';
+      seats.value = Array(8).fill().map(() => Array(8).fill(0));
       resolve();
     });
   });
@@ -424,24 +416,14 @@ const generateOrderNo = () => {
 // 确认购票（适配后端/add接口和Ordered实体）
 const confirmBooking = () => {
 
-  if (selectedSeats.length === 0) {
+  if (selectedSeats.value.length === 0) {
     ElMessage.warning('请先选择座位');
     return;
   }
 
   // 构造符合后端Ordered实体的订单数据
   const orderData = {
-    orders: generateOrderNo(),
-    userId: userId.value,
-    filmId: Number(filmId),
-    img: filmInfo.value.img || '',
-    cinemaId: Number(cinemaId),
-    roomId: Number(roomId) || 1, // 核心修改：使用路由传递的roomId，兜底为1（一号厅）
-    appointment: `场次ID:${recordId}`,
-    total: Number(calculateTotalPrice()),
-    number: selectedSeats.value.length,
-    status: '待取票',
-    start: showInfo.value.start || '',
+    recordId: Number(recordId),
     seat: selectedSeats.value.join(',')
   };
 

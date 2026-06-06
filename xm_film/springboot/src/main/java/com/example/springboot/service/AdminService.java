@@ -81,6 +81,6 @@ public class AdminService extends BaseService<Admin> {
             }
         }
         admin.setPassword(passwordEncoder.encode(account.getNewPassword()));
-        update(admin);
+        adminMapper.updatePassword(admin);
     }
 }

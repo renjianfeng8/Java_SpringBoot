@@ -54,6 +54,10 @@
         WHERE id = #{id}
     </update>
 
+    <update id="updatePassword" parameterType="com.example.springboot.entity.User">
+        UPDATE user SET password = #{password} WHERE id = #{id}
+    </update>
+
     <!-- 删除操作 -->
     <delete id="deleteById" parameterType="java.lang.Integer">
         DELETE FROM user WHERE id = #{id}

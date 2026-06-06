@@ -12,4 +12,6 @@ public interface CinemaMapper extends BaseMapper<Cinema> {
 
     List<Cinema> selectByFilmId(@Param("cinema") Cinema cinema, @Param("filmId") Integer filmId);
 
+    void updatePassword(Cinema cinema);
+
 }

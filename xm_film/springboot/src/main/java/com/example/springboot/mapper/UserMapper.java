@@ -7,4 +7,6 @@ public interface UserMapper extends BaseMapper<User> {
 
     User selectByUsername(String username);
 
+    void updatePassword(User user);
+
 }

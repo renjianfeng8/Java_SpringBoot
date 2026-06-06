@@ -279,10 +279,7 @@ const reset = () => {
 // 调整加载顺序，确保影厅数据先加载
 const initLoad = async () => {
   await Promise.all([
-    loadRoom(),
-    loadUser(),
-    loadFilm(),
-    loadCinema()
+    loadRoom()
   ]);
   load(); // 最后加载订单数据
 }

@@ -43,6 +43,10 @@
         WHERE id = #{id}
     </update>
 
+    <update id="updatePassword" parameterType="com.example.springboot.entity.Admin">
+        UPDATE admin SET password = #{password} WHERE id = #{id}
+    </update>
+
     <!-- 删除操作 -->
     <delete id="deleteById" parameterType="com.example.springboot.entity.Admin">
         DELETE FROM admin WHERE id = #{id}

@@ -30,6 +30,19 @@
         ORDER BY id DESC
     </select>
 
+    <select id="selectActiveByRecordId" resultType="com.example.springboot.entity.Ordered">
+        SELECT * FROM ordered
+        WHERE record_id = #{recordId}
+          AND status != '已取消'
+    </select>
+
+    <select id="countSeatInUse" resultType="int">
+        SELECT COUNT(*) FROM ordered
+        WHERE record_id = #{recordId}
+          AND status != '已取消'
+          AND FIND_IN_SET(#{seat}, REPLACE(seat, '，', ',')) > 0
+    </select>
+
     <!-- 插入操作 -->
     <insert id="insert" parameterType="com.example.springboot.entity.Ordered"
             useGeneratedKeys="true" keyProperty="id">

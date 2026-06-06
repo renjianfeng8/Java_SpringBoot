@@ -1,17 +1,90 @@
 package com.example.springboot.controller;
 
 import com.example.springboot.common.BaseController;
+import com.example.springboot.common.Result;
 import com.example.springboot.entity.Ordered;
 import com.example.springboot.service.OrderedService;
+import com.github.pagehelper.PageHelper;
+import com.github.pagehelper.PageInfo;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @Tag(name = "订单管理", description = "购票订单 CRUD")
 @RestController
 @RequestMapping("/api/v1/orders")
 public class OrderedController extends BaseController<Ordered> {
+    private final OrderedService orderedService;
+
     public OrderedController(OrderedService orderedService) {
         super(orderedService);
+        this.orderedService = orderedService;
+    }
+
+    @Override
+    @GetMapping
+    public Result list(Ordered entity) {
+        orderedService.applyScope(entity, currentRole(), currentUserId());
+        return Result.success(orderedService.selectAll(entity));
+    }
+
+    @Override
+    @GetMapping("/page")
+    public Result page(Ordered entity,
+                       @RequestParam(defaultValue = "1") Integer pageNum,
+                       @RequestParam(defaultValue = "10") Integer pageSize) {
+        orderedService.applyScope(entity, currentRole(), currentUserId());
+        PageHelper.startPage(pageNum, pageSize);
+        return Result.success(new PageInfo<>(orderedService.selectAll(entity)));
+    }
+
+    @Override
+    @PostMapping
+    public Result add(@RequestBody Ordered entity) {
+        orderedService.createOrder(entity, currentRole(), currentUserId());
+        return Result.success();
+    }
+
+    @GetMapping("/seats")
+    public Result seats(@RequestParam Integer recordId) {
+        List<Ordered> orders = orderedService.selectActiveByRecordId(recordId);
+        return Result.success(orders);
+    }
+
+    @Override
+    @DeleteMapping("/{id}")
+    public Result delete(@PathVariable Integer id) {
+        orderedService.deleteScoped(id, currentRole(), currentUserId());
+        return Result.success();
+    }
+
+    @Override
+    @DeleteMapping("/batch")
+    public Result deleteBatch(@RequestBody List<Integer> ids) {
+        orderedService.deleteBatchScoped(ids, currentRole(), currentUserId());
+        return Result.success();
+    }
+
+    private String currentRole() {
+        HttpServletRequest request = currentRequest();
+        return request == null ? null : (String) request.getAttribute("role");
+    }
+
+    private Integer currentUserId() {
+        HttpServletRequest request = currentRequest();
+        if (request == null) {
+            return null;
+        }
+        String userId = (String) request.getAttribute("userId");
+        return userId == null ? null : Integer.valueOf(userId);
+    }
+
+    private HttpServletRequest currentRequest() {
+        ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+        return attributes == null ? null : attributes.getRequest();
     }
 }

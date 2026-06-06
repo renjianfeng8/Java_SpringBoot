@@ -32,7 +32,6 @@ public class WebMvcConfig implements WebMvcConfigurer {
                         "/api/v1/auth/login",
                         "/api/v1/auth/register",
                         "/api/v1/auth/years",
-                        "/api/v1/files/**",
                         "/api/v1/types",
                         "/api/v1/areas",
                         "/api/v1/films/page",
