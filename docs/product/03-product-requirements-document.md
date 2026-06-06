@@ -73,6 +73,8 @@
 
 ## 6. 核心用户流程
 
+> 详细用例图、业务流程图和数据流图见[建模图文档](./05-modeling-diagrams.md)。
+
 ### 6.1 用户购票流程
 
 1. 用户登录。
@@ -289,7 +291,6 @@ V1.0 订单状态（字段 `ordered.status`）枚举值：
 
 ```mermaid
 erDiagram
-    admin ||--o{ notice : "发布"
     admin {
         int id PK
         string username
@@ -298,7 +299,7 @@ erDiagram
         string phone
         string email
         string avatar
-        int role "固定=ADMIN"
+        string role "固定=ADMIN"
     }
 
     user ||--o{ ordered : "购买"
@@ -311,7 +312,7 @@ erDiagram
         string phone
         string email
         string avatar
-        int role "固定=USER"
+        string role "固定=USER"
     }
 
     cinema ||--o{ room : "拥有"
@@ -326,36 +327,42 @@ erDiagram
         string phone
         string email
         string avatar
-        int role "固定=CINEMA"
+        string role "固定=CINEMA"
         string address
-        string businessHours
-        int status "0-待审核 1-已审核"
+        string leader
+        string code
+        string certificate
+        string status "未审核/已审核"
+        string description
     }
 
     film ||--o{ record : "被排片"
     film ||--o{ mark : "被评价"
     film ||--o{ film_type : "分类"
     film ||--o{ cinema_film : "可在影院放映"
-    film ||--o{ actor : "主演" 
-    film ||--o{ video : "预告片"
+    film ||--o{ actor : "主演"
     film {
         int id PK
-        string name
-        string cover
-        string duration "片长"
-        string description
-        double boxOffice "票房"
-        date releaseDate
+        string title
+        string english
+        int time "片长分钟"
+        string content
+        string img
+        string employee
+        double box_office "票房"
+        date start
         int area_id FK
+        string status
+        double score
+        string video
     }
 
     room ||--o{ record : "排片场次"
     room {
         int id PK
         int cinema_id FK
+        string title "所属影院名称"
         string name "如: 1号厅"
-        int rowNum "默认8"
-        int colNum "默认8"
     }
 
     record ||--o{ ordered : "产生订单"
@@ -364,33 +371,34 @@ erDiagram
         int cinema_id FK
         int room_id FK
         int film_id FK
-        datetime startTime
-        datetime endTime
+        string title "电影名称"
+        datetime start
         double price
-        int status "0-待上映 1-上映中 2-已结束"
+        string status
     }
 
     ordered {
         int id PK
-        string orderId "对外订单号"
+        string orders "对外订单号"
         int user_id FK
         int record_id FK
         int film_id FK
         int cinema_id FK
         int room_id FK
+        string appointment
         string seat "座位坐标"
-        double price
+        double total
+        int number
         string status "待取票/已取票/已取消"
-        datetime createTime
+        datetime start
     }
 
     mark {
         int id PK
         int film_id FK
         int user_id FK
-        int level "评分 1-5"
-        string content "评价内容"
-        datetime time
+        string img
+        string mark "评分/评价内容"
     }
 
     type ||--o{ film_type : "包含"
@@ -406,45 +414,51 @@ erDiagram
         int film_id FK
     }
 
-    video ||--o{ film : "预告"
-    notice ||--o{ admin : "作者"
-
-    type {
-        int id PK
-        string name "如: 动作/喜剧"
-    }
-
-    area {
-        int id PK
-        string name "如: 中国大陆/美国"
-    }
-
-    actor {
-        int id PK
-        string name
-        string avatar
-    }
-
     video {
         int id PK
-        int film_id FK
+        string title "关联电影标题"
+        string img
         string name
-        string url
+        string preview
+        date start
     }
 
     notice {
         int id PK
         string title
         string content
-        string author
-        datetime createTime
+        datetime time
+    }
+
+    type {
+        int id PK
+        string title "如: 动作/喜剧"
+    }
+
+    area {
+        int id PK
+        string title "如: 中国大陆/美国"
+    }
+
+    actor {
+        int id PK
+        int film_id FK
+        string title "所属电影标题"
+        string img
+        string actor "演员姓名"
+        string figure "角色名"
+        string picture
+        string grade
+        string video
     }
 ```
 
 **关系说明：**
 - `film` ↔ `type`：多对多，通过 `film_type` 中间表关联
 - `cinema` ↔ `film`：多对多，通过 `cinema_film` 中间表关联
-- `film` ↔ `actor`：多对多，通过关联表实现（电影可有多个主演）
+- `film` → `actor`：一对多，通过 `actor.film_id` 关联
+- `video` 当前为内容管理表，未通过外键强关联 `film`，可通过标题/预告 URL 与影片展示侧弱关联
+- `notice` 当前为公告内容表，未存储发布人外键
 - 购票主路径：`film → record → ordered`，一条 record 可产生多个 ordered
 - 影院资源路径：`cinema → room → record`，一个 cinema 可拥有多个 room
 
