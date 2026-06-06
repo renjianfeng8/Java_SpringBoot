@@ -255,10 +255,6 @@ const reset = () => {
 
 // 初始加载
 load()
-loadUser()
-loadFilm()
-loadCinema()
-loadRoom()
 
 const getStatusType = (status: string | undefined) => {
   switch (status) {

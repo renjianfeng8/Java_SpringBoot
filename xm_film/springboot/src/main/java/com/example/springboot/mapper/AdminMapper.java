@@ -7,4 +7,6 @@ public interface AdminMapper extends BaseMapper<Admin> {
 
     Admin selectByUsername(String username);
 
+    void updatePassword(Admin admin);
+
 }

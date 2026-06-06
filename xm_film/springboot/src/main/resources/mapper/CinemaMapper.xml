@@ -77,6 +77,10 @@
         WHERE id = #{id}
     </update>
 
+    <update id="updatePassword" parameterType="com.example.springboot.entity.Cinema">
+        UPDATE cinema SET password = #{password} WHERE id = #{id}
+    </update>
+
     <insert id="insert" parameterType="com.example.springboot.entity.Cinema">
         INSERT INTO cinema
         <trim prefix="(" suffix=")" suffixOverrides=",">

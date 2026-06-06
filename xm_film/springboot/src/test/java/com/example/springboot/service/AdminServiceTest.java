@@ -135,7 +135,12 @@ class AdminServiceTest {
 
         adminService.updatePassword(account);
 
-        verify(adminMapper).updateById(any(Admin.class));
+        verify(adminMapper).updatePassword(argThat(admin ->
+                admin.getId().equals(1)
+                        && admin.getPassword() != null
+                        && !admin.getPassword().equals("new-pass-456")
+        ));
+        verify(adminMapper, never()).updateById(any(Admin.class));
     }
 
     @Test

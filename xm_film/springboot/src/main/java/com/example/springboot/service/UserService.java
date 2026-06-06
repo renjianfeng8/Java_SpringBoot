@@ -82,7 +82,7 @@ public class UserService extends BaseService<User> {
             }
         }
         user.setPassword(passwordEncoder.encode(account.getNewPassword()));
-        update(user);
+        userMapper.updatePassword(user);
     }
 
     @Transactional(rollbackFor = Exception.class)

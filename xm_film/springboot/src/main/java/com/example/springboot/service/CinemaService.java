@@ -93,7 +93,7 @@ public class CinemaService extends BaseService<Cinema> {
             }
         }
         cinema.setPassword(passwordEncoder.encode(account.getNewPassword()));
-        update(cinema);
+        cinemaMapper.updatePassword(cinema);
     }
 
     @Transactional(rollbackFor = Exception.class)
