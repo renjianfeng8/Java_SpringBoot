@@ -301,6 +301,7 @@ node e2e-tests/e2e-scan.spec.mjs
 
 - [Bug 修复记录](Bug.md) — 已修复 Bug 的根因与解决方案，遇到相似问题优先查阅
 - [重构设计文档](docs/superpowers/specs/2026-05-29-architecture-refactoring-design.md) — 全链路架构重构设计（BaseCRUD/DTO/RESTful/数据库规范化/前端Composable）
+- [产品需求文档](docs/product/README.md) — 用户需求、业务需求、竞品分析、PRD 与优化路线图
 
 ## Current Architecture Notes
 

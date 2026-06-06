@@ -497,6 +497,7 @@ node e2e-tests/e2e-scan.spec.mjs
 - [变更日志](CHANGELOG.md) — 版本历史与功能变更
 - [Bug 修复记录](Bug.md) — 已修复 Bug 的根因分析与解决方案
 - [数据库说明](xm_film/sql/README.md) — 数据库表设计与初始化指引
+- [产品需求文档](docs/product/README.md) — 用户需求、业务需求、竞品分析、PRD 与优化路线图
 
 ---
 
