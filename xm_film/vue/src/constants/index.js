@@ -17,6 +17,27 @@ export const API_PATHS = {
   YEARS: '/api/v1/auth/years',
 }
 
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:9090'
+export const FILE_UPLOAD_URL = `${API_BASE_URL}${API_PATHS.FILES}`
+
+export const apiById = (base, id) => `${base}/${id}`
+export const apiPage = (base) => `${base}/page`
+export const apiBatch = (base) => `${base}/batch`
+
+export const FILM_API = {
+  SEARCH: `${API_PATHS.FILMS}/search`,
+  BY_CINEMA: `${API_PATHS.FILMS}/by-cinema`,
+  BOX_OFFICE_TOP: `${API_PATHS.FILMS}/box-office/top`,
+  MARK_TOP: `${API_PATHS.FILMS}/mark/top`,
+}
+
+export const AUTH_API = {
+  LOGIN: `${API_PATHS.AUTH}/login`,
+  REGISTER: `${API_PATHS.AUTH}/register`,
+  PASSWORD: `${API_PATHS.AUTH}/password`,
+  YEARS: `${API_PATHS.AUTH}/years`,
+}
+
 export const TYPE_MAP = {
   1: '纪录', 4: '恐怖', 5: '喜剧', 6: '动漫',
   7: '伦理', 13: '爱情', 14: '动作', 15: '灾难',

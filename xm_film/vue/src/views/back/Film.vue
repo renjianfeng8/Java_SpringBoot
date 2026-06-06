@@ -106,6 +106,7 @@ import { reactive, ref } from "vue";
 import { Search } from "@element-plus/icons-vue";
 import request from "@/utils/request.js";
 import { ElMessage } from "element-plus";
+import { API_PATHS, apiPage } from "@/constants";
 
 interface FormData {
   id?: number;
@@ -155,7 +156,7 @@ const data = reactive({
 const formRef = ref();
 
 const loadType = () => {
-  request.get('/api/v1/types').then(res => {
+  request.get(API_PATHS.TYPES).then(res => {
     if(res.code === '200') {
       data.typeData = res.data
     } else {
@@ -165,7 +166,7 @@ const loadType = () => {
 }
 
 const loadArea = () => {
-  request.get('/api/v1/areas').then(res => {
+  request.get(API_PATHS.AREAS).then(res => {
     if(res.code === '200') {
       data.areaData = res.data
     } else {
@@ -175,7 +176,7 @@ const loadArea = () => {
 }
 
 const load = () => {
-  request.get('/api/v1/films/page', {
+  request.get(apiPage(API_PATHS.FILMS), {
     params: {
       pageNum: data.pageNumber,
       pageSize: data.pageSize,

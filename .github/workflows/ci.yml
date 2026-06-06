@@ -99,7 +99,7 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y mysql-client
 
       - name: 初始化数据库
-        run: cd ../sql && mysql -h 127.0.0.1 -u root -p123456 < init.sql
+        run: cd ../sql && mysql --default-character-set=utf8mb4 -h 127.0.0.1 -u root -p123456 < init.sql
 
       - name: 创建上传目录
         run: mkdir -p /tmp/xm-film-uploads

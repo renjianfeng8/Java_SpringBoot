@@ -67,6 +67,7 @@ import { reactive, ref } from "vue";
 import {Delete, Edit, Search} from "@element-plus/icons-vue";
 import request from "@/utils/request.js";
 import {ElMessage, ElMessageBox, FormRules} from "element-plus";
+import { API_PATHS, apiBatch, apiById, apiPage } from "@/constants";
 
 interface RoomForm {
   id?: number;
@@ -102,7 +103,7 @@ const data = reactive({
 
 // 加载电影分类列表
 const load = () => {
-  request.get('/api/v1/rooms/page', {
+  request.get(apiPage(API_PATHS.ROOMS), {
     params: {
       pageNum: data.pageNumber,
       pageSize: data.pageSize,
@@ -121,7 +122,7 @@ const load = () => {
 
 
 const add = () => {
-  request.post('/api/v1/rooms', data.form).then(res => {
+  request.post(API_PATHS.ROOMS, data.form).then(res => {
     if (res.code === '200') {
       ElMessage.success('添加成功');
       data.formVisible = false;
@@ -135,7 +136,7 @@ const add = () => {
 }
 
 const update = () => {
-  request.put('/api/v1/rooms', data.form).then(res => {
+  request.put(API_PATHS.ROOMS, data.form).then(res => {
     if (res.code === '200') {
       ElMessage.success('更新成功');
       data.formVisible = false;
@@ -182,7 +183,7 @@ const save = () => {
 const del = (id: number) => {
   ElMessageBox.confirm('删除数据后无法恢复，您确认删除吗?', '删除确认', { type: 'warning' })
       .then(() => {
-        request.delete(`/api/v1/rooms/${id}`).then(res => {
+        request.delete(apiById(API_PATHS.ROOMS, id)).then(res => {
           if (res.code === '200') {
             ElMessage.success('删除成功');
             load();
@@ -209,7 +210,7 @@ const delBatch = () => {
   }
   ElMessageBox.confirm(`确定删除选中的 ${data.ids.length} 条数据吗？删除后无法恢复`, '删除确认', { type: 'warning' })
       .then(() => {
-        request.delete('/api/v1/rooms/batch', { data: data.ids }).then(res => {
+        request.delete(apiBatch(API_PATHS.ROOMS), { data: data.ids }).then(res => {
           if (res.code === '200') {
             ElMessage.success('批量删除成功');
             load();

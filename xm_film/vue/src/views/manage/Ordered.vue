@@ -105,7 +105,7 @@ const { dataList, total, pageNum, pageSize, searchForm, selectedIds,
 const roomData = []
 
 function loadRoom() {
-  return request.get('/api/v1/rooms').then(res => {
+  return request.get(API_PATHS.ROOMS).then(res => {
     if (res.code === '200') { roomData.length = 0; roomData.push(...res.data) }
   })
 }

@@ -75,6 +75,7 @@ import { useRouter } from "vue-router";
 import request from "@/utils/request.js";
 import { ElMessage } from "element-plus";
 import * as echarts from 'echarts';
+import { API_PATHS } from '@/constants';
 
 // 路由实例
 const router = useRouter();
@@ -315,8 +316,8 @@ const initFilmTypeChart = () => {
 // 加载电影列表数据
 const getFilmList = async () => {
   try {
-    const res = await request.get("/film/selectAll");
-    data.filmList = res.data?.data || res.data || res || [];
+    const res = await request.get(API_PATHS.FILMS);
+    data.filmList = res.data || [];
   } catch (error) {
     ElMessage.warning("电影数据加载失败，不影响核心功能使用");
   }
@@ -325,17 +326,17 @@ const getFilmList = async () => {
 // 初始化页面所有数据
 const initData = async () => {
   try {
-    const cinemaRes = await request.get("/cinema/selectAll");
-    data.cinemaList = cinemaRes.data?.data || cinemaRes.data || cinemaRes || [];
+    const cinemaRes = await request.get(API_PATHS.CINEMAS);
+    data.cinemaList = cinemaRes.data || [];
 
-    const adminRes = await request.get("/admin/selectAll");
-    data.adminList = adminRes.data?.data || adminRes.data || adminRes || [];
+    const adminRes = await request.get(API_PATHS.ADMINS);
+    data.adminList = adminRes.data || [];
 
-    const userRes = await request.get("/user/selectAll");
-    data.userList = userRes.data?.data || userRes.data || userRes || [];
+    const userRes = await request.get(API_PATHS.USERS);
+    data.userList = userRes.data || [];
 
-    const typeRes = await request.get("/type/selectAll");
-    data.typeList = typeRes.data?.data || typeRes.data || typeRes || [];
+    const typeRes = await request.get(API_PATHS.TYPES);
+    data.typeList = typeRes.data || [];
 
     // 加载电影数据
     await getFilmList();

@@ -177,6 +177,7 @@ import { reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import request from "@/utils/request.js";
+import { API_PATHS, FILM_API } from '@/constants';
 // 引入Element Plus样式（移除el-rate相关样式）
 import 'element-plus/theme-chalk/el-skeleton.css';
 import 'element-plus/theme-chalk/el-button.css';
@@ -251,7 +252,7 @@ const formatBoxOffice = (num) => {
 // 加载总票房Top10数据
 const loadFilmBoxOfficeTop = () => {
   loading.boxOffice = true;
-  request.get('/api/v1/films/box-office/top', {
+  request.get(FILM_API.BOX_OFFICE_TOP, {
     params: {topNum: 10}
   }).then(res => {
     if (res.code === '200') {
@@ -271,7 +272,7 @@ const loadFilmBoxOfficeTop = () => {
 // 加载评分Top5数据
 const loadFilmMarkTop = () => {
   loading.mark = true;
-  request.get('/api/v1/films/mark/top', {
+  request.get(FILM_API.MARK_TOP, {
     params: {topNum: 10}
   }).then(res => {
     if (res.code === '200') {
@@ -299,7 +300,7 @@ const refreshTodayBoxOffice = () => {
 
 // 电影数据加载
 const load = () => {
-  request.get('/api/v1/films').then(res => {
+  request.get(API_PATHS.FILMS).then(res => {
     if (res.code === '200') {
       data.data1 = res.data.filter(v => v.status === '已上映');
       data.data2 = res.data.filter(v => v.status === '待上映');

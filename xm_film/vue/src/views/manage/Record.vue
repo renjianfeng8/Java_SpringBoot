@@ -58,7 +58,7 @@
 import { Delete, Search } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useCrud } from '@/composables/useCrud'
-import { API_PATHS } from '@/constants'
+import { API_PATHS, apiBatch, apiById, apiPage } from '@/constants'
 import request from '@/utils/request'
 
 // 仅使用 useCrud 的响应式状态（dataList 需自定义 load 做名称映射）
@@ -69,13 +69,13 @@ const cinemaData = []
 const roomData = []
 
 function loadCinema() {
-  return request.get('/api/v1/cinemas').then(res => {
+  return request.get(API_PATHS.CINEMAS).then(res => {
     if (res.code === '200') { cinemaData.length = 0; cinemaData.push(...res.data) }
   })
 }
 
 function loadRoom() {
-  return request.get('/api/v1/rooms').then(res => {
+  return request.get(API_PATHS.ROOMS).then(res => {
     if (res.code === '200') { roomData.length = 0; roomData.push(...res.data) }
   })
 }
@@ -83,7 +83,7 @@ function loadRoom() {
 // 自定义 load：映射影院/影厅名称
 function load() {
   const params = { pageNum: pageNum.value, pageSize: pageSize.value, ...searchForm }
-  request.get('/api/v1/records/page', { params }).then(res => {
+  request.get(apiPage(API_PATHS.RECORDS), { params }).then(res => {
     if (res && res.data) {
       dataList.value = (res.data.list || []).map(record => ({
         ...record,
@@ -102,7 +102,7 @@ function onSizeChange(s) { pageSize.value = s; pageNum.value = 1; load() }
 
 function handleDel(id) {
   ElMessageBox.confirm('删除数据后无法恢复,您确认删除吗?', '删除确认', { type: 'warning' })
-    .then(() => request.delete(`/api/v1/records/${id}`))
+    .then(() => request.delete(apiById(API_PATHS.RECORDS, id)))
     .then(res => { if (res.code === '200') { ElMessage.success('操作成功'); load() } })
     .catch(() => {})
 }
@@ -110,7 +110,7 @@ function handleDel(id) {
 function handleDelBatch() {
   if (!selectedIds.value.length) { ElMessage.warning('请选择数据'); return }
   ElMessageBox.confirm(`确定删除选中的 ${selectedIds.value.length} 条数据吗？删除后无法恢复`, '删除确认', { type: 'warning' })
-    .then(() => request.delete('/api/v1/records/batch', { data: selectedIds.value }))
+    .then(() => request.delete(apiBatch(API_PATHS.RECORDS), { data: selectedIds.value }))
     .then(res => { if (res.code === '200') { ElMessage.success('操作成功'); load() } })
     .catch(() => {})
 }

@@ -178,7 +178,7 @@ home, movie, filmDetail/:id, cinema, cinemaDetail/:id, filmCinema/:id, buyTicket
 cd xm_film/vue
 npm install
 npx playwright install chromium
-npx playwright test e2e-tests/e2e-scan.spec.mjs --config=e2e-tests/playwright.config.mjs
+node e2e-tests/e2e-scan.spec.mjs
 ```
 
 ### 测试覆盖范围
@@ -205,14 +205,13 @@ npx playwright show-report xm_film/vue/e2e-tests/playwright-report
 ### 1. 初始化数据库
 ```bash
 cd xm_film/sql
-mysql -u root -p < init.sql
+mysql --default-character-set=utf8mb4 -u root -p < init.sql
 ```
 或手动执行：
 ```sql
 CREATE DATABASE `xm-film` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE `xm-film`;
 SOURCE xm_film/sql/schema.sql;
-SOURCE xm_film/sql/data.sql;
 SOURCE xm_film/sql/data.sql;
 ```
 
@@ -235,7 +234,7 @@ npm run dev
 ### 4. 运行 E2E 测试
 ```bash
 cd xm_film/vue
-npx playwright test e2e-tests/e2e-scan.spec.mjs --config=e2e-tests/playwright.config.mjs
+node e2e-tests/e2e-scan.spec.mjs
 ```
 
 ### 默认账号
@@ -266,7 +265,7 @@ npx playwright test e2e-tests/e2e-scan.spec.mjs --config=e2e-tests/playwright.co
 5. **API 文档**：建议集成 Swagger/SpringDoc OpenAPI 自动生成接口文档
 6. **单元测试**：后端仅依赖测试（spring-boot-starter-test），缺少业务单元测试
 7. **前端构建**：生产构建后建议接入 CDN 分发静态资源
-8. **CI/CD**：✅ 已配置 GitHub Actions 完整流水线（后端编译 → 前端构建 → MySQL 初始化 → 后端启动 → 54 用例 E2E 验证），支持 `application-ci.yml` CI 专属配置
+8. **CI/CD**：✅ 已配置 GitHub Actions 完整流水线（后端编译 → 前端构建 → MySQL 初始化 → 后端启动 → 59 用例 E2E 验证），支持 `application-ci.yml` CI 专属配置
 9. **错误边界**：前端可引入 Vue ErrorBoundary 机制处理渲染异常
 10. **权限校验**：✅ 已实现前端路由守卫 + 后端 AuthInterceptor 双重角色校验
 

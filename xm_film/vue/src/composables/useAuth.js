@@ -1,6 +1,7 @@
 import { ref, computed } from 'vue'
 import { ElMessage } from 'element-plus'
 import request from '@/utils/request'
+import { AUTH_API } from '@/constants'
 
 const USER_KEY = 'xm-pro-user'
 
@@ -38,7 +39,7 @@ export function useAuth() {
   }
 
   async function login(credentials) {
-    const res = await request.post('/api/v1/auth/login', credentials)
+    const res = await request.post(AUTH_API.LOGIN, credentials)
     if (res.code === '200') {
       setUser(res.data)
       ElMessage.success('登录成功')

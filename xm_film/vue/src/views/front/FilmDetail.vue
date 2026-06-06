@@ -183,6 +183,7 @@ import {useRoute} from 'vue-router';
 import {ElMessage} from 'element-plus';
 import request from "@/utils/request.js";
 import 'element-plus/theme-chalk/el-button.css';
+import { API_PATHS, apiById } from '@/constants';
 // 导入路由跳转函数
 import { useRouter } from 'vue-router';
 
@@ -312,7 +313,7 @@ const fetchFilmDetail = () => {
   }
   loading.value = true;
   errorMsg.value = '';
-  request.get(`/api/v1/films/${filmId}`).then(res => {
+  request.get(apiById(API_PATHS.FILMS, filmId)).then(res => {
         if (res.code === '200' && res.data) {
           const data = res.data;
           // 电影数据映射
@@ -360,7 +361,7 @@ const fetchFilmDetail = () => {
 
 
 /**
- * 按单个actorId查询演职人员详情（适配后端selectById接口）
+ * 按单个actorId查询演职人员详情
  * 逻辑：根据单个演员ID，获取该演员的角色类型（导演/主演等）
  */
 const fetchCastBySingleId = (actorId) => {
@@ -375,7 +376,7 @@ const fetchCastBySingleId = (actorId) => {
   castList.value = []; // 清空历史数据
 
   // 调用后端接口：按单个演员ID查询详情（含角色类型）
-  request.get(`/api/v1/actors/${actorId}`)
+  request.get(apiById(API_PATHS.ACTORS, actorId))
       .then(res => {
         if (res.code === '200' && res.data) {
           const actorData = res.data;

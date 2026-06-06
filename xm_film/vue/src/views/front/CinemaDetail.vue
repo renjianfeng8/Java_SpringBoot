@@ -236,6 +236,7 @@ import {reactive, ref, watch} from 'vue';
 import {useRoute, useRouter} from 'vue-router';
 import {ElMessage} from 'element-plus';
 import request from "@/utils/request.js";
+import { API_PATHS, FILM_API, apiById, apiPage } from '@/constants';
 
 
 // 1. 路由相关：参数提取与监听
@@ -331,7 +332,7 @@ const fetchCinemaInfo = () => {
   }
 
   loading.value = true;
-  return request.get(`/cinema/selectById/${validCinemaId}`)
+  return request.get(apiById(API_PATHS.CINEMAS, validCinemaId))
       .then(res => {
         if (res.code === '200' && res.data) {
           const {services, ...cinemaInfo} = res.data;
@@ -372,7 +373,7 @@ const loadFilmList = () => {
     requestParams.filmId = Number(filmId.value);
   }
 
-  request.get('/api/v1/films/by-cinema', {params: requestParams})
+  request.get(FILM_API.BY_CINEMA, {params: requestParams})
       .then(res => {
         if (res.code === '200') {
           filmData.films = res.data || [];
@@ -414,7 +415,7 @@ const loadFilmList = () => {
       .finally(() => loading.value = false);
 };
 
-// 11. 核心函数：加载指定影院+电影的放映记录（调用后端/record/selectPage接口）
+// 11. 核心函数：加载指定影院+电影的放映记录
 const fetchRecordList = (cinemaId, filmId) => {
   // 初始化当前电影的放映记录状态（默认每页5条）
   if (!recordData[filmId]) {
@@ -434,7 +435,7 @@ const fetchRecordList = (cinemaId, filmId) => {
     pageNum: recordData[filmId].pageNum,
     pageSize: recordData[filmId].pageSize
   };
-  request.get('/api/v1/records/page', {params: requestParams})
+  request.get(apiPage(API_PATHS.RECORDS), {params: requestParams})
       .then(res => {
         if (res.code === '200' && res.data) {
           // 适配后端PageInfo格式：{ list: [], total: 0, pageNum: 1, pageSize: 5 }

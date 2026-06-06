@@ -129,6 +129,7 @@
 import { reactive } from 'vue';
 import request from "@/utils/request.js";
 import { ElMessage } from 'element-plus';
+import { FILM_API } from '@/constants';
 import 'element-plus/theme-chalk/el-skeleton.css';
 import 'element-plus/theme-chalk/el-empty.css';
 import 'element-plus/theme-chalk/el-image.css';
@@ -156,7 +157,7 @@ const formatBoxOffice = (num) => {
 
 const loadFilmBoxOfficeTop = () => {
   loading.boxOffice = true;
-  request.get('/api/v1/films/box-office/top', {
+  request.get(FILM_API.BOX_OFFICE_TOP, {
     params: { topNum: 10 }
   }).then(res => {
     if (res.code === '200') {
@@ -174,7 +175,7 @@ const loadFilmBoxOfficeTop = () => {
 
 const loadFilmMarkTop = () => {
   loading.mark = true;
-  request.get('/api/v1/films/mark/top', {
+  request.get(FILM_API.MARK_TOP, {
     params: { topNum: 10 }
   }).then(res => {
     if (res.code === '200') {

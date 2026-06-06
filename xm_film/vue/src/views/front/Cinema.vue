@@ -76,6 +76,7 @@
 import {reactive} from 'vue';
 import request from "@/utils/request.js";
 import {ElMessage} from 'element-plus';
+import { API_PATHS, apiPage } from '@/constants';
 
 const data = reactive({
   cinemaData: null,
@@ -88,7 +89,7 @@ const data = reactive({
 
 // 加载影院数据
 const load = () => {
-  request.get('cinema/selectPage', {
+  request.get(apiPage(API_PATHS.CINEMAS), {
     params: {
       pageNum: data.pageNum,
       pageSize: data.pageSize,

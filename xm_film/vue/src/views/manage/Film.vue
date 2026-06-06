@@ -109,7 +109,7 @@
           <el-input v-model="form.title" autocomplete="off" placeholder="请输入电影名称"/>
         </el-form-item>
         <el-form-item label="电影封面" prop="img">
-          <el-upload :action="baseUrl + '/api/v1/files/upload'" :on-success="handleFileUpload"
+          <el-upload :action="FILE_UPLOAD_URL" :on-success="handleFileUpload"
                      :auto-upload="true" list-type="picture">
             <el-button type="primary">点击上传电影封面图</el-button>
           </el-upload>
@@ -182,10 +182,8 @@ import { Delete, Edit, Search } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useCrud } from '@/composables/useCrud'
 import { useFormDialog } from '@/composables/useFormDialog'
-import { API_PATHS } from '@/constants'
+import { API_PATHS, FILE_UPLOAD_URL } from '@/constants'
 import request from '@/utils/request'
-
-const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:9090'
 
 const crud = useCrud(API_PATHS.FILMS)
 const { dataList, total, pageNum, pageSize, searchForm, selectedIds,
@@ -211,13 +209,13 @@ const typeData = ref([])
 const areaData = ref([])
 
 function loadType() {
-  request.get('/api/v1/types').then(res => {
+  request.get(API_PATHS.TYPES).then(res => {
     if (res.code === '200') typeData.value = res.data
   })
 }
 
 function loadArea() {
-  request.get('/api/v1/areas').then(res => {
+  request.get(API_PATHS.AREAS).then(res => {
     if (res.code === '200') areaData.value = res.data
   })
 }

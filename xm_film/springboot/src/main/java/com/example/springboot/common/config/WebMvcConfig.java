@@ -38,7 +38,7 @@ public class WebMvcConfig implements WebMvcConfigurer {
                         "/api/v1/films/page",
                         "/api/v1/films/box-office/**",
                         "/api/v1/films/mark/**",
-                        "/api/v1/films/by-title",
+                        "/api/v1/films/search",
                         "/api/v1/films/by-cinema",
                         "/api/v1/cinemas/page",
                         "/api/v1/notices/page"

@@ -26,6 +26,7 @@
 import {reactive, ref} from "vue";
 import request from "@/utils/request.js";
 import { ElMessage } from "element-plus";
+import { API_PATHS } from '@/constants';
 
 
 const formRef = ref()
@@ -61,7 +62,7 @@ const updatePassword = () => {
   data.form.role = data.user.role
   formRef.value.validate((valid) =>{
     if (valid) {
-      request.put('/api/v1/auth/password',data.form).then(res => {
+      request.put(`${API_PATHS.AUTH}/password`,data.form).then(res => {
         if (res.code === '200') {
           ElMessage.success('修改成功')
           localStorage.removeItem('xm-pro-user')

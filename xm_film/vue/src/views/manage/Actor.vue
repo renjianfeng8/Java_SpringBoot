@@ -64,7 +64,7 @@
           <el-input v-model="form.title" autocomplete="off" placeholder="请输入电影名称" />
         </el-form-item>
         <el-form-item label="电影图片" prop="img">
-          <el-upload :action="baseUrl + '/api/v1/files/upload'" :on-success="handleMovieImgUpload"
+          <el-upload :action="FILE_UPLOAD_URL" :on-success="handleMovieImgUpload"
                      :auto-upload="true" list-type="picture">
             <el-button type="primary">点击上传</el-button>
           </el-upload>
@@ -76,7 +76,7 @@
           <el-input v-model="form.figure" autocomplete="off" placeholder="请输入饰演角色名称" />
         </el-form-item>
         <el-form-item label="演员照片" prop="picture">
-          <el-upload :action="baseUrl + '/api/v1/files/upload'" :on-success="handleActorImgUpload"
+          <el-upload :action="FILE_UPLOAD_URL" :on-success="handleActorImgUpload"
                      :auto-upload="true" list-type="picture">
             <el-button type="primary">点击上传</el-button>
           </el-upload>
@@ -105,9 +105,7 @@ import { Delete, Edit, Search } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useCrud } from '@/composables/useCrud'
 import { useFormDialog } from '@/composables/useFormDialog'
-import { API_PATHS } from '@/constants'
-
-const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:9090'
+import { API_PATHS, FILE_UPLOAD_URL } from '@/constants'
 
 const crud = useCrud(API_PATHS.ACTORS)
 const { dataList, total, pageNum, pageSize, searchForm, selectedIds,

@@ -161,6 +161,7 @@ import {ElMessage} from 'element-plus';
 import request from "@/utils/request.js";
 import 'element-plus/theme-chalk/el-pagination.css';
 import 'element-plus/theme-chalk/el-button.css';
+import { API_PATHS, apiById, apiPage } from '@/constants';
 
 // 1. 路由相关（获取电影ID + 路由跳转）
 const route = useRoute();
@@ -231,7 +232,7 @@ const fetchFilmFullInfo = () => {
     return Promise.reject('电影ID无效');
   }
 
-  return request.get(`/film/selectById/${filmId}`)
+  return request.get(apiById(API_PATHS.FILMS, filmId))
       .then(res => {
         if (res.code === '200' && res.data) {
           const data = res.data;
@@ -291,7 +292,7 @@ const loadCinemaList = () => {
 
   loading.value = true;
   // 发起请求：携带 pageNum、pageSize、filmId 三个参数（与后端Controller参数对齐）
-  request.get('/api/v1/cinemas/page', {
+  request.get(apiPage(API_PATHS.CINEMAS), {
     params: {
       pageNum: cinemaData.pageNum,   // 分页页码
       pageSize: cinemaData.pageSize, // 每页条数
