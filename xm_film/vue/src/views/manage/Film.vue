@@ -25,7 +25,7 @@
               <el-descriptions-item label="上映日期">{{props.row.start}}</el-descriptions-item>
               <el-descriptions-item label="电影时长">{{props.row.time}}分钟</el-descriptions-item>
               <el-descriptions-item label="电影类型">
-                <el-tag v-for="item in props.row.types" style="margin-right: 5px; margin-bottom: 5px" type="info">{{item}}</el-tag>
+                <el-tag v-for="item in props.row.typeList" style="margin-right: 5px; margin-bottom: 5px" :type="getTypeTagType(item)">{{ item.title }}</el-tag>
               </el-descriptions-item>
               <el-descriptions-item label="电影语言">{{props.row.language}}</el-descriptions-item>
               <el-descriptions-item label="电影分辨率">{{props.row.resolution}}</el-descriptions-item>
@@ -66,9 +66,9 @@
         </el-table-column>
         <el-table-column label="上映日期" prop="start" />
         <el-table-column label="电影时长" prop="time" />
-        <el-table-column label="电影类型" prop="types" width="180">
+        <el-table-column label="电影类型" prop="typeList" width="180">
           <template v-slot="scope">
-            <el-tag v-for="item in scope.row.types" style="margin-right: 5px; margin-bottom: 5px" type="info">{{item}}</el-tag>
+            <el-tag v-for="item in scope.row.typeList" style="margin-right: 5px; margin-bottom: 5px" :type="getTypeTagType(item)">{{ item.title }}</el-tag>
           </template>
         </el-table-column>
         <el-table-column label="语言" prop="language" />
@@ -123,8 +123,8 @@
         <el-form-item label="电影时长" prop="time">
           <el-input-number v-model="form.time" :min="1" style="width: 220px"/>
         </el-form-item>
-        <el-form-item label="电影类型" prop="typeId">
-          <el-select v-model="form.ids" multiple placeholder="请选择电影类型" style="width: 350px" @change="handleTypeChange">
+        <el-form-item label="电影类型" prop="typeIds">
+          <el-select v-model="form.typeIds" multiple placeholder="请选择电影类型" style="width: 350px" @change="handleTypeChange">
             <el-option v-for="item in typeData" :key="item.id" :label="item.title" :value="item.id" />
           </el-select>
         </el-form-item>
@@ -192,7 +192,7 @@ const { dialogVisible, formRef, form, rules, openAdd, openEdit, submit, close } 
   defaultForm: {
     title: '', english: '', img: '', start: '', time: undefined,
     language: '', content: '', resolution: '', employee: '',
-    areaId: undefined, status: '', ids: []
+    areaId: undefined, status: '', typeIds: []
   },
   rules: {
     title: [{ required: true, message: '请输入电影名称', trigger: 'blur' }],
@@ -242,11 +242,17 @@ function handleFileUpload(res) {
 
 function handleTypeChange(val) {
   if (val.length > 4) {
-    form.ids = val.slice(0, 4)
+    form.typeIds = val.slice(0, 4)
     ElMessage.warning('最多只能选择4种电影类型')
   } else {
-    form.ids = val
+    form.typeIds = val
   }
+}
+
+function getTypeTagType(type) {
+  const tagTypes = ['primary', 'success', 'warning', 'danger', 'info']
+  const seed = type?.id ?? String(type?.title || '').charCodeAt(0) ?? 0
+  return tagTypes[Math.abs(seed) % tagTypes.length]
 }
 
 function getStatusType(status) {
