@@ -38,15 +38,17 @@ import { ElMessageBox } from 'element-plus'
 import { useCrud } from '@/composables/useCrud'
 import { API_PATHS } from '@/constants'
 
-const { dataList, total, pageNum, pageSize, searchForm, selectedIds, del, delBatch, onSearch, onReset, onPageChange, onSizeChange, onSelectionChange } = useCrud(API_PATHS.MARKS)
+const { dataList, total, pageNum, pageSize, searchForm, selectedIds, load, del, delBatch, onSearch, onReset, onPageChange, onSizeChange, onSelectionChange } = useCrud(API_PATHS.MARKS)
+
+load()
 
 function handleDel(id) {
   ElMessageBox.confirm('删除数据后无法恢复，您确认删除吗?', '删除确认', { type: 'warning' }).then(() => del(id)).catch()
 }
 
 function handleDelBatch() {
-  if (!selectedIds.length) return
-  ElMessageBox.confirm(`确定删除选中的 ${selectedIds.length} 条数据吗？`, '删除确认', { type: 'warning' }).then(() => delBatch(selectedIds)).catch()
+  if (!selectedIds.value.length) return
+  ElMessageBox.confirm(`确定删除选中的 ${selectedIds.value.length} 条数据吗？`, '删除确认', { type: 'warning' }).then(() => delBatch(selectedIds.value)).catch()
 }
 </script>
 

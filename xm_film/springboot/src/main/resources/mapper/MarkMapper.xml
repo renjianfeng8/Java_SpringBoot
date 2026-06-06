@@ -17,6 +17,8 @@
         <where>
             <if test="userId != null">AND mark.user_id = #{userId} </if>
             <if test="filmId != null">AND mark.film_id = #{filmId} </if>
+            <if test="userName != null and userName != ''">AND user.name LIKE CONCAT('%', #{userName}, '%')</if>
+            <if test="filmName != null and filmName != ''">AND film.title LIKE CONCAT('%', #{filmName}, '%')</if>
         </where>
         ORDER BY id DESC
     </select>

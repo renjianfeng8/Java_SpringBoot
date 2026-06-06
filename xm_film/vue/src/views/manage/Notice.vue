@@ -88,9 +88,9 @@ function handleDel(id) {
 }
 
 function handleDelBatch() {
-  if (!selectedIds.length) return
-  ElMessageBox.confirm(`确定删除选中的 ${selectedIds.length} 条数据吗？`, '删除确认', { type: 'warning' })
-    .then(() => delBatch(selectedIds)).catch()
+  if (!selectedIds.value.length) return
+  ElMessageBox.confirm(`确定删除选中的 ${selectedIds.value.length} 条数据吗？`, '删除确认', { type: 'warning' })
+    .then(() => delBatch(selectedIds.value)).catch()
 }
 </script>
 
