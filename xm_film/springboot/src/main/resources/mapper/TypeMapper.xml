@@ -16,6 +16,10 @@
         ORDER BY id DESC
     </select>
 
+    <select id="selectById" parameterType="java.lang.Integer" resultType="com.example.springboot.entity.Type">
+        SELECT * FROM type WHERE id = #{id}
+    </select>
+
     <select id="selectByIds" resultType="com.example.springboot.entity.Type">
         SELECT * FROM type WHERE id IN
         <foreach collection="list" item="id" open="(" separator="," close=")">

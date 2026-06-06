@@ -21,6 +21,17 @@
         ORDER BY id DESC
     </select>
 
+    <select id="selectById" parameterType="java.lang.Integer" resultType="com.example.springboot.entity.Mark">
+        SELECT
+        mark.*,
+        user.name as userName,
+        film.title as filmName
+        FROM mark
+        LEFT JOIN user ON mark.user_id = user.id
+        LEFT JOIN film ON mark.film_id = film.id
+        WHERE mark.id = #{id}
+    </select>
+
     <!-- 插入操作 -->
     <insert id="insert" parameterType="com.example.springboot.entity.Mark"
             useGeneratedKeys="true" keyProperty="id">

@@ -19,6 +19,9 @@
         ORDER BY id DESC
     </select>
 
+    <select id="selectById" parameterType="java.lang.Integer" resultType="com.example.springboot.entity.Room">
+        SELECT * FROM room WHERE id = #{id}
+    </select>
 
     <insert id="insert" parameterType="com.example.springboot.entity.Room"
             useGeneratedKeys="true" keyProperty="id">

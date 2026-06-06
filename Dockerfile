@@ -14,7 +14,10 @@ RUN mvn clean package -DskipTests -q
 FROM eclipse-temurin:17-jre
 WORKDIR /app
 COPY --from=builder /build/target/*.jar app.jar
-RUN mkdir -p /app/uploads
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends curl \
+    && rm -rf /var/lib/apt/lists/* \
+    && mkdir -p /app/uploads
 
 EXPOSE 9090
 
