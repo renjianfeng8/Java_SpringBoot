@@ -9,6 +9,9 @@
     <select id="selectAll" resultType="com.example.springboot.entity.Room">
         SELECT * FROM room
         <where>
+            <if test="cinemaId != null">
+                AND cinema_id = #{cinemaId}
+            </if>
             <if test="name != null">
                 AND name LIKE CONCAT('%', #{name}, '%')
             </if>
@@ -21,11 +24,13 @@
             useGeneratedKeys="true" keyProperty="id">
         INSERT INTO room
         <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="cinemaId != null">cinema_id,</if>
             <if test="title != null">title,</if>
             <if test="name != null">name,</if>
         </trim>
         VALUES
         <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="cinemaId != null">#{cinemaId},</if>
             <if test="title != null">#{title},</if>
             <if test="name != null">#{name},</if>
         </trim>
@@ -35,6 +40,7 @@
     <update id="updateById" parameterType="com.example.springboot.entity.Room">
         UPDATE room
         <set>
+            <if test="cinemaId != null">cinema_id = #{cinemaId},</if>
             <if test="title != null">title = #{title},</if>
             <if test="name != null">name = #{name},</if>
         </set>

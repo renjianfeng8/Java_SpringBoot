@@ -73,14 +73,16 @@ public class AuthController {
     @PutMapping("/password")
     public Result updatePassword(@RequestBody Account account, HttpServletRequest request) {
         String userId = (String) request.getAttribute("userId");
+        String role = (String) request.getAttribute("role");
         if (userId != null) {
             account.setId(Integer.valueOf(userId));
         }
-        if ("ADMIN".equals(account.getRole())) {
+        account.setRole(role);
+        if ("ADMIN".equals(role)) {
             adminService.updatePassword(account);
-        } else if ("CINEMA".equals(account.getRole())) {
+        } else if ("CINEMA".equals(role)) {
             cinemaService.updatePassword(account);
-        } else if ("USER".equals(account.getRole())) {
+        } else if ("USER".equals(role)) {
             userService.updatePassword(account);
         } else {
             throw new CustomException("500", "非法输入");

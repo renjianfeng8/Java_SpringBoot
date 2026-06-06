@@ -21,6 +21,7 @@
         <where>
             <if test="orders != null and orders != ''">AND ordered.orders LIKE CONCAT('%', #{orders}, '%')</if>
             <if test="status != null">AND ordered.status = #{status}</if>
+            <if test="recordId != null">AND ordered.record_id = #{recordId} </if>
             <if test="userId != null">AND ordered.user_id = #{userId} </if>
             <if test="filmId != null">AND ordered.film_id = #{filmId} </if>
             <if test="cinemaId != null">AND ordered.cinema_id = #{cinemaId} </if>
@@ -35,6 +36,7 @@
         INSERT INTO ordered
         <trim prefix="(" suffix=")" suffixOverrides=",">
             <if test="orders != null">orders,</if>
+            <if test="recordId != null">record_id,</if>
             <if test="userId != null">user_id,</if>
             <if test="filmId != null">film_id,</if>
             <if test="img != null">img,</if>
@@ -50,6 +52,7 @@
         VALUES
         <trim prefix="(" suffix=")" suffixOverrides=",">
             <if test="orders != null">#{orders},</if>
+            <if test="recordId != null">#{recordId},</if>
             <if test="userId != null">#{userId},</if>
             <if test="filmId != null">#{filmId},</if>
             <if test="img != null">#{img},</if>
@@ -69,6 +72,7 @@
         UPDATE ordered
         <set>
             <if test="orders != null">orders = #{orders},</if>
+            <if test="recordId != null">record_id = #{recordId},</if>
             <if test="userId != null">user_id = #{userId},</if>
             <if test="filmId != null">film_id = #{filmId},</if>
             <if test="img != null">img = #{img},</if>

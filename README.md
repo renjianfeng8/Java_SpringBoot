@@ -503,3 +503,10 @@ node e2e-tests/e2e-scan.spec.mjs
 ## License
 
 MIT License
+
+## Current Architecture Notes
+
+- Authentication state is centralized in `xm_film/vue/src/utils/authStorage.js`; router guards, Axios token injection, password pages, profile pages, and ticket purchase use the same storage helpers.
+- Backend password changes trust the JWT-derived request role instead of the request body role.
+- `AuthInterceptor` enforces role boundaries for admin-only resources and write operations on protected resources.
+- Database relations now use explicit keys for the main booking path: `room.cinema_id`, `record.film_id`, and `ordered.record_id`; schema/data SQL under `xm_film/sql` and `xm_film/springboot/src/main/resources/db` are kept in sync.

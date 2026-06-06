@@ -142,8 +142,9 @@ import { useRoute, useRouter } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import request from "@/utils/request.js";
 import { API_PATHS, apiById } from '@/constants';
+import { clearStoredUser, getStoredUser } from '@/utils/authStorage';
 
-// 1. 从localStorage读取登录用户信息（与登录逻辑完全匹配）
+// 1. Read the current signed-in user from shared auth storage.
 const userInfo = ref(null); // 存储登录用户完整信息
 const isLogin = ref(false); // 是否登录标记
 const userId = ref(0); // 用户ID（后端Ordered实体需要）
@@ -151,9 +152,9 @@ const userId = ref(0); // 用户ID（后端Ordered实体需要）
 // 初始化并监听登录状态（页面刷新或登录状态变化时自动更新）
 const initUserInfo = () => {
   try {
-    const storedUser = localStorage.getItem('xm-pro-user');
+    const storedUser = getStoredUser();
     if (storedUser) {
-      const parsedUser = JSON.parse(storedUser);
+      const parsedUser = storedUser;
       // 校验用户信息合法性（需包含id和role字段，与登录接口返回一致）
       if (parsedUser.id && parsedUser.role) {
         userInfo.value = parsedUser;
@@ -166,15 +167,15 @@ const initUserInfo = () => {
         }
       } else {
         // 存储的用户信息不完整，清除无效数据
-        localStorage.removeItem('xm-pro-user');
+        clearStoredUser();
         isLogin.value = false;
       }
     } else {
       isLogin.value = false;
     }
   } catch (err) {
-    // 解析localStorage数据失败，清除无效数据
-    localStorage.removeItem('xm-pro-user');
+    // Clear invalid cached auth data.
+    clearStoredUser();
     isLogin.value = false;
     ElMessage.warning('登录信息失效，请重新登录');
   }

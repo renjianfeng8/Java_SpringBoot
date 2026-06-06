@@ -34,6 +34,7 @@ import { reactive, ref, onMounted } from "vue";
 import request from "@/utils/request.js";
 import { ElMessage } from "element-plus";
 import { API_PATHS } from '@/constants';
+import { getStoredUser, setStoredUser } from "@/utils/authStorage";
 
 const formRef = ref();
 const formData = reactive({
@@ -54,10 +55,10 @@ const rules = {
 };
 
 onMounted(() => {
-  const storedUser = localStorage.getItem("xm-pro-user");
+  const storedUser = getStoredUser();
   if (storedUser) {
     try {
-      const user = JSON.parse(storedUser);
+      const user = storedUser;
       formData.username = user.username;
       formData.name = user.name || user.username;
       formData.phone = user.phone || "";
@@ -77,7 +78,7 @@ const updateUser = () => {
         if (res.code === "200") {
           ElMessage.success("更新成功");
           // 更新缓存数据
-          localStorage.setItem("xm-pro-user", JSON.stringify(formData));
+          setStoredUser({ ...getStoredUser(), ...formData });
         } else {
           ElMessage.error(res.msg);
         }

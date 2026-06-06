@@ -29,6 +29,7 @@ import {reactive, ref} from "vue";
 import request from "@/utils/request.js";
 import { ElMessage } from "element-plus";
 import { API_PATHS } from '@/constants';
+import { clearStoredUser, getStoredUser } from "@/utils/authStorage";
 
 
 const formRef = ref()
@@ -44,7 +45,7 @@ const validatePass = (rule,value,callback) => {
 }
 
 const data = reactive({
-  user: (() => { try { return JSON.parse(localStorage.getItem('xm-pro-user')); } catch { return {}; } })(),
+  user: getStoredUser() || {},
   form: {},
   rules: {
     password: [
@@ -67,7 +68,7 @@ const updatePassword = () => {
       request.put(`${API_PATHS.AUTH}/password`,data.form).then(res => {
         if (res.code === '200') {
           ElMessage.success('修改成功')
-          localStorage.removeItem('xm-pro-user')
+          clearStoredUser()
           setTimeout(() => {
             location.href = '/login'
           },500)
