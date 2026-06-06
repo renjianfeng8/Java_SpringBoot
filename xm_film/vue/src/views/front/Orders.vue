@@ -98,6 +98,7 @@ import { reactive } from "vue";
 import { Delete, Search } from "@element-plus/icons-vue";
 import request from "@/utils/request.js";
 import { ElMessage, ElMessageBox } from "element-plus";
+import { API_PATHS, apiById, apiPage } from '@/constants';
 
 // 关键修改3：扩展Ordered接口，增加后端返回的字段
 interface Ordered {
@@ -160,7 +161,7 @@ const data = reactive({
 });
 
 const loadUser = () => {
-  request.get('/api/v1/users').then(res => {
+  request.get(API_PATHS.USERS).then(res => {
     if(res.code === '200') {
       data.UserData = res.data
     } else {
@@ -170,7 +171,7 @@ const loadUser = () => {
 }
 
 const loadFilm = () => {
-  request.get('/api/v1/films').then(res => {
+  request.get(API_PATHS.FILMS).then(res => {
     if(res.code === '200') {
       data.FilmData = res.data
     } else {
@@ -190,7 +191,7 @@ const getRoomName = (roomId?: number) => {
 }
 
 const loadCinema = () => {
-  request.get('/api/v1/cinemas').then(res => {
+  request.get(API_PATHS.CINEMAS).then(res => {
     if(res.code === '200') {
       data.CinemaData = res.data
     } else {
@@ -200,7 +201,7 @@ const loadCinema = () => {
 }
 
 const loadRoom = () => {
-  request.get('/api/v1/rooms').then(res => {
+  request.get(API_PATHS.ROOMS).then(res => {
     if(res.code === '200') {
       data.RoomData = res.data
     } else {
@@ -210,7 +211,7 @@ const loadRoom = () => {
 }
 
 const load = () => {
-  request.get('/api/v1/orders/page', {
+  request.get(apiPage(API_PATHS.ORDERS), {
     params: {
       pageNum: data.pageNumber,
       pageSize: data.pageSize,
@@ -230,7 +231,7 @@ const load = () => {
 
 const del = (id: number) => {
   ElMessageBox.confirm('删除数据后无法恢复,您确认删除吗?', '删除确认', { type: 'warning' }).then(() => {
-    request.delete(`/api/v1/orders/${id}`).then(res => {
+    request.delete(apiById(API_PATHS.ORDERS, id)).then(res => {
       if (res.code === '200') {
         ElMessage.success('操作成功')
         load()

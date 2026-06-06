@@ -141,6 +141,7 @@ import { ref, onMounted, watchEffect } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import request from "@/utils/request.js";
+import { API_PATHS, apiById } from '@/constants';
 
 // 1. 从localStorage读取登录用户信息（与登录逻辑完全匹配）
 const userInfo = ref(null); // 存储登录用户完整信息
@@ -253,7 +254,7 @@ onMounted(() => {
 const initSeats = () => {
   return new Promise((resolve) => {
     // 1. 先查询该场次已售座位（通过订单接口反向获取）
-    request.get('/api/v1/orders', {
+    request.get(API_PATHS.ORDERS, {
       params: {
         cinemaId: Number(cinemaId),
         filmId: Number(filmId),
@@ -311,7 +312,7 @@ const initSeats = () => {
 const fetchBaseInfo = () => {
   return Promise.all([
     // 电影信息（与影院页接口一致）
-    request.get(`/film/selectById/${Number(filmId)}`).then(res => {
+    request.get(apiById(API_PATHS.FILMS, Number(filmId))).then(res => {
       if (res.code === '200' && res.data) {
         filmInfo.value = res.data;
       } else {
@@ -319,7 +320,7 @@ const fetchBaseInfo = () => {
       }
     }),
     // 影院信息（与影院页接口一致）
-    request.get(`/cinema/selectById/${Number(cinemaId)}`).then(res => {
+    request.get(apiById(API_PATHS.CINEMAS, Number(cinemaId))).then(res => {
       if (res.code === '200' && res.data) {
         cinemaInfo.value = res.data;
       } else {
@@ -327,7 +328,7 @@ const fetchBaseInfo = () => {
       }
     }),
     // 场次信息（获取影厅ID等关键字段）
-    request.get(`/record/selectById/${Number(recordId)}`).then(res => {
+    request.get(apiById(API_PATHS.RECORDS, Number(recordId))).then(res => {
       if (res.code === '200' && res.data) {
         showInfo.value = {
           id: res.data.id,
@@ -444,7 +445,7 @@ const confirmBooking = () => {
   };
 
   // 调用后端/add接口提交订单
-  request.post('/api/v1/orders', orderData)
+  request.post(API_PATHS.ORDERS, orderData)
       .then(res => {
         if (res.code === '200') {
           ElMessage.success('订单创建成功！即将跳转到订单详情');

@@ -203,7 +203,7 @@ xm_film/
 CREATE DATABASE `xm-film` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 ```
 
-执行项目提供的 `xm_film/sql/init.sql` 一键初始化脚本（或依次执行 `schema.sql` + `data.sql`）。
+执行项目提供的 `xm_film/sql/init.sql` 一键初始化脚本（或依次执行 `schema.sql` + `data.sql`）。使用 MySQL 客户端导入时请指定 `--default-character-set=utf8mb4`，避免中文默认值和初始数据在不同终端编码下被错误解析。
 
 ### 2. 启动后端
 

@@ -91,6 +91,7 @@ import { reactive } from "vue"; // 补充导入reactive
 import { useRouter } from "vue-router"; // 导入路由
 import request from "@/utils/request.js";
 import { ElMessage } from "element-plus"; // 补充导入ElMessage
+import { API_PATHS, apiPage } from '@/constants';
 
 // 初始化路由实例
 const router = useRouter();
@@ -121,7 +122,7 @@ const goToFilmDetail = (filmId) => {
 }
 
 const load = () => {
-  request.get('/api/v1/films/page',{
+  request.get(apiPage(API_PATHS.FILMS),{
     params: {
       pageNum: data.pageNum,
       pageSize: data.pageSize,
@@ -140,7 +141,7 @@ const load = () => {
 }
 
 const loadType = () => {
-  request.get('/api/v1/types').then(res => {
+  request.get(API_PATHS.TYPES).then(res => {
     if (res.code === '200') {
       data.typeData = res.data
     } else {
@@ -150,7 +151,7 @@ const loadType = () => {
 }
 
 const loadArea = () => {
-  request.get('/api/v1/areas').then(res => {
+  request.get(API_PATHS.AREAS).then(res => {
     if (res.code === '200') {
       data.areaData = res.data
     } else {
@@ -160,7 +161,7 @@ const loadArea = () => {
 }
 
 const loadYear = () => {
-  request.get('/api/v1/auth/years').then(res => {
+  request.get(API_PATHS.YEARS).then(res => {
     if (res.code === '200') {
       data.yearData = res.data
     } else {

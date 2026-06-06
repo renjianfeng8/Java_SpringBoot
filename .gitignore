@@ -44,6 +44,10 @@ test-results/
 # === Claude ===
 .claude/
 
+# === Local agent/runtime artifacts ===
+AGENTS.md
+xm_film/package.json
+
 # === 内部计划文档（非项目源码）===
 docs/superpowers/plans/
 

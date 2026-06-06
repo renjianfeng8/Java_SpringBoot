@@ -6,7 +6,7 @@
 -- 使用方式:
 --   方式一（推荐）: 先 cd 到 sql 目录, 再执行
 --     cd xm_film/sql
---     mysql -u root -p < init.sql
+--     mysql --default-character-set=utf8mb4 -u root -p < init.sql
 --
 --   方式二: 在 MySQL 客户端中指定全路径
 --     SOURCE /absolute/path/to/xm_film/sql/init.sql;

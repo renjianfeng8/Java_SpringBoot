@@ -33,6 +33,7 @@
 import { reactive, ref, onMounted } from "vue";
 import request from "@/utils/request.js";
 import { ElMessage } from "element-plus";
+import { API_PATHS } from '@/constants';
 
 const formRef = ref();
 const formData = reactive({
@@ -72,7 +73,7 @@ onMounted(() => {
 const updateUser = () => {
   formRef.value.validate((valid) => {
     if (valid) {
-      request.put("/api/v1/users", formData).then((res) => {
+      request.put(API_PATHS.USERS, formData).then((res) => {
         if (res.code === "200") {
           ElMessage.success("更新成功");
           // 更新缓存数据

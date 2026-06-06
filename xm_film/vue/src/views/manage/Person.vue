@@ -38,6 +38,7 @@
 import {reactive , ref} from "vue";
 import request from "@/utils/request.js";
 import { ElMessage } from "element-plus";
+import { API_PATHS, apiById } from '@/constants';
 
 
 const formRef = ref()
@@ -62,7 +63,7 @@ const data = reactive ({
 const emit = defineEmits(['updateUser'])
 
 if (data.user.role === 'USER') {
-  request.get('/api/v1/users/' + data.user.id).then(res => {
+  request.get(apiById(API_PATHS.USERS, data.user.id)).then(res => {
     data.form = res.data
   })
 } else {
@@ -71,7 +72,7 @@ if (data.user.role === 'USER') {
 
 const updateUser = () => {
   if (data.user.role === 'USER') {
-    request.put('/api/v1/users',data.form).then(res =>{
+    request.put(API_PATHS.USERS,data.form).then(res =>{
       if (res.code === '200') {
         ElMessage.success('更新成功')
         //更新缓存数据
@@ -83,7 +84,7 @@ const updateUser = () => {
       }
     })
   } else {
-    request.put('/api/v1/admins',data.form).then(res =>{
+    request.put(API_PATHS.ADMINS,data.form).then(res =>{
       if (res.code === '200') {
         ElMessage.success('更新成功')
         //更新缓存数据

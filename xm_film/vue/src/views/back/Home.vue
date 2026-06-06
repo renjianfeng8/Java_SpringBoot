@@ -36,6 +36,7 @@
 import { reactive, onMounted } from "vue";
 import request from "@/utils/request.js";
 import { ElMessage } from "element-plus";
+import { API_PATHS, apiPage } from "@/constants";
 
 // 公告数据类型定义
 interface Notice {
@@ -88,7 +89,7 @@ const formatTime = (time: string | number | undefined) => {
 
 // 加载公告列表（支持分页和搜索）
 const load = () => {
-  request.get("/api/v1/notices/page", {
+  request.get(apiPage(API_PATHS.NOTICES), {
     params: {
       title: data.query.title // 搜索条件（模糊匹配公告名称）
     }

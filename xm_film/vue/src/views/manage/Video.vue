@@ -75,9 +75,9 @@ import { Delete, Edit, Search } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useCrud } from '@/composables/useCrud'
 import { useFormDialog } from '@/composables/useFormDialog'
-import { API_PATHS } from '@/constants'
+import { API_PATHS, FILE_UPLOAD_URL } from '@/constants'
 
-const uploadUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:9090' + '/api/v1/files/upload'
+const uploadUrl = FILE_UPLOAD_URL
 
 const crud = useCrud(API_PATHS.VIDEOS)
 const { dataList, total, pageNum, pageSize, searchForm, selectedIds, del, delBatch, onSearch, onReset, onPageChange, onSizeChange, onSelectionChange } = crud

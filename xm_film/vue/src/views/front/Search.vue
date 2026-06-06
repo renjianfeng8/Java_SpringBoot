@@ -43,6 +43,7 @@
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import request from "@/utils/request.js";
+import { FILM_API } from '@/constants';
 
 // 路由实例
 const route = useRoute()
@@ -68,7 +69,7 @@ const fetchSearchResults = async () => {
     const title = route.query.title || ''
     searchTitle.value = title
     if (!title.trim()) return
-    const response = await request.get('/api/v1/films/by-title', { params: { title } })
+    const response = await request.get(FILM_API.SEARCH, { params: { title } })
     filmList.value = response.code === '200' ? (response.data || []) : []
   } catch (error) {
     console.error('搜索请求出错:', error)

@@ -112,6 +112,7 @@ import { reactive, ref } from "vue";
 import {Delete, Edit, Search} from "@element-plus/icons-vue";
 import request from "@/utils/request.js";
 import { ElMessage, ElMessageBox } from "element-plus";
+import { API_PATHS, apiBatch, apiById, apiPage } from "@/constants";
 
 interface Record {
   id?: number;
@@ -156,7 +157,7 @@ const delBatch = () => {
     return
   }
   ElMessageBox.confirm('删除数据后无法恢复,您确认删除吗?', '删除确认', { type: 'warning' }).then(() => {
-    request.delete('/api/v1/records/batch', { data: data.ids }).then(res => {
+    request.delete(apiBatch(API_PATHS.RECORDS), { data: data.ids }).then(res => {
       if (res.code === '200') {
         ElMessage.success('操作成功')
         load()
@@ -179,7 +180,7 @@ const reset = () => {
 };
 
 const load = () => {
-  request.get('/api/v1/records/page', {
+  request.get(apiPage(API_PATHS.RECORDS), {
     params: {
       pageNum: data.pageNumber,
       pageSize: data.pageSize,
@@ -213,7 +214,7 @@ const load = () => {
 
 const del = (id: number) => {
   ElMessageBox.confirm('删除数据后无法恢复,您确认删除吗?', '删除确认', { type: 'warning' }).then(() => {
-    request.delete(`/api/v1/records/${id}`).then(res => {
+    request.delete(apiById(API_PATHS.RECORDS, id)).then(res => {
       if (res.code === '200') {
         ElMessage.success('操作成功');
         load();
@@ -227,7 +228,7 @@ const del = (id: number) => {
 
 
 const add = () => {
-  request.post('/api/v1/records', data.form).then(res => {
+  request.post(API_PATHS.RECORDS, data.form).then(res => {
     if (res.code === '200') {
       ElMessage.success('添加成功');
       data.formVisible = false;
@@ -241,7 +242,7 @@ const add = () => {
 }
 
 const update = () => {
-  request.put('/api/v1/records', data.form).then(res => {
+  request.put(API_PATHS.RECORDS, data.form).then(res => {
     if (res.code === '200') {
       ElMessage.success('更新成功');
       data.formVisible = false;
@@ -274,7 +275,7 @@ const getStatusType = (status: string | undefined) => {
 
 
 const loadCinema = () => {
-  return request.get('/api/v1/cinemas').then(res => {
+  return request.get(API_PATHS.CINEMAS).then(res => {
     if(res.code === '200') {
       data.cinemaData = res.data;
     } else {
@@ -285,7 +286,7 @@ const loadCinema = () => {
 
 
 const loadRoom = () => {
-  return request.get('/api/v1/rooms').then(res => {
+  return request.get(API_PATHS.ROOMS).then(res => {
     if(res.code === '200') {
       data.roomData = res.data;
     } else {

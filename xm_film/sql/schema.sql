@@ -12,6 +12,8 @@
 -- ---------------------------
 -- 1. 管理员表 (admin)
 -- ---------------------------
+SET FOREIGN_KEY_CHECKS = 0;
+
 DROP TABLE IF EXISTS `admin`;
 CREATE TABLE `admin` (
     `id`       INT          AUTO_INCREMENT PRIMARY KEY COMMENT '管理员ID',
@@ -224,3 +226,5 @@ CREATE TABLE `video` (
     `preview` VARCHAR(500)                            COMMENT '视频预览URL',
     `start`   DATE                                    COMMENT '上映日期'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='视频/预告片表';
+
+SET FOREIGN_KEY_CHECKS = 1;
