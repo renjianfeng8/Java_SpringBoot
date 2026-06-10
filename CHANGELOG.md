@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased] - 2026-06-10
+
+### Added
+
+- **错误码与参数校验**: 新增 `ErrorCode` 枚举（7 种标准化错误码）、`CustomException` 扩展（支持 ErrorCode 构造）、`GlobalExceptionHandler` 验证异常处理
+- **请求 DTO**: 新增 `LoginRequest`、`PasswordChangeRequest`、`OrderCreateRequest` 并集成 `@Valid` 校验
+- **订单状态操作**: 新增 `createOrder`、`cancelOrder`、`pickupOrder` 事务方法，严格状态流转校验
+- **重复座位防护**: 下单时逐个检查未取消订单的座位占用，配合 `idx_ordered_status` 索引
+- **RBAC 权限矩阵**: 文档化 ADMIN/CINEMA/USER 权限边界，新增 `AuthInterceptorAccessTest` 验证拦截器逻辑
+- **生产配置**: 新增 `application-prod.yml`、`.env.example`、`vue/Dockerfile`（Nginx 多阶段）、`vue/nginx.conf`、Docker Compose 前端服务、健康检查
+- **健康检查**: `GET /api/v1/health` 返回 UP 状态，列入拦截器白名单
+- **前端错误展示**: `request.js` 优先展示后端业务消息；购票页切到 DTO 端点；订单页新增取消操作
+- **文档升级**: README 作品集版头、项目亮点、Mermaid 架构图；本地 CI 复现说明
+- **部署文档**: `docs/deployment/production-deploy.md`，含演示检查清单
+- **测试覆盖**: 新增 35 个单元测试（总计 68 例），覆盖异常处理、订单状态流转、权限拦截、健康检查
+
+### Changed
+
+- **全栈 ErrorCode 替换**: 17 个后端的原始错误码字符串统一替换为 `ErrorCode` 枚举引用
+- **AuthInterceptor RBAC 修正**: `actors/areas/types/notices/videos` 从 `ADMIN_ONLY_PREFIXES` 移至 `ADMIN_WRITE_PREFIXES`，允许非管理员读取
+- **CI/本地脚本对齐**: `run-e2e-tests.bat` 和 CI 后端健康检查切到 `/api/v1/health`
+
 ## [1.1.0] - 2026-05-29
 
 ### Added
