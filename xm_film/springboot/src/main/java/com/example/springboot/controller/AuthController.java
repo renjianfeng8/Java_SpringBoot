@@ -4,6 +4,8 @@ import com.example.springboot.common.BaseController;
 import com.example.springboot.common.JwtUtils;
 import com.example.springboot.common.Result;
 import com.example.springboot.common.enums.RoleEnum;
+import com.example.springboot.dto.request.LoginRequest;
+import com.example.springboot.dto.request.PasswordChangeRequest;
 import com.example.springboot.entity.Account;
 import com.example.springboot.exception.CustomException;
 import com.example.springboot.service.AdminService;
@@ -13,6 +15,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -39,7 +42,11 @@ public class AuthController {
 
     @Operation(summary = "用户登录", description = "三端共用登录接口，根据角色(ADMIN/CINEMA/USER)路由到不同服务")
     @PostMapping("/login")
-    public Result login(@RequestBody Account account) {
+    public Result login(@Valid @RequestBody LoginRequest request) {
+        Account account = new Account();
+        account.setUsername(request.getUsername());
+        account.setPassword(request.getPassword());
+        account.setRole(request.getRole());
         Account result = null;
         if (RoleEnum.ADMIN.name().equals(account.getRole())) {
             result = adminService.login(account);
@@ -71,9 +78,12 @@ public class AuthController {
 
     @Operation(summary = "修改密码")
     @PutMapping("/password")
-    public Result updatePassword(@RequestBody Account account, HttpServletRequest request) {
-        String userId = (String) request.getAttribute("userId");
-        String role = (String) request.getAttribute("role");
+    public Result updatePassword(@Valid @RequestBody PasswordChangeRequest request, HttpServletRequest httpRequest) {
+        Account account = new Account();
+        account.setPassword(request.getPassword());
+        account.setNewPassword(request.getNewPassword());
+        String userId = (String) httpRequest.getAttribute("userId");
+        String role = (String) httpRequest.getAttribute("role");
         if (userId != null) {
             account.setId(Integer.valueOf(userId));
         }
