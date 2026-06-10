@@ -2,12 +2,14 @@ package com.example.springboot.controller;
 
 import com.example.springboot.common.BaseController;
 import com.example.springboot.common.Result;
+import com.example.springboot.dto.request.OrderCreateRequest;
 import com.example.springboot.entity.Ordered;
 import com.example.springboot.service.OrderedService;
 import com.github.pagehelper.PageHelper;
 import com.github.pagehelper.PageInfo;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 import org.springframework.web.bind.annotation.*;
@@ -46,6 +48,27 @@ public class OrderedController extends BaseController<Ordered> {
     @PostMapping
     public Result add(@RequestBody Ordered entity) {
         orderedService.createOrder(entity, currentRole(), currentUserId());
+        return Result.success();
+    }
+
+    @PostMapping("/create")
+    public Result create(@Valid @RequestBody OrderCreateRequest request) {
+        Ordered ordered = new Ordered();
+        ordered.setRecordId(request.getRecordId());
+        ordered.setSeat(request.getSeat());
+        orderedService.createOrder(ordered, currentRole(), currentUserId());
+        return Result.success();
+    }
+
+    @PutMapping("/{id}/cancel")
+    public Result cancel(@PathVariable Integer id) {
+        orderedService.cancelOrder(id, currentRole(), currentUserId());
+        return Result.success();
+    }
+
+    @PutMapping("/{id}/pickup")
+    public Result pickup(@PathVariable Integer id) {
+        orderedService.pickupOrder(id, currentRole(), currentUserId());
         return Result.success();
     }
 
