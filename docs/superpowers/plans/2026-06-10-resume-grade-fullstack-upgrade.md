@@ -648,7 +648,7 @@ public void pickupOrder(Integer id, String role, Integer userId) {
 }
 ```
 
-- [ ] **Step 5: Add explicit controller endpoints**
+- [ ] **Step 5: Replace the existing order creation endpoint**
 
 In `xm_film/springboot/src/main/java/com/example/springboot/controller/OrderedController.java`, add imports:
 
@@ -658,18 +658,23 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 ```
 
-Add endpoints while preserving existing CRUD endpoints:
+Replace the existing `@PostMapping` order creation method instead of adding a second `POST /api/v1/orders/create` route. This keeps a single order creation API at `POST /api/v1/orders` and avoids duplicate creation endpoints.
 
 ```java
-@PostMapping("/create")
-public Result createOrder(@Valid @RequestBody OrderCreateRequest request, HttpServletRequest httpRequest) {
+@Override
+@PostMapping
+public Result add(@Valid @RequestBody OrderCreateRequest request) {
     Ordered ordered = new Ordered();
     ordered.setRecordId(request.getRecordId());
     ordered.setSeat(request.getSeat());
-    orderedService.createOrder(ordered, (String) httpRequest.getAttribute("role"), Integer.valueOf((String) httpRequest.getAttribute("userId")));
+    orderedService.createOrder(ordered, currentRole(), currentUserId());
     return Result.success();
 }
+```
 
+Add state transition endpoints while preserving the existing scoped list/page/delete endpoints:
+
+```java
 @PutMapping("/{id}/cancel")
 public Result cancel(@PathVariable Integer id, HttpServletRequest httpRequest) {
     orderedService.cancelOrder(id, (String) httpRequest.getAttribute("role"), Integer.valueOf((String) httpRequest.getAttribute("userId")));
@@ -734,14 +739,11 @@ Select-String -Path xm_film/springboot/src/main/resources/db/schema.sql -Pattern
 
 Expected: identify existing indexes and whether `record_id`, `seat`, and `status` are indexed.
 
-- [ ] **Step 2: Add supporting indexes**
+- [ ] **Step 2: Add the missing status index**
 
-In both schema files, add these indexes inside the `ordered` table definition if missing:
+The current schema already has `idx_ordered_record_id`, `idx_ordered_user_id`, and `idx_ordered_cinema_id`. In both schema files, add only this missing index inside the `ordered` table definition:
 
 ```sql
-KEY `idx_ordered_user_id` (`user_id`),
-KEY `idx_ordered_record_id` (`record_id`),
-KEY `idx_ordered_cinema_id` (`cinema_id`),
 KEY `idx_ordered_status` (`status`)
 ```
 
@@ -1117,6 +1119,8 @@ server {
 
 - [ ] **Step 7: Wire backend and frontend into Docker Compose**
 
+The root `Dockerfile` already installs `curl` and defines an image-level `HEALTHCHECK`. Keep a compose-level backend healthcheck too, because the frontend service uses `depends_on.backend.condition: service_healthy`.
+
 In `docker-compose.yml`, ensure backend service has:
 
 ```yaml
@@ -1242,7 +1246,7 @@ In `BuyTicket.vue`, ensure the order submit method does not show success after a
 
 ```javascript
 try {
-  const res = await request.post('/api/v1/orders/create', {
+  const res = await request.post('/api/v1/orders', {
     recordId: recordId.value,
     seat: selectedSeats.value.join(',')
   })
@@ -1849,4 +1853,4 @@ The plan contains no unresolved implementation placeholders. Local demo URLs are
 - Error enum: `com.example.springboot.common.enums.ErrorCode`.
 - Order operations: `cancelOrder`, `pickupOrder`, `createOrder`.
 - Health endpoint: `/api/v1/health`.
-- Explicit frontend order endpoints: `/api/v1/orders/create`, `/api/v1/orders/{id}/cancel`.
+- Explicit frontend order endpoints: `POST /api/v1/orders`, `PUT /api/v1/orders/{id}/cancel`.
