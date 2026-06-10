@@ -2,6 +2,7 @@ package com.example.springboot.controller;
 
 import com.example.springboot.common.BaseController;
 import com.example.springboot.common.Result;
+import com.example.springboot.common.enums.ErrorCode;
 import com.example.springboot.entity.Cinema;
 import com.example.springboot.exception.CustomException;
 import com.example.springboot.service.CinemaService;
@@ -56,7 +57,7 @@ public class CinemaController extends BaseController<Cinema> {
             cinemaService.update(cinema);
             return Result.success();
         }
-        throw new CustomException("403", "权限不足");
+        throw new CustomException(ErrorCode.FORBIDDEN, "权限不足");
     }
 
     @Override
@@ -85,7 +86,7 @@ public class CinemaController extends BaseController<Cinema> {
 
     private void requireAdmin() {
         if (!isAdmin()) {
-            throw new CustomException("403", "权限不足");
+            throw new CustomException(ErrorCode.FORBIDDEN, "权限不足");
         }
     }
 

@@ -2,6 +2,7 @@ package com.example.springboot.controller;
 
 import com.example.springboot.common.BaseController;
 import com.example.springboot.common.Result;
+import com.example.springboot.common.enums.ErrorCode;
 import com.example.springboot.entity.User;
 import com.example.springboot.exception.CustomException;
 import com.example.springboot.service.UserService;
@@ -36,7 +37,7 @@ public class UserController extends BaseController<User> {
             User user = userService.selectById(currentUserId());
             return Result.success(user == null ? List.of() : List.of(user));
         }
-        throw new CustomException("403", "权限不足");
+        throw new CustomException(ErrorCode.FORBIDDEN, "权限不足");
     }
 
     @Override
@@ -52,7 +53,7 @@ public class UserController extends BaseController<User> {
             User user = userService.selectById(currentUserId());
             return Result.success(new PageInfo<>(user == null ? List.of() : List.of(user)));
         }
-        throw new CustomException("403", "权限不足");
+        throw new CustomException(ErrorCode.FORBIDDEN, "权限不足");
     }
 
     @Override
@@ -61,7 +62,7 @@ public class UserController extends BaseController<User> {
         if (isAdmin() || (isUser() && id.equals(currentUserId()))) {
             return Result.success(userService.selectById(id));
         }
-        throw new CustomException("403", "权限不足");
+        throw new CustomException(ErrorCode.FORBIDDEN, "权限不足");
     }
 
     @Override
@@ -76,7 +77,7 @@ public class UserController extends BaseController<User> {
             userService.update(entity);
             return Result.success();
         }
-        throw new CustomException("403", "权限不足");
+        throw new CustomException(ErrorCode.FORBIDDEN, "权限不足");
     }
 
     @Override
@@ -105,7 +106,7 @@ public class UserController extends BaseController<User> {
 
     private void requireAdmin() {
         if (!isAdmin()) {
-            throw new CustomException("403", "权限不足");
+            throw new CustomException(ErrorCode.FORBIDDEN, "权限不足");
         }
     }
 

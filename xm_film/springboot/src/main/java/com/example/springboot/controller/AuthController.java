@@ -3,6 +3,7 @@ package com.example.springboot.controller;
 import com.example.springboot.common.BaseController;
 import com.example.springboot.common.JwtUtils;
 import com.example.springboot.common.Result;
+import com.example.springboot.common.enums.ErrorCode;
 import com.example.springboot.common.enums.RoleEnum;
 import com.example.springboot.dto.request.LoginRequest;
 import com.example.springboot.dto.request.PasswordChangeRequest;
@@ -56,7 +57,7 @@ public class AuthController {
             result = userService.login(account);
         }
         if (result == null) {
-            return Result.error("500", "账号或密码错误");
+            return Result.error(ErrorCode.SYSTEM_ERROR.code(), "账号或密码错误");
         }
         String token = jwtUtils.generateToken(result.getId(), result.getRole());
         result.setToken(token);
@@ -71,7 +72,7 @@ public class AuthController {
         } else if (RoleEnum.USER.name().equals(account.getRole())) {
             userService.register(account);
         } else {
-            throw new CustomException("400", "无效的角色类型");
+            throw new CustomException(ErrorCode.PARAM_INVALID, "无效的角色类型");
         }
         return Result.success();
     }
@@ -95,7 +96,7 @@ public class AuthController {
         } else if ("USER".equals(role)) {
             userService.updatePassword(account);
         } else {
-            throw new CustomException("500", "非法输入");
+            throw new CustomException(ErrorCode.SYSTEM_ERROR, "非法输入");
         }
         return Result.success();
     }
