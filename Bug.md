@@ -305,8 +305,8 @@
 - **根因分析**: `Front.vue` 的 `handleSearch()` 使用 `router.push({ path: '/front/search', query: { title } })` 导航。在 Playwright headless Chromium 下与 BUG-018 登录跳转是同一类问题——`router.push` 在某些调用上下文（非用户直接交互触发）中被跳过，而 `window.location.href` 是浏览器原生 API，在任何环境下都能可靠触发导航
 - **解决方案**: `handleSearch()` 中的 `router.push({ path, query })` 替换为 `window.location.href = '/front/search?title=' + encodeURIComponent(keyword)`
 - **相关文件**: `xm_film/vue/src/views/Front.vue`（第 153~162 行）
-- **提交记录**: 待提交
-- **状态**: 已修复
+- **提交记录**: `0de65567`
+- **状态**: 已修复（后续 CI 59/59 100% 通过）
 
 ---
 
