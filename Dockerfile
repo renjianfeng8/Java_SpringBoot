@@ -28,6 +28,6 @@ ENV DB_HOST=localhost \
     MYBATIS_LOG_LEVEL=INFO
 
 HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
-  CMD curl -s http://localhost:9090/api/v1/auth/years > /dev/null || exit 1
+  CMD curl -s http://localhost:9090/api/v1/health > /dev/null || exit 1
 
 ENTRYPOINT ["java", "-jar", "app.jar"]
