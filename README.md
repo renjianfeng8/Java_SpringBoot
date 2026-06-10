@@ -35,8 +35,10 @@
 
 ## 目录
 
+- [项目亮点](#项目亮点)
 - [技术栈](#技术栈)
 - [项目结构](#项目结构)
+- [架构概览](#架构概览)
 - [快速启动](#快速启动)
 - [配置说明](#配置说明)
 - [功能模块](#功能模块)
@@ -519,6 +521,18 @@ node e2e-tests/e2e-scan.spec.mjs
 
 > 运行前需确保后端服务运行在 `http://localhost:9090`，前端运行在 `http://localhost:5173`。
 > 测试报告输出为 `e2e-tests/e2e-scan-report.html`，截图保存至 `e2e-tests/screenshots/`。
+
+### 本地复现 CI
+
+```bash
+cd xm_film/springboot
+mvn clean package
+
+cd ../vue
+npm install
+npm run build
+node e2e-tests/e2e-scan.spec.mjs
+```
 
 ---
 

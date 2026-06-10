@@ -29,7 +29,7 @@ cd ..\..
 
 :: Step 3: 检查后端是否运行
 echo [3/4] 检查后端服务...
-curl -s http://localhost:9090/api/v1/auth/years >nul 2>&1
+curl -s http://localhost:9090/api/v1/health >nul 2>&1
 if %errorlevel% neq 0 (
     echo [警告] 后端服务 (localhost:9090) 未运行
     echo 请先启动后端服务再进行测试
