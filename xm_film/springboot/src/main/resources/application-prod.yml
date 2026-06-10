@@ -8,13 +8,13 @@ spring:
     username: ${DB_USERNAME:root}
     password: ${DB_PASSWORD}
 
+jwt:
+  secret: ${JWT_SECRET}
+  expire: ${JWT_EXPIRE:86400000}
+
+file:
+  upload-dir: ${FILE_UPLOAD_DIR:/app/uploads}
+
 logging:
   level:
     com.example.springboot.mapper: ${MYBATIS_LOG_LEVEL:WARN}
-
-app:
-  jwt:
-    secret: ${JWT_SECRET}
-    expire: ${JWT_EXPIRE:86400000}
-  file:
-    upload-dir: ${FILE_UPLOAD_DIR:/app/uploads}
