@@ -77,10 +77,16 @@ This plan is intentionally a master plan for the approved 14-day standard upgrad
   New production-style environment variable template.
 
 - `docker-compose.yml`  
-  Keep one-command local deployment, adding health checks and production env wiring.
+  Keep one-command local deployment for MySQL, backend, and frontend, adding health checks and production env wiring.
 
 - `Dockerfile`  
-  Confirm backend/frontend build path is reproducible.
+  Confirm backend build path is reproducible.
+
+- `xm_film/vue/Dockerfile`
+  New multi-stage frontend image that builds Vue assets and serves them through Nginx.
+
+- `xm_film/vue/nginx.conf`
+  New Nginx config for frontend static assets and API proxying to the backend container.
 
 - `xm_film/springboot/src/main/resources/application-prod.yml`  
   New production profile driven by environment variables.
@@ -774,12 +780,14 @@ package com.example.springboot;
 
 import com.example.springboot.mapper.OrderedMapper;
 import org.junit.jupiter.api.Test;
-import org.mybatis.spring.boot.test.autoconfigure.MybatisTest;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@MybatisTest
+@SpringBootTest
+@ActiveProfiles("ci")
 class OrderedSeatConflictTest {
 
     @Autowired
@@ -802,7 +810,7 @@ cd xm_film/springboot
 mvn -Dtest=OrderedSeatConflictTest test
 ```
 
-Expected: PASS. If the test cannot connect because `@MybatisTest` needs a datasource, convert it to `@SpringBootTest` with the CI test profile already used by the project.
+Expected: PASS when the local or CI MySQL instance is running and initialized with `xm_film/sql/init.sql`. This project does not include H2, so keep this as a `@SpringBootTest` against the configured MySQL datasource instead of using a mapper slice test.
 
 - [ ] **Step 7: Commit**
 
@@ -939,6 +947,8 @@ git commit -m "docs: document rbac and verify route access"
 - Create: `xm_film/springboot/src/main/java/com/example/springboot/controller/HealthController.java`
 - Create: `xm_film/springboot/src/main/resources/application-prod.yml`
 - Create: `.env.example`
+- Create: `xm_film/vue/Dockerfile`
+- Create: `xm_film/vue/nginx.conf`
 - Modify: `docker-compose.yml`
 - Test: `xm_film/springboot/src/test/java/com/example/springboot/HealthControllerTest.java`
 
@@ -1026,7 +1036,7 @@ server:
 spring:
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: ${DB_URL:jdbc:mysql://mysql:3306/xm-film?serverTimezone=Asia/Shanghai&useUnicode=true&characterEncoding=utf-8&useSSL=false&allowPublicKeyRetrieval=true}
+    url: jdbc:mysql://${DB_HOST:mysql}:${DB_PORT:3306}/xm-film?serverTimezone=Asia/Shanghai&useUnicode=true&characterEncoding=utf-8&useSSL=false&allowPublicKeyRetrieval=true
     username: ${DB_USERNAME:root}
     password: ${DB_PASSWORD}
 
@@ -1048,7 +1058,8 @@ Create `.env.example`:
 
 ```dotenv
 SERVER_PORT=9090
-DB_URL=jdbc:mysql://mysql:3306/xm-film?serverTimezone=Asia/Shanghai&useUnicode=true&characterEncoding=utf-8&useSSL=false&allowPublicKeyRetrieval=true
+DB_HOST=mysql
+DB_PORT=3306
 DB_USERNAME=root
 DB_PASSWORD=change-me
 MYSQL_ROOT_PASSWORD=change-me
@@ -1057,9 +1068,54 @@ JWT_EXPIRE=86400000
 FILE_UPLOAD_DIR=/app/uploads
 MYBATIS_LOG_LEVEL=WARN
 VITE_API_BASE_URL=http://localhost:9090
+FRONTEND_PORT=80
 ```
 
-- [ ] **Step 6: Wire health check into Docker Compose**
+- [ ] **Step 6: Add frontend Nginx image**
+
+Create `xm_film/vue/Dockerfile`:
+
+```dockerfile
+FROM node:20-alpine AS builder
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY . .
+ARG VITE_API_BASE_URL=http://localhost:9090
+ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
+RUN npm run build
+
+FROM nginx:1.27-alpine
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY --from=builder /app/dist /usr/share/nginx/html
+EXPOSE 80
+```
+
+Create `xm_film/vue/nginx.conf`:
+
+```nginx
+server {
+    listen 80;
+    server_name _;
+
+    root /usr/share/nginx/html;
+    index index.html;
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    location /api/ {
+        proxy_pass http://backend:9090/api/;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+```
+
+- [ ] **Step 7: Wire backend and frontend into Docker Compose**
 
 In `docker-compose.yml`, ensure backend service has:
 
@@ -1081,7 +1137,30 @@ healthcheck:
   retries: 5
 ```
 
-- [ ] **Step 7: Run health test**
+Add a frontend service:
+
+```yaml
+  frontend:
+    build:
+      context: ./xm_film/vue
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:9090}
+    container_name: cinema-frontend
+    ports:
+      - "${FRONTEND_PORT:-80}:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost/ || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+```
+
+- [ ] **Step 8: Run health test**
 
 Run:
 
@@ -1092,12 +1171,12 @@ mvn -Dtest=HealthControllerTest test
 
 Expected: PASS.
 
-- [ ] **Step 8: Commit**
+- [ ] **Step 9: Commit**
 
 Run:
 
 ```bash
-git add xm_film/springboot/src/main/java/com/example/springboot/controller/HealthController.java xm_film/springboot/src/main/resources/application-prod.yml .env.example docker-compose.yml xm_film/springboot/src/test/java/com/example/springboot/HealthControllerTest.java
+git add xm_film/springboot/src/main/java/com/example/springboot/controller/HealthController.java xm_film/springboot/src/main/resources/application-prod.yml .env.example xm_film/vue/Dockerfile xm_film/vue/nginx.conf docker-compose.yml xm_film/springboot/src/test/java/com/example/springboot/HealthControllerTest.java
 git commit -m "feat: add production health configuration"
 ```
 
