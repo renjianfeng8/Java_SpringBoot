@@ -20,6 +20,20 @@ jobs:
       run:
         working-directory: xm_film/springboot
 
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: 123456
+          MYSQL_DATABASE: xm-film
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
     steps:
       - uses: actions/checkout@v4
 
@@ -29,6 +43,9 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
           cache: maven
+
+      - name: 初始化数据库
+        run: cd ../sql && mysql --default-character-set=utf8mb4 -h 127.0.0.1 -u root -p123456 < init.sql
 
       - name: Maven 打包（含单元测试）
         run: mvn clean package -q
