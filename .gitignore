@@ -4,6 +4,7 @@
 
 # === Java / Maven ===
 target/
+springboot-jar/
 *.class
 *.jar
 *.war
