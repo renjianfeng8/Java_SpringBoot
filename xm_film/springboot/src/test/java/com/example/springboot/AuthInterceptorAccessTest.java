@@ -2,8 +2,6 @@ package com.example.springboot;
 
 import com.example.springboot.common.JwtUtils;
 import com.example.springboot.common.config.AuthInterceptor;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
 
@@ -12,83 +10,114 @@ import static org.mockito.Mockito.mock;
 
 class AuthInterceptorAccessTest {
 
-    @Test
-    void cinemaCannotWriteFilms() throws Exception {
+    private AuthInterceptor newInterceptor() {
         AuthInterceptor interceptor = new AuthInterceptor();
         ReflectionTestUtils.setField(interceptor, "jwtUtils", mock(JwtUtils.class));
+        return interceptor;
+    }
 
-        boolean access = (boolean) ReflectionTestUtils.invokeMethod(
-                interceptor,
-                "hasAccess",
-                "/api/v1/films",
-                "POST",
-                "CINEMA"
-        );
+    private boolean hasAccess(AuthInterceptor interceptor, String path, String method, String role) {
+        return (boolean) ReflectionTestUtils.invokeMethod(
+                interceptor, "hasAccess", path, method, role);
+    }
 
-        assertThat(access).isFalse();
+    // ========== Film write protection ==========
+
+    @Test
+    void cinemaCannotWriteFilms() {
+        assertThat(hasAccess(newInterceptor(), "/api/v1/films", "POST", "CINEMA")).isFalse();
     }
 
     @Test
-    void adminCanWriteFilms() throws Exception {
-        AuthInterceptor interceptor = new AuthInterceptor();
-        ReflectionTestUtils.setField(interceptor, "jwtUtils", mock(JwtUtils.class));
-
-        boolean access = (boolean) ReflectionTestUtils.invokeMethod(
-                interceptor,
-                "hasAccess",
-                "/api/v1/films",
-                "POST",
-                "ADMIN"
-        );
-
-        assertThat(access).isTrue();
+    void adminCanWriteFilms() {
+        assertThat(hasAccess(newInterceptor(), "/api/v1/films", "POST", "ADMIN")).isTrue();
     }
 
     @Test
-    void cinemaCanReadFilms() throws Exception {
-        AuthInterceptor interceptor = new AuthInterceptor();
-        ReflectionTestUtils.setField(interceptor, "jwtUtils", mock(JwtUtils.class));
+    void cinemaCanReadFilms() {
+        assertThat(hasAccess(newInterceptor(), "/api/v1/films", "GET", "CINEMA")).isTrue();
+    }
 
-        boolean access = (boolean) ReflectionTestUtils.invokeMethod(
-                interceptor,
-                "hasAccess",
-                "/api/v1/films",
-                "GET",
-                "CINEMA"
-        );
+    // ========== Admin-only resources ==========
 
-        assertThat(access).isTrue();
+    @Test
+    void cinemaCannotAccessAdminPrefix() {
+        assertThat(hasAccess(newInterceptor(), "/api/v1/admins", "GET", "CINEMA")).isFalse();
     }
 
     @Test
-    void cinemaCannotAccessAdminPrefix() throws Exception {
-        AuthInterceptor interceptor = new AuthInterceptor();
-        ReflectionTestUtils.setField(interceptor, "jwtUtils", mock(JwtUtils.class));
+    void userCannotAccessAdminPrefix() {
+        assertThat(hasAccess(newInterceptor(), "/api/v1/admins", "GET", "USER")).isFalse();
+    }
 
-        boolean access = (boolean) ReflectionTestUtils.invokeMethod(
-                interceptor,
-                "hasAccess",
-                "/api/v1/admins",
-                "GET",
-                "CINEMA"
-        );
+    // ========== Read-only for non-ADMIN: actors, areas, types, notices, videos ==========
 
-        assertThat(access).isFalse();
+    @Test
+    void cinemaCanReadActors() {
+        assertThat(hasAccess(newInterceptor(), "/api/v1/actors", "GET", "CINEMA")).isTrue();
     }
 
     @Test
-    void userCannotWriteOrdersDirectlyThroughInterceptor() throws Exception {
-        AuthInterceptor interceptor = new AuthInterceptor();
-        ReflectionTestUtils.setField(interceptor, "jwtUtils", mock(JwtUtils.class));
+    void cinemaCannotWriteActors() {
+        assertThat(hasAccess(newInterceptor(), "/api/v1/actors", "POST", "CINEMA")).isFalse();
+    }
 
-        boolean access = (boolean) ReflectionTestUtils.invokeMethod(
-                interceptor,
-                "hasAccess",
-                "/api/v1/orders",
-                "POST",
-                "USER"
-        );
+    @Test
+    void cinemaCanReadAreas() {
+        assertThat(hasAccess(newInterceptor(), "/api/v1/areas", "GET", "CINEMA")).isTrue();
+    }
 
-        assertThat(access).isTrue();
+    @Test
+    void cinemaCannotWriteAreas() {
+        assertThat(hasAccess(newInterceptor(), "/api/v1/areas", "PUT", "CINEMA")).isFalse();
+    }
+
+    @Test
+    void cinemaCanReadTypes() {
+        assertThat(hasAccess(newInterceptor(), "/api/v1/types", "GET", "CINEMA")).isTrue();
+    }
+
+    @Test
+    void cinemaCannotWriteTypes() {
+        assertThat(hasAccess(newInterceptor(), "/api/v1/types", "POST", "CINEMA")).isFalse();
+    }
+
+    @Test
+    void cinemaCanReadNotices() {
+        assertThat(hasAccess(newInterceptor(), "/api/v1/notices", "GET", "CINEMA")).isTrue();
+    }
+
+    @Test
+    void cinemaCannotWriteNotices() {
+        assertThat(hasAccess(newInterceptor(), "/api/v1/notices", "DELETE", "CINEMA")).isFalse();
+    }
+
+    @Test
+    void cinemaCanReadVideos() {
+        assertThat(hasAccess(newInterceptor(), "/api/v1/videos", "GET", "CINEMA")).isTrue();
+    }
+
+    @Test
+    void cinemaCannotWriteVideos() {
+        assertThat(hasAccess(newInterceptor(), "/api/v1/videos", "POST", "CINEMA")).isFalse();
+    }
+
+    // ========== USER read access ==========
+
+    @Test
+    void userCanReadActors() {
+        assertThat(hasAccess(newInterceptor(), "/api/v1/actors", "GET", "USER")).isTrue();
+    }
+
+    @Test
+    void userCannotWriteActors() {
+        assertThat(hasAccess(newInterceptor(), "/api/v1/actors", "POST", "USER")).isFalse();
+    }
+
+    // ========== Order endpoint (service-level auth) ==========
+
+    @Test
+    void interceptorAllowsUserPostOrders() {
+        assertThat(hasAccess(newInterceptor(), "/api/v1/orders", "POST", "USER")).isTrue();
     }
 }

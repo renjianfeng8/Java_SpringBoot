@@ -18,16 +18,16 @@ public class AuthInterceptor implements HandlerInterceptor {
     private static final Logger log = LoggerFactory.getLogger(AuthInterceptor.class);
 
     private static final Set<String> ADMIN_ONLY_PREFIXES = Set.of(
-            "/api/v1/admins",
+            "/api/v1/admins"
+    );
+
+    private static final Set<String> ADMIN_WRITE_PREFIXES = Set.of(
+            "/api/v1/films",
             "/api/v1/actors",
             "/api/v1/areas",
             "/api/v1/types",
             "/api/v1/notices",
             "/api/v1/videos"
-    );
-
-    private static final Set<String> ADMIN_WRITE_PREFIXES = Set.of(
-            "/api/v1/films"
     );
 
     @Resource
