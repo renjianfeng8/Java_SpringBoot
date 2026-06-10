@@ -143,9 +143,6 @@ public class OrderedService extends BaseService<Ordered> {
     @Transactional(rollbackFor = Exception.class)
     public void cancelOrder(Integer id, String role, Integer userId) {
         Ordered ordered = selectById(id);
-        if (ordered == null) {
-            throw new CustomException(ErrorCode.NOT_FOUND, "订单不存在");
-        }
         ensureOrderAccess(ordered, role, userId);
         if (!"待取票".equals(ordered.getStatus())) {
             throw new CustomException(ErrorCode.BUSINESS_CONFLICT, "当前状态不允许取消订单");
@@ -159,9 +156,6 @@ public class OrderedService extends BaseService<Ordered> {
     @Transactional(rollbackFor = Exception.class)
     public void pickupOrder(Integer id, String role, Integer userId) {
         Ordered ordered = selectById(id);
-        if (ordered == null) {
-            throw new CustomException(ErrorCode.NOT_FOUND, "订单不存在");
-        }
         ensureOrderAccess(ordered, role, userId);
         if ("USER".equals(role)) {
             throw new CustomException(ErrorCode.FORBIDDEN, "用户无权执行取票操作");
