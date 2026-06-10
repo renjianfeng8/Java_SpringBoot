@@ -28,6 +28,12 @@ request.interceptors.response.use(
   },
   error => {
     const status = error.response?.status
+    const backendMessage = error.response?.data?.msg
+
+    if (backendMessage) {
+      ElMessage.error(backendMessage)
+      return Promise.reject(error)
+    }
 
     switch (status) {
       case 401:
