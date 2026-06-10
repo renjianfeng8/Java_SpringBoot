@@ -12,6 +12,8 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @SpringBootTest(classes = OrderedService.class)
@@ -28,6 +30,8 @@ class OrderedServiceTest {
 
     @MockBean
     FilmMapper filmMapper;
+
+    // ========== 反向用例 ==========
 
     @Test
     void userCannotCancelAnotherUsersOrder() {
@@ -53,5 +57,97 @@ class OrderedServiceTest {
         assertThatThrownBy(() -> orderedService.pickupOrder(1, "CINEMA", 10))
                 .isInstanceOf(CustomException.class)
                 .hasMessageContaining("状态");
+    }
+
+    @Test
+    void userCannotPickupOrder() {
+        Ordered ordered = new Ordered();
+        ordered.setId(1);
+        ordered.setUserId(100);
+        ordered.setStatus("待取票");
+        when(orderedMapper.selectById(1)).thenReturn(ordered);
+
+        assertThatThrownBy(() -> orderedService.pickupOrder(1, "USER", 100))
+                .isInstanceOf(CustomException.class)
+                .hasMessageContaining("无权");
+    }
+
+    // ========== 正向通路 ==========
+
+    @Test
+    void userCancelsOwnOrderSuccessfully() {
+        Ordered ordered = new Ordered();
+        ordered.setId(1);
+        ordered.setUserId(100);
+        ordered.setStatus("待取票");
+        when(orderedMapper.selectById(1)).thenReturn(ordered);
+
+        orderedService.cancelOrder(1, "USER", 100);
+
+        verify(orderedMapper).updateById(argThat(u ->
+                1 == u.getId() && "已取消".equals(u.getStatus())
+        ));
+    }
+
+    @Test
+    void cinemaPickupOrderSuccessfully() {
+        Ordered ordered = new Ordered();
+        ordered.setId(1);
+        ordered.setCinemaId(10);
+        ordered.setStatus("待取票");
+        when(orderedMapper.selectById(1)).thenReturn(ordered);
+
+        orderedService.pickupOrder(1, "CINEMA", 10);
+
+        verify(orderedMapper).updateById(argThat(u ->
+                1 == u.getId() && "已取票".equals(u.getStatus())
+        ));
+    }
+
+    @Test
+    void cinemaCancelsOrderSuccessfully() {
+        Ordered ordered = new Ordered();
+        ordered.setId(1);
+        ordered.setCinemaId(10);
+        ordered.setStatus("待取票");
+        when(orderedMapper.selectById(1)).thenReturn(ordered);
+
+        orderedService.cancelOrder(1, "CINEMA", 10);
+
+        verify(orderedMapper).updateById(argThat(u ->
+                1 == u.getId() && "已取消".equals(u.getStatus())
+        ));
+    }
+
+    @Test
+    void adminCancelsOrderSuccessfully() {
+        Ordered ordered = new Ordered();
+        ordered.setId(1);
+        ordered.setUserId(100);
+        ordered.setCinemaId(10);
+        ordered.setStatus("待取票");
+        when(orderedMapper.selectById(1)).thenReturn(ordered);
+
+        orderedService.cancelOrder(1, "ADMIN", 999);
+
+        verify(orderedMapper).updateById(argThat(u ->
+                1 == u.getId() && "已取消".equals(u.getStatus())
+        ));
+    }
+
+    @Test
+    void adminPickupOrderSuccessfully() {
+        Ordered ordered = new Ordered();
+        ordered.setId(1);
+        ordered.setUserId(100);
+        ordered.setCinemaId(10);
+        ordered.setStatus("待取票");
+        when(orderedMapper.selectById(1)).thenReturn(ordered);
+
+        orderedService.pickupOrder(1, "ADMIN", 999);
+
+        verify(orderedMapper).updateById(argThat(u ->
+                1 == u.getId() && "已取票".equals(u.getStatus())
+        ));
     }
 }
