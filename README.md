@@ -1,13 +1,35 @@
-# 影院购票管理系统 🎬
+# 多角色影院票务运营平台
 
-[![CI](https://github.com/renjianfeng8/Java_SpringBoot/actions/workflows/ci.yml/badge.svg)](https://github.com/renjianfeng8/Java_SpringBoot/actions/workflows/ci.yml)
-[![Swagger](https://img.shields.io/badge/API%20Docs-Swagger-brightgreen)](http://localhost:9090/swagger-ui.html)
-[![Docker](https://img.shields.io/badge/deployment-Docker-blue)](docker-compose.yml)
-[![Tests](https://img.shields.io/badge/tests-33%20unit%20%2B%2059%20E2E-brightgreen)](xm_film/springboot/src/test)
+基于 **Spring Boot 3.3 + Vue 3 + MySQL** 构建的多角色影院票务运营平台，覆盖用户购票、影院排片、平台审核、订单流转、权限隔离、CI/E2E 自动化验证与 Docker 化部署。
 
-基于 **Spring Boot 3.3 + Vue 3 + MySQL** 构建的在线电影购票管理平台，支持三端角色分离运营（管理员后台、影院端、用户端），提供完整的影片管理、影厅排片、在线选座购票、订单评价等功能闭环。
+![CI](https://github.com/renjianfeng8/Java_SpringBoot/actions/workflows/ci.yml/badge.svg)
+
+## 在线演示
+
+| 项目 | 地址 |
+|------|------|
+| 前端演示 | http://localhost:5173 |
+| 后端健康检查 | http://localhost:9090/api/v1/health |
+
+## 测试账号
+
+| 角色 | 用户名 | 密码 |
+|------|--------|------|
+| 管理员 | 999 | 999 |
+| 影院管理员 | asks | cinema123 |
+| 普通用户 | zhangsan | user123 |
 
 **代码质量**: 全栈 E2E 自动化测试覆盖（59 用例，含负面测试，100% 通过率），BCrypt 密码加密 + JWT 认证 + RBAC 权限控制，GitHub Actions CI 流水线。
+
+---
+
+## 项目亮点
+
+- **多角色 RBAC**：管理员、影院端、用户端分离，后端拦截器和业务层共同保证权限边界。
+- **订单一致性**：购票链路校验排片、座位、订单状态，防止重复购票和越权操作。
+- **工程化验证**：GitHub Actions 自动执行后端构建、前端构建、MySQL 初始化和 Playwright E2E。
+- **部署交付**：支持 Docker Compose 轻量化部署，生产配置通过环境变量注入。
+- **文档闭环**：产品、设计、数据库、接口、安全、Bug 复盘和面试材料同步维护。
 
 ---
 
@@ -161,6 +183,20 @@ xm_film/
 
 ---
 
+## 架构概览
+
+```mermaid
+flowchart LR
+  User[用户端 Vue 3] --> API[Spring Boot API]
+  Cinema[影院端 Vue 3] --> API
+  Admin[管理端 Vue 3] --> API
+  API --> Auth[JWT + RBAC]
+  API --> Service[业务服务层]
+  Service --> MyBatis[MyBatis Mapper]
+  MyBatis --> MySQL[(MySQL)]
+  API --> Upload[本地文件存储]
+```
+
 ## 架构设计
 
 ### 后端泛型三层架构
@@ -227,13 +263,7 @@ npm run dev
 
 ### 4. 默认账号
 
-| 角色 | 用户名 | 密码 | 说明 |
-|------|--------|------|------|
-| ADMIN | 999 | 999 | 系统管理员 |
-| USER | zhangsan | user123 | 普通用户 |
-| CINEMA | asks | cinema123 | 影院管理员 |
-
-> 管理员账号 `999` 和影院账号 `asks` 均通过 `data.sql` 初始化。
+> 管理员账号 `999`、影院账号 `asks` 和用户 `zhangsan` 均通过 `data.sql` 初始化，默认账号见顶部表格。
 
 ### 5. API 文档（Swagger）
 
