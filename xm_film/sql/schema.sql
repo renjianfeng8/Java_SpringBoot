@@ -211,6 +211,7 @@ CREATE TABLE `ordered` (
     INDEX idx_ordered_film_id (film_id),
     INDEX idx_ordered_cinema_id (cinema_id),
     INDEX idx_ordered_room_id (room_id),
+    INDEX idx_ordered_status (status),
     FOREIGN KEY (record_id) REFERENCES record(id) ON DELETE SET NULL,
     FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE CASCADE,
     FOREIGN KEY (film_id) REFERENCES film(id) ON DELETE CASCADE,
