@@ -648,7 +648,7 @@ public void pickupOrder(Integer id, String role, Integer userId) {
 }
 ```
 
-- [ ] **Step 5: Replace the existing order creation endpoint**
+- [ ] **Step 5: Add explicit DTO order creation endpoint**
 
 In `xm_film/springboot/src/main/java/com/example/springboot/controller/OrderedController.java`, add imports:
 
@@ -658,23 +658,29 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 ```
 
-Replace the existing `@PostMapping` order creation method instead of adding a second `POST /api/v1/orders/create` route. This keeps a single order creation API at `POST /api/v1/orders` and avoids duplicate creation endpoints.
+Keep the existing `add(@RequestBody Ordered entity)` override unchanged so it still correctly overrides `BaseController<Ordered>.add(T entity)`. Add a separate DTO-validated endpoint at `POST /api/v1/orders/create`; the frontend will use this new endpoint, while `POST /api/v1/orders` remains as a compatibility path.
 
 ```java
 @Override
 @PostMapping
-public Result add(@Valid @RequestBody OrderCreateRequest request) {
+public Result add(@RequestBody Ordered entity) {
+    orderedService.createOrder(entity, currentRole(), currentUserId());
+    return Result.success();
+}
+```
+
+Add the DTO creation endpoint and state transition endpoints while preserving the existing scoped list/page/delete endpoints:
+
+```java
+@PostMapping("/create")
+public Result create(@Valid @RequestBody OrderCreateRequest request) {
     Ordered ordered = new Ordered();
     ordered.setRecordId(request.getRecordId());
     ordered.setSeat(request.getSeat());
     orderedService.createOrder(ordered, currentRole(), currentUserId());
     return Result.success();
 }
-```
 
-Add state transition endpoints while preserving the existing scoped list/page/delete endpoints:
-
-```java
 @PutMapping("/{id}/cancel")
 public Result cancel(@PathVariable Integer id, HttpServletRequest httpRequest) {
     orderedService.cancelOrder(id, (String) httpRequest.getAttribute("role"), Integer.valueOf((String) httpRequest.getAttribute("userId")));
@@ -1246,7 +1252,7 @@ In `BuyTicket.vue`, ensure the order submit method does not show success after a
 
 ```javascript
 try {
-  const res = await request.post('/api/v1/orders', {
+  const res = await request.post('/api/v1/orders/create', {
     recordId: recordId.value,
     seat: selectedSeats.value.join(',')
   })
@@ -1853,4 +1859,4 @@ The plan contains no unresolved implementation placeholders. Local demo URLs are
 - Error enum: `com.example.springboot.common.enums.ErrorCode`.
 - Order operations: `cancelOrder`, `pickupOrder`, `createOrder`.
 - Health endpoint: `/api/v1/health`.
-- Explicit frontend order endpoints: `POST /api/v1/orders`, `PUT /api/v1/orders/{id}/cancel`.
+- Explicit frontend order endpoints: `POST /api/v1/orders/create`, `PUT /api/v1/orders/{id}/cancel`.
