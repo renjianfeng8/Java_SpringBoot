@@ -2,6 +2,7 @@ package com.example.springboot.controller;
 
 import com.example.springboot.common.FileUtil;
 import com.example.springboot.common.Result;
+import com.example.springboot.common.enums.ErrorCode;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.slf4j.Logger;
@@ -30,20 +31,20 @@ public class FileUploadController {
     public Result uploadFile(@RequestParam("file") MultipartFile file) {
         try {
             if (file == null || file.isEmpty()) {
-                return Result.error("400", "上传文件不能为空");
+                return Result.error(ErrorCode.PARAM_INVALID.code(), "上传文件不能为空");
             }
             String fileName = FileUtil.uploadFile(file, uploadDir);
             String fileUrl = accessPrefix + fileName;
             log.info("生成的文件URL: {}", fileUrl);
             return Result.success(fileUrl);
         } catch (IllegalArgumentException e) {
-            return Result.error("400", e.getMessage());
+            return Result.error(ErrorCode.PARAM_INVALID.code(), e.getMessage());
         } catch (IOException e) {
             log.error("File upload failed", e);
-            return Result.error("500", "文件上传失败: " + e.getMessage());
+            return Result.error(ErrorCode.SYSTEM_ERROR.code(), "文件上传失败: " + e.getMessage());
         } catch (Exception e) {
             log.error("File upload failed", e);
-            return Result.error("500", "服务器内部错误");
+            return Result.error(ErrorCode.SYSTEM_ERROR.code(), "服务器内部错误");
         }
     }
 }

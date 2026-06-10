@@ -2,6 +2,7 @@ package com.example.springboot.controller;
 
 import com.example.springboot.common.BaseController;
 import com.example.springboot.common.Result;
+import com.example.springboot.common.enums.ErrorCode;
 import com.example.springboot.entity.Room;
 import com.example.springboot.exception.CustomException;
 import com.example.springboot.service.RoomService;
@@ -101,7 +102,7 @@ public class RoomController extends BaseController<Room> {
 
     private void ensureRoomAccess(Room room) {
         if (room == null) {
-            throw new CustomException("404", "影厅不存在");
+            throw new CustomException(ErrorCode.NOT_FOUND, "影厅不存在");
         }
         if (isAdmin()) {
             return;
@@ -109,12 +110,12 @@ public class RoomController extends BaseController<Room> {
         if (isCinema() && currentUserId().equals(room.getCinemaId())) {
             return;
         }
-        throw new CustomException("403", "无权操作该影厅");
+        throw new CustomException(ErrorCode.FORBIDDEN, "无权操作该影厅");
     }
 
     private void requireAdminOrCinema() {
         if (!isAdmin() && !isCinema()) {
-            throw new CustomException("403", "权限不足");
+            throw new CustomException(ErrorCode.FORBIDDEN, "权限不足");
         }
     }
 

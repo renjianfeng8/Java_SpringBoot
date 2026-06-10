@@ -2,6 +2,7 @@ package com.example.springboot.controller;
 
 import com.example.springboot.common.BaseController;
 import com.example.springboot.common.Result;
+import com.example.springboot.common.enums.ErrorCode;
 import com.example.springboot.entity.Record;
 import com.example.springboot.entity.Room;
 import com.example.springboot.exception.CustomException;
@@ -107,7 +108,7 @@ public class RecordController extends BaseController<Record> {
 
     private void ensureRecordAccess(Record record) {
         if (record == null) {
-            throw new CustomException("404", "排片不存在");
+            throw new CustomException(ErrorCode.NOT_FOUND, "排片不存在");
         }
         if (isAdmin()) {
             return;
@@ -115,7 +116,7 @@ public class RecordController extends BaseController<Record> {
         if (isCinema() && currentUserId().equals(record.getCinemaId())) {
             return;
         }
-        throw new CustomException("403", "无权操作该排片");
+        throw new CustomException(ErrorCode.FORBIDDEN, "无权操作该排片");
     }
 
     private void ensureRoomBelongsToCinema(Record record) {
@@ -124,16 +125,16 @@ public class RecordController extends BaseController<Record> {
         }
         Room room = roomService.selectById(record.getRoomId());
         if (room == null) {
-            throw new CustomException("400", "影厅不存在");
+            throw new CustomException(ErrorCode.PARAM_INVALID, "影厅不存在");
         }
         if (!record.getCinemaId().equals(room.getCinemaId())) {
-            throw new CustomException("400", "影厅不属于当前影院");
+            throw new CustomException(ErrorCode.PARAM_INVALID, "影厅不属于当前影院");
         }
     }
 
     private void requireAdminOrCinema() {
         if (!isAdmin() && !isCinema()) {
-            throw new CustomException("403", "权限不足");
+            throw new CustomException(ErrorCode.FORBIDDEN, "权限不足");
         }
     }
 

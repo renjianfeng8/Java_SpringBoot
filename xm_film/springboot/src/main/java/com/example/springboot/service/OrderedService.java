@@ -63,28 +63,28 @@ public class OrderedService extends BaseService<Ordered> {
     @Transactional(rollbackFor = Exception.class)
     public void createOrder(Ordered ordered, String role, Integer tokenUserId) {
         if (role != null && !"USER".equals(role)) {
-            throw new CustomException("403", "仅普通用户可创建订单");
+            throw new CustomException(ErrorCode.FORBIDDEN, "仅普通用户可创建订单");
         }
         if (ordered == null || ordered.getRecordId() == null) {
-            throw new CustomException("400", "缺少放映场次");
+            throw new CustomException(ErrorCode.PARAM_INVALID, "缺少放映场次");
         }
         if (tokenUserId != null) {
             ordered.setUserId(tokenUserId);
         }
         if (ordered.getUserId() == null) {
-            throw new CustomException("400", "缺少购票用户");
+            throw new CustomException(ErrorCode.PARAM_INVALID, "缺少购票用户");
         }
 
         Record record = recordMapper.selectById(ordered.getRecordId());
         if (record == null) {
-            throw new CustomException("400", "放映场次不存在");
+            throw new CustomException(ErrorCode.PARAM_INVALID, "放映场次不存在");
         }
 
         List<String> seats = normalizeSeats(ordered.getSeat());
         int number = seats.size();
         for (String seat : seats) {
             if (orderedMapper.countSeatInUse(record.getId(), seat) > 0) {
-                throw new CustomException("409", "座位已售: " + seat);
+                throw new CustomException(ErrorCode.BUSINESS_CONFLICT, "座位已售: " + seat);
             }
         }
 
@@ -131,7 +131,7 @@ public class OrderedService extends BaseService<Ordered> {
     @Transactional(rollbackFor = Exception.class)
     public void deleteBatchScoped(List<Integer> ids, String role, Integer userId) {
         if (ids == null || ids.isEmpty()) {
-            throw new CustomException("400", "请选择订单");
+            throw new CustomException(ErrorCode.PARAM_INVALID, "请选择订单");
         }
         for (Integer id : ids) {
             Ordered ordered = selectById(id);
@@ -144,11 +144,11 @@ public class OrderedService extends BaseService<Ordered> {
     public void cancelOrder(Integer id, String role, Integer userId) {
         Ordered ordered = selectById(id);
         if (ordered == null) {
-            throw new CustomException("404", "订单不存在");
+            throw new CustomException(ErrorCode.NOT_FOUND, "订单不存在");
         }
         ensureOrderAccess(ordered, role, userId);
         if (!"待取票".equals(ordered.getStatus())) {
-            throw new CustomException(ErrorCode.BUSINESS_CONFLICT.code(), "当前状态不允许取消订单");
+            throw new CustomException(ErrorCode.BUSINESS_CONFLICT, "当前状态不允许取消订单");
         }
         Ordered update = new Ordered();
         update.setId(id);
@@ -160,14 +160,14 @@ public class OrderedService extends BaseService<Ordered> {
     public void pickupOrder(Integer id, String role, Integer userId) {
         Ordered ordered = selectById(id);
         if (ordered == null) {
-            throw new CustomException("404", "订单不存在");
+            throw new CustomException(ErrorCode.NOT_FOUND, "订单不存在");
         }
         ensureOrderAccess(ordered, role, userId);
         if ("USER".equals(role)) {
-            throw new CustomException("403", "用户无权执行取票操作");
+            throw new CustomException(ErrorCode.FORBIDDEN, "用户无权执行取票操作");
         }
         if (!"待取票".equals(ordered.getStatus())) {
-            throw new CustomException(ErrorCode.BUSINESS_CONFLICT.code(), "当前状态不允许取票");
+            throw new CustomException(ErrorCode.BUSINESS_CONFLICT, "当前状态不允许取票");
         }
         Ordered update = new Ordered();
         update.setId(id);
@@ -177,7 +177,7 @@ public class OrderedService extends BaseService<Ordered> {
 
     private void ensureOrderAccess(Ordered ordered, String role, Integer userId) {
         if (ordered == null) {
-            throw new CustomException("404", "订单不存在");
+            throw new CustomException(ErrorCode.NOT_FOUND, "订单不存在");
         }
         if ("ADMIN".equals(role)) {
             return;
@@ -188,23 +188,23 @@ public class OrderedService extends BaseService<Ordered> {
         if ("CINEMA".equals(role) && userId != null && userId.equals(ordered.getCinemaId())) {
             return;
         }
-        throw new CustomException("403", "无权操作该订单");
+        throw new CustomException(ErrorCode.FORBIDDEN, "无权操作该订单");
     }
 
     private List<String> normalizeSeats(String rawSeats) {
         if (rawSeats == null || rawSeats.trim().isEmpty()) {
-            throw new CustomException("400", "请选择座位");
+            throw new CustomException(ErrorCode.PARAM_INVALID, "请选择座位");
         }
         Set<String> seats = Arrays.stream(rawSeats.replace('，', ',').split(","))
                 .map(String::trim)
                 .filter(seat -> !seat.isEmpty())
                 .collect(Collectors.toCollection(LinkedHashSet::new));
         if (seats.isEmpty()) {
-            throw new CustomException("400", "请选择座位");
+            throw new CustomException(ErrorCode.PARAM_INVALID, "请选择座位");
         }
         for (String seat : seats) {
             if (!seat.matches("[1-8]排[1-8]座")) {
-                throw new CustomException("400", "座位格式错误: " + seat);
+                throw new CustomException(ErrorCode.PARAM_INVALID, "座位格式错误: " + seat);
             }
         }
         return List.copyOf(seats);
@@ -214,7 +214,7 @@ public class OrderedService extends BaseService<Ordered> {
         try {
             return new BigDecimal(price).setScale(2, RoundingMode.HALF_UP);
         } catch (Exception e) {
-            throw new CustomException("500", "场次票价配置错误");
+            throw new CustomException(ErrorCode.SYSTEM_ERROR, "场次票价配置错误");
         }
     }
 
