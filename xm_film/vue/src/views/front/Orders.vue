@@ -71,6 +71,7 @@
           </el-table-column>
           <el-table-column label="操作">
             <template #default="scope">
+              <el-button v-if="scope.row.status === '待取票'" style="font-size: 14px" link type="warning" @click="() => cancelOrder(scope.row.id)">取消</el-button>
               <el-button style="font-size: 18px" link :icon="Delete" @click="() => del(scope.row.id)" type="danger"></el-button>
             </template>
           </el-table-column>
@@ -241,6 +242,20 @@ const del = (id: number) => {
       }
     })
   }).catch()
+}
+
+const cancelOrder = async (id: number) => {
+  try {
+    const res = await request.put(`/api/v1/orders/${id}/cancel`)
+    if (res.code === '200') {
+      ElMessage.success('订单已取消')
+      await load()
+    } else {
+      ElMessage.error(res.msg || '取消失败')
+    }
+  } catch (error) {
+    // request.js has already shown the backend message.
+  }
 }
 
 const handleSelectionChange = (rows: Ordered[]) => {

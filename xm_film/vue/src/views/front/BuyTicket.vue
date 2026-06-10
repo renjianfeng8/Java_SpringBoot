@@ -413,41 +413,27 @@ const generateOrderNo = () => {
   return `${dateStr}${randomStr}`;
 };
 
-// 确认购票（适配后端/add接口和Ordered实体）
-const confirmBooking = () => {
-
+// 确认购票（使用 DTO 端点处理参数校验）
+const confirmBooking = async () => {
   if (selectedSeats.value.length === 0) {
     ElMessage.warning('请先选择座位');
     return;
   }
 
-  // 构造符合后端Ordered实体的订单数据
-  const orderData = {
-    recordId: Number(recordId),
-    seat: selectedSeats.value.join(',')
-  };
-
-  // 调用后端/add接口提交订单
-  request.post(API_PATHS.ORDERS, orderData)
-      .then(res => {
-        if (res.code === '200') {
-          ElMessage.success('订单创建成功！即将跳转到订单详情');
-          // 跳转订单详情页（携带订单编号）
-          setTimeout(() => {
-            router.push({
-              path: '/front/orders',
-              query: {
-                orderNo: orderData.orders // 用于查询订单详情
-              }
-            });
-          }, 1500);
-        } else {
-          ElMessage.error(`订单创建失败：${res.msg || '未知错误'}`);
-        }
-      })
-      .catch(err => {
-        ElMessage.error(`网络异常：${err.message || '提交订单失败'}`);
-      });
+  try {
+    const res = await request.post('/api/v1/orders/create', {
+      recordId: Number(recordId),
+      seat: selectedSeats.value.join(',')
+    });
+    if (res.code === '200') {
+      ElMessage.success('下单成功');
+      router.push('/front/orders');
+    } else {
+      ElMessage.error(res.msg || '下单失败');
+    }
+  } catch (error) {
+    // request.js has already shown the backend message.
+  }
 };
 </script>
 
