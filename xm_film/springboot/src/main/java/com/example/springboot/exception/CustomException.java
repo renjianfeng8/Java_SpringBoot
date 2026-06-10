@@ -1,5 +1,6 @@
 package com.example.springboot.exception;
 
+import com.example.springboot.common.enums.ErrorCode;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
@@ -13,5 +14,13 @@ public class CustomException extends RuntimeException {
         super(msg);
         this.code = code;
         this.msg = msg;
+    }
+
+    public CustomException(ErrorCode errorCode) {
+        this(errorCode.code(), errorCode.message());
+    }
+
+    public CustomException(ErrorCode errorCode, String msg) {
+        this(errorCode.code(), msg);
     }
 }
