@@ -188,6 +188,7 @@ Create `xm_film/springboot/src/test/java/com/example/springboot/GlobalExceptionH
 package com.example.springboot;
 
 import com.example.springboot.controller.AuthController;
+import com.example.springboot.common.JwtUtils;
 import com.example.springboot.service.AdminService;
 import com.example.springboot.service.CinemaService;
 import com.example.springboot.service.UserService;
@@ -223,6 +224,9 @@ class GlobalExceptionHandlerTest {
 
     @MockBean
     CinemaService cinemaService;
+
+    @MockBean
+    JwtUtils jwtUtils;
 
     @Test
     void loginRejectsBlankUsernameWithParamInvalidCode() throws Exception {
@@ -503,7 +507,6 @@ git commit -m "feat: validate auth request payloads"
 
 **Files:**
 - Create: `xm_film/springboot/src/main/java/com/example/springboot/dto/request/OrderCreateRequest.java`
-- Create: `xm_film/springboot/src/main/java/com/example/springboot/dto/request/OrderStatusRequest.java`
 - Modify: `xm_film/springboot/src/main/java/com/example/springboot/controller/OrderedController.java`
 - Modify: `xm_film/springboot/src/main/java/com/example/springboot/service/OrderedService.java`
 - Test: `xm_film/springboot/src/test/java/com/example/springboot/OrderedServiceTest.java`
@@ -604,24 +607,7 @@ public class OrderCreateRequest {
 }
 ```
 
-- [ ] **Step 4: Create `OrderStatusRequest`**
-
-Create `xm_film/springboot/src/main/java/com/example/springboot/dto/request/OrderStatusRequest.java`:
-
-```java
-package com.example.springboot.dto.request;
-
-import jakarta.validation.constraints.NotBlank;
-import lombok.Data;
-
-@Data
-public class OrderStatusRequest {
-    @NotBlank(message = "订单状态不能为空")
-    private String status;
-}
-```
-
-- [ ] **Step 5: Add order state methods**
+- [ ] **Step 4: Add order state methods**
 
 Add these methods to `xm_film/springboot/src/main/java/com/example/springboot/service/OrderedService.java`:
 
@@ -656,7 +642,7 @@ public void pickupOrder(Integer id, String role, Integer userId) {
 }
 ```
 
-- [ ] **Step 6: Add explicit controller endpoints**
+- [ ] **Step 5: Add explicit controller endpoints**
 
 In `xm_film/springboot/src/main/java/com/example/springboot/controller/OrderedController.java`, add imports:
 
@@ -700,7 +686,7 @@ private Integer currentUserId(HttpServletRequest request) {
 }
 ```
 
-- [ ] **Step 7: Run focused order tests**
+- [ ] **Step 6: Run focused order tests**
 
 Run:
 
@@ -711,12 +697,12 @@ mvn -Dtest=OrderedServiceTest test
 
 Expected: PASS.
 
-- [ ] **Step 8: Commit**
+- [ ] **Step 7: Commit**
 
 Run:
 
 ```bash
-git add xm_film/springboot/src/main/java/com/example/springboot/dto/request/OrderCreateRequest.java xm_film/springboot/src/main/java/com/example/springboot/dto/request/OrderStatusRequest.java xm_film/springboot/src/main/java/com/example/springboot/controller/OrderedController.java xm_film/springboot/src/main/java/com/example/springboot/service/OrderedService.java xm_film/springboot/src/test/java/com/example/springboot/OrderedServiceTest.java
+git add xm_film/springboot/src/main/java/com/example/springboot/dto/request/OrderCreateRequest.java xm_film/springboot/src/main/java/com/example/springboot/controller/OrderedController.java xm_film/springboot/src/main/java/com/example/springboot/service/OrderedService.java xm_film/springboot/src/test/java/com/example/springboot/OrderedServiceTest.java
 git commit -m "feat: add explicit order state operations"
 ```
 
