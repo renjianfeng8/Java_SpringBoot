@@ -4,6 +4,7 @@ import com.example.springboot.common.BaseMapper;
 import com.example.springboot.common.BaseService;
 import com.example.springboot.entity.Account;
 import com.example.springboot.entity.Admin;
+import com.example.springboot.common.enums.ErrorCode;
 import com.example.springboot.exception.CustomException;
 import com.example.springboot.mapper.AdminMapper;
 import jakarta.annotation.Resource;
@@ -32,7 +33,7 @@ public class AdminService extends BaseService<Admin> {
         String username = admin.getUsername();
         Admin dbAdmin = adminMapper.selectByUsername(username);
         if (dbAdmin != null) {
-            throw new CustomException("500", "账号已存在,请更换别的账号");
+            throw new CustomException(ErrorCode.SYSTEM_ERROR.code(), "账号已存在,请更换别的账号");
         }
         if (admin.getPassword() == null) {
             admin.setPassword("admin123");
@@ -57,12 +58,12 @@ public class AdminService extends BaseService<Admin> {
         String username = account.getUsername();
         Admin dbAdmin = adminMapper.selectByUsername(username);
         if (dbAdmin == null) {
-            throw new CustomException("500", "账号不存在");
+            throw new CustomException(ErrorCode.SYSTEM_ERROR.code(), "账号不存在");
         }
         String password = account.getPassword();
         if (!passwordEncoder.matches(password, dbAdmin.getPassword())) {
             if (!dbAdmin.getPassword().equals(password)) {
-                throw new CustomException("500", "账号或密码错误");
+                throw new CustomException(ErrorCode.SYSTEM_ERROR.code(), "账号或密码错误");
             }
         }
         return dbAdmin;
@@ -73,11 +74,11 @@ public class AdminService extends BaseService<Admin> {
         Integer id = account.getId();
         Admin admin = selectById(id);
         if (admin == null) {
-            throw new CustomException("500", "账号不存在");
+            throw new CustomException(ErrorCode.SYSTEM_ERROR.code(), "账号不存在");
         }
         if (!passwordEncoder.matches(account.getPassword(), admin.getPassword())) {
             if (!admin.getPassword().equals(account.getPassword())) {
-                throw new CustomException("500", "原密码错误");
+                throw new CustomException(ErrorCode.SYSTEM_ERROR.code(), "原密码错误");
             }
         }
         admin.setPassword(passwordEncoder.encode(account.getNewPassword()));

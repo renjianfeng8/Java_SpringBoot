@@ -2,6 +2,8 @@ package com.example.springboot.common;
 
 import lombok.Data;
 
+import com.example.springboot.common.enums.ErrorCode;
+
 // 统一返回包装类
 @Data
 public class Result {
@@ -24,8 +26,8 @@ public class Result {
 
     public static Result error(){
         Result result = new Result();
-        result.setCode("500");
-        result.setMsg("系统错误");
+        result.setCode(ErrorCode.SYSTEM_ERROR.code());
+        result.setMsg(ErrorCode.SYSTEM_ERROR.message());
         return result;
     }
 
