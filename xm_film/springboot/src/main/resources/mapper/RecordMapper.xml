@@ -36,6 +36,11 @@
         WHERE record.id = #{id}
     </select>
 
+    <select id="selectByIdForUpdate" parameterType="java.lang.Integer"
+            resultType="com.example.springboot.entity.Record">
+        SELECT * FROM record WHERE id = #{id} FOR UPDATE
+    </select>
+
     <!-- 插入操作 -->
     <insert id="insert" parameterType="com.example.springboot.entity.Record"
             useGeneratedKeys="true" keyProperty="id">

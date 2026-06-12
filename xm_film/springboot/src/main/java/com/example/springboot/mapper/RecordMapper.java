@@ -4,4 +4,6 @@ import com.example.springboot.common.BaseMapper;
 import com.example.springboot.entity.Record;
 
 public interface RecordMapper extends BaseMapper<Record> {
+
+    Record selectByIdForUpdate(Integer id);
 }

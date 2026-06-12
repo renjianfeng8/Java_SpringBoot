@@ -45,6 +45,11 @@
         WHERE ordered.id = #{id}
     </select>
 
+    <select id="selectByIdForUpdate" parameterType="java.lang.Integer"
+            resultType="com.example.springboot.entity.Ordered">
+        SELECT * FROM ordered WHERE id = #{id} FOR UPDATE
+    </select>
+
     <select id="selectActiveByRecordId" resultType="com.example.springboot.entity.Ordered">
         SELECT * FROM ordered
         WHERE record_id = #{recordId}

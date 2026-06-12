@@ -26,6 +26,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const BASE = 'http://localhost:5173';
 const API = 'http://localhost:9090';
 const SS_DIR = path.join(__dirname, 'screenshots');
+const EXPECTED_TEST_COUNT = 64;
 if (!existsSync(SS_DIR)) mkdirSync(SS_DIR, { recursive: true });
 
 const results = [];
@@ -48,11 +49,13 @@ async function waitStable(ms = 1500) {
 
 // ======================== 工具函数 ========================
 
-async function apiPost(url, body) {
+async function apiPost(url, body, token) {
   try {
+    const headers = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
     const r = await fetch(`${API}${url}`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify(body),
     });
     return await r.json();
@@ -66,6 +69,21 @@ async function apiGet(url, token) {
     const headers = { 'Content-Type': 'application/json' };
     if (token) headers['Authorization'] = `Bearer ${token}`;
     const r = await fetch(`${API}${url}`, { headers });
+    return await r.json();
+  } catch (e) {
+    return { code: '500', msg: e.message };
+  }
+}
+
+async function apiPut(url, token, body) {
+  try {
+    const headers = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    const r = await fetch(`${API}${url}`, {
+      method: 'PUT',
+      headers,
+      body: body === undefined ? undefined : JSON.stringify(body),
+    });
     return await r.json();
   } catch (e) {
     return { code: '500', msg: e.message };
@@ -260,7 +278,11 @@ let adminToken = ''; // 存储登录 token
         await dialog.locator('button').filter({ hasText: '保 存' }).click();
         await waitStable(1000);
         log('新增分类', true, testName);
+      } else {
+        log('新增分类', false, '新增对话框不可见');
       }
+    } else {
+      log('新增分类', false, '新增按钮不可见');
     }
   } catch (e) { log('新增分类', false, e.message); }
 
@@ -278,7 +300,11 @@ let adminToken = ''; // 存储登录 token
         await editDialog.locator('button').filter({ hasText: '保 存' }).click();
         await waitStable(1000);
         log('编辑分类', true);
+      } else {
+        log('编辑分类', false, '编辑对话框不可见');
       }
+    } else {
+      log('编辑分类', false, '编辑按钮不可见');
     }
   } catch (e) { log('编辑分类', false, e.message); }
 
@@ -294,7 +320,11 @@ let adminToken = ''; // 存储登录 token
         await confirmBtn.click();
         await waitStable(1000);
         log('删除分类', true);
+      } else {
+        log('删除分类', false, '删除确认按钮不可见');
       }
+    } else {
+      log('删除分类', false, '删除按钮不可见');
     }
   } catch (e) { log('删除分类', false, e.message); }
   await ss('03-type-crud');
@@ -396,9 +426,70 @@ let adminToken = ''; // 存储登录 token
         await searchBtn.click();
         await waitStable(2000);
         log('搜索跳转', page.url().includes('/front/search'), page.url());
+      } else {
+        log('搜索跳转', false, '搜索按钮不可见');
       }
+    } else {
+      log('搜索跳转', false, '搜索输入框不可见');
     }
   } catch (e) { log('前台首页测试', false, e.message); }
+
+  // 用户订单主流程：下单、重复座位冲突、查询、取消
+  {
+    const userLogin = await apiPost('/api/v1/auth/login', {
+      username: 'zhangsan',
+      password: 'user123',
+      role: 'USER'
+    });
+    const userToken = userLogin?.data?.token || '';
+    log('用户 API 登录（订单主流程）', userLogin.code === '200' && !!userToken);
+
+    if (!userToken) {
+      log('创建订单', false, '未获取用户 token');
+      log('重复座位下单应拒绝', false, '未获取用户 token');
+      log('用户订单列表包含新订单', false, '未获取用户 token');
+      log('取消订单', false, '未获取用户 token');
+    } else {
+      try {
+        const recordsRes = await apiGet('/api/v1/records', userToken);
+        const record = Array.isArray(recordsRes.data) ? recordsRes.data[0] : null;
+        if (!record?.id) throw new Error('没有可用排片');
+
+        const soldRes = await apiGet(`/api/v1/orders/seats?recordId=${record.id}`, userToken);
+        const occupied = new Set(
+          (Array.isArray(soldRes.data) ? soldRes.data : [])
+            .flatMap(order => String(order.seat || '').replaceAll('，', ',').split(','))
+            .map(seat => seat.trim())
+            .filter(Boolean)
+        );
+        const seat = Array.from({ length: 64 }, (_, i) =>
+          `${Math.floor(i / 8) + 1}排${(i % 8) + 1}座`
+        ).find(candidate => !occupied.has(candidate));
+        if (!seat) throw new Error('当前排片没有可用座位');
+
+        const createRes = await apiPost('/api/v1/orders/create', { recordId: record.id, seat }, userToken);
+        log('创建订单', createRes.code === '200', `code: ${createRes.code}, seat: ${seat}`);
+
+        const duplicateRes = await apiPost('/api/v1/orders/create', { recordId: record.id, seat }, userToken);
+        log('重复座位下单应拒绝', duplicateRes.code === '409', `code: ${duplicateRes.code}`);
+
+        const ordersRes = await apiGet('/api/v1/orders', userToken);
+        const createdOrder = (Array.isArray(ordersRes.data) ? ordersRes.data : [])
+          .find(order => order.recordId === record.id && order.seat === seat && order.status === '待取票');
+        log('用户订单列表包含新订单', !!createdOrder, `orderId: ${createdOrder?.id || '-'}`);
+
+        const cancelRes = createdOrder
+          ? await apiPut(`/api/v1/orders/${createdOrder.id}/cancel`, userToken)
+          : { code: '500' };
+        log('取消订单', cancelRes.code === '200', `code: ${cancelRes.code}`);
+      } catch (e) {
+        log('创建订单', false, e.message);
+        log('重复座位下单应拒绝', false, e.message);
+        log('用户订单列表包含新订单', false, e.message);
+        log('取消订单', false, e.message);
+      }
+    }
+  }
 
   // 前台电影列表页
   try {
@@ -564,9 +655,15 @@ let adminToken = ''; // 存储登录 token
   const passed = results.filter(r => r.pass).length;
   const failed = results.filter(r => !r.pass).length;
   const total = results.length;
-  console.log(`\n  总用例: ${total}  ✅ ${passed}  ❌ ${failed}  通过率: ${(passed / total * 100).toFixed(1)}%\n`);
+  if (total !== EXPECTED_TEST_COUNT) {
+    log('E2E 用例数量完整', false, `expected: ${EXPECTED_TEST_COUNT}, actual: ${total}`);
+  }
+  const finalPassed = results.filter(r => r.pass).length;
+  const finalFailed = results.filter(r => !r.pass).length;
+  const finalTotal = results.length;
+  console.log(`\n  总用例: ${finalTotal}  ✅ ${finalPassed}  ❌ ${finalFailed}  通过率: ${(finalPassed / finalTotal * 100).toFixed(1)}%\n`);
 
-  if (failed > 0) {
+  if (finalFailed > 0) {
     console.log('  失败项:');
     results.filter(r => !r.pass).forEach(r => console.log(`    - ${r.name}: ${r.detail}`));
     console.log();
@@ -599,10 +696,10 @@ let adminToken = ''; // 存储登录 token
 <h1>🎬 影院管理系统 — 全栈 E2E 扫描测试报告</h1>
 <p>测试时间: ${new Date().toLocaleString('zh-CN')}</p>
 <div class="summary">
-  <div><div class="num" style="color:#2196f3">${total}</div><div class="lb">总用例</div></div>
-  <div><div class="num" style="color:#4caf50">${passed}</div><div class="lb">通过</div></div>
-  <div><div class="num" style="color:#f44336">${failed}</div><div class="lb">失败</div></div>
-  <div><div class="num" style="color:#ff9800">${(passed/total*100).toFixed(1)}%</div><div class="lb">通过率</div></div>
+  <div><div class="num" style="color:#2196f3">${finalTotal}</div><div class="lb">总用例</div></div>
+  <div><div class="num" style="color:#4caf50">${finalPassed}</div><div class="lb">通过</div></div>
+  <div><div class="num" style="color:#f44336">${finalFailed}</div><div class="lb">失败</div></div>
+  <div><div class="num" style="color:#ff9800">${(finalPassed/finalTotal*100).toFixed(1)}%</div><div class="lb">通过率</div></div>
 </div>
 <h2>📋 测试明细</h2>
 <table><thead><tr><th>#</th><th>用例</th><th>结果</th><th>详情</th></tr></thead><tbody>${rowsHtml}</tbody></table>
@@ -618,7 +715,7 @@ let adminToken = ''; // 存储登录 token
   console.log(`📸 截图目录: ${SS_DIR}\n`);
 
   await browser.close();
-  process.exit(failed > 0 ? 1 : 0);
+  process.exit(finalFailed > 0 ? 1 : 0);
 })().catch(e => {
   console.error('\n❌ 测试异常:', e.message);
   console.error(e);

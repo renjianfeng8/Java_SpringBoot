@@ -44,7 +44,7 @@ if %errorlevel% neq 0 (
 echo [4/4] 运行 E2E 测试...
 echo.
 cd xm_film\vue
-npx playwright test e2e-tests/e2e-scan.spec.mjs --config=e2e-tests/playwright.config.mjs
+node e2e-tests\e2e-scan.spec.mjs
 
 set TEST_RESULT=%errorlevel%
 cd ..\..
@@ -58,7 +58,7 @@ if %TEST_RESULT% equ 0 (
 
 echo.
 echo 查看 HTML 测试报告:
-echo   npx playwright show-report xm_film/vue/e2e-tests/playwright-report
+echo   xm_film\vue\e2e-tests\e2e-scan-report.html
 echo.
 
 pause
