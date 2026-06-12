@@ -30,7 +30,7 @@ Thumbs.db
 .env.*
 !.env.example
 /claude.log
-start_claude.bat
+scripts/start-claude.bat
 backend.log
 frontend.log
 
