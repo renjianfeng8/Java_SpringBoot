@@ -26,6 +26,9 @@ dist/
 Thumbs.db
 
 # === 项目本地文件 ===
+.env
+.env.*
+!.env.example
 /claude.log
 start_claude.bat
 backend.log

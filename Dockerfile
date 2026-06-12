@@ -21,7 +21,8 @@ RUN apt-get update \
 
 EXPOSE 9090
 
-ENV DB_HOST=localhost \
+ENV SERVER_PORT=9090 \
+    DB_HOST=localhost \
     DB_PASSWORD=123456 \
     JWT_SECRET=docker-secret-key-for-cinema-system \
     FILE_UPLOAD_DIR=/app/uploads \

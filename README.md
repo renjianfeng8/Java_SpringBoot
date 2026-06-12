@@ -282,10 +282,10 @@ http://localhost:9090/swagger-ui.html
 ### 6. Docker 部署
 
 ```bash
-docker-compose up -d
+docker compose up -d --build
 ```
 
-构建并启动 MySQL + 后端服务，访问 `http://localhost:9090/swagger-ui/index.html` 验证。
+构建并启动 MySQL、Spring Boot 后端和 Nginx 前端。访问 `http://localhost/` 打开系统，访问 `http://localhost:9090/api/v1/health` 验证后端健康状态。
 
 ---
 
@@ -448,7 +448,8 @@ file:
 ```bash
 # 后端
 cd xm_film/springboot
-mvn clean package -DskipTests -Pprod
+mvn clean package -DskipTests
+java -jar target/springboot-0.0.1-SNAPSHOT.jar --spring.profiles.active=prod
 
 # 前端
 cd xm_film/vue

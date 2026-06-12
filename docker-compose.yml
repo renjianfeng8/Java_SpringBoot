@@ -1,7 +1,7 @@
 # ============================================================
 # 影院购票管理系统 — Docker Compose
-# 启动: docker-compose up -d
-# 停止: docker-compose down
+# 启动: docker compose up -d
+# 停止: docker compose down
 # ============================================================
 
 services:
@@ -16,7 +16,8 @@ services:
       - "3307:3306"
     volumes:
       - mysql-data:/var/lib/mysql
-      - ./xm_film/sql:/docker-entrypoint-initdb.d
+      - ./xm_film/sql/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ./xm_film/sql/data.sql:/docker-entrypoint-initdb.d/02-data.sql:ro
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
       interval: 10s
@@ -31,12 +32,19 @@ services:
       dockerfile: Dockerfile
     container_name: cinema-backend
     ports:
-      - "9090:9090"
+      - "${BACKEND_PORT:-9090}:9090"
     environment:
+      SPRING_PROFILES_ACTIVE: prod
+      SERVER_PORT: 9090
       DB_HOST: mysql
+      DB_PORT: ${DB_PORT:-3306}
+      DB_USERNAME: ${DB_USERNAME:-root}
       DB_PASSWORD: ${DB_PASSWORD:-123456}
       JWT_SECRET: ${JWT_SECRET:-docker-secret-key-for-cinema-system}
-      FILE_UPLOAD_DIR: /app/uploads
+      JWT_EXPIRE: ${JWT_EXPIRE:-86400000}
+      FILE_UPLOAD_DIR: ${FILE_UPLOAD_DIR:-/app/uploads}
+      FILE_ACCESS_PREFIX: ${FILE_ACCESS_PREFIX:-/files/}
+      MYBATIS_LOG_LEVEL: ${MYBATIS_LOG_LEVEL:-WARN}
     depends_on:
       mysql:
         condition: service_healthy
@@ -46,7 +54,7 @@ services:
       timeout: 5s
       retries: 5
     volumes:
-      - uploads:/app/uploads
+      - uploads:${FILE_UPLOAD_DIR:-/app/uploads}
     restart: unless-stopped
 
   # ---- Vue 前端 (Nginx) ----
@@ -55,7 +63,7 @@ services:
       context: ./xm_film/vue
       dockerfile: Dockerfile
       args:
-        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:9090}
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-/}
     container_name: cinema-frontend
     ports:
       - "${FRONTEND_PORT:-80}:80"

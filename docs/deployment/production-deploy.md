@@ -8,7 +8,7 @@
 
 - Docker 24+
 - Docker Compose v2+
-- 开放端口：80、9090、3306 仅内网或安全组限制
+- 开放端口：80、9090；MySQL 映射到 3307 时应仅限内网或安全组访问
 
 ## 配置环境变量
 
@@ -18,11 +18,15 @@ cp .env.example .env
 
 修改 `.env`：
 
+- `BACKEND_PORT` — 后端对宿主机暴露的端口
 - `DB_PASSWORD` — 数据库密码
-- `MYSQL_ROOT_PASSWORD` — MySQL root 密码
 - `JWT_SECRET` — JWT 签名密钥（至少 32 位随机字符）
 - `FILE_UPLOAD_DIR` — 文件上传目录
-- `VITE_API_BASE_URL` — 前端构建时注入的后端 API 地址
+- `FILE_ACCESS_PREFIX` — 上传文件公开访问前缀，默认 `/files/`
+- `VITE_API_BASE_URL` — 前端 API 基础地址，Docker Compose 默认使用同源 `/`
+
+Compose 会为后端启用 `prod` profile，并把数据库连接、JWT、上传目录和 SQL 日志级别通过环境变量注入。
+首次启动时，MySQL 会按 `01-schema.sql`、`02-data.sql` 顺序初始化数据库。
 
 ## 启动
 
@@ -34,9 +38,10 @@ docker compose up -d --build
 
 ```bash
 curl http://localhost:9090/api/v1/health
+curl http://localhost/
 ```
 
-返回 `code=200` 且 `data.status=UP` 表示后端可用。
+后端返回 `code=200` 且 `data.status=UP`，前端返回 HTML，表示两个容器入口可用。数据库和反向代理仍应通过登录、查询等业务请求验证。
 
 ## 演示前检查
 

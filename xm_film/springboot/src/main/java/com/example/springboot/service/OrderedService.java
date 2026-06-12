@@ -75,7 +75,7 @@ public class OrderedService extends BaseService<Ordered> {
             throw new CustomException(ErrorCode.PARAM_INVALID, "缺少购票用户");
         }
 
-        Record record = recordMapper.selectById(ordered.getRecordId());
+        Record record = recordMapper.selectByIdForUpdate(ordered.getRecordId());
         if (record == null) {
             throw new CustomException(ErrorCode.PARAM_INVALID, "放映场次不存在");
         }
@@ -121,6 +121,19 @@ public class OrderedService extends BaseService<Ordered> {
         return orderedMapper.selectActiveByRecordId(recordId);
     }
 
+    public Ordered selectByIdScoped(Integer id, String role, Integer userId) {
+        Ordered ordered = selectById(id);
+        ensureOrderAccess(ordered, role, userId);
+        return ordered;
+    }
+
+    public void updateScoped(Ordered ordered, String role, Integer userId) {
+        throw new CustomException(
+                ErrorCode.FORBIDDEN,
+                "订单不支持通用更新，请使用取消或取票显式接口"
+        );
+    }
+
     @Transactional(rollbackFor = Exception.class)
     public void deleteScoped(Integer id, String role, Integer userId) {
         Ordered ordered = selectById(id);
@@ -142,7 +155,7 @@ public class OrderedService extends BaseService<Ordered> {
 
     @Transactional(rollbackFor = Exception.class)
     public void cancelOrder(Integer id, String role, Integer userId) {
-        Ordered ordered = selectById(id);
+        Ordered ordered = orderedMapper.selectByIdForUpdate(id);
         ensureOrderAccess(ordered, role, userId);
         if (!"待取票".equals(ordered.getStatus())) {
             throw new CustomException(ErrorCode.BUSINESS_CONFLICT, "当前状态不允许取消订单");
@@ -155,7 +168,7 @@ public class OrderedService extends BaseService<Ordered> {
 
     @Transactional(rollbackFor = Exception.class)
     public void pickupOrder(Integer id, String role, Integer userId) {
-        Ordered ordered = selectById(id);
+        Ordered ordered = orderedMapper.selectByIdForUpdate(id);
         ensureOrderAccess(ordered, role, userId);
         if ("USER".equals(role)) {
             throw new CustomException(ErrorCode.FORBIDDEN, "用户无权执行取票操作");

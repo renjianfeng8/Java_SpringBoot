@@ -41,11 +41,28 @@ export default defineConfig({
       }
     }
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules/zrender/')) {
+            return 'zrender'
+          }
+        },
+      },
+    },
+  },
   // 环境变量配置（确保 TypeScript 正确识别 import.meta.env）
   envPrefix: ['VITE_'], // 只加载 VITE_ 前缀的环境变量
 
   // 文件系统配置（允许访问 src 和 node_modules 目录）
   server: {
+    proxy: {
+      '/files': {
+        target: 'http://localhost:9090',
+        changeOrigin: true
+      }
+    },
     fs: {
       allow: [
         'node_modules',

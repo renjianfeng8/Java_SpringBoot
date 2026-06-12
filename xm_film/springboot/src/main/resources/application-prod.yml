@@ -14,6 +14,7 @@ jwt:
 
 file:
   upload-dir: ${FILE_UPLOAD_DIR:/app/uploads}
+  access-prefix: ${FILE_ACCESS_PREFIX:/files/}
 
 logging:
   level:

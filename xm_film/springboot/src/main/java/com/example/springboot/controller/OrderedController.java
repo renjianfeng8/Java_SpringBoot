@@ -45,6 +45,12 @@ public class OrderedController extends BaseController<Ordered> {
     }
 
     @Override
+    @GetMapping("/{id}")
+    public Result getById(@PathVariable Integer id) {
+        return Result.success(orderedService.selectByIdScoped(id, currentRole(), currentUserId()));
+    }
+
+    @Override
     @PostMapping
     public Result add(@RequestBody Ordered entity) {
         orderedService.createOrder(entity, currentRole(), currentUserId());
@@ -57,6 +63,13 @@ public class OrderedController extends BaseController<Ordered> {
         ordered.setRecordId(request.getRecordId());
         ordered.setSeat(request.getSeat());
         orderedService.createOrder(ordered, currentRole(), currentUserId());
+        return Result.success();
+    }
+
+    @Override
+    @PutMapping
+    public Result update(@RequestBody Ordered entity) {
+        orderedService.updateScoped(entity, currentRole(), currentUserId());
         return Result.success();
     }
 

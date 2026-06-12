@@ -112,6 +112,20 @@
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import {
+  Avatar,
+  Calendar,
+  CaretBottom,
+  CreditCard,
+  Document,
+  HomeFilled,
+  Lock,
+  SwitchButton as Logout,
+  Tickets,
+  User,
+  UserFilled,
+  VideoCameraFilled,
+} from '@element-plus/icons-vue'
 import { useAuth } from '@/composables/useAuth'
 
 const router = useRouter()

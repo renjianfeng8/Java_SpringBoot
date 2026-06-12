@@ -12,4 +12,5 @@ public interface OrderedMapper extends BaseMapper<Ordered> {
 
     int countSeatInUse(@Param("recordId") Integer recordId, @Param("seat") String seat);
 
+    Ordered selectByIdForUpdate(Integer id);
 }
