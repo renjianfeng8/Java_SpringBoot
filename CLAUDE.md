@@ -33,10 +33,20 @@
 
 ```
 project_02/
-├── CLAUDE.md                          # 项目文档（本文件）
 ├── README.md                          # 项目说明
+├── CLAUDE.md                          # 项目文档（本文件）
 ├── CHANGELOG.md                       # 变更日志
+├── LICENSE                            # 许可证
 ├── Bug.md                             # Bug 修复记录（修复前先查阅）
+├── .env.example                       # 环境变量模板
+├── docker-compose.yml                 # Docker 编排
+├── docs/                              # 文档
+│   └── README.md                      # 文档总索引
+├── scripts/                           # 通用脚本
+│   ├── start-dev.bat                  # 一键启动
+│   ├── run-e2e-tests.bat              # E2E 测试运行
+│   ├── start-claude.bat               # Claude 启动
+│   └── scan-project.sh                # 项目扫描
 ├── xm_film/                           # 项目主目录
 │   ├── springboot/                    # 后端（Spring Boot）
 │   │   ├── pom.xml                    # Maven 依赖配置
@@ -299,6 +309,7 @@ node e2e-tests/e2e-scan.spec.mjs
 
 ## 相关文档
 
+- [文档总索引](docs/README.md) — 文档体系入口
 - [Bug 修复记录](Bug.md) — 已修复 Bug 的根因与解决方案，遇到相似问题优先查阅
 - [重构设计文档](docs/superpowers/specs/2026-05-29-architecture-refactoring-design.md) — 全链路架构重构设计（BaseCRUD/DTO/RESTful/数据库规范化/前端Composable）
 - [产品需求文档](docs/product/README.md) — 用户需求、业务需求、竞品分析、PRD 与优化路线图
@@ -343,4 +354,4 @@ node e2e-tests/e2e-scan.spec.mjs
 - 新增 GitHub Actions CI 配置
 - 新增 Playwright 全量 E2E 测试（53 用例，100% 通过）
 - 新增 start-dev.bat / run-e2e-tests.bat 一键启动脚本
-- 新增 scan-project.sh 全栈项目扫描脚本
+- 新增 scripts/scan-project.sh 全栈项目扫描脚本
