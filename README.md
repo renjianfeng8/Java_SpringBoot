@@ -496,7 +496,7 @@ server {
 }
 ```
 
-生产部署完整步骤见 [生产部署说明](docs/deployment/production-deploy.md)。
+生产部署完整步骤见 [生产部署说明](docs/deployment/deploy-guide.md)。
 
 ---
 
