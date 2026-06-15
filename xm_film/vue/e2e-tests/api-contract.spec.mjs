@@ -16,6 +16,7 @@ const API = 'http://localhost:9090';
 
 let passed = 0;
 let failed = 0;
+let createdUserIds = [];
 
 function assert(condition, label, detail = '') {
   if (condition) {
@@ -96,9 +97,11 @@ async function run() {
     const r2 = await apiPost('/api/v1/auth/login', { username: '999', password: 'wrong', role: 'ADMIN' });
     assert(r2.body.code !== '200', 'POST /api/v1/auth/login (错误密码)', `→ code=${r2.body.code}`);
 
-    // 1c. 注册接口存在
+    // 1c. 注册接口存在（记录 ID 用于清理）
     const r3 = await apiPost('/api/v1/auth/register', { username: '_test_contract', password: 'test123', role: 'USER' });
-    // 可能注册成功或用户名已存在，只要收到响应即可
+    if (r3.body.code === '200' && r3.body.data?.id) {
+      createdUserIds.push({ type: 'user', id: r3.body.data.id });
+    }
     assert(r3.status === 200, 'POST /api/v1/auth/register', '(接口可达)');
   }
 
@@ -144,21 +147,41 @@ async function run() {
       assert('total' in r2.body.data, `  → 返回 total 字段`);
     }
 
-    // 3c. POST 新增（验证端点存在，传空体预期 4xx）
-    const r3 = await apiPost(ep.path, {}, adminToken);
-    assert(r3.status !== 404 && r3.status !== 500,
-      `POST ${ep.path}`, `(端点存在，返回 ${r3.status})`);
-
-    // 3d. GET by id=1
+    // 3c. GET by id=1
     const r4 = await apiGet(`${ep.path}/1`, adminToken);
     assert(r4.status === 200, `GET ${ep.path}/1`, '(状态 200)');
   }
 
-  // ---- 4. 业务接口 ----
-  console.log('\n--- 4. 业务接口 ---');
+  // ---- 4. OpenAPI 规范验证（零数据污染） ----
+  console.log('\n--- 4. OpenAPI 规范 ---');
+  {
+    const spec = await apiGet('/v3/api-docs', adminToken);
+    if (spec.status === 200 && spec.body?.paths) {
+      const paths = Object.keys(spec.body.paths);
+      const expectedEndpoints = [
+        '/api/v1/admins', '/api/v1/users', '/api/v1/cinemas', '/api/v1/films',
+        '/api/v1/actors', '/api/v1/areas', '/api/v1/types', '/api/v1/notices',
+        '/api/v1/rooms', '/api/v1/records', '/api/v1/orders', '/api/v1/marks',
+        '/api/v1/videos',
+      ];
+      for (const ep of expectedEndpoints) {
+        assert(paths.includes(ep), `OpenAPI 包含 ${ep}`);
+        const methods = Object.keys(spec.body.paths[ep]).join(',').toUpperCase();
+        assert(methods.includes('POST'), `  → ${ep} 支持 POST (${methods})`);
+      }
+      assert(paths.includes('/api/v1/auth/login'), 'OpenAPI 包含 /api/v1/auth/login');
+      assert(paths.includes('/api/v1/films/search'), 'OpenAPI 包含 /api/v1/films/search');
+      assert(paths.includes('/api/v1/files/upload'), 'OpenAPI 包含 /api/v1/files/upload');
+    } else {
+      assert(false, '获取 OpenAPI spec', `(状态 ${spec.status})`);
+    }
+  }
+
+  // ---- 5. 业务接口 ----
+  console.log('\n--- 5. 业务接口 ---');
 
   {
-    // 4a. 电影搜索
+    // 5a. 电影搜索
     const r = await apiGet('/api/v1/films/search?title=电影');
     if (r.status === 200 && r.body.code === '200') {
       assert(Array.isArray(r.body.data), 'GET /api/v1/films/search', '(返回数组)');
@@ -168,13 +191,13 @@ async function run() {
   }
 
   {
-    // 4b. 按影院查电影
+    // 5b. 按影院查电影
     const r = await apiGet('/api/v1/films/by-cinema?cinemaId=1');
     assert(r.status === 200, 'GET /api/v1/films/by-cinema', '(状态 200)');
   }
 
   {
-    // 4c. 票房排行榜
+    // 5c. 票房排行榜
     const r = await apiGet('/api/v1/films/box-office/top');
     if (r.status === 200 && r.body.code === '200') {
       assert(Array.isArray(r.body.data), 'GET /api/v1/films/box-office/top', '(返回数组)');
@@ -182,7 +205,7 @@ async function run() {
   }
 
   {
-    // 4d. 评分排行榜
+    // 5d. 评分排行榜
     const r = await apiGet('/api/v1/films/mark/top?topNum=5');
     if (r.status === 200 && r.body.code === '200') {
       assert(Array.isArray(r.body.data), 'GET /api/v1/films/mark/top', '(返回数组)');
@@ -190,7 +213,7 @@ async function run() {
   }
 
   {
-    // 4e. 年份列表
+    // 5e. 年份列表
     const r = await apiGet('/api/v1/auth/years');
     if (r.status === 200 && r.body.code === '200') {
       assert(Array.isArray(r.body.data), 'GET /api/v1/auth/years', '(返回数组)');
@@ -198,14 +221,14 @@ async function run() {
   }
 
   {
-    // 4f. 订单创建（验证端点存在）
+    // 5f. 订单创建（验证端点存在）
     const r = await apiPost('/api/v1/orders/create', { recordId: 0, seat: '' }, adminToken);
     // 参数无效但端点应存在，返回 4xx 而非 404
     assert(r.status !== 404, 'POST /api/v1/orders/create', `(端点存在，返回 ${r.status})`);
   }
 
   {
-    // 4g. 订单取消（验证端点存在）
+    // 5g. 订单取消（验证端点存在）
     if (adminToken) {
       const r = await apiPut('/api/v1/orders/0/cancel', {}, adminToken);
       assert(r.status !== 404, 'PUT /api/v1/orders/:id/cancel', `(端点存在，返回 ${r.status})`);
@@ -213,7 +236,7 @@ async function run() {
   }
 
   {
-    // 4h. 文件上传（验证端点存在）
+    // 5h. 文件上传（验证端点存在）
     if (adminToken) {
       const formData = new FormData();
       const r = await fetch(`${API}/api/v1/files/upload`, {
@@ -226,28 +249,37 @@ async function run() {
     }
   }
 
-  // ---- 5. 负面测试 ----
-  console.log('\n--- 5. 负面测试 ---');
+  // ---- 6. 负面测试 ----
+  console.log('\n--- 6. 负面测试 ---');
 
   {
-    // 5a. 无 token 访问受保护资源
+    // 6a. 无 token 访问受保护资源
     const r = await apiGet('/api/v1/admins/page');
     assert(r.status === 401 || r.body.code !== '200',
       '无 token 访问受保护资源', `(返回 ${r.status})`);
   }
 
   {
-    // 5b. 无效 token
+    // 6b. 无效 token
     const r = await apiGet('/api/v1/admins/page', 'invalid-token');
     assert(r.status === 401 || r.body.code !== '200',
       '无效 token 访问受保护资源', `(返回 ${r.status})`);
   }
 
   {
-    // 5c. 不存在路由 → 404（需带 token 绕过拦截器）
+    // 6c. 不存在路由 → 404（需带 token 绕过拦截器）
     const r = await apiGet('/api/v1/nonexistent', adminToken);
     assert(r.status === 404,
       'GET /api/v1/nonexistent', `(返回 ${r.status})`);
+  }
+
+  // ---- 7. 清理 ----
+  console.log('\n--- 7. 清理测试数据 ---');
+  for (const record of createdUserIds) {
+    const r = await apiDelete(`/api/v1/users/${record.id}`, adminToken);
+    if (r.status === 200) {
+      console.log(`  🗑️ 清理 ${record.type} id=${record.id}`);
+    }
   }
 
   // ---- 结果汇总 ----
