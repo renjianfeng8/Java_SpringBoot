@@ -3,6 +3,7 @@ package com.example.springboot.service;
 import com.example.springboot.common.BaseMapper;
 import com.example.springboot.common.BaseService;
 import com.example.springboot.common.enums.ErrorCode;
+import com.example.springboot.common.enums.OrderStatus;
 import com.example.springboot.entity.Film;
 import com.example.springboot.entity.Ordered;
 import com.example.springboot.entity.Record;
@@ -101,7 +102,7 @@ public class OrderedService extends BaseService<Ordered> {
         ordered.setStart(record.getStart());
         ordered.setNumber(number);
         ordered.setTotal(total.doubleValue());
-        ordered.setStatus("待取票");
+        ordered.setStatus(OrderStatus.PENDING);
         ordered.setSeat(String.join(",", seats));
         if (film != null) {
             ordered.setImg(film.getImg());
@@ -157,12 +158,12 @@ public class OrderedService extends BaseService<Ordered> {
     public void cancelOrder(Integer id, String role, Integer userId) {
         Ordered ordered = orderedMapper.selectByIdForUpdate(id);
         ensureOrderAccess(ordered, role, userId);
-        if (!"待取票".equals(ordered.getStatus())) {
+        if (!OrderStatus.PENDING.equals(ordered.getStatus())) {
             throw new CustomException(ErrorCode.BUSINESS_CONFLICT, "当前状态不允许取消订单");
         }
         Ordered update = new Ordered();
         update.setId(id);
-        update.setStatus("已取消");
+        update.setStatus(OrderStatus.CANCELLED);
         orderedMapper.updateById(update);
     }
 
@@ -173,12 +174,12 @@ public class OrderedService extends BaseService<Ordered> {
         if ("USER".equals(role)) {
             throw new CustomException(ErrorCode.FORBIDDEN, "用户无权执行取票操作");
         }
-        if (!"待取票".equals(ordered.getStatus())) {
+        if (!OrderStatus.PENDING.equals(ordered.getStatus())) {
             throw new CustomException(ErrorCode.BUSINESS_CONFLICT, "当前状态不允许取票");
         }
         Ordered update = new Ordered();
         update.setId(id);
-        update.setStatus("已取票");
+        update.setStatus(OrderStatus.PICKED_UP);
         orderedMapper.updateById(update);
     }
 

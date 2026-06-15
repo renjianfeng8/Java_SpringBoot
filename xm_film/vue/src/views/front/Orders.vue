@@ -99,7 +99,7 @@ import { reactive } from "vue";
 import { Delete, Search } from "@element-plus/icons-vue";
 import request from "@/utils/request.js";
 import { ElMessage, ElMessageBox } from "element-plus";
-import { API_PATHS, apiById, apiPage } from '@/constants';
+import { API_PATHS, ORDER_API, getOrderStatusType, apiById, apiPage } from '@/constants';
 
 // 关键修改3：扩展Ordered接口，增加后端返回的字段
 interface Ordered {
@@ -246,7 +246,7 @@ const del = (id: number) => {
 
 const cancelOrder = async (id: number) => {
   try {
-    const res = await request.put(`/api/v1/orders/${id}/cancel`)
+    const res = await request.put(ORDER_API.CANCEL(id))
     if (res.code === '200') {
       ElMessage.success('订单已取消')
       await load()
@@ -271,13 +271,7 @@ const reset = () => {
 // 初始加载
 load()
 
-const getStatusType = (status: string | undefined) => {
-  switch (status) {
-    case '已取票': return 'warning';
-    case '待取票': return 'success';
-    default: return 'info';
-  }
-}
+const getStatusType = (status) => getOrderStatusType(status)
 </script>
 
 <style scoped>

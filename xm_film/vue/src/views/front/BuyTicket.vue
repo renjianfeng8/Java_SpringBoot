@@ -141,7 +141,7 @@ import { ref, onMounted, watchEffect } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import request from "@/utils/request.js";
-import { API_PATHS, apiById } from '@/constants';
+import { API_PATHS, ORDER_API, apiById } from '@/constants';
 import { clearStoredUser, getStoredUser } from '@/utils/authStorage';
 
 // 1. Read the current signed-in user from shared auth storage.
@@ -421,7 +421,7 @@ const confirmBooking = async () => {
   }
 
   try {
-    const res = await request.post('/api/v1/orders/create', {
+    const res = await request.post(ORDER_API.CREATE, {
       recordId: Number(recordId),
       seat: selectedSeats.value.join(',')
     });

@@ -44,7 +44,7 @@ public class CinemaService extends BaseService<Cinema> {
         String username = cinema.getUsername();
         Cinema dbCinema = cinemaMapper.selectByUsername(username);
         if (dbCinema != null) {
-            throw new CustomException(ErrorCode.SYSTEM_ERROR.code(), "账号已存在,请更换别的账号");
+            throw new CustomException(ErrorCode.BUSINESS_CONFLICT.code(), "账号已存在,请更换别的账号");
         }
         if (cinema.getPassword() == null) {
             cinema.setPassword("cinema123");
@@ -70,12 +70,12 @@ public class CinemaService extends BaseService<Cinema> {
         String username = account.getUsername();
         Cinema dbCinema = cinemaMapper.selectByUsername(username);
         if (dbCinema == null) {
-            throw new CustomException(ErrorCode.SYSTEM_ERROR.code(), "账号不存在");
+            throw new CustomException(ErrorCode.UNAUTHORIZED.code(), "账号不存在");
         }
         String password = account.getPassword();
         if (!passwordEncoder.matches(password, dbCinema.getPassword())) {
             if (!dbCinema.getPassword().equals(password)) {
-                throw new CustomException(ErrorCode.SYSTEM_ERROR.code(), "账号或密码错误");
+                throw new CustomException(ErrorCode.UNAUTHORIZED.code(), "账号或密码错误");
             }
         }
         return dbCinema;
@@ -86,11 +86,11 @@ public class CinemaService extends BaseService<Cinema> {
         Integer id = account.getId();
         Cinema cinema = selectById(id);
         if (cinema == null) {
-            throw new CustomException(ErrorCode.SYSTEM_ERROR.code(), "账号不存在");
+            throw new CustomException(ErrorCode.UNAUTHORIZED.code(), "账号不存在");
         }
         if (!passwordEncoder.matches(account.getPassword(), cinema.getPassword())) {
             if (!cinema.getPassword().equals(account.getPassword())) {
-                throw new CustomException(ErrorCode.SYSTEM_ERROR.code(), "原密码错误");
+                throw new CustomException(ErrorCode.UNAUTHORIZED.code(), "原密码错误");
             }
         }
         cinema.setPassword(passwordEncoder.encode(account.getNewPassword()));

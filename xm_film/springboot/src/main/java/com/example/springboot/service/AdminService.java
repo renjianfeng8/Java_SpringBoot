@@ -33,7 +33,7 @@ public class AdminService extends BaseService<Admin> {
         String username = admin.getUsername();
         Admin dbAdmin = adminMapper.selectByUsername(username);
         if (dbAdmin != null) {
-            throw new CustomException(ErrorCode.SYSTEM_ERROR.code(), "账号已存在,请更换别的账号");
+            throw new CustomException(ErrorCode.BUSINESS_CONFLICT.code(), "账号已存在,请更换别的账号");
         }
         if (admin.getPassword() == null) {
             admin.setPassword("admin123");
@@ -58,12 +58,12 @@ public class AdminService extends BaseService<Admin> {
         String username = account.getUsername();
         Admin dbAdmin = adminMapper.selectByUsername(username);
         if (dbAdmin == null) {
-            throw new CustomException(ErrorCode.SYSTEM_ERROR.code(), "账号不存在");
+            throw new CustomException(ErrorCode.UNAUTHORIZED.code(), "账号不存在");
         }
         String password = account.getPassword();
         if (!passwordEncoder.matches(password, dbAdmin.getPassword())) {
             if (!dbAdmin.getPassword().equals(password)) {
-                throw new CustomException(ErrorCode.SYSTEM_ERROR.code(), "账号或密码错误");
+                throw new CustomException(ErrorCode.UNAUTHORIZED.code(), "账号或密码错误");
             }
         }
         return dbAdmin;
@@ -74,11 +74,11 @@ public class AdminService extends BaseService<Admin> {
         Integer id = account.getId();
         Admin admin = selectById(id);
         if (admin == null) {
-            throw new CustomException(ErrorCode.SYSTEM_ERROR.code(), "账号不存在");
+            throw new CustomException(ErrorCode.UNAUTHORIZED.code(), "账号不存在");
         }
         if (!passwordEncoder.matches(account.getPassword(), admin.getPassword())) {
             if (!admin.getPassword().equals(account.getPassword())) {
-                throw new CustomException(ErrorCode.SYSTEM_ERROR.code(), "原密码错误");
+                throw new CustomException(ErrorCode.UNAUTHORIZED.code(), "原密码错误");
             }
         }
         admin.setPassword(passwordEncoder.encode(account.getNewPassword()));
