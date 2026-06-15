@@ -62,7 +62,7 @@ class AdminServiceTest {
         when(adminMapper.selectByUsername("ghost")).thenReturn(null);
 
         CustomException ex = assertThrows(CustomException.class, () -> adminService.login(account));
-        assertEquals("500", ex.getCode());
+        assertEquals("401", ex.getCode());
         assertTrue(ex.getMsg().contains("不存在"));
     }
 
@@ -75,7 +75,7 @@ class AdminServiceTest {
         when(adminMapper.selectByUsername("999")).thenReturn(mockAdmin);
 
         CustomException ex = assertThrows(CustomException.class, () -> adminService.login(account));
-        assertEquals("500", ex.getCode());
+        assertEquals("401", ex.getCode());
         assertTrue(ex.getMsg().contains("错误"));
     }
 
