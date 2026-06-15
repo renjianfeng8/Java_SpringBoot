@@ -40,6 +40,10 @@ request.interceptors.response.use(
     const status = error.response?.status
     const backendMessage = error.response?.data?.msg
 
+    if (status === 401) {
+      clearStoredUser()
+    }
+
     if (backendMessage) {
       ElMessage.error(backendMessage)
       return Promise.reject(error)
@@ -47,7 +51,6 @@ request.interceptors.response.use(
 
     switch (status) {
       case 401:
-        clearStoredUser()
         ElMessage.warning('登录状态已过期，请重新登录')
         break
       case 403:

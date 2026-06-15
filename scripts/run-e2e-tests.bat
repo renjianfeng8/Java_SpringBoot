@@ -74,3 +74,4 @@ echo   xm_film\vue\e2e-tests\e2e-scan-report.html
 echo.
 
 pause
+exit /b %TEST_RESULT%
