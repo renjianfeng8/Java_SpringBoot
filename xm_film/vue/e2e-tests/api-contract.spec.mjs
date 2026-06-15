@@ -244,8 +244,8 @@ async function run() {
   }
 
   {
-    // 5c. 不存在路由 → 404
-    const r = await apiGet('/api/v1/nonexistent');
+    // 5c. 不存在路由 → 404（需带 token 绕过拦截器）
+    const r = await apiGet('/api/v1/nonexistent', adminToken);
     assert(r.status === 404,
       'GET /api/v1/nonexistent', `(返回 ${r.status})`);
   }

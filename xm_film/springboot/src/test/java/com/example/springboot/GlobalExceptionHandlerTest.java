@@ -125,8 +125,8 @@ class GlobalExceptionHandlerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value("500"))
-                .andExpect(jsonPath("$.msg").value(org.hamcrest.Matchers.containsString("错误")));
+                .andExpect(jsonPath("$.code").value("400"))
+                .andExpect(jsonPath("$.msg").value(org.hamcrest.Matchers.containsString("角色")));
     }
 
     @Test
