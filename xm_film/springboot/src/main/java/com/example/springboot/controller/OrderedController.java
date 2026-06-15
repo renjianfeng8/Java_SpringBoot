@@ -2,8 +2,10 @@ package com.example.springboot.controller;
 
 import com.example.springboot.common.BaseController;
 import com.example.springboot.common.Result;
+import com.example.springboot.common.enums.ErrorCode;
 import com.example.springboot.dto.request.OrderCreateRequest;
 import com.example.springboot.entity.Ordered;
+import com.example.springboot.exception.CustomException;
 import com.example.springboot.service.OrderedService;
 import com.github.pagehelper.PageHelper;
 import com.github.pagehelper.PageInfo;
@@ -53,8 +55,7 @@ public class OrderedController extends BaseController<Ordered> {
     @Override
     @PostMapping
     public Result add(@RequestBody Ordered entity) {
-        orderedService.createOrder(entity, currentRole(), currentUserId());
-        return Result.success();
+        throw new CustomException(ErrorCode.PARAM_INVALID, "请使用 /api/v1/orders/create 创建订单");
     }
 
     @PostMapping("/create")

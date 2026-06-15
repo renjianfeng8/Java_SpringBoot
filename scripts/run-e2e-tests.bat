@@ -44,10 +44,22 @@ if %errorlevel% neq 0 (
 echo [4/4] 运行 E2E 测试...
 echo.
 cd xm_film\vue
-node e2e-tests\e2e-scan.spec.mjs
 
-set TEST_RESULT=%errorlevel%
+:: 4a. 全量 E2E 扫描测试
+echo --- E2E 扫描测试 ---
+node e2e-tests\e2e-scan.spec.mjs
+set SCAN_RESULT=%errorlevel%
+
+:: 4b. API 契约测试（验证前后端接口一致性）
+echo.
+echo --- API 契约测试 ---
+node e2e-tests\api-contract.spec.mjs
+set CONTRACT_RESULT=%errorlevel%
+
 cd ..\..
+
+:: 合并结果
+if %SCAN_RESULT% equ 0 if %CONTRACT_RESULT% equ 0 (set TEST_RESULT=0) else (set TEST_RESULT=1)
 
 echo.
 if %TEST_RESULT% equ 0 (

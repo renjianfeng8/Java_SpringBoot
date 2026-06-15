@@ -7,6 +7,7 @@ import com.example.springboot.common.enums.ErrorCode;
 import com.example.springboot.common.enums.RoleEnum;
 import com.example.springboot.dto.request.LoginRequest;
 import com.example.springboot.dto.request.PasswordChangeRequest;
+import com.example.springboot.dto.request.RegisterRequest;
 import com.example.springboot.entity.Account;
 import com.example.springboot.exception.CustomException;
 import com.example.springboot.service.AdminService;
@@ -57,7 +58,7 @@ public class AuthController {
             result = userService.login(account);
         }
         if (result == null) {
-            return Result.error(ErrorCode.SYSTEM_ERROR.code(), "账号或密码错误");
+            return Result.error(ErrorCode.PARAM_INVALID.code(), "无效的角色类型");
         }
         String token = jwtUtils.generateToken(result.getId(), result.getRole());
         result.setToken(token);
@@ -66,7 +67,11 @@ public class AuthController {
 
     @Operation(summary = "用户注册", description = "支持CINEMA(影院)和USER(用户)注册")
     @PostMapping("/register")
-    public Result register(@RequestBody Account account) {
+    public Result register(@Valid @RequestBody RegisterRequest request) {
+        Account account = new Account();
+        account.setUsername(request.getUsername());
+        account.setPassword(request.getPassword());
+        account.setRole(request.getRole());
         if (RoleEnum.CINEMA.name().equals(account.getRole())) {
             cinemaService.register(account);
         } else if (RoleEnum.USER.name().equals(account.getRole())) {

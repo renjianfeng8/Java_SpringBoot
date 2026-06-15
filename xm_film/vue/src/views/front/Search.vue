@@ -42,6 +42,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { ElMessage } from 'element-plus'
 import request from "@/utils/request.js";
 import { FILM_API } from '@/constants';
 
@@ -73,6 +74,7 @@ const fetchSearchResults = async () => {
     filmList.value = response.code === '200' ? (response.data || []) : []
   } catch (error) {
     console.error('搜索请求出错:', error)
+    ElMessage.error('搜索失败，请稍后重试')
   }
 }
 

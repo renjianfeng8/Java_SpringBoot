@@ -1,6 +1,6 @@
 import axios from 'axios'
 import { ElMessage } from 'element-plus'
-import { getStoredUser } from '@/utils/authStorage'
+import { getStoredUser, clearStoredUser } from '@/utils/authStorage'
 
 const request = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:9090',
@@ -27,6 +27,16 @@ request.interceptors.response.use(
     return typeof res === 'string' ? (res ? JSON.parse(res) : res) : res
   },
   error => {
+    if (error.code === 'ERR_NETWORK') {
+      ElMessage.error('无法连接到服务器，请检查网络或后端是否启动')
+      return Promise.reject(error)
+    }
+
+    if (error.code === 'ECONNABORTED') {
+      ElMessage.error('请求超时，请检查网络后重试')
+      return Promise.reject(error)
+    }
+
     const status = error.response?.status
     const backendMessage = error.response?.data?.msg
 
@@ -37,6 +47,7 @@ request.interceptors.response.use(
 
     switch (status) {
       case 401:
+        clearStoredUser()
         ElMessage.warning('登录状态已过期，请重新登录')
         break
       case 403:
@@ -49,7 +60,11 @@ request.interceptors.response.use(
         ElMessage.error('系统异常，请检查后端控制台报错')
         break
       default:
-        ElMessage.error(`请求失败: ${error.message}`)
+        if (status) {
+          ElMessage.error(`请求失败 (${status})`)
+        } else {
+          ElMessage.error(`请求失败: ${error.message}`)
+        }
     }
 
     return Promise.reject(error)

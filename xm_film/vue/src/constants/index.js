@@ -31,6 +31,12 @@ export const FILM_API = {
   MARK_TOP: `${API_PATHS.FILMS}/mark/top`,
 }
 
+/** 订单业务接口（非标准 CRUD） */
+export const ORDER_API = {
+  CREATE: `${API_PATHS.ORDERS}/create`,
+  CANCEL: (id) => `${API_PATHS.ORDERS}/${id}/cancel`,
+}
+
 export const AUTH_API = {
   LOGIN: `${API_PATHS.AUTH}/login`,
   REGISTER: `${API_PATHS.AUTH}/register`,
@@ -53,9 +59,13 @@ export const AREA_MAP = {
 }
 
 export const ORDER_STATUS_MAP = {
-  '待取票': { type: 'warning', label: '待取票' },
-  '已取票': { type: 'success', label: '已取票' },
+  '待取票': { type: 'success', label: '待取票' },
+  '已取票': { type: 'warning', label: '已取票' },
   '已取消': { type: 'info', label: '已取消' },
+}
+
+export function getOrderStatusType(status) {
+  return ORDER_STATUS_MAP[status]?.type || 'info'
 }
 
 export const CINEMA_STATUS_MAP = {

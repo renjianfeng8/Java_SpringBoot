@@ -102,7 +102,7 @@ import { reactive } from "vue";
 import { Delete, Search } from "@element-plus/icons-vue";
 import request from "@/utils/request.js";
 import { ElMessage, ElMessageBox } from "element-plus";
-import { API_PATHS, apiBatch, apiById, apiPage } from "@/constants";
+import { API_PATHS, getOrderStatusType, apiBatch, apiById, apiPage } from "@/constants";
 
 
 interface Ordered {
@@ -287,13 +287,7 @@ const initLoad = async () => {
 // 执行初始加载
 initLoad();
 
-const getStatusType = (status: string | undefined) => {
-  switch (status) {
-    case '已取票': return 'warning';
-    case '待取票': return 'success';
-    default: return 'info';
-  }
-}
+const getStatusType = (status) => getOrderStatusType(status)
 </script>
 
 <style scoped>

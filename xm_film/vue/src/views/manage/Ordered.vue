@@ -95,7 +95,7 @@
 import { Delete, Search } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useCrud } from '@/composables/useCrud'
-import { API_PATHS } from '@/constants'
+import { API_PATHS, getOrderStatusType } from '@/constants'
 import request from '@/utils/request'
 
 const crud = useCrud(API_PATHS.ORDERS)
@@ -126,13 +126,7 @@ function handleDelBatch() {
     .then(() => delBatch(selectedIds.value)).catch()
 }
 
-function getStatusType(status) {
-  switch (status) {
-    case '已取票': return 'warning'
-    case '待取票': return 'success'
-    default: return 'info'
-  }
-}
+const getStatusType = (status) => getOrderStatusType(status)
 
 crud.load()
 loadRoom()
