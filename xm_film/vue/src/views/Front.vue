@@ -43,21 +43,34 @@
           </template>
         </el-input>
 
-        <el-dropdown trigger="click">
-          <div class="user-info">
-            <img :src="userAvatar" alt="用户头像" class="avatar">
-            <span class="username">{{ userName }}</span>
-            <el-icon><CaretBottom /></el-icon>
-          </div>
+        <!-- 未登录：显示登录/注册 -->
+        <template v-if="!isLoggedIn">
+          <router-link to="/login" class="header-link">登录</router-link>
+          <span class="header-divider">·</span>
+          <router-link to="/register" class="header-link">注册</router-link>
+        </template>
 
-          <template #dropdown>
-            <el-dropdown-menu>
-              <el-dropdown-item @click="router.push('/front/person')">个人中心</el-dropdown-item>
-              <el-dropdown-item @click="router.push('/front/password')">修改密码</el-dropdown-item>
-              <el-dropdown-item @click="logout">退出登录</el-dropdown-item>
-            </el-dropdown-menu>
-          </template>
-        </el-dropdown>
+        <!-- 已登录：显示用户信息 -->
+        <template v-else>
+          <!-- 影院/管理员登录后显示后台入口 -->
+          <el-button v-if="isCinema || isAdmin" type="primary" size="small" class="admin-btn" @click="goAdmin">
+            管理后台
+          </el-button>
+          <el-dropdown trigger="click">
+            <div class="user-info">
+              <img :src="userAvatar" alt="用户头像" class="avatar">
+              <span class="username">{{ userName }}</span>
+              <el-icon><CaretBottom /></el-icon>
+            </div>
+            <template #dropdown>
+              <el-dropdown-menu>
+                <el-dropdown-item @click="router.push('/front/person')">个人中心</el-dropdown-item>
+                <el-dropdown-item @click="router.push('/front/password')">修改密码</el-dropdown-item>
+                <el-dropdown-item @click="logout">退出登录</el-dropdown-item>
+              </el-dropdown-menu>
+            </template>
+          </el-dropdown>
+        </template>
       </div>
     </div>
 
@@ -127,10 +140,18 @@ import { useAuth } from '@/composables/useAuth'
 
 const router = useRouter()
 const route = useRoute()
-const { user, logout: authLogout } = useAuth()
+const { user, logout: authLogout, isLoggedIn, isAdmin, isCinema } = useAuth()
 
 const searchKeyword = ref('')
 const activePath = ref('')
+
+const goAdmin = () => {
+  if (isAdmin.value) {
+    router.push('/manage/home')
+  } else if (isCinema.value) {
+    router.push('/back/home')
+  }
+}
 
 const userName = computed(() => user.value?.username || '')
 
@@ -371,5 +392,21 @@ const updateActivePath = (path) => {
   padding: 15px;
   font-size: 12px;
   color: #666;
+}
+.header-link {
+  color: #333;
+  text-decoration: none;
+  font-size: 14px;
+  transition: color 0.3s;
+}
+.header-link:hover {
+  color: #409eff;
+}
+.header-divider {
+  margin: 0 6px;
+  color: #ccc;
+}
+.admin-btn {
+  margin-right: 12px;
 }
 </style>
