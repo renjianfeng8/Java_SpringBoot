@@ -87,9 +87,10 @@ public class UserService extends BaseService<User> {
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public void register(Account account) {
+    public User register(Account account) {
         User user = new User();
         BeanUtils.copyProperties(account, user);
         add(user);
+        return user;
     }
 }

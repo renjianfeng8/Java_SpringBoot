@@ -22,6 +22,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -75,7 +76,8 @@ public class AuthController {
         if (RoleEnum.CINEMA.name().equals(account.getRole())) {
             cinemaService.register(account);
         } else if (RoleEnum.USER.name().equals(account.getRole())) {
-            userService.register(account);
+            com.example.springboot.entity.User user = userService.register(account);
+            return Result.success(Map.of("id", user.getId()));
         } else {
             throw new CustomException(ErrorCode.PARAM_INVALID, "无效的角色类型");
         }

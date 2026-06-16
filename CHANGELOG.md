@@ -19,7 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **前端错误展示**: `request.js` 优先展示后端业务消息；购票页切到 DTO 端点；订单页新增取消操作
 - **文档升级**: README 作品集版头、项目亮点、Mermaid 架构图；本地 CI 复现说明
 - **部署文档**: `docs/deployment/deploy-guide.md`，含演示检查清单
-- **测试覆盖**: 新增 35 个单元测试（总计 68 例），覆盖异常处理、订单状态流转、权限拦截、健康检查
+- **测试覆盖**: 新增 40 个单元测试（总计 73 例），覆盖异常处理、订单状态流转、权限拦截、健康检查
 
 ### Changed
 
@@ -77,7 +77,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **SLF4J + Logback 日志系统**: 包级别 SQL 日志控制，支持 `MYBATIS_LOG_LEVEL` 环境变量
 
-- **CI 全自动流水线**: 后端编译 → 前端构建 → MySQL 8.0 服务 → 初始化数据库 → 后端启动 → Playwright 59 例 E2E 测试 → 报告归档
+- **CI 全自动流水线**: 后端编译 → 前端构建 → MySQL 8.0 服务 → 初始化数据库 → 后端启动 → Playwright 64 例 E2E 测试 + 契约测试 → 报告归档
 
 - **E2E 负面测试 5 例**: 错误密码登录、无 token 访问、路由越权、未选批量删除、未登录重定向
 

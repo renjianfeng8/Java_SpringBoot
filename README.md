@@ -19,7 +19,7 @@
 | 影院管理员 | asks | cinema123 |
 | 普通用户 | zhangsan | user123 |
 
-**代码质量**: 全栈 E2E 自动化测试覆盖（59 用例，含负面测试，100% 通过率），BCrypt 密码加密 + JWT 认证 + RBAC 权限控制，GitHub Actions CI 流水线。
+**代码质量**: 全栈 E2E 自动化测试覆盖（64 用例 + 契约测试，含负面测试，100% 通过率），BCrypt 密码加密 + JWT 认证 + RBAC 权限控制，GitHub Actions CI 流水线。
 
 ---
 
@@ -502,18 +502,18 @@ server {
 
 ## 测试
 
-### 单元测试（33 用例）
+### 单元测试（73 用例）
 
 ```bash
 cd xm_film/springboot
 mvn test
 ```
 
-覆盖 4 个核心 Service（AdminService、UserService、CinemaService、FilmService），包括登录认证、密码加密、注册去重、密码修改、批量赋值防护、排行榜查询、类型关联维护等业务逻辑。
+覆盖 4 个核心 Service（AdminService、UserService、CinemaService、FilmService）及订单、权限拦截、异常处理、健康检查模块，包括登录认证、密码加密、注册去重、密码修改、批量赋值防护、排行榜查询、类型关联维护、订单状态流转、座位冲突检测、RBAC 权限边界、全局异常处理等业务逻辑。
 
-### E2E 测试（59 用例）
+### E2E 测试（64 用例）
 
-项目使用 Playwright 进行全栈自动化扫描测试，覆盖后端 API、前端页面渲染、CRUD 流程、分页、搜索、三端导航、负面场景等。
+项目使用 Playwright 进行全栈自动化扫描测试，覆盖后端 API、前端页面渲染、CRUD 流程、分页、搜索、三端导航、订单流程、负面场景等。
 
 ```bash
 cd xm_film/vue
