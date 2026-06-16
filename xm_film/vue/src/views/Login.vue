@@ -32,12 +32,20 @@
 
 <script setup>
 import { reactive, ref } from "vue"
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { useAuth } from "@/composables/useAuth"
 import { ElMessage, ElMessageBox } from "element-plus"
 
 const router = useRouter()
+const route = useRoute()
 const { login: authLogin } = useAuth()
+
+function getDefaultPath(role) {
+  if (role === 'USER') return '/front/home'
+  if (role === 'CINEMA') return '/back/home'
+  if (role === 'ADMIN') return '/manage/home'
+  return '/front/home'
+}
 
 const data = reactive({
   form: {
@@ -59,10 +67,8 @@ const login = () => {
     if (!valid) return
     try {
       const user = await authLogin(data.form)
-      const homePath = user.role === 'USER' ? '/front/home'
-        : user.role === 'CINEMA' ? '/back/home'
-        : '/manage/home'
-      window.location.href = homePath
+      const redirect = route.query.redirect || getDefaultPath(user.role)
+      window.location.href = redirect
     } catch (e) {
       ElMessageBox({
         message: e.message || '登录失败，请检查账号或密码是否正确',
