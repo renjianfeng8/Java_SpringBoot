@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { clearStoredUser, getStoredUser } from '@/utils/authStorage'
 
 const router = createRouter({
@@ -46,20 +46,20 @@ const router = createRouter({
     {
       path: '/front',
       component: () => import('../views/Front.vue'),
-      meta: { requiresAuth: true, roles: ['USER'] },
+      meta: { guest: true },
       children: [
         { path: 'home', meta: { name: '首页', title: '电影购票网站' }, component: () => import('../views/front/Home.vue') },
-        { path: 'person', meta: { name: '个人中心' }, component: () => import('../views/front/Person.vue') },
-        { path: 'password', meta: { name: '修改密码' }, component: () => import('../views/front/Password.vue') },
+        { path: 'orders', meta: { requiresAuth: true, roles: ['USER'], name: '购票记录' }, component: () => import('../views/front/Orders.vue') },
+        { path: 'buyTicket', meta: { requiresAuth: true, roles: ['USER'], name: '购票' }, component: () => import('../views/front/BuyTicket.vue') },
+        { path: 'person', meta: { requiresAuth: true, roles: ['USER'], name: '个人中心' }, component: () => import('../views/front/Person.vue') },
+        { path: 'password', meta: { requiresAuth: true, roles: ['USER'], name: '修改密码' }, component: () => import('../views/front/Password.vue') },
         { path: 'movie', meta: { name: '电影列表' }, component: () => import('../views/front/Movie.vue') },
         { path: 'cinema', meta: { name: '影院列表' }, component: () => import('../views/front/Cinema.vue') },
         { path: 'rank', meta: { name: '排行榜' }, component: () => import('../views/front/Rank.vue') },
-        { path: 'orders', meta: { name: '购票记录' }, component: () => import('../views/front/Orders.vue') },
         { path: 'filmDetail/:id', meta: { name: '电影详情' }, component: () => import('../views/front/FilmDetail.vue') },
         { path: 'filmCinema/:id', meta: { name: '选择影院' }, component: () => import('../views/front/FilmCinema.vue') },
         { path: 'cinemaDetail/:id', meta: { name: '影院详情' }, component: () => import('../views/front/CinemaDetail.vue') },
         { path: 'search', meta: { name: '搜索结果' }, component: () => import('../views/front/Search.vue') },
-        { path: 'buyTicket', meta: { name: '购票' }, component: () => import('../views/front/BuyTicket.vue') },
       ],
     },
     { path: '/404', meta: { name: '404', title: '404页面', guest: true }, component: () => import('../views/404.vue') },
@@ -72,24 +72,36 @@ const router = createRouter({
 router.beforeEach((to, from, next) => {
   document.title = to.meta.title || '电影购票网站'
 
+  // 1. 访客页面（login/register/404）无条件放行
   if (to.meta.guest) {
     return next()
   }
 
+  // 2. 需要登录的页面
   if (to.meta.requiresAuth) {
     const user = getStoredUser()
     if (!user?.token || !user?.role) {
       clearStoredUser()
-      ElMessage.warning('请先登录')
-      return next('/login')
+      ElMessageBox.confirm('请先登录后再进行此操作', '提示', {
+        confirmButtonText: '去登录',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }).then(() => {
+        next(`/login?redirect=${to.path}`)
+      }).catch(() => {
+        next(false)
+      })
+      return
     }
 
+    // 角色校验
     if (to.meta.roles && !to.meta.roles.includes(user.role)) {
       ElMessage.error('无权访问该页面')
       return next('/login')
     }
   }
 
+  // 3. 无 meta 限制的路由直接放行
   next()
 })
 
