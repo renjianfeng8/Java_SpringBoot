@@ -183,7 +183,7 @@ let adminToken = ''; // 存储登录 token
   try {
     await page.goto(BASE, { timeout: 10000 });
     await waitStable();
-    log('根路径 → /login', page.url().includes('/login'));
+    log('根路径 → /front/home', page.url().includes('/front/home'));
   } catch (e) { log('根路径重定向', false, e.message); }
 
   // ========== 3. 管理员登录流程 ==========
@@ -510,13 +510,14 @@ let adminToken = ''; // 存储登录 token
     await page.goto(`${BASE}/front/home`, { timeout: 10000 });
     await waitStable(1500);
     const footerItems = [
-      '关于我们', '购票服务', '帮助中心', '联系我们', '400-123-4567'
+      '项目声明', '功能与风险', '用户信息与隐私', '版权信息', '个人学习项目'
     ];
     let footerOk = 0;
     for (const item of footerItems) {
       if (await page.isVisible(`text=${item}`).catch(() => false)) footerOk++;
     }
     log('页脚信息', footerOk >= 4, `${footerOk}/5 项可见`);
+    await ss('04-footer');
   } catch (e) { log('页脚测试', false, e.message); }
 
   // ========== 9. 影院后台页面 ==========
@@ -638,12 +639,18 @@ let adminToken = ''; // 存储登录 token
     }
   } catch (e) { log('批量删除提示测试', false, e.message); }
 
-  // 10.5 未登录访问受保护页面 → 重定向到登录页
+  // 10.5 未登录访问受保护页面 → 弹确认框 → 点去登录 → 跳转到登录页
   try {
     await page.evaluate(() => localStorage.removeItem('xm-pro-user'));
     await page.goto(`${BASE}/manage/home`, { timeout: 10000 });
     await waitStable(1500);
-    log('未登录访问管理页重定向到登录', page.url().includes('/login'), page.url());
+    const dialogBtn = page.locator('.el-message-box__btns button').filter({ hasText: '去登录' });
+    const dialogVisible = await dialogBtn.isVisible().catch(() => false);
+    if (dialogVisible) {
+      await dialogBtn.click();
+      await waitStable(1000);
+    }
+    log('未登录访问管理页弹框提示登录', page.url().includes('/login'), page.url());
   } catch (e) { log('未登录重定向', false, e.message); }
   await ss('06-negative');
 

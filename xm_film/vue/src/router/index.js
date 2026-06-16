@@ -5,7 +5,7 @@ import { clearStoredUser, getStoredUser } from '@/utils/authStorage'
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
-    { path: '/', redirect: '/login' },
+    { path: '/', redirect: '/front/home' },
     {
       path: '/manage',
       component: () => import('../views/Manage.vue'),
