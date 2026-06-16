@@ -59,7 +59,8 @@ set CONTRACT_RESULT=%errorlevel%
 cd ..\..
 
 :: 合并结果
-if %SCAN_RESULT% equ 0 if %CONTRACT_RESULT% equ 0 (set TEST_RESULT=0) else (set TEST_RESULT=1)
+set TEST_RESULT=1
+if %SCAN_RESULT% equ 0 if %CONTRACT_RESULT% equ 0 set TEST_RESULT=0
 
 echo.
 if %TEST_RESULT% equ 0 (

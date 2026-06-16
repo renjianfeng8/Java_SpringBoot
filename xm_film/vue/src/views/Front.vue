@@ -67,48 +67,50 @@
 
     <!-- 页脚 -->
     <footer class="front-footer">
-      <div style="border-bottom:1px solid #333;">
+      <div class="footer-main">
         <div class="footer-wrapper">
           <div class="footer-column">
-            <h3 class="footer-title">关于我们</h3>
+            <h3 class="footer-title">项目声明</h3>
             <ul class="footer-links">
-              <li>公司简介</li>
-              <li>联系我们</li>
-              <li>加入我们</li>
+              <li>本系统为个人学习项目</li>
+              <li>所有数据均为模拟数据</li>
+              <li>严禁用于任何商业用途</li>
+              <li>部分素材来源网络，侵删</li>
             </ul>
           </div>
           <div class="footer-column">
-            <h3 class="footer-title">购票服务</h3>
+            <h3 class="footer-title">功能与风险</h3>
             <ul class="footer-links">
-              <li>购票指南</li>
-              <li>退改签规则</li>
-              <li>会员权益</li>
+              <li>本系统仅展示功能演示</li>
+              <li>不提供真实购票服务</li>
+              <li>不涉及任何资金交易</li>
+              <li>使用风险由用户自行承担</li>
             </ul>
           </div>
           <div class="footer-column">
-            <h3 class="footer-title">帮助中心</h3>
+            <h3 class="footer-title">用户信息与隐私</h3>
             <ul class="footer-links">
-              <li>常见问题</li>
-              <li>影院设施</li>
-              <li>儿童观影政策</li>
+              <li>本系统不收集真实个人信息</li>
+              <li>注册信息仅用于功能演示</li>
+              <li>密码采用加密存储</li>
+              <li>请勿使用真实密码注册</li>
             </ul>
           </div>
           <div class="footer-column contact-column">
-            <h3 class="footer-title">联系我们</h3>
-            <div style="margin-right: 8px;color: #e53935;">
-              <p class="contact-item"><el-icon><Phone /></el-icon><span>400-123-4567</span></p>
-              <p class="contact-item"><el-icon><Message /></el-icon><span>service@movie-ticket.com</span></p>
+            <h3 class="footer-title">版权信息</h3>
+            <div style="margin-right: 8px;color: #aaa; font-size: 14px; line-height: 1.8;">
+              <p class="contact-item">© 2024-2026 电影购票网站</p>
+              <p class="contact-item">个人学习项目 保留所有权利</p>
+              <p class="contact-item">本系统仅用于技术学习与交流</p>
+              <p class="contact-item">联系方式: 2145345678@qq.com</p>
             </div>
           </div>
         </div>
       </div>
       <div class="footer-bottom">
-        <div style="margin: 5px 0;">
-          <p>©电影购票网站 版权所有 | 营业执照 | 增值业务许可证</p>
-          <p>网络文化经营许可证 | 广播电视节目制作经营许可证 | 违法和不良信息举报中心</p>
-        </div>
-        <div style="color: red; font-style: italic; font-size: 18px">
-          <p>让每一次观影都成为美好回忆</p>
+        <div style="color: #888; font-size: 13px; text-align: center; width: 100%;">
+          <p>本系统为 <strong>个人学习项目</strong>，所有展示数据（包括但不限于电影信息、票房数据、影院信息、订单记录）均为 <strong>模拟数据</strong>，不反映真实市场情况。</p>
+          <p style="margin-top: 4px;">严禁将本系统用于任何商业用途。使用本系统即表示您已了解并同意上述条款。</p>
         </div>
       </div>
     </footer>
@@ -120,7 +122,7 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Phone, Message, CaretBottom } from '@element-plus/icons-vue'
+import { CaretBottom } from '@element-plus/icons-vue'
 import { useAuth } from '@/composables/useAuth'
 
 const router = useRouter()
@@ -292,13 +294,19 @@ const updateActivePath = (path) => {
 .front-footer {
   background-color: #1a1a1a;
   color: #fff;
-  padding: 10px 0 20px;
+  padding: 0;
   margin-top: 60px;
+}
+
+.footer-main {
+  border-bottom: 1px solid #333;
+  padding: 20px 0 10px;
+  background-color: #1a1a1a;
 }
 
 .footer-wrapper {
   color: #aaa;
-  max-width: 850px;
+  max-width: 950px;
   margin: 0 auto;
   display: flex;
 }
@@ -314,6 +322,17 @@ const updateActivePath = (path) => {
   margin-bottom: 10px;
   position: relative;
   padding-bottom: 10px;
+  color: #e53935;
+}
+
+.footer-title::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 30px;
+  height: 2px;
+  background-color: #e53935;
 }
 
 .footer-links {
@@ -322,10 +341,11 @@ const updateActivePath = (path) => {
 }
 
 .footer-links li {
-  margin-bottom: 10px;
-  font-size: 14px;
-  cursor: pointer;
-  transition: color 0.3s;
+  margin-bottom: 8px;
+  font-size: 13px;
+  color: #999;
+  cursor: default;
+  line-height: 1.6;
 }
 
 .footer-links li:hover {
@@ -340,23 +360,15 @@ const updateActivePath = (path) => {
 .contact-item {
   display: flex;
   align-items: center;
-  margin-bottom: 10px;
-  font-size: 14px;
-  color: #aaa;
-}
-
-.contact-item i {
-  margin-right: 8px;
-  color: #e53935;
+  margin-bottom: 6px;
+  font-size: 13px;
+  color: #999;
 }
 
 .footer-bottom {
-  max-width: 1200px;
+  max-width: 1000px;
   margin: 0 auto;
-  padding: 15px 15px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+  padding: 15px;
   font-size: 12px;
   color: #666;
 }

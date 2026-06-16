@@ -50,6 +50,9 @@
         </el-form>
       </div>
     </div>
+    <div class="register-footer">
+      <p>本系统为 <strong>个人学习项目</strong>，所有展示数据均为 <strong>模拟数据</strong>，不反映真实市场情况，严禁用于商业用途。</p>
+    </div>
   </div>
 </template>
 
@@ -133,5 +136,16 @@ const register = () => {
   border-radius: 10px;
   padding: 40px;
   box-shadow: 0 0 20px rgba(0, 0, 0, 0.2);
+}
+
+.register-footer {
+  position: absolute;
+  bottom: 20px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 12px;
+  padding: 10px;
 }
 </style>

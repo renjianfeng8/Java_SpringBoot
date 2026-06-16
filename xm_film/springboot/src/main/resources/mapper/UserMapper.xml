@@ -33,9 +33,9 @@
     </select>
 
     <!-- 插入操作 -->
-    <insert id="insert" parameterType="com.example.springboot.entity.User">
-        INSERT INTO user (id, username, password, role, name, avatar, phone, email)
-        VALUES (#{id}, #{username}, #{password}, #{role}, #{name}, #{avatar}, #{phone}, #{email})
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id" parameterType="com.example.springboot.entity.User">
+        INSERT INTO user (username, password, role, name, avatar, phone, email)
+        VALUES (#{username}, #{password}, #{role}, #{name}, #{avatar}, #{phone}, #{email})
     </insert>
 
     <!-- 查询名字 -->

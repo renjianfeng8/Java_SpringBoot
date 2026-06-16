@@ -140,6 +140,9 @@
         <RouterView />
       </div>
     </div>
+    <div class="manage-footer">
+      <p>个人学习项目 · 所有数据均为模拟数据 · 严禁商业用途</p>
+    </div>
   </div>
 </template>
 
@@ -289,6 +292,15 @@ const logout = () => {
   overflow-y: auto;
   background-color: #ffffff;
   padding: 15px;
-  min-height: calc(100vh - 120px);
+  min-height: calc(100vh - 160px);
+}
+
+.manage-footer {
+  text-align: center;
+  padding: 10px;
+  font-size: 12px;
+  color: #999;
+  background: #f5f7fa;
+  border-top: 1px solid #eee;
 }
 </style>
