@@ -67,7 +67,8 @@ const login = () => {
     if (!valid) return
     try {
       const user = await authLogin(data.form)
-      const redirect = route.query.redirect || getDefaultPath(user.role)
+      const redirectParam = route.query.redirect
+      const redirect = (redirectParam && redirectParam.startsWith('/')) ? redirectParam : getDefaultPath(user.role)
       window.location.href = redirect
     } catch (e) {
       ElMessageBox({
