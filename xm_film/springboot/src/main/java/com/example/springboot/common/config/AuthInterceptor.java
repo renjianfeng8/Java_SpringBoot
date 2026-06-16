@@ -30,6 +30,15 @@ public class AuthInterceptor implements HandlerInterceptor {
             "/api/v1/videos"
     );
 
+    private static final Set<String> PUBLIC_READ_PREFIXES = Set.of(
+            "/api/v1/films",
+            "/api/v1/cinemas",
+            "/api/v1/types",
+            "/api/v1/areas",
+            "/api/v1/notices",
+            "/api/v1/actors"
+    );
+
     @Resource
     private JwtUtils jwtUtils;
 
@@ -40,7 +49,20 @@ public class AuthInterceptor implements HandlerInterceptor {
         }
 
         String token = request.getHeader("Authorization");
-        if (token != null && token.startsWith("Bearer ")) {
+
+        // Allow anonymous GET requests to public resources
+        if (token == null) {
+            if ("GET".equalsIgnoreCase(request.getMethod()) &&
+                PUBLIC_READ_PREFIXES.stream().anyMatch(p -> request.getRequestURI().startsWith(p))) {
+                return true;
+            }
+            response.setStatus(401);
+            response.setContentType("application/json;charset=UTF-8");
+            response.getWriter().write("{\"code\":\"401\",\"msg\":\"登录已过期，请重新登录\"}");
+            return false;
+        }
+
+        if (token.startsWith("Bearer ")) {
             token = token.substring(7);
             try {
                 Claims claims = jwtUtils.parseToken(token);
