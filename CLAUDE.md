@@ -147,6 +147,8 @@ project_02/
 | `/api/v1/auth/password` | PUT | 修改密码 | Bearer |
 | `/api/v1/auth/years` | GET | 获取年份列表（搜索筛选用） | 否 |
 
+> 匿名 GET 访问 `/api/v1/films`、`/api/v1/cinemas`、`/api/v1/types`、`/api/v1/areas`、`/api/v1/notices`、`/api/v1/actors` 等公开资源无需认证，由 AuthInterceptor 自动放行。写操作（POST/PUT/DELETE）仍需登录。
+
 ### 资源管理接口 (`/api/v1/{resources}`)
 13 个资源（`admins`、`users`、`cinemas`、`films`、`actors`、`areas`、`types`、`notices`、`rooms`、`records`、`orders`、`marks`、`videos`）统一提供以下 RESTful 接口：
 
@@ -178,8 +180,15 @@ home, admin, user, cinema, type, area, film, actor, notice, room, record, ordere
 ### 影院后台 (`/back/*`) — 7个页面
 home, film, room, record, ordered, person, password
 
-### 用户前台 (`/front/*`) — 12个页面
-home, movie, filmDetail/:id, cinema, cinemaDetail/:id, filmCinema/:id, buyTicket, orders, rank, search, person, password
+### 用户前台 (`/front/*`) — 12个页面（公开浏览模式）
+系统支持公开访问，无需登录即可浏览电影、影院、排行榜等公开内容。根路径 `/` 自动重定向到 `/front/home`。
+
+| 访问模式 | 路由 | 说明 |
+|----------|------|------|
+| 公开访问（无需登录） | home, movie, filmDetail/:id, cinema, cinemaDetail/:id, filmCinema/:id, rank, search | 浏览类页面，无需认证 |
+| 需登录（USER） | buyTicket, orders, person, password | 操作类页面，未登录时弹框提示跳转登录 |
+
+访问受保护页面时，系统弹出确认框 → 跳转 `/login?redirect=<原路径>` → 登录成功后自动回跳。登录页根据角色（USER/CINEMA/ADMIN）分别跳转 `/front/home`、`/back/home`、`/manage/home`。
 
 ## Playwright E2E 验证说明
 
