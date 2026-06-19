@@ -64,7 +64,7 @@ public class OrderedController extends BaseController<Ordered> {
         ordered.setRecordId(request.getRecordId());
         ordered.setSeat(request.getSeat());
         orderedService.createOrder(ordered, currentRole(), currentUserId());
-        return Result.success();
+        return Result.success(ordered);
     }
 
     @Override
@@ -83,6 +83,12 @@ public class OrderedController extends BaseController<Ordered> {
     @PutMapping("/{id}/pickup")
     public Result pickup(@PathVariable Integer id) {
         orderedService.pickupOrder(id, currentRole(), currentUserId());
+        return Result.success();
+    }
+
+    @PutMapping("/{id}/pay")
+    public Result pay(@PathVariable Integer id) {
+        orderedService.payOrder(id, currentRole(), currentUserId());
         return Result.success();
     }
 

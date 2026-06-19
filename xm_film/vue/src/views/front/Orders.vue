@@ -3,9 +3,11 @@
     <div>
       <div class="card" style="margin-bottom: 5px">
         <el-input v-model="data.orders" placeholder="请输入订单号" style="width: 300px; margin-right:10px" :prefix-icon="Search"/>
-        <el-select v-model="data.status" placeholder="请选择放映状态" style="width: 300px; margin-right:10px">
-          <el-option label="已取票" value="已取票" />
+        <el-select v-model="data.status" placeholder="请选择订单状态" style="width: 300px; margin-right:10px">
+          <el-option label="待支付" value="待支付" />
           <el-option label="待取票" value="待取票" />
+          <el-option label="已取票" value="已取票" />
+          <el-option label="已取消" value="已取消" />
         </el-select>
         <el-button type="primary" @click="load">查 询</el-button>
         <el-button type="warning" @click="reset">重 置</el-button>
@@ -71,7 +73,7 @@
           </el-table-column>
           <el-table-column label="操作">
             <template #default="scope">
-              <el-button v-if="scope.row.status === '待取票'" style="font-size: 14px" link type="warning" @click="() => cancelOrder(scope.row.id)">取消</el-button>
+              <el-button v-if="scope.row.status === '待支付'" style="font-size: 14px" link type="warning" @click="() => cancelOrder(scope.row.id)">取消</el-button>
               <el-button style="font-size: 18px" link :icon="Delete" @click="() => del(scope.row.id)" type="danger"></el-button>
             </template>
           </el-table-column>

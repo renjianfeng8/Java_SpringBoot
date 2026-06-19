@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <!-- 整个页面统一外层盒子 -->
   <div style="width: 100%; padding: 20px 0; background-color: #f9f9f9;">
     <div style="width: 70%; margin: 0 auto; background-color: white; padding: 30px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
@@ -134,10 +134,66 @@
       </div>
     </div>
   </div>
+
+  <!-- 支付弹窗 -->
+  <div v-if="paymentDialogVisible"
+       style="position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+              background: rgba(0,0,0,0.5); display: flex; align-items: center;
+              justify-content: center; z-index: 1000;">
+    <div style="background: white; border-radius: 8px; padding: 30px; width: 400px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+      <div style="font-size: 20px; font-weight: bold; text-align: center; margin-bottom: 20px;">
+        确认支付
+      </div>
+      <div style="margin-bottom: 15px;">
+        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+          <span style="color: #666;">订单编号：</span>
+          <span>{{ currentOrder?.orders }}</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+          <span style="color: #666;">座位：</span>
+          <span>{{ currentOrder?.seat }}</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;
+                    font-size: 18px; font-weight: bold;">
+          <span style="color: #333;">总价：</span>
+          <span style="color: #ef4238;">¥{{ currentOrder?.total }}</span>
+        </div>
+        <div v-if="paymentCountdown > 0"
+             style="text-align: center; margin: 15px 0; font-size: 14px; color: #999;">
+          剩余支付时间：
+          <span :style="{ color: paymentCountdown <= 30 ? '#ef4238' : '#333',
+                          fontWeight: 'bold', fontSize: '18px' }">
+            {{ formatCountdown(paymentCountdown) }}
+          </span>
+        </div>
+        <div v-else style="text-align: center; margin: 15px 0; color: #ef4238; font-weight: bold;">
+          支付已超时
+        </div>
+      </div>
+      <div style="display: flex; gap: 15px; justify-content: center;">
+        <button @click="cancelPaymentOrder"
+                style="padding: 8px 25px; border: 1px solid #ddd; border-radius: 4px;
+                       background: white; cursor: pointer; font-size: 14px;">
+          取消订单
+        </button>
+        <button @click="payOrder"
+                :disabled="paymentCountdown <= 0"
+                :style="{
+                  padding: '8px 25px', border: 'none', borderRadius: '4px',
+                  background: paymentCountdown > 0 ? '#ef4238' : '#ccc',
+                  color: 'white', cursor: paymentCountdown > 0 ? 'pointer' : 'not-allowed',
+                  fontSize: '14px'
+                }">
+          模拟支付
+        </button>
+      </div>
+    </div>
+  </div>
 </template>
 
 <script setup>
-import { ref, onMounted, watchEffect } from 'vue';
+import { ref, onMounted, onUnmounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import request from "@/utils/request.js";
@@ -191,6 +247,76 @@ const loading = ref(true);
 const seatError = ref('');
 const seats = ref([]); // 座位矩阵：0=可选，1=已售，2=已选
 const selectedSeats = ref([]); // 已选座位（格式：["1排1座", ...]）
+
+// 支付弹窗状态
+const paymentDialogVisible = ref(false);
+const currentOrder = ref(null);
+const paymentCountdown = ref(0);
+let countdownTimer = null;
+
+const startCountdown = () => {
+  stopCountdown();
+  countdownTimer = setInterval(() => {
+    paymentCountdown.value--;
+    if (paymentCountdown.value <= 0) {
+      stopCountdown();
+      paymentDialogVisible.value = false;
+      ElMessage.warning('支付超时，订单已自动取消');
+      initSeats();
+    }
+  }, 1000);
+};
+
+const stopCountdown = () => {
+  if (countdownTimer) {
+    clearInterval(countdownTimer);
+    countdownTimer = null;
+  }
+};
+
+const formatCountdown = (seconds) => {
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${m}:${s.toString().padStart(2, '0')}`;
+};
+
+const payOrder = async () => {
+  if (!currentOrder.value || !currentOrder.value.id) return;
+  try {
+    const res = await request.put(ORDER_API.PAY(currentOrder.value.id));
+    if (res.code === '200') {
+      stopCountdown();
+      ElMessage.success('支付成功');
+      paymentDialogVisible.value = false;
+      router.push('/front/orders');
+    } else {
+      ElMessage.error(res.msg || '支付失败');
+      if (res.msg && res.msg.includes('超时')) {
+        paymentDialogVisible.value = false;
+        initSeats();
+      }
+    }
+  } catch (error) {}
+};
+
+const cancelPaymentOrder = async () => {
+  if (!currentOrder.value || !currentOrder.value.id) return;
+  try {
+    const res = await request.put(ORDER_API.CANCEL(currentOrder.value.id));
+    if (res.code === '200') {
+      stopCountdown();
+      ElMessage.success('订单已取消');
+      paymentDialogVisible.value = false;
+      initSeats();
+    } else {
+      ElMessage.error(res.msg || '取消失败');
+    }
+  } catch (error) {}
+};
+
+onUnmounted(() => {
+  stopCountdown();
+});
 
 // 数据存储（与后端实体字段对应）
 const filmInfo = ref({
@@ -425,9 +551,18 @@ const confirmBooking = async () => {
       recordId: Number(recordId),
       seat: selectedSeats.value.join(',')
     });
-    if (res.code === '200') {
-      ElMessage.success('下单成功');
-      router.push('/front/orders');
+    if (res.code === '200' && res.data) {
+      currentOrder.value = res.data;
+      const timeoutStr = res.data.pendingTimeoutAt;
+      if (timeoutStr) {
+        const timeoutDate = new Date(timeoutStr.replace(' ', 'T'));
+        const now = new Date();
+        paymentCountdown.value = Math.max(0, Math.floor((timeoutDate - now) / 1000));
+      } else {
+        paymentCountdown.value = 300;
+      }
+      paymentDialogVisible.value = true;
+      startCountdown();
     } else {
       ElMessage.error(res.msg || '下单失败');
     }

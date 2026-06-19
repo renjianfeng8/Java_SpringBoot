@@ -22,6 +22,8 @@ public class Ordered {
     private String status;
     private String start;
     private String seat;
+    private String createTime;
+    private String pendingTimeoutAt;
 
     private String userName;
     private String filmName;
