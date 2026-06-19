@@ -35,6 +35,7 @@ export const FILM_API = {
 export const ORDER_API = {
   CREATE: `${API_PATHS.ORDERS}/create`,
   CANCEL: (id) => `${API_PATHS.ORDERS}/${id}/cancel`,
+  PAY: (id) => `${API_PATHS.ORDERS}/${id}/pay`,
 }
 
 export const AUTH_API = {
@@ -59,8 +60,9 @@ export const AREA_MAP = {
 }
 
 export const ORDER_STATUS_MAP = {
+  '待支付': { type: 'warning', label: '待支付' },
   '待取票': { type: 'success', label: '待取票' },
-  '已取票': { type: 'warning', label: '已取票' },
+  '已取票': { type: 'primary', label: '已取票' },
   '已取消': { type: 'info', label: '已取消' },
 }
 

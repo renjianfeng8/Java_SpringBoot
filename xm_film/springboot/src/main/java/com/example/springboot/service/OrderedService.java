@@ -18,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 import java.util.LinkedHashSet;
@@ -102,13 +103,48 @@ public class OrderedService extends BaseService<Ordered> {
         ordered.setStart(record.getStart());
         ordered.setNumber(number);
         ordered.setTotal(total.doubleValue());
-        ordered.setStatus(OrderStatus.PENDING);
+        ordered.setStatus(OrderStatus.PENDING_PAYMENT);
         ordered.setSeat(String.join(",", seats));
+        ordered.setCreateTime(LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
+        ordered.setPendingTimeoutAt(LocalDateTime.now().plusMinutes(5).format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
         if (film != null) {
             ordered.setImg(film.getImg());
         }
 
         orderedMapper.insert(ordered);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public void payOrder(Integer id, String role, Integer userId) {
+        Ordered ordered = orderedMapper.selectByIdForUpdate(id);
+        if (ordered == null) {
+            throw new CustomException(ErrorCode.NOT_FOUND, "订单不存在");
+        }
+        if (!OrderStatus.PENDING_PAYMENT.equals(ordered.getStatus())) {
+            throw new CustomException(ErrorCode.BUSINESS_CONFLICT, "当前状态不允许支付");
+        }
+        ensureOrderAccess(ordered, role, userId);
+
+        if (ordered.getPendingTimeoutAt() != null) {
+            LocalDateTime timeout = LocalDateTime.parse(
+                    ordered.getPendingTimeoutAt(),
+                    DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
+            );
+            if (LocalDateTime.now().isAfter(timeout)) {
+                Ordered update = new Ordered();
+                update.setId(id);
+                update.setStatus(OrderStatus.CANCELLED);
+                update.setPendingTimeoutAt(null);
+                orderedMapper.updateById(update);
+                throw new CustomException(ErrorCode.BUSINESS_CONFLICT, "支付超时，订单已自动取消");
+            }
+        }
+
+        Ordered update = new Ordered();
+        update.setId(id);
+        update.setStatus(OrderStatus.PENDING);
+        update.setPendingTimeoutAt(null);
+        orderedMapper.updateById(update);
     }
 
     @Override
@@ -158,12 +194,13 @@ public class OrderedService extends BaseService<Ordered> {
     public void cancelOrder(Integer id, String role, Integer userId) {
         Ordered ordered = orderedMapper.selectByIdForUpdate(id);
         ensureOrderAccess(ordered, role, userId);
-        if (!OrderStatus.PENDING.equals(ordered.getStatus())) {
+        if (!OrderStatus.PENDING_PAYMENT.equals(ordered.getStatus())) {
             throw new CustomException(ErrorCode.BUSINESS_CONFLICT, "当前状态不允许取消订单");
         }
         Ordered update = new Ordered();
         update.setId(id);
         update.setStatus(OrderStatus.CANCELLED);
+        update.setPendingTimeoutAt(null);
         orderedMapper.updateById(update);
     }
 
@@ -181,6 +218,16 @@ public class OrderedService extends BaseService<Ordered> {
         update.setId(id);
         update.setStatus(OrderStatus.PICKED_UP);
         orderedMapper.updateById(update);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public void cancelExpiredPendingOrders() {
+        List<Ordered> expired = orderedMapper.selectExpiredPendingOrders();
+        if (expired.isEmpty()) {
+            return;
+        }
+        List<Integer> ids = expired.stream().map(Ordered::getId).collect(Collectors.toList());
+        orderedMapper.batchCancelExpiredOrders(ids);
     }
 
     private void ensureOrderAccess(Ordered ordered, String role, Integer userId) {

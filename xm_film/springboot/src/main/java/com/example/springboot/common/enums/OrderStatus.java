@@ -3,6 +3,9 @@ package com.example.springboot.common.enums;
 public final class OrderStatus {
     private OrderStatus() {}
 
+    /** 待支付 — 订单已创建，等待用户支付（5分钟超时） */
+    public static final String PENDING_PAYMENT = "待支付";
+
     /** 待取票 — 订单已创建，等待用户取票 */
     public static final String PENDING = "待取票";
 

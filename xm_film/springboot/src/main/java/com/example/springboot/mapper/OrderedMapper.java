@@ -13,4 +13,8 @@ public interface OrderedMapper extends BaseMapper<Ordered> {
     int countSeatInUse(@Param("recordId") Integer recordId, @Param("seat") String seat);
 
     Ordered selectByIdForUpdate(Integer id);
+
+    List<Ordered> selectExpiredPendingOrders();
+
+    int batchCancelExpiredOrders(@Param("ids") List<Integer> ids);
 }

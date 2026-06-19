@@ -26,7 +26,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const BASE = 'http://localhost:5173';
 const API = 'http://localhost:9090';
 const SS_DIR = path.join(__dirname, 'screenshots');
-const EXPECTED_TEST_COUNT = 64;
+const EXPECTED_TEST_COUNT = 67;
 if (!existsSync(SS_DIR)) mkdirSync(SS_DIR, { recursive: true });
 
 const results = [];
@@ -473,20 +473,43 @@ let adminToken = ''; // 存储登录 token
         const duplicateRes = await apiPost('/api/v1/orders/create', { recordId: record.id, seat }, userToken);
         log('重复座位下单应拒绝', duplicateRes.code === '409', `code: ${duplicateRes.code}`);
 
+        const orderId = createRes.data?.id;
+
+        // 支付前可以取消
+        const preCancelRes = orderId
+          ? await apiPut(`/api/v1/orders/${orderId}/cancel`, userToken)
+          : { code: '500' };
+        log('待支付可取消', preCancelRes.code === '200', `code: ${preCancelRes.code}`);
+
+        // 重新下单（刚才取消了，座位已释放）
+        const reCreateRes = await apiPost('/api/v1/orders/create', { recordId: record.id, seat }, userToken);
+        log('释放后重新下单', reCreateRes.code === '200', `code: ${reCreateRes.code}`);
+        const newOrderId = reCreateRes.data?.id;
+
+        // 模拟支付
+        const payRes = newOrderId
+          ? await apiPut(`/api/v1/orders/${newOrderId}/pay`, userToken)
+          : { code: '500' };
+        log('模拟支付', payRes.code === '200', `code: ${payRes.code}`);
+
+        // 支付后不可取消
+        const postPayCancelRes = newOrderId
+          ? await apiPut(`/api/v1/orders/${newOrderId}/cancel`, userToken)
+          : { code: '500' };
+        log('支付后不可取消', postPayCancelRes.code === '409', `code: ${postPayCancelRes.code}`);
+
         const ordersRes = await apiGet('/api/v1/orders', userToken);
         const createdOrder = (Array.isArray(ordersRes.data) ? ordersRes.data : [])
           .find(order => order.recordId === record.id && order.seat === seat && order.status === '待取票');
         log('用户订单列表包含新订单', !!createdOrder, `orderId: ${createdOrder?.id || '-'}`);
-
-        const cancelRes = createdOrder
-          ? await apiPut(`/api/v1/orders/${createdOrder.id}/cancel`, userToken)
-          : { code: '500' };
-        log('取消订单', cancelRes.code === '200', `code: ${cancelRes.code}`);
       } catch (e) {
         log('创建订单', false, e.message);
         log('重复座位下单应拒绝', false, e.message);
+        log('待支付可取消', false, e.message);
+        log('释放后重新下单', false, e.message);
+        log('模拟支付', false, e.message);
+        log('支付后不可取消', false, e.message);
         log('用户订单列表包含新订单', false, e.message);
-        log('取消订单', false, e.message);
       }
     }
   }

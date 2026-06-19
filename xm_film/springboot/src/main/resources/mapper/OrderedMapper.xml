@@ -54,14 +54,34 @@
         SELECT * FROM ordered
         WHERE record_id = #{recordId}
           AND status != '已取消'
+          AND (status != '待支付' OR pending_timeout_at IS NULL OR pending_timeout_at &gt; NOW())
     </select>
 
     <select id="countSeatInUse" resultType="int">
         SELECT COUNT(*) FROM ordered
         WHERE record_id = #{recordId}
           AND status != '已取消'
+          AND (status != '待支付' OR pending_timeout_at IS NULL OR pending_timeout_at &gt; NOW())
           AND FIND_IN_SET(#{seat}, REPLACE(seat, '，', ',')) > 0
     </select>
+
+    <select id="selectExpiredPendingOrders" resultType="com.example.springboot.entity.Ordered">
+        SELECT id, record_id, seat
+        FROM ordered
+        WHERE status = '待支付'
+          AND pending_timeout_at IS NOT NULL
+          AND pending_timeout_at &lt; NOW()
+    </select>
+
+    <update id="batchCancelExpiredOrders">
+        UPDATE ordered
+        SET status = '已取消', pending_timeout_at = NULL
+        WHERE id IN
+        <foreach collection="ids" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+          AND status = '待支付'
+    </update>
 
     <!-- 插入操作 -->
     <insert id="insert" parameterType="com.example.springboot.entity.Ordered"
@@ -81,6 +101,8 @@
             <if test="status != null">status,</if>
             <if test="start != null">start,</if>
             <if test="seat != null">seat,</if>
+            <if test="createTime != null">create_time,</if>
+            <if test="pendingTimeoutAt != null">pending_timeout_at,</if>
         </trim>
         VALUES
         <trim prefix="(" suffix=")" suffixOverrides=",">
@@ -97,6 +119,8 @@
             <if test="status != null">#{status},</if>
             <if test="start != null">#{start},</if>
             <if test="seat != null">#{seat},</if>
+            <if test="createTime != null">#{createTime},</if>
+            <if test="pendingTimeoutAt != null">#{pendingTimeoutAt},</if>
         </trim>
     </insert>
 
@@ -117,6 +141,8 @@
             <if test="status != null">status = #{status},</if>
             <if test="start != null">start = #{start},</if>
             <if test="seat != null">seat = #{seat},</if>
+            <if test="createTime != null">create_time = #{createTime},</if>
+            <if test="pendingTimeoutAt != null">pending_timeout_at = #{pendingTimeoutAt},</if>
         </set>
         WHERE id = #{id}
     </update>
