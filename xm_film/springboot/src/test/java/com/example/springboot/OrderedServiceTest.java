@@ -40,7 +40,7 @@ class OrderedServiceTest {
         Ordered ordered = new Ordered();
         ordered.setId(1);
         ordered.setUserId(100);
-        ordered.setStatus("待取票");
+        ordered.setStatus("待支付");
         when(orderedMapper.selectByIdForUpdate(1)).thenReturn(ordered);
 
         assertThatThrownBy(() -> orderedService.cancelOrder(1, "USER", 200))
@@ -124,7 +124,7 @@ class OrderedServiceTest {
         Ordered ordered = new Ordered();
         ordered.setId(1);
         ordered.setUserId(100);
-        ordered.setStatus("待取票");
+        ordered.setStatus("待支付");
         when(orderedMapper.selectByIdForUpdate(1)).thenReturn(ordered);
 
         orderedService.cancelOrder(1, "USER", 100);
@@ -139,7 +139,7 @@ class OrderedServiceTest {
         Ordered ordered = new Ordered();
         ordered.setId(1);
         ordered.setUserId(100);
-        ordered.setStatus("待取票");
+        ordered.setStatus("待支付");
         when(orderedMapper.selectByIdForUpdate(1)).thenReturn(ordered);
 
         orderedService.cancelOrder(1, "USER", 100);
@@ -169,7 +169,7 @@ class OrderedServiceTest {
         Ordered ordered = new Ordered();
         ordered.setId(1);
         ordered.setCinemaId(10);
-        ordered.setStatus("待取票");
+        ordered.setStatus("待支付");
         when(orderedMapper.selectByIdForUpdate(1)).thenReturn(ordered);
 
         orderedService.cancelOrder(1, "CINEMA", 10);
@@ -185,7 +185,7 @@ class OrderedServiceTest {
         ordered.setId(1);
         ordered.setUserId(100);
         ordered.setCinemaId(10);
-        ordered.setStatus("待取票");
+        ordered.setStatus("待支付");
         when(orderedMapper.selectByIdForUpdate(1)).thenReturn(ordered);
 
         orderedService.cancelOrder(1, "ADMIN", 999);
