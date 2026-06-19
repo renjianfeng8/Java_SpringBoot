@@ -52,7 +52,9 @@ public class RecordController extends BaseController<Record> {
     @GetMapping("/{id}")
     public Result getById(@PathVariable Integer id) {
         Record record = recordService.selectById(id);
-        ensureRecordAccess(record);
+        if (record == null) {
+            throw new CustomException(ErrorCode.NOT_FOUND, "排片不存在");
+        }
         return Result.success(record);
     }
 
