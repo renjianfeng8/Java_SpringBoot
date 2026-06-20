@@ -150,6 +150,10 @@ public class OrderedService extends BaseService<Ordered> {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void update(Ordered ordered) {
+        Ordered db = mapper().selectById(ordered.getId());
+        if (db != null) {
+            ordered.setPendingTimeoutAt(db.getPendingTimeoutAt());
+        }
         ordered.setStatus(null);
         mapper().updateById(ordered);
     }

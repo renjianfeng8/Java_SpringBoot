@@ -10,7 +10,7 @@ services:
     image: mysql:8.0
     container_name: project-mysql
     environment:
-      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-123456}
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
       MYSQL_DATABASE: xm-film
     ports:
       - "3307:3306"
@@ -39,9 +39,10 @@ services:
       DB_HOST: mysql
       DB_PORT: ${DB_PORT:-3306}
       DB_USERNAME: ${DB_USERNAME:-root}
-      DB_PASSWORD: ${DB_PASSWORD:-123456}
-      JWT_SECRET: ${JWT_SECRET:-docker-secret-key-for-cinema-system}
+      DB_PASSWORD: ${DB_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
       JWT_EXPIRE: ${JWT_EXPIRE:-86400000}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:5173}
       FILE_UPLOAD_DIR: ${FILE_UPLOAD_DIR:-/app/uploads}
       FILE_ACCESS_PREFIX: ${FILE_ACCESS_PREFIX:-/files/}
       MYBATIS_LOG_LEVEL: ${MYBATIS_LOG_LEVEL:-WARN}

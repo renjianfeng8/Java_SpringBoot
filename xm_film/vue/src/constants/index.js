@@ -18,7 +18,11 @@ export const API_PATHS = {
 }
 
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:9090'
-export const FILE_UPLOAD_URL = `${API_BASE_URL}${API_PATHS.FILES}`
+// Same-origin deploy (VITE_API_BASE_URL=/): use relative path → Nginx proxies /api/ → backend
+// Cross-origin dev (default localhost:9090): use absolute URL
+export const FILE_UPLOAD_URL = API_BASE_URL === '/'
+  ? API_PATHS.FILES
+  : `${API_BASE_URL}${API_PATHS.FILES}`
 
 export const apiById = (base, id) => `${base}/${id}`
 export const apiPage = (base) => `${base}/page`
@@ -43,6 +47,7 @@ export const AUTH_API = {
   REGISTER: `${API_PATHS.AUTH}/register`,
   PASSWORD: `${API_PATHS.AUTH}/password`,
   YEARS: `${API_PATHS.AUTH}/years`,
+  ME: `${API_PATHS.AUTH}/me`,
 }
 
 export const TYPE_MAP = {
