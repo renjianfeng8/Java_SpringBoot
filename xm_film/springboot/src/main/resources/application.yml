@@ -35,6 +35,9 @@ logging:
 
 fileBaseUrl: http://localhost:${server.port}
 
+cors:
+  allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
+
 jwt:
   secret: ${JWT_SECRET:change-me-from-env}
   expire: ${JWT_EXPIRE:86400000}

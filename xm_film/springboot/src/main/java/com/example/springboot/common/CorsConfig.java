@@ -1,5 +1,6 @@
 package com.example.springboot.common;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.cors.CorsConfiguration;
@@ -9,21 +10,23 @@ import org.springframework.web.filter.CorsFilter;
 @Configuration
 public class CorsConfig {
 
+    @Value("${cors.allowed-origins:http://localhost:5173}")
+    private String allowedOrigins;
+
     @Bean
     public CorsFilter corsFilter() {
-        // 创建CORS配置对象，用于配置跨域规则
         CorsConfiguration config = new CorsConfiguration();
-        config.addAllowedOriginPattern("*"); // 允许所有域名进行跨域调用
-        config.addAllowedHeader("*");        // 允许请求携带任何头信息
-        config.addAllowedMethod("*");        // 允许使用任何HTTP请求方法
-        config.setAllowCredentials(true);    // 允许携带认证凭证
-        config.setMaxAge(3600L);             // 预检请求缓存时间（秒）
+        for (String origin : allowedOrigins.split(",")) {
+            config.addAllowedOrigin(origin.trim());
+        }
+        config.addAllowedHeader("*");
+        config.addAllowedMethod("*");
+        config.setAllowCredentials(true);
+        config.setMaxAge(3600L);
 
-        // 配置URL映射源，将CORS规则应用到所有接口
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
 
-        // 返回CORS过滤器实例，实现跨域请求处理
         return new CorsFilter(source);
     }
 }

@@ -9,6 +9,9 @@ import com.example.springboot.dto.request.LoginRequest;
 import com.example.springboot.dto.request.PasswordChangeRequest;
 import com.example.springboot.dto.request.RegisterRequest;
 import com.example.springboot.entity.Account;
+import com.example.springboot.entity.Admin;
+import com.example.springboot.entity.Cinema;
+import com.example.springboot.entity.User;
 import com.example.springboot.exception.CustomException;
 import com.example.springboot.service.AdminService;
 import com.example.springboot.service.CinemaService;
@@ -106,6 +109,29 @@ public class AuthController {
             throw new CustomException(ErrorCode.SYSTEM_ERROR, "非法输入");
         }
         return Result.success();
+    }
+
+    @Operation(summary = "获取当前登录用户信息", description = "根据JWT令牌验证登录状态并返回用户信息")
+    @GetMapping("/me")
+    public Result me(HttpServletRequest request) {
+        String userId = (String) request.getAttribute("userId");
+        String role = (String) request.getAttribute("role");
+
+        Account account = null;
+        if (RoleEnum.ADMIN.name().equals(role)) {
+            account = adminService.selectById(Integer.valueOf(userId));
+        } else if (RoleEnum.CINEMA.name().equals(role)) {
+            account = cinemaService.selectById(Integer.valueOf(userId));
+        } else if (RoleEnum.USER.name().equals(role)) {
+            account = userService.selectById(Integer.valueOf(userId));
+        } else {
+            return Result.error(ErrorCode.UNAUTHORIZED.code(), "无效的用户角色");
+        }
+        if (account == null) {
+            return Result.error(ErrorCode.UNAUTHORIZED.code(), "账号不存在");
+        }
+        account.setPassword(null);
+        return Result.success(account);
     }
 
     @Operation(summary = "获取年份列表", description = "用于前端搜索筛选，返回最近11年")

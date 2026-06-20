@@ -5,12 +5,13 @@ import { getStoredUser, setStoredUser, clearStoredUser } from '@/utils/authStora
 import { AUTH_API } from '@/constants'
 
 const globalUser = ref(null)
+const globalVerifying = ref(true)
 
 export function useAuth() {
   const user = globalUser
 
   const token = computed(() => user.value?.token || '')
-  const isLoggedIn = computed(() => !!token.value)
+  const isLoggedIn = computed(() => !globalVerifying.value && !!token.value)
   const isAdmin = computed(() => user.value?.role === 'ADMIN')
   const isCinema = computed(() => user.value?.role === 'CINEMA')
   const isUser = computed(() => user.value?.role === 'USER')
@@ -20,6 +21,34 @@ export function useAuth() {
 
   function init() {
     user.value = getStoredUser()
+    verifyToken()
+  }
+
+  async function verifyToken() {
+    if (!user.value?.token) {
+      globalVerifying.value = false
+      return
+    }
+    try {
+      const res = await request.get(AUTH_API.ME)
+      if (res.code === '200') {
+        const stored = getStoredUser()  // preserve the existing token
+        setUser({ ...res.data, token: stored?.token })
+      } else {
+        forceLogout()
+      }
+    } catch (e) {
+      if (e.response?.status === 401 || e.response?.status === 403) {
+        forceLogout()
+      }
+    } finally {
+      globalVerifying.value = false
+    }
+  }
+
+  function forceLogout() {
+    clearStoredUser()
+    user.value = null
   }
 
   function setUser(userData) {

@@ -142,7 +142,7 @@
             <if test="start != null">start = #{start},</if>
             <if test="seat != null">seat = #{seat},</if>
             <if test="createTime != null">create_time = #{createTime},</if>
-            <if test="pendingTimeoutAt != null">pending_timeout_at = #{pendingTimeoutAt},</if>
+            pending_timeout_at = #{pendingTimeoutAt},
         </set>
         WHERE id = #{id}
     </update>
