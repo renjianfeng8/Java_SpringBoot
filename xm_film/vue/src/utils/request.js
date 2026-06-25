@@ -3,7 +3,7 @@ import { ElMessage } from 'element-plus'
 import { getStoredUser, clearStoredUser } from '@/utils/authStorage'
 
 const request = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:9090',
+  baseURL: import.meta.env.VITE_API_BASE_URL || '/',
   timeout: 30000,
 })
 
