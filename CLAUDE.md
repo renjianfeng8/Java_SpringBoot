@@ -46,7 +46,9 @@ project_02/
 │   ├── start-dev.bat                  # 一键启动
 │   ├── run-e2e-tests.bat              # E2E 测试运行
 │   ├── start-claude.bat               # Claude 启动
-│   └── scan-project.sh                # 项目扫描
+│   ├── scan-project.sh                # 项目扫描
+│   ├── generate-seed-uploads.ps1     # 种子占位文件生成
+│   └── docker-entrypoint.sh           # Docker 入口脚本（自动填充 uploads 卷）
 ├── xm_film/                           # 项目主目录
 │   ├── springboot/                    # 后端（Spring Boot）
 │   │   ├── pom.xml                    # Maven 依赖配置
@@ -100,7 +102,8 @@ project_02/
 │   │   ├── README.md                  # 数据库说明
 │   │   ├── schema.sql                 # 14张表建表语句
 │   │   ├── data.sql                   # 初始数据
-│   │   └── init.sql                   # 一键初始化入口
+│   │   ├── init.sql                   # 一键初始化入口
+│   │   └── seed-uploads/              # data.sql 引用的 61 个占位文件
 │   ├── package.json
 │   ├── package-lock.json
 
@@ -262,6 +265,14 @@ node e2e-tests/e2e-scan.spec.mjs
 | ADMIN | 999 | 999 | 系统管理员 |
 | CINEMA | asks | cinema123 | 影院管理员 |
 | USER | zhangsan | user123 | 普通用户 |
+
+### 种子文件（Docker 部署）
+`xm_film/sql/seed-uploads/` 存储 data.sql 引用的 61 个 `/files/*` 占位文件（47 JPG、4 PNG、10 MP4），解决 Docker 部署时 `uploads` 命名卷为空导致的 404 问题。
+
+- 生成脚本：`scripts/generate-seed-uploads.ps1`（解析 data.sql → 自动生成占位图）
+- 更新种子：data.sql 中新加文件引用后，重新运行该脚本即可
+- 部署机制：Dockerfile 将 seed-uploads 拷入镜像 → entrypoint 脚本检测 if uploads 卷为空 → 自动拷贝种子文件 → 启动 Java 应用
+- 用户上传文件写入 uploads 卷，不受种子文件影响（仅首次部署时填充空卷）
 
 ## 配置说明
 
