@@ -91,13 +91,23 @@ const videoMp4s = {
 
 // ============================================================
 // STEP 1: Copy real files to seed-uploads with UUID names
+// NOTE: Use arrays (not merged objects) so the same source file
+// can map to MULTIPLE UUIDs (e.g. 张梓宸.jpg -> both actor
+// character photo AND headshot). Merged objects lose duplicates.
 // ============================================================
-const allMappings = { ...filmPosters, ...cinemaLogos, ...actorPhotos, ...actorHeadshots, ...userAvatars, ...videoCovers };
+const allMappings = [
+  ...Object.entries(filmPosters),
+  ...Object.entries(cinemaLogos),
+  ...Object.entries(actorPhotos),
+  ...Object.entries(actorHeadshots),
+  ...Object.entries(userAvatars),
+  ...Object.entries(videoCovers),
+];
 
 console.log('=== Copying real files to seed-uploads ===');
 let copied = 0, missing = [];
 
-for (const [srcName, dstName] of Object.entries(allMappings)) {
+for (const [srcName, dstName] of allMappings) {
   const srcPath = path.join(PictureDir, srcName);
   const dstPath = path.join(SeedDir, dstName);
   if (fs.existsSync(srcPath)) {
