@@ -64,10 +64,7 @@ export default defineConfig({
       }
     },
     fs: {
-      allow: [
-        'node_modules',
-        'src'
-      ]
+      allow: ['.']
     }
   }
 })

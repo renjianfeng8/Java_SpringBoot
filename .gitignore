@@ -29,6 +29,8 @@ Thumbs.db
 .env
 .env.*
 !.env.example
+!.env.development
+!.env.production
 /claude.log
 scripts/start-claude.bat
 backend.log
