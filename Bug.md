@@ -310,6 +310,120 @@
 
 ---
 
+### BUG-020: 选座环节 USER 读取排片被误拦截
+
+- **日期**: 2026-06-19
+- **Bug 描述**: USER 角色用户在选座页面调用 `GET /api/v1/records/{id}` 时报"无权操作该排片"，无法正常选座购票
+- **根因分析**: `RecordController.ensureRecordAccess()` 仅允许 ADMIN 和 CINEMA 角色访问，未放行 USER 角色。选座页作为读操作不需要角色校验，被误拦截
+- **解决方案**: `getById()` 中移除非必要的角色校验（仅保留空值检查），写操作（PUT/DELETE）保持原有权限保护不变
+- **相关文件**: `xm_film/springboot/src/main/java/com/example/springboot/controller/RecordController.java`
+- **提交记录**: `b0578696`
+- **状态**: 已修复
+
+---
+
+### BUG-021: OrderedServiceTest 取消用例状态不匹配 P1 变更
+
+- **日期**: 2026-06-19
+- **Bug 描述**: P1 支付流程上线后，4 个 `OrderedServiceTest` 单元测试因状态不匹配而失败
+- **根因分析**: P1 将 `cancelOrder` 方法接受的订单状态从"待取票"收窄为仅"待支付"，但测试 mock 数据仍使用旧状态
+- **解决方案**: 更新测试 mock 数据中的订单状态为"待支付"
+- **相关文件**: `xm_film/springboot/src/test/java/com/example/springboot/OrderedServiceTest.java`
+- **提交记录**: `fcf6e256`
+- **状态**: 已修复
+
+---
+
+### BUG-022: CORS 通配符 + pending_timeout_at 设置 null 不写库
+
+- **日期**: 2026-06-20
+- **Bug 描述**: (a) CORS 配置使用 `*` 通配符，生产环境存在安全隐患；(b) 订单取消后 `pending_timeout_at` 字段未清除，MyBatis UPDATE 跳过了该字段；(c) 前端 token 过期无法自动检测登出
+- **根因分析**:
+  - (a) `CorsConfig.java` 中 `allowedOrigins` 设为 `*`，允许任意域跨域访问
+  - (b) `OrderedMapper.xml` 中 UPDATE 语句用 `<if test="pendingTimeoutAt != null">` 包装该字段，Java 显式设为 `null` 后 `<if>` 判断为 `false`，跳过了该字段的更新
+  - (c) 缺少 token 有效性校验端点和前端自动检测逻辑
+- **解决方案**:
+  - (a) CORS 从 `*` 改为 `CORS_ALLOWED_ORIGINS` 环境变量白名单
+  - (b) 移除 `<if>` 包装，允许显式 `null` 写入数据库
+  - (c) 新增 `/api/v1/auth/me` 接口；前端 `useAuth.js` 初始化自动校验 token，过期自动登出
+- **相关文件**: `CorsConfig.java`、`OrderedMapper.xml`、`OrderedService.java`、`AuthController.java`、`useAuth.js`、`application-prod.yml`
+- **提交记录**: `0cbb6664`
+- **状态**: 已修复
+
+---
+
+### BUG-023: Docker HTTPS 部署 + Vite SPA 路由 403
+
+- **日期**: 2026-06-25
+- **Bug 描述**: (a) 生产环境 Docker 部署前端缺少 HTTPS 支持；(b) Vite `fs.allow` 配置导致 SPA 路由刷新时返回 403；(c) `VITE_API_BASE_URL` 硬编码为 `http://localhost:9090` 无法适配同源部署
+- **根因分析**:
+  - (a) Nginx 配置缺少 SSL 证书挂载和 HTTPS server block
+  - (b) `vite.config.js` 中 `fs.allow` 限制过严，SPA 路由刷新时 Vite 开发服务器拒绝服务
+  - (c) `vue/.env` 中 `VITE_API_BASE_URL=http://localhost:9090` 被 git 跟踪，生产环境无法覆盖
+- **解决方案**:
+  - (a) 前端容器加 443 端口 + SSL 证书挂载；Nginx HTTPS server block + HTTP→HTTPS 301 重定向
+  - (b) `vite.config.js` 中 `fs.allow` 改为允许项目根目录
+  - (c) `vue/.env` 取消 git 跟踪，默认值改为 `/`，新增 `.env.development` 本地开发配置；`request.js` 回退值从 `http://localhost:9090` 改为 `/`
+  - (d) `npm audit fix` 修复 8 个前端安全漏洞（1 critical, 4 high, 3 moderate）
+- **相关文件**: `nginx.conf`、`docker-compose.yml`、`vite.config.js`、`request.js`、`.env` → `.env.development`
+- **提交记录**: `1bbb6571`
+- **状态**: 已修复
+
+---
+
+### BUG-024: 生产环境 MySQL 乱码
+
+- **日期**: 2026-06-25
+- **Bug 描述**: 生产环境 MySQL 中文数据出现乱码，页面显示问号或乱码字符
+- **根因分析**: JDBC 连接 URL 缺少 `characterEncoding=utf-8` 和 `useUnicode=true` 参数，MySQL 连接使用默认编码（非 UTF-8）
+- **解决方案**: `application.yml` 中 JDBC URL 追加 `?useUnicode=true&characterEncoding=utf-8`
+- **相关文件**: `xm_film/springboot/src/main/resources/application.yml`
+- **提交记录**: `71927b4d`
+- **状态**: 已修复
+
+---
+
+### BUG-025: 生产环境 /files/* 图片全部 404
+
+- **日期**: 2026-06-25
+- **Bug 描述**: Docker 部署后所有电影海报、用户头像、预告片返回 404，页面图片全部缺失
+- **根因分析**: SQL seed 数据引用了 61 个 `/files/*` 资源（47 JPG、4 PNG、10 MP4），但仓库中不存在这些文件。Docker 部署时 `uploads` 命名卷为空，无种子文件填充机制
+- **解决方案**:
+  - 新增 `xm_film/sql/seed-uploads/` 目录，容纳 61 个自动生成的占位文件
+  - 新增 `scripts/generate-seed-uploads.ps1` 种子文件生成脚本
+  - 新增 `scripts/docker-entrypoint.sh` Docker 入口包装脚本
+  - Dockerfile 在构建时将种子文件拷入镜像，entrypoint 在首次启动时自动填充空卷
+  - 用户后续上传不受影响（仅首次部署时填充空卷）
+- **相关文件**: `Dockerfile`、`scripts/docker-entrypoint.sh`、`scripts/generate-seed-uploads.ps1`、`xm_film/sql/seed-uploads/`（61 个文件）
+- **提交记录**: `6adac709`
+- **状态**: 已修复
+
+---
+
+### BUG-026: 同名素材文件覆盖导致部分占位图未替换
+
+- **日期**: 2026-06-25
+- **Bug 描述**: 替换 seed-uploads 为真实素材后，部分占位图未被替换，仍显示占位内容
+- **根因分析**: 映射脚本使用合并对象（`{源文件: UUID}`）存储映射关系，当多个不同 UUID 文件名映射到同名源文件时，后一个覆盖前一个，导致"毒液：最后一舞"海报被视频封面覆盖、演员张梓宸头像被其他映射覆盖
+- **解决方案**: 映射结构改为数组存储 `[源文件, UUID]` 对，支持一源多目标映射
+- **相关文件**: `scripts/replace-with-real-images.mjs`
+- **提交记录**: `2e6f2856`
+- **状态**: 已修复
+
+---
+
+### BUG-027: /files/ 未设置 Cache-Control 导致浏览器缓存旧占位图
+
+- **日期**: 2026-06-25
+- **Bug 描述**: 替换占位图为真实素材后，用户浏览器仍显示旧占位图，需手动刷新或清除缓存
+- **根因分析**: Nginx 代理 `/files/` 静态资源时未设置 `Cache-Control` 头，浏览器默认强缓存旧占位图
+- **解决方案**: Nginx location `/files/` 添加 `add_header Cache-Control 'no-cache'`，每次请求回源验证
+- **相关文件**: `xm_film/vue/nginx.conf`
+- **提交记录**: `22c6b60b`
+- **状态**: 已修复
+
+---
+
 ## 预防清单
 
 1. **数据库初始化**: 新环境部署时务必执行 `xm_film/sql/init.sql`（或依次执行 `schema.sql` + `data.sql`）
@@ -323,3 +437,10 @@
 9. **SQL 列名一致**: MyBatis XML 中 ORDER BY/INSERT/UPDATE 的列名必须与数据库实际列名一致（snake_case），不能依赖 `map-underscore-to-camel-case` 自动映射（该配置仅对 SELECT 结果映射生效）
 10. **E2E 路由跳转**: 页面跳转（登录/搜索等）使用 `window.location.href` 而非 `router.push`，确保在 Playwright headless 模式下可靠触发导航
 11. **依赖兼容性**: Spring Boot 3.3.x (Spring 6.1.x) 项目引入依赖时需确认其不引用已移除的 Spring 类（如 `LiteWebJarsResourceResolver`）
+12. **MyBatis `<if>` null 语义**: UPDATE 语句中用 `<if test="field != null">` 包裹字段时，Java 显式设为 `null` 会导致该字段被跳过不更新。若需要允许将字段设为 `null`，应移除 `<if>` 包装
+13. **CORS 生产安全**: 生产环境 CORS 禁止使用 `*` 通配符，应使用环境变量白名单精确控制允许的域名
+14. **JDBC 编码**: MySQL JDBC 连接 URL 必须显式指定 `useUnicode=true&characterEncoding=utf-8`，防止生产环境中文乱码
+15. **Docker 卷初始化**: Docker 部署中首次挂载的命名卷为空，需要 entrypoint 脚本检测并自动填充种子数据
+16. **Nginx 静态资源缓存**: 替换静态资源后，需在 Nginx 中设置 `Cache-Control: no-cache` 防止浏览器缓存旧版本
+17. **映射结构选择**: 文件映射关系使用 `Object` 存储时同名 key 会覆盖，应使用 `Array<[源, 目标]>` 支持一源多目标
+18. **角色权限校验范围**: 资源控制器的角色校验应区分读写操作——读操作放行 USER，写操作保持 CINEMA/ADMIN 权限保护
