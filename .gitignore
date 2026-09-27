@@ -60,3 +60,10 @@ docs/superpowers/plans/
 # === 其他 ===
 login.json
 JIANLI.txt
+
+# === 本地素材与测试产出（不入库）===
+# picture/ 与 video/ 是 replace-with-real-images 脚本的输入源，
+# 其真实素材已进入 xm_film/sql/seed-uploads/ 跟踪；video/ 内容与 picture/ 完全重复
+/picture/
+/video/
+/output/
