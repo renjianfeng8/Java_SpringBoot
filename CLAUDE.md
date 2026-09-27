@@ -35,19 +35,15 @@
 project_02/
 ├── README.md                          # 项目说明
 ├── CLAUDE.md                          # 项目文档（本文件）
-├── CHANGELOG.md                       # 变更日志
 ├── LICENSE                            # 许可证
 ├── Bug.md                             # Bug 修复记录（修复前先查阅）
 ├── .env.example                       # 环境变量模板
 ├── docker-compose.yml                 # Docker 编排
-├── docs/                              # 文档
-│   └── README.md                      # 文档总索引
+├── Dockerfile                         # 后端多阶段构建镜像
 ├── scripts/                           # 通用脚本
 │   ├── start-dev.bat                  # 一键启动
 │   ├── run-e2e-tests.bat              # E2E 测试运行
-│   ├── start-claude.bat               # Claude 启动
-│   ├── scan-project.sh                # 项目扫描
-│   ├── generate-seed-uploads.ps1     # 种子占位文件生成
+│   ├── generate-seed-uploads.ps1      # 种子占位文件生成
 │   └── docker-entrypoint.sh           # Docker 入口脚本（自动填充 uploads 卷）
 ├── xm_film/                           # 项目主目录
 │   ├── springboot/                    # 后端（Spring Boot）
@@ -302,7 +298,7 @@ node e2e-tests/e2e-scan.spec.mjs
 ## 开发守则
 
 ### 文档链完整性
-所有架构级变更必须维护完整的文档链：**设计文档 → CLAUDE.md/README.md → 代码 → 数据库** 四者一致。当修改代码时，同步检查并更新所有链上文档。
+所有架构级变更必须维护完整的文档链：**CLAUDE.md/README.md → 代码 → 数据库** 三者一致。当修改代码时，同步检查并更新所有链上文档。
 
 ### 修改流程（防批量修复陷阱）
 
@@ -310,9 +306,7 @@ node e2e-tests/e2e-scan.spec.mjs
 2. **三方校验** — 看到"错误"时不急于修复，对比 文档/代码/数据库 三方，找出真正的不一致源头（防确认偏差）
 3. **逐块验证** — 批量修改时降低警戒线是危险的，每个逻辑块改完后需单独验证（编译/测试/启动）
 4. **主动启动验证** — 改完后主动提议启动项目验证效果，不等人问
-5. **文档同步** — 代码变更完成后检查设计文档是否需要同步更新
-
-> 详细说明参见 [重构设计文档](docs/superpowers/specs/2026-05-29-architecture-refactoring-design.md) 附录A：开发注意事项
+5. **文档同步** — 代码变更完成后检查 CLAUDE.md / README.md / Bug.md 是否需要同步更新
 
 ### 提交规范
 本仓库遵循 [Conventional Commits](https://www.conventionalcommits.org/) 规范：
@@ -329,18 +323,16 @@ node e2e-tests/e2e-scan.spec.mjs
 
 ## 相关文档
 
-- [文档总索引](docs/README.md) — 文档体系入口
+- [README.md](README.md) — 项目说明、快速启动、部署方式
 - [Bug 修复记录](Bug.md) — 已修复 Bug 的根因与解决方案，遇到相似问题优先查阅
-- [重构设计文档](docs/superpowers/specs/2026-05-29-architecture-refactoring-design.md) — 全链路架构重构设计（BaseCRUD/DTO/RESTful/数据库规范化/前端Composable）
-- [产品需求文档](docs/product/README.md) — 用户需求、业务需求、竞品分析、PRD 与优化路线图
-- [系统设计文档](docs/design/README.md) — 系统设计说明、架构图、数据库设计、接口安全与部署设计
+- [数据库说明](xm_film/sql/README.md) — 数据库表设计与初始化指引
 
 ## Current Architecture Notes
 
 - Authentication state is centralized in `xm_film/vue/src/utils/authStorage.js`; router guards, Axios token injection, password pages, profile pages, and ticket purchase use the same storage helpers.
 - Backend password changes trust the JWT-derived request role instead of the request body role.
 - `AuthInterceptor` enforces role boundaries for admin-only resources and write operations on protected resources.
-- Database relations now use explicit keys for the main booking path: `room.cinema_id`, `record.film_id`, and `ordered.record_id`; schema/data SQL under `xm_film/sql` and `xm_film/springboot/src/main/resources/db` are kept in sync.
+- Database relations now use explicit keys for the main booking path: `room.cinema_id`, `record.film_id`, and `ordered.record_id`; `xm_film/sql` is the single source of truth for both schema and seed data.
 
 ## Git 提交历史
 
@@ -374,4 +366,4 @@ node e2e-tests/e2e-scan.spec.mjs
 - 新增 GitHub Actions CI 配置
 - 新增 Playwright 全量 E2E 测试（53 用例，100% 通过）
 - 新增 start-dev.bat / run-e2e-tests.bat 一键启动脚本
-- 新增 scripts/scan-project.sh 全栈项目扫描脚本
+- 新增 scripts/scan-project.sh 全栈项目扫描脚本（2026-09-27 清理时移除）
