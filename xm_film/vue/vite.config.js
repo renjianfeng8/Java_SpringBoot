@@ -57,6 +57,7 @@ export default defineConfig({
 
   // 文件系统配置（允许访问 src 和 node_modules 目录）
   server: {
+    port: 5173, // 前端页面访问端口；后端 CORS 白名单绑定此端口（application.yml 的 cors.allowed-origins），改动需同步
     proxy: {
       '/files': {
         target: 'http://localhost:9090',

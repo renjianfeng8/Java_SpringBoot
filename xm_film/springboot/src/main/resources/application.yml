@@ -1,5 +1,5 @@
 server:
-  port: 9090  # 应用服务端口号，访问地址为 http://localhost:9090
+  port: 9090  # 后端接口端口，只提供 /api/v1/** 的 JSON；前端页面访问端口见 vue/vite.config.js 的 server.port
 
 spring:
   datasource:
