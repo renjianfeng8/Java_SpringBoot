@@ -6,6 +6,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import java.util.Map;
 
 @RestController
@@ -16,7 +17,7 @@ public class HealthController {
     public Result health() {
         return Result.success(Map.of(
                 "status", "UP",
-                "time", OffsetDateTime.now().toString()
+                "time", OffsetDateTime.now(ZoneId.systemDefault()).toString()
         ));
     }
 }
