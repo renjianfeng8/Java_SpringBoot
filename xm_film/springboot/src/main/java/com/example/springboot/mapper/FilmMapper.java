@@ -17,6 +17,9 @@ public interface FilmMapper extends BaseMapper<Film> {
 
     List<Film> selectMarkTop(@Param("topNum") Integer topNum);
 
+    /** 按 mark 评价均分回写影片评分；该影片无评价时不改动 */
+    void recalculateScore(@Param("filmId") Integer filmId);
+
     List<Map<String, Object>> selectFilmTypeJoin(@Param("filmIds") List<Integer> filmIds);
 
     void insertFilmTypes(@Param("filmId") Integer filmId, @Param("typeIds") List<Integer> typeIds);

@@ -542,6 +542,20 @@
 
 ---
 
+### BUG-036: 影院分页接口被排除在拦截器外，角色信息缺失导致审核列表查不到待审核影院
+
+- **日期**: 2026-09-28
+- **Bug 描述**: 为「未审核影院不对外展示」加上按角色过滤后，管理员打开影院管理页也只看到 4 家已审核影院，新注册的（未审核）影院在前后台都查不到 —— 管理员因此根本无法审核它，「影院注册审核」这条业务线整体不可用
+- **根因分析**: `WebMvcConfig.addInterceptors` 的 `excludePathPatterns` 里列着 `/api/v1/cinemas/page`。被排除的路径**根本不进 AuthInterceptor**，拦截器自然不会往 request 写 `role`/`userId` 属性，控制器里的 `isAdmin()` 于是恒为 false，"管理员看全部、其余人只看已审核"退化成"所有人都只看已审核"。该排除项本意是放开公开访问，但 `PUBLIC_READ_PREFIXES` 已包含 `/api/v1/cinemas`，排除是冗余的 —— 它唯一的实际效果是让这个端点变成"角色盲"
+- **解决方案**:
+  - 从 `excludePathPatterns` 移除 `/api/v1/cinemas/page`，并在代码里留注释说明"公开访问交给 `PUBLIC_READ_PREFIXES`，不要往排除表里加"
+  - 端到端验证补断言：管理员的 `/cinemas/page` 必须能看到未审核影院，且审核通过后该影院出现在前台列表并可以登录
+- **相关文件**: `common/config/WebMvcConfig.java`、`common/config/AuthInterceptor.java`、`controller/CinemaController.java`、`mapper/CinemaMapper.xml`
+- **提交记录**: 待提交
+- **状态**: 已修复
+
+---
+
 ## 预防清单
 
 1. **数据库初始化**: 新环境部署时务必执行 `xm_film/sql/init.sql`（或依次执行 `schema.sql` + `data.sql`）
@@ -570,8 +584,14 @@
 24. **派生状态不落库**: 凡是能由时间/其他字段算出的状态（如场次的未开始/放映中/已结束）一律运行时计算，表字段只保留无法推导的人工开关（`status` = 正常/停售）
 25. **公开页面依赖的接口必须在白名单内**: 新增公开页面时，先确认其调用的所有 GET 接口都在 `AuthInterceptor.PUBLIC_READ_PREFIXES` 中，否则匿名访问会 401
 26. **必填外键要给到数据库约束**: 关键关联字段（如 `record.film_id`）应声明 `NOT NULL`，并在服务层校验后回填冗余字段（如影片名），避免只有应用层约定导致的脏数据
-27. **实体字段可空性必须与 `<if test="X != null">` 守卫一致**: 原始类型（`double`/`int`）经 OGNL 取值恒非 null，"只更新非空字段"会退化成"用 0 覆盖"。金额/计数/比率类字段一律用包装类型（`Double`/`Integer`）。同类地雷：`Film.boxOffice` 目前仍是原始 `double`，但 `manage/Film.vue` 提交整个对象所以不可达，改动影片编辑表单时要一并处理
+27. **实体字段可空性必须与 `<if test="X != null">` 守卫一致**: 原始类型（`double`/`int`）经 OGNL 取值恒非 null，"只更新非空字段"会退化成"用 0 覆盖"。金额/计数/比率类字段一律用包装类型（`Double`/`Integer`）。同类地雷 `Film.boxOffice` 已于 P3 一并改为 `Double` 清除（`film.box_office` 有 `DEFAULT 0.0`，新增影片不受影响）
 28. **事务方法内不得"先写入再抛异常"表达失败**: `rollbackFor = Exception.class` 会把刚写入的状态一起回滚（见 BUG-035）。失败用返回值（枚举/结果对象）传出，由控制器翻译成错误码；这类缺陷会被定时任务掩盖，只能靠单元测试或代码审查发现
 29. **资源占用状态集合只留一处**: 占用座位的状态集合定义在 `OrderedMapper.countSeatInUse` / `selectActiveByRecordId`（`NOT IN ('已取消','已退票')`）。新增任何"释放资源"的状态时必须同步这两处，否则座位永远锁死
 30. **容量/尺寸限制必须数据驱动**: 写死的 8×8 选座图与 `[1-8]排[1-8]座` 正则会让他厅配置直接不可用。容量随实体列走（`room.seat_rows`/`seat_cols`），后端按实体校验、前端只负责渲染
 31. **派生字段不接受前端输入**: 影厅的影院名、排片的影片名等冗余字段一律由后端按外键回填。前端可提供输入框会造成同一事实的两份数据长期漂移（`room.title` 与 `cinema.name` 在种子数据里就已经不一致）
+32. **拦截器排除表就是"角色盲区"**: `excludePathPatterns` 里的路径不执行 `AuthInterceptor`，request 上没有 `role`/`userId`。凡是要在控制器里做角色判断的端点，绝不能被排除；公开访问统一交给 `PUBLIC_READ_PREFIXES`（见 BUG-036）
+33. **令牌失效不得把公开内容变成"必须登录"**: 携带无法解析的令牌访问公开只读资源时按匿名放行（`AuthInterceptor.isAnonymousRead`）。否则前端 401 处理会把游客从公开页踢去登录页
+34. **评分只有一个数值来源**: `mark.score` 是影片评分的唯一数值来源，`film.score` 由该片评价均分回写（没有评价时保留基线分，不归零）。写评价的唯一入口是 `MarkService`，增删改后统一重算；种子数据用同一条 SQL 规则（`EXISTS` 守卫）保证新库与增量库结果一致
+35. **"同一主体对同一目标"要显式去重**: 一个用户对一部影片只能有一条评价（`MarkMapper.countByUserAndFilm` 拦截），否则单人反复评分即可带偏均分。评价人只认 JWT 里的 `userId`，请求体里的同名字段一律忽略
+36. **审核状态要同时落到"能否登录"和"是否公开"两条路径**: 影院未审核时既不可登录（`CinemaService.login`）也不出现在公开列表（`CinemaMapper.selectByFilmId` 的 `approvedOnly`，管理员豁免）。只做其一就会出现"审核前就能用"或"审核后仍看不见"
+37. **词表以数据库真实取值为准**: 影院审核状态只有 `未审核`/`已审核`（后端 `CinemaStatus`）。不要引入 `待审核`/`审核通过`/`审核拒绝` 等同义值 —— 每多一个同义值，过滤条件就多一处漏网

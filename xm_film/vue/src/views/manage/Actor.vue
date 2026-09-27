@@ -12,7 +12,7 @@
     </div>
 
     <div class="card" style="margin-bottom: 5px">
-      <el-table stripe :data="dataList" @selection-change="onSelectionChange" empty-text="暂无数据">
+      <el-table v-loading="loading" stripe :data="dataList" @selection-change="onSelectionChange" empty-text="暂无数据">
         <el-table-column type="selection" width="55" />
         <el-table-column label="电影名称" prop="title" />
         <el-table-column label="电影图片" prop="img" >
@@ -109,7 +109,7 @@ import { API_PATHS, FILE_UPLOAD_URL } from '@/constants'
 
 const crud = useCrud(API_PATHS.ACTORS)
 const { dataList, total, pageNum, pageSize, searchForm, selectedIds,
-        del, delBatch, onSearch, onReset, onPageChange, onSizeChange, onSelectionChange } = crud
+        loading, del, delBatch, onSearch, onReset, onPageChange, onSizeChange, onSelectionChange } = crud
 const { dialogVisible, formRef, form, rules, openAdd, openEdit, submit, close } = useFormDialog(crud, {
   defaultForm: { title: '', actorName: '', figure: '', picture: '', img: '', grade: '' },
   rules: {

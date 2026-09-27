@@ -16,7 +16,7 @@
     </div>
 
     <div class="card" style="margin-bottom: 5px">
-      <el-table stripe :data="dataList" @selection-change="onSelectionChange">
+      <el-table v-loading="loading" stripe :data="dataList" @selection-change="onSelectionChange">
         <el-table-column type="selection" width="55"/>
         <el-table-column label="影院名称" prop="cinemaName"/>
         <el-table-column label="影厅名称" prop="roomName"/>
@@ -62,16 +62,19 @@ import request from '@/utils/request'
 
 // 仅使用 useCrud 的响应式状态（后端 selectAll 已 JOIN 出 cinemaName / roomName）
 const crud = useCrud(API_PATHS.RECORDS)
-const { dataList, total, pageNum, pageSize, searchForm, selectedIds, onSelectionChange } = crud
+const { dataList, total, pageNum, pageSize, searchForm, selectedIds, loading, onSelectionChange } = crud
 
 function load() {
   const params = { pageNum: pageNum.value, pageSize: pageSize.value, ...searchForm }
+  // 本页自带 load()，需自行驱动 useCrud 暴露的 loading，否则表格的加载态永远不亮
+  loading.value = true
   request.get(apiPage(API_PATHS.RECORDS), { params }).then(res => {
     if (res && res.data) {
       dataList.value = res.data.list || []
       total.value = res.data.total || 0
     }
   }).catch(() => ElMessage.error('加载数据失败，请重试'))
+    .finally(() => { loading.value = false })
 }
 
 function onSearch() { pageNum.value = 1; load() }

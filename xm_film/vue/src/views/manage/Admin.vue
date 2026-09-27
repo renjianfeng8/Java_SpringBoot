@@ -10,7 +10,7 @@
       <el-button type="danger" @click="handleDelBatch">批量删除</el-button>
     </div>
     <div class="card" style="margin-bottom: 5px">
-      <el-table stripe :data="dataList" @selection-change="onSelectionChange">
+      <el-table v-loading="loading" stripe :data="dataList" @selection-change="onSelectionChange">
         <el-table-column type="selection" width="55" />
         <el-table-column label="账号" prop="username" />
         <el-table-column label="头像" prop="avatar">
@@ -70,7 +70,7 @@ import { useFormDialog } from '@/composables/useFormDialog'
 import { API_PATHS } from '@/constants'
 
 const crud = useCrud(API_PATHS.ADMINS)
-const { dataList, total, pageNum, pageSize, searchForm, selectedIds, del, delBatch, onSearch, onReset, onPageChange, onSizeChange, onSelectionChange } = crud
+const { dataList, total, pageNum, pageSize, searchForm, selectedIds, loading, del, delBatch, onSearch, onReset, onPageChange, onSizeChange, onSelectionChange } = crud
 const { dialogVisible, formRef, form, rules, openAdd, openEdit, submit, close } = useFormDialog(crud, {
   defaultForm: { username: '', name: '', phone: '', email: '' },
   rules: {

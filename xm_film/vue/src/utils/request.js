@@ -7,6 +7,22 @@ const request = axios.create({
   timeout: 30000,
 })
 
+let redirectingToLogin = false
+
+/**
+ * 登录态失效统一跳登录页，并带上来源路径供登录后回跳。
+ * 只有 AuthInterceptor 直写 setStatus(401) 的响应才会走到这里；
+ * 业务异常（含登录失败）经 GlobalExceptionHandler 返回的是 HTTP 200 + body code=401，
+ * 不会命中该分支，所以不存在"登录页自己 401 再跳登录页"的死循环。
+ */
+function redirectToLogin() {
+  if (redirectingToLogin) return
+  const { pathname, search } = window.location
+  if (pathname.startsWith('/login')) return
+  redirectingToLogin = true
+  window.location.href = `/login?redirect=${encodeURIComponent(pathname + search)}`
+}
+
 request.interceptors.request.use(
   config => {
     config.headers['Content-Type'] = 'application/json;charset=utf-8'
@@ -42,6 +58,7 @@ request.interceptors.response.use(
 
     if (status === 401) {
       clearStoredUser()
+      redirectToLogin()
     }
 
     if (backendMessage) {

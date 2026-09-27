@@ -77,6 +77,14 @@
         LIMIT #{topNum}
     </select>
 
+    <!-- 影片评分 = 该影片评价均分；没有任何评价时不动该字段（保留基线分，不归零） -->
+    <update id="recalculateScore">
+        UPDATE film f
+        SET f.score = (SELECT ROUND(AVG(m.score), 1) FROM mark m WHERE m.film_id = f.id)
+        WHERE f.id = #{filmId}
+          AND EXISTS (SELECT 1 FROM mark m2 WHERE m2.film_id = f.id)
+    </update>
+
     <insert id="insert" parameterType="com.example.springboot.entity.Film" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO film
         <trim prefix="(" suffix=")" suffixOverrides=",">

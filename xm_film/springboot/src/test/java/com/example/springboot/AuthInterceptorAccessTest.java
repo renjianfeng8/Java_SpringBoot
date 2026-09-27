@@ -35,6 +35,19 @@ class AuthInterceptorAccessTest {
         }
     }
 
+    /** 带着无法解析的令牌访问时 preHandle 的结果（模拟令牌过期） */
+    private boolean withBrokenToken(String path, String method) {
+        AuthInterceptor interceptor = newInterceptor();
+        MockHttpServletRequest request = new MockHttpServletRequest(method, path);
+        request.addHeader("Authorization", "Bearer not-a-real-token");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        try {
+            return interceptor.preHandle(request, response, new Object());
+        } catch (Exception e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
     // ========== Film write protection ==========
 
     @Test
@@ -155,5 +168,56 @@ class AuthInterceptorAccessTest {
     @Test
     void anonymousCannotReadOrders() {
         assertThat(anonymousAllowed("/api/v1/orders/page", "GET")).isFalse();
+    }
+
+    // ========== Marks: 评价列表公开可读，写操作的角色与归属由 MarkController 校验 ==========
+
+    @Test
+    void anonymousCanReadMarks() {
+        assertThat(anonymousAllowed("/api/v1/marks", "GET")).isTrue();
+    }
+
+    @Test
+    void anonymousCannotWriteMarks() {
+        assertThat(anonymousAllowed("/api/v1/marks", "POST")).isFalse();
+    }
+
+    @Test
+    void interceptorLetsUserReachMarkWriteEndpoint() {
+        // 拦截器只做前缀级判断，「仅 USER 可发表 / 非 ADMIN 只能改删自己的」在控制器内
+        assertThat(hasAccess(newInterceptor(), "/api/v1/marks", "POST", "USER")).isTrue();
+    }
+
+    // ========== Cinemas: 读公开，写（新增/删除）在 CinemaController 内限管理员 ==========
+
+    @Test
+    void anonymousCanReadCinemas() {
+        assertThat(anonymousAllowed("/api/v1/cinemas/page", "GET")).isTrue();
+    }
+
+    @Test
+    void userCanReadCinemas() {
+        assertThat(hasAccess(newInterceptor(), "/api/v1/cinemas", "GET", "USER")).isTrue();
+    }
+
+    // ========== 令牌过期：公开只读资源不应因此变成"必须登录" ==========
+
+    @Test
+    void brokenTokenStillReadsPublicResources() {
+        assertThat(withBrokenToken("/api/v1/marks", "GET")).isTrue();
+        assertThat(withBrokenToken("/api/v1/cinemas/page", "GET")).isTrue();
+        assertThat(withBrokenToken("/api/v1/records/page", "GET")).isTrue();
+    }
+
+    @Test
+    void brokenTokenCannotReadPrivateResources() {
+        assertThat(withBrokenToken("/api/v1/orders/page", "GET")).isFalse();
+        assertThat(withBrokenToken("/api/v1/admins", "GET")).isFalse();
+    }
+
+    @Test
+    void brokenTokenCannotWritePublicResources() {
+        assertThat(withBrokenToken("/api/v1/marks", "POST")).isFalse();
+        assertThat(withBrokenToken("/api/v1/films", "POST")).isFalse();
     }
 }

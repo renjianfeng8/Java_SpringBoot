@@ -12,7 +12,7 @@
     </div>
 
     <div class="card mb-2">
-      <el-table stripe :data="dataList" @selection-change="onSelectionChange">
+      <el-table v-loading="loading" stripe :data="dataList" @selection-change="onSelectionChange">
         <el-table-column type="selection" width="55" />
         <el-table-column label="公告标题" prop="title" />
         <el-table-column label="公告内容" prop="content" show-overflow-tooltip />
@@ -70,7 +70,7 @@ import { API_PATHS } from '@/constants'
 
 const crud = useCrud(API_PATHS.NOTICES)
 const { dataList, total, pageNum, pageSize, searchForm, selectedIds,
-        del, delBatch, onSearch, onReset, onPageChange, onSizeChange, onSelectionChange } = crud
+        loading, del, delBatch, onSearch, onReset, onPageChange, onSizeChange, onSelectionChange } = crud
 const { dialogVisible, formRef, form, rules, openAdd, openEdit, submit, close } = useFormDialog(crud, {
   defaultForm: { title: '', content: '', time: new Date().toISOString().slice(0, 19).replace('T', ' ') },
   rules: {

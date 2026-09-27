@@ -9,16 +9,17 @@
       <el-button type="danger" @click="handleDelBatch">批量删除</el-button>
     </div>
     <div class="card" style="margin-bottom: 5px">
-      <el-table stripe :data="dataList" @selection-change="onSelectionChange">
+      <el-table v-loading="loading" stripe :data="dataList" @selection-change="onSelectionChange">
         <el-table-column type="selection" width="55" />
         <el-table-column label="用户名称" prop="userName" />
         <el-table-column label="电影名称" prop="filmName" show-overflow-tooltip />
-        <el-table-column label="电影图片" prop="img">
+        <el-table-column label="电影图片" prop="filmImg">
           <template #default="scope">
-            <el-image style="margin-top:7px;width:36px;height:36px;border-radius:10%;object-fit:cover" v-if="scope.row.img" :src="scope.row.img" :preview-src-list="[scope.row.img]" preview-teleported />
+            <el-image style="margin-top:7px;width:36px;height:36px;border-radius:10%;object-fit:cover" v-if="scope.row.filmImg" :src="scope.row.filmImg" :preview-src-list="[scope.row.filmImg]" preview-teleported />
           </template>
         </el-table-column>
-        <el-table-column label="用户评分" prop="mark" />
+        <el-table-column label="用户评分" prop="score" width="90" />
+        <el-table-column label="用户评语" prop="mark" show-overflow-tooltip />
         <el-table-column label="操作">
           <template #default="scope">
             <el-button style="font-size: 18px" link :icon="Delete" @click="() => handleDel(scope.row.id)" type="danger" />
@@ -38,7 +39,7 @@ import { ElMessageBox } from 'element-plus'
 import { useCrud } from '@/composables/useCrud'
 import { API_PATHS } from '@/constants'
 
-const { dataList, total, pageNum, pageSize, searchForm, selectedIds, load, del, delBatch, onSearch, onReset, onPageChange, onSizeChange, onSelectionChange } = useCrud(API_PATHS.MARKS)
+const { dataList, total, pageNum, pageSize, searchForm, selectedIds, loading, load, del, delBatch, onSearch, onReset, onPageChange, onSizeChange, onSelectionChange } = useCrud(API_PATHS.MARKS)
 
 load()
 

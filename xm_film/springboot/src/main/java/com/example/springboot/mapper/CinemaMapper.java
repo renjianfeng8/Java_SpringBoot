@@ -10,7 +10,9 @@ public interface CinemaMapper extends BaseMapper<Cinema> {
 
     Cinema selectByUsername(String username);
 
-    List<Cinema> selectByFilmId(@Param("cinema") Cinema cinema, @Param("filmId") Integer filmId);
+    List<Cinema> selectByFilmId(@Param("cinema") Cinema cinema,
+                                @Param("filmId") Integer filmId,
+                                @Param("approvedOnly") Boolean approvedOnly);
 
     void updatePassword(Cinema cinema);
 

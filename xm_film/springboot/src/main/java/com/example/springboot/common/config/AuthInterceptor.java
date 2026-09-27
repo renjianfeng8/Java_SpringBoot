@@ -41,7 +41,9 @@ public class AuthInterceptor implements HandlerInterceptor {
             "/api/v1/notices",
             "/api/v1/actors",
             // 影院详情的放映场次列表需匿名可读，否则公开页会 401
-            "/api/v1/records"
+            "/api/v1/records",
+            // 影片详情页的评价列表是公开内容，需匿名可读
+            "/api/v1/marks"
     );
 
     @Resource
@@ -57,13 +59,10 @@ public class AuthInterceptor implements HandlerInterceptor {
 
         // Allow anonymous GET requests to public resources
         if (token == null) {
-            if ("GET".equalsIgnoreCase(request.getMethod()) &&
-                PUBLIC_READ_PREFIXES.stream().anyMatch(p -> request.getRequestURI().startsWith(p))) {
+            if (isAnonymousRead(request)) {
                 return true;
             }
-            response.setStatus(401);
-            response.setContentType(JSON_CONTENT_TYPE);
-            response.getWriter().write("{\"code\":\"401\",\"msg\":\"登录已过期，请重新登录\"}");
+            writeUnauthorized(response);
             return false;
         }
 
@@ -85,10 +84,26 @@ public class AuthInterceptor implements HandlerInterceptor {
             }
         }
 
+        // 令牌失效/过期时，公开只读资源仍按匿名放行。否则游客带着过期令牌浏览公开页会被判 401，
+        // 而前端 401 处理会把人踢去登录页 —— 公开内容就变成了事实上的必须登录。
+        if (isAnonymousRead(request)) {
+            return true;
+        }
+
+        writeUnauthorized(response);
+        return false;
+    }
+
+    /** 匿名可读判定：GET + 命中公开只读前缀 */
+    private boolean isAnonymousRead(HttpServletRequest request) {
+        return "GET".equalsIgnoreCase(request.getMethod())
+                && PUBLIC_READ_PREFIXES.stream().anyMatch(p -> request.getRequestURI().startsWith(p));
+    }
+
+    private void writeUnauthorized(HttpServletResponse response) throws IOException {
         response.setStatus(401);
         response.setContentType(JSON_CONTENT_TYPE);
         response.getWriter().write("{\"code\":\"401\",\"msg\":\"登录已过期，请重新登录\"}");
-        return false;
     }
 
     private boolean hasAccess(String path, String method, String role) {
