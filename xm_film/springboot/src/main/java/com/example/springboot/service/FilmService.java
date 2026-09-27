@@ -5,14 +5,13 @@ import com.example.springboot.common.BaseService;
 import com.example.springboot.entity.Film;
 import com.example.springboot.entity.Type;
 import com.example.springboot.mapper.FilmMapper;
-import com.github.pagehelper.PageHelper;
 import com.github.pagehelper.PageInfo;
+import com.github.pagehelper.page.PageMethod;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 @Service
 @Transactional(readOnly = true)
@@ -51,7 +50,7 @@ public class FilmService extends BaseService<Film> {
     }
 
     public PageInfo<Film> selectPage(Film film, Integer pageNum, Integer pageSize) {
-        PageHelper.startPage(pageNum, pageSize);
+        PageMethod.startPage(pageNum, pageSize);
         List<Film> list = filmMapper.selectAll(film);
         fillFilmTypes(list);
         return new PageInfo<>(list);
@@ -96,7 +95,7 @@ public class FilmService extends BaseService<Film> {
         if (filmList == null || filmList.isEmpty()) {
             return;
         }
-        List<Integer> filmIds = filmList.stream().map(Film::getId).collect(Collectors.toList());
+        List<Integer> filmIds = filmList.stream().map(Film::getId).toList();
         List<Map<String, Object>> rows = filmMapper.selectFilmTypeJoin(filmIds);
         if (rows == null || rows.isEmpty()) {
             return;

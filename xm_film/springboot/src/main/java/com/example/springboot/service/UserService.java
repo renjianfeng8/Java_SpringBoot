@@ -31,6 +31,10 @@ public class UserService extends BaseService<User> {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void add(User user) {
+        insertUser(user);
+    }
+
+    private void insertUser(User user) {
         String username = user.getUsername();
         User dbUser = userMapper.selectByUsername(username);
         if (dbUser != null) {
@@ -62,10 +66,9 @@ public class UserService extends BaseService<User> {
             throw new CustomException(ErrorCode.UNAUTHORIZED.code(), "账号不存在");
         }
         String password = account.getPassword();
-        if (!passwordEncoder.matches(password, dbUser.getPassword())) {
-            if (!dbUser.getPassword().equals(password)) {
-                throw new CustomException(ErrorCode.UNAUTHORIZED.code(), "账号或密码错误");
-            }
+        if (!passwordEncoder.matches(password, dbUser.getPassword())
+                && !dbUser.getPassword().equals(password)) {
+            throw new CustomException(ErrorCode.UNAUTHORIZED.code(), "账号或密码错误");
         }
         return dbUser;
     }
@@ -77,10 +80,9 @@ public class UserService extends BaseService<User> {
         if (user == null) {
             throw new CustomException(ErrorCode.UNAUTHORIZED.code(), "账号不存在");
         }
-        if (!passwordEncoder.matches(account.getPassword(), user.getPassword())) {
-            if (!user.getPassword().equals(account.getPassword())) {
-                throw new CustomException(ErrorCode.UNAUTHORIZED.code(), "原密码错误");
-            }
+        if (!passwordEncoder.matches(account.getPassword(), user.getPassword())
+                && !user.getPassword().equals(account.getPassword())) {
+            throw new CustomException(ErrorCode.UNAUTHORIZED.code(), "原密码错误");
         }
         user.setPassword(passwordEncoder.encode(account.getNewPassword()));
         userMapper.updatePassword(user);
@@ -90,7 +92,7 @@ public class UserService extends BaseService<User> {
     public User register(Account account) {
         User user = new User();
         BeanUtils.copyProperties(account, user);
-        add(user);
+        insertUser(user);
         return user;
     }
 }

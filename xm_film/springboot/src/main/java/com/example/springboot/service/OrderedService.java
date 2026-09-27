@@ -19,17 +19,23 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 @Service
 @Transactional(readOnly = true)
 public class OrderedService extends BaseService<Ordered> {
+
+    private static final String DATE_TIME_PATTERN = "yyyy-MM-dd HH:mm:ss";
+
+    private static final Pattern SEAT_PATTERN = Pattern.compile("[1-8]排[1-8]座");
 
     @Resource
     private OrderedMapper orderedMapper;
@@ -59,11 +65,15 @@ public class OrderedService extends BaseService<Ordered> {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void add(Ordered ordered) {
-        createOrder(ordered, null, null);
+        insertOrder(ordered, null, null);
     }
 
     @Transactional(rollbackFor = Exception.class)
     public void createOrder(Ordered ordered, String role, Integer tokenUserId) {
+        insertOrder(ordered, role, tokenUserId);
+    }
+
+    private void insertOrder(Ordered ordered, String role, Integer tokenUserId) {
         if (role != null && !"USER".equals(role)) {
             throw new CustomException(ErrorCode.FORBIDDEN, "仅普通用户可创建订单");
         }
@@ -77,36 +87,36 @@ public class OrderedService extends BaseService<Ordered> {
             throw new CustomException(ErrorCode.PARAM_INVALID, "缺少购票用户");
         }
 
-        Record record = recordMapper.selectByIdForUpdate(ordered.getRecordId());
-        if (record == null) {
+        Record recordItem = recordMapper.selectByIdForUpdate(ordered.getRecordId());
+        if (recordItem == null) {
             throw new CustomException(ErrorCode.PARAM_INVALID, "放映场次不存在");
         }
 
         List<String> seats = normalizeSeats(ordered.getSeat());
         int number = seats.size();
         for (String seat : seats) {
-            if (orderedMapper.countSeatInUse(record.getId(), seat) > 0) {
+            if (orderedMapper.countSeatInUse(recordItem.getId(), seat) > 0) {
                 throw new CustomException(ErrorCode.BUSINESS_CONFLICT, "座位已售: " + seat);
             }
         }
 
-        Film film = filmMapper.selectById(record.getFilmId());
-        BigDecimal price = parsePrice(record.getPrice());
+        Film film = filmMapper.selectById(recordItem.getFilmId());
+        BigDecimal price = parsePrice(recordItem.getPrice());
         BigDecimal total = price.multiply(BigDecimal.valueOf(number)).setScale(2, RoundingMode.HALF_UP);
 
         ordered.setOrders(generateOrderNo());
-        ordered.setRecordId(record.getId());
-        ordered.setFilmId(record.getFilmId());
-        ordered.setCinemaId(record.getCinemaId());
-        ordered.setRoomId(record.getRoomId());
-        ordered.setAppointment("场次ID:" + record.getId());
-        ordered.setStart(record.getStart());
+        ordered.setRecordId(recordItem.getId());
+        ordered.setFilmId(recordItem.getFilmId());
+        ordered.setCinemaId(recordItem.getCinemaId());
+        ordered.setRoomId(recordItem.getRoomId());
+        ordered.setAppointment("场次ID:" + recordItem.getId());
+        ordered.setStart(recordItem.getStart());
         ordered.setNumber(number);
         ordered.setTotal(total.doubleValue());
         ordered.setStatus(OrderStatus.PENDING_PAYMENT);
         ordered.setSeat(String.join(",", seats));
-        ordered.setCreateTime(LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
-        ordered.setPendingTimeoutAt(LocalDateTime.now().plusMinutes(5).format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
+        ordered.setCreateTime(LocalDateTime.now(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern(DATE_TIME_PATTERN)));
+        ordered.setPendingTimeoutAt(LocalDateTime.now(ZoneId.systemDefault()).plusMinutes(5).format(DateTimeFormatter.ofPattern(DATE_TIME_PATTERN)));
         if (film != null) {
             ordered.setImg(film.getImg());
         }
@@ -128,9 +138,9 @@ public class OrderedService extends BaseService<Ordered> {
         if (ordered.getPendingTimeoutAt() != null) {
             LocalDateTime timeout = LocalDateTime.parse(
                     ordered.getPendingTimeoutAt(),
-                    DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
+                    DateTimeFormatter.ofPattern(DATE_TIME_PATTERN)
             );
-            if (LocalDateTime.now().isAfter(timeout)) {
+            if (LocalDateTime.now(ZoneId.systemDefault()).isAfter(timeout)) {
                 Ordered update = new Ordered();
                 update.setId(id);
                 update.setStatus(OrderStatus.CANCELLED);
@@ -179,7 +189,7 @@ public class OrderedService extends BaseService<Ordered> {
     public void deleteScoped(Integer id, String role, Integer userId) {
         Ordered ordered = selectById(id);
         ensureOrderAccess(ordered, role, userId);
-        delete(id);
+        orderedMapper.deleteById(id);
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -191,7 +201,7 @@ public class OrderedService extends BaseService<Ordered> {
             Ordered ordered = selectById(id);
             ensureOrderAccess(ordered, role, userId);
         }
-        deleteBatch(ids);
+        orderedMapper.deleteBatch(ids);
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -230,7 +240,7 @@ public class OrderedService extends BaseService<Ordered> {
         if (expired.isEmpty()) {
             return;
         }
-        List<Integer> ids = expired.stream().map(Ordered::getId).collect(Collectors.toList());
+        List<Integer> ids = expired.stream().map(Ordered::getId).toList();
         orderedMapper.batchCancelExpiredOrders(ids);
     }
 
@@ -262,7 +272,7 @@ public class OrderedService extends BaseService<Ordered> {
             throw new CustomException(ErrorCode.PARAM_INVALID, "请选择座位");
         }
         for (String seat : seats) {
-            if (!seat.matches("[1-8]排[1-8]座")) {
+            if (!SEAT_PATTERN.matcher(seat).matches()) {
                 throw new CustomException(ErrorCode.PARAM_INVALID, "座位格式错误: " + seat);
             }
         }
@@ -278,7 +288,7 @@ public class OrderedService extends BaseService<Ordered> {
     }
 
     private String generateOrderNo() {
-        String date = LocalDate.now().format(DateTimeFormatter.BASIC_ISO_DATE);
+        String date = LocalDate.now(ZoneId.systemDefault()).format(DateTimeFormatter.BASIC_ISO_DATE);
         String suffix = UUID.randomUUID().toString().replace("-", "").substring(0, 8).toUpperCase();
         return date + suffix;
     }

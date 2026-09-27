@@ -1,7 +1,7 @@
 <template>
   <div>
     <div class="card" style="margin-bottom: 5px">
-      <el-input v-model="searchForm.actor" placeholder="请输入演员名称查询" style="width: 300px; margin-right:10px" :prefix-icon="Search" />
+      <el-input v-model="searchForm.actorName" placeholder="请输入演员名称查询" style="width: 300px; margin-right:10px" :prefix-icon="Search" />
       <el-button type="primary" @click="onSearch">查 询</el-button>
       <el-button type="warning" @click="onReset">重 置</el-button>
     </div>
@@ -22,7 +22,7 @@
                       :preview-src-list="[scope.row.img]" preview-teleported />
           </template>
         </el-table-column>
-        <el-table-column label="演员名称" prop="actor" />
+        <el-table-column label="演员名称" prop="actorName" />
         <el-table-column label="饰演角色" prop="figure" />
         <el-table-column label="演员照片" prop="picture" >
           <template #default="scope">
@@ -69,8 +69,8 @@
             <el-button type="primary">点击上传</el-button>
           </el-upload>
         </el-form-item>
-        <el-form-item label="演员名称" prop="actor">
-          <el-input v-model="form.actor" autocomplete="off" placeholder="请输入演员名称" />
+        <el-form-item label="演员名称" prop="actorName">
+          <el-input v-model="form.actorName" autocomplete="off" placeholder="请输入演员名称" />
         </el-form-item>
         <el-form-item label="饰演角色" prop="figure">
           <el-input v-model="form.figure" autocomplete="off" placeholder="请输入饰演角色名称" />
@@ -111,10 +111,10 @@ const crud = useCrud(API_PATHS.ACTORS)
 const { dataList, total, pageNum, pageSize, searchForm, selectedIds,
         del, delBatch, onSearch, onReset, onPageChange, onSizeChange, onSelectionChange } = crud
 const { dialogVisible, formRef, form, rules, openAdd, openEdit, submit, close } = useFormDialog(crud, {
-  defaultForm: { title: '', actor: '', figure: '', picture: '', img: '', grade: '' },
+  defaultForm: { title: '', actorName: '', figure: '', picture: '', img: '', grade: '' },
   rules: {
     title: [{ required: true, message: '请输入电影名称', trigger: 'blur' }],
-    actor: [{ required: true, message: '请输入主演名称', trigger: 'blur' }],
+    actorName: [{ required: true, message: '请输入主演名称', trigger: 'blur' }],
     figure: [{ required: true, message: '请输入饰演角色名称', trigger: 'blur' }],
     grade: [{ required: true, message: '请选择角色评级', trigger: 'change' }]
   }
@@ -154,5 +154,3 @@ function getGradeType(grade) {
 }
 </script>
 
-<style scoped>
-</style>

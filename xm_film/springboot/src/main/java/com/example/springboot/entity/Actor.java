@@ -15,7 +15,7 @@ public class Actor {
     private Integer id;
     private String title;
     private String img;
-    private String actor;
+    private String actorName;
     private String figure;
     private String picture;
     private String grade;

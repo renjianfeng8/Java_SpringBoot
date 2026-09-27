@@ -1,6 +1,5 @@
 package com.example.springboot.controller;
 
-import com.example.springboot.common.BaseController;
 import com.example.springboot.common.JwtUtils;
 import com.example.springboot.common.Result;
 import com.example.springboot.common.enums.ErrorCode;
@@ -9,9 +8,6 @@ import com.example.springboot.dto.request.LoginRequest;
 import com.example.springboot.dto.request.PasswordChangeRequest;
 import com.example.springboot.dto.request.RegisterRequest;
 import com.example.springboot.entity.Account;
-import com.example.springboot.entity.Admin;
-import com.example.springboot.entity.Cinema;
-import com.example.springboot.entity.User;
 import com.example.springboot.exception.CustomException;
 import com.example.springboot.service.AdminService;
 import com.example.springboot.service.CinemaService;
@@ -24,9 +20,9 @@ import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 @Tag(name = "认证管理", description = "登录、注册、密码修改、年份列表查询")
@@ -137,11 +133,11 @@ public class AuthController {
     @Operation(summary = "获取年份列表", description = "用于前端搜索筛选，返回最近11年")
     @GetMapping("/years")
     public Result getYear() {
-        int currentYear = LocalDate.now().getYear();
+        int currentYear = LocalDate.now(ZoneId.systemDefault()).getYear();
         List<Integer> yearList = IntStream.iterate(currentYear, year -> year - 1)
                 .limit(11)
                 .boxed()
-                .collect(Collectors.toList());
+                .toList();
         return Result.success(yearList);
     }
 }

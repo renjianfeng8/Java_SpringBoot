@@ -61,10 +61,9 @@ public class AdminService extends BaseService<Admin> {
             throw new CustomException(ErrorCode.UNAUTHORIZED.code(), "账号不存在");
         }
         String password = account.getPassword();
-        if (!passwordEncoder.matches(password, dbAdmin.getPassword())) {
-            if (!dbAdmin.getPassword().equals(password)) {
-                throw new CustomException(ErrorCode.UNAUTHORIZED.code(), "账号或密码错误");
-            }
+        if (!passwordEncoder.matches(password, dbAdmin.getPassword())
+                && !dbAdmin.getPassword().equals(password)) {
+            throw new CustomException(ErrorCode.UNAUTHORIZED.code(), "账号或密码错误");
         }
         return dbAdmin;
     }
@@ -76,10 +75,9 @@ public class AdminService extends BaseService<Admin> {
         if (admin == null) {
             throw new CustomException(ErrorCode.UNAUTHORIZED.code(), "账号不存在");
         }
-        if (!passwordEncoder.matches(account.getPassword(), admin.getPassword())) {
-            if (!admin.getPassword().equals(account.getPassword())) {
-                throw new CustomException(ErrorCode.UNAUTHORIZED.code(), "原密码错误");
-            }
+        if (!passwordEncoder.matches(account.getPassword(), admin.getPassword())
+                && !admin.getPassword().equals(account.getPassword())) {
+            throw new CustomException(ErrorCode.UNAUTHORIZED.code(), "原密码错误");
         }
         admin.setPassword(passwordEncoder.encode(account.getNewPassword()));
         adminMapper.updatePassword(admin);

@@ -7,8 +7,8 @@ import com.example.springboot.dto.request.OrderCreateRequest;
 import com.example.springboot.entity.Ordered;
 import com.example.springboot.exception.CustomException;
 import com.example.springboot.service.OrderedService;
-import com.github.pagehelper.PageHelper;
 import com.github.pagehelper.PageInfo;
+import com.github.pagehelper.page.PageMethod;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -42,7 +42,7 @@ public class OrderedController extends BaseController<Ordered> {
                        @RequestParam(defaultValue = "1") Integer pageNum,
                        @RequestParam(defaultValue = "10") Integer pageSize) {
         orderedService.applyScope(entity, currentRole(), currentUserId());
-        PageHelper.startPage(pageNum, pageSize);
+        PageMethod.startPage(pageNum, pageSize);
         return Result.success(new PageInfo<>(orderedService.selectAll(entity)));
     }
 
