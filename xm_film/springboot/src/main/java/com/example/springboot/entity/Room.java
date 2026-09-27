@@ -12,4 +12,6 @@ public class Room {
     private Integer cinemaId;
     private String title;
     private String name;
+    private Integer seatRows;
+    private Integer seatCols;
 }

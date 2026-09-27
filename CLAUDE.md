@@ -118,8 +118,8 @@ project_02/
 - **影片管理** — 影片 CRUD、分类/地区关联、演员关联、预告片上传
 - **影院管理** — 影院注册审核、信息维护、影厅管理
 - **排片管理** — 创建放映场次（关联影片、影厅、时间、票价）；校验时间晚于当前、票价大于 0、同影厅时段不重叠
-- **在线选座** — 8×8 可视化座位图、选定下单
-- **订单系统** — 购票下单、订单状态流转（待取票/已取票/已取消）
+- **在线选座** — 座位规模由影厅配置（`room.seat_rows` / `seat_cols`，默认 8×8）驱动的可视化选座图、选定下单；本人未支付锁座可继续支付或释放
+- **订单系统** — 购票下单、订单状态流转（待支付 → 待取票 → 已取票；待支付可取消或超时自动取消；待取票可退票 → 已退票）、支付与退款资金凭证留痕
 - **评价系统** — 用户对影片评分评价
 - **排行榜** — 票房榜 Top10、评分榜 Top5
 - **搜索筛选** — 按影片名称、类型、年份、地区多维筛选
@@ -172,6 +172,18 @@ project_02/
 | `/api/v1/films/by-cinema` | GET | 按影院查询电影 |
 | `/api/v1/cinemas/page` | GET | 影院分页（支持按电影筛选） |
 | `/api/v1/files/upload` | POST | 文件上传（图片/视频） |
+
+### 订单状态机接口（`/api/v1/orders/**`）
+订单不支持通用 PUT 更新（`OrderedService.updateScoped` 直接拒绝），状态流转全部走显式端点：
+
+| 路径 | 方法 | 说明 | 允许角色 |
+|------|------|------|----------|
+| `/api/v1/orders/create` | POST | 下单（校验场次可售、座位在影厅范围内且未被占用） | USER |
+| `/api/v1/orders/seats` | GET | 查询某场次占用中的座位（含本人待支付锁座） | 登录用户 |
+| `/api/v1/orders/{id}/pay` | PUT | 支付待支付订单；超时则取消并返回 409 | 订单归属方 |
+| `/api/v1/orders/{id}/cancel` | PUT | 取消待支付订单 | 订单归属方 |
+| `/api/v1/orders/{id}/pickup` | PUT | 取票（待取票 → 已取票） | ADMIN / CINEMA |
+| `/api/v1/orders/{id}/refund` | PUT | 退票（待取票 → 已退票，需放映前 60 分钟以上） | 订单归属方 |
 
 ## 页面清单
 
@@ -252,7 +264,7 @@ npm run dev
 3. **文件存储**：当前为本地存储，建议生产环境迁移至 OSS（阿里云/S3）
 4. **日志配置**：✅ 已切换为 SLF4J + Logback，`logback-spring.xml` 按 mapper 包级别控制 SQL 日志（可通过 `MYBATIS_LOG_LEVEL` 环境变量调整）
 5. **API 文档**：✅ 已集成 SpringDoc OpenAPI —— `SwaggerConfig` 定义 OpenAPI Bean 与全局 Bearer 鉴权方案，控制器标注 `@Tag`/`@Operation`，规范端点 `/v3/api-docs`，UI 页面 `static/swagger-ui.html`（swagger-ui 资源走 CDN，离线环境需改用 `springdoc-openapi-starter-webmvc-ui` 本地内嵌）
-6. **单元测试**：✅ 已覆盖 9 个测试类 / 73 个用例 —— Service 层 CRUD 与权限（Admin/User/Cinema/Film/Ordered）、订单座位并发冲突、AuthInterceptor 访问边界、全局异常处理；`mvn test` 可复现
+6. **单元测试**：✅ 已覆盖 9 个测试类 / 90 个用例 —— Service 层 CRUD 与权限（Admin/User/Cinema/Film/Ordered）、订单状态机（支付超时/退票窗口/座位边界与单笔上限）、订单座位并发冲突、AuthInterceptor 访问边界、全局异常处理；`mvn test` 可复现
 7. **前端构建**：生产构建后建议接入 CDN 分发静态资源
 8. **CI/CD**：✅ 已配置 GitHub Actions 流水线（后端编译 → 前端构建）
 9. **错误边界**：前端可引入 Vue ErrorBoundary 机制处理渲染异常
@@ -304,6 +316,12 @@ npm run dev
 - 排片的创建/编辑统一走 `RecordController` → `RecordService.validateSchedule(record, previousStart)`：校验影厅与影片归属、`start` 晚于当前（编辑时时间未改动则不重复校验，保证存量过期场次仍可停售）、`price > 0`、同影厅时段不重叠（按影片片长计算区间，无片长时按 120 分钟兜底），并按 `filmId` 回填 `title`。
 - 父数据禁止物理删除：`ordered` 的 5 个外键、`record` 的 3 个外键、`room.cinema_id` 均为 `ON DELETE RESTRICT`；Film/Cinema/Room/Record/User 五个删除入口先做引用计数校验并返回可读提示。下架影片/场次请改 `status`，不要删除。
 - `/api/v1/records` 在 `AuthInterceptor.PUBLIC_READ_PREFIXES` 内（匿名 GET 放行），因为公开的影院详情页需要拉取场次列表。
+- 订单状态机只有一条合法路径：`待支付 → 待取票 → 已取票`，旁支为 `待支付 →（取消/超时）已取消` 与 `待取票 →（退票）已退票`。`OrderedService.updateScoped` 拒绝通用 PUT，状态只能经 `payOrder`/`cancelOrder`/`pickupOrder`/`refundOrder` 迁移。前端 `ORDER_STATUS_MAP` 是状态色的唯一来源，筛选下拉由 `ORDER_STATUS_OPTIONS` 从同一 map 派生，避免筛选项与状态脱节。
+- 占用座位的判定只有一个出处：`OrderedMapper.countSeatInUse` / `selectActiveByRecordId`，状态集合为 `NOT IN ('已取消','已退票')`，且待支付订单仅在 `pending_timeout_at > NOW()` 时锁座。**新增任何"释放座位"的状态时，两处查询必须同步**，否则座位永远锁死。
+- 支付超时不用异常表达：`OrderedService.payOrder` 返回 `PayResult.TIMEOUT_CANCELLED`，由控制器翻译为 409。原因是该方法带 `rollbackFor = Exception.class`，"先取消再抛异常"会把取消一起回滚，订单停在待支付（另见 Bug.md BUG-035）。
+- 金额字段必须是包装类型：`ordered.total` 为 `Double` 而非 `double`。`updateById` 用 `<if test="total != null">` 守卫，原始类型永远非 null，会让支付/取票/取消等局部更新把金额写成 0.00（另见 Bug.md BUG-034）。
+- 选座图的座位来源是 `record.roomSeatRows` / `roomSeatCols`（`RecordMapper` 从 `room` 表 JOIN 出来），而不是写死的 8×8，也不是让用户端去读 `/api/v1/rooms`（USER 无权访问影厅接口）。后端座位合法性校验同样按影厅边界，单笔订单座位数上限 6（`OrderedService.MAX_SEATS_PER_ORDER`）。
+- 影厅的 `title`（影院名称）由后端按所属影院记录派生，前端不再手填；`back/Room.vue` 的影院名是只读展示。影厅 `seat_rows`/`seat_cols` 合法区间为 1~50，由 `RoomController.validateSeatLayout` 兜底。
 
 ## Git 提交历史
 

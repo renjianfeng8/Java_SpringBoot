@@ -10,7 +10,9 @@
         SELECT
         record.*,
         cinema.name as cinemaName,
-        room.name as roomName
+        room.name as roomName,
+        room.seat_rows as roomSeatRows,
+        room.seat_cols as roomSeatCols
         FROM record
         LEFT JOIN cinema ON record.cinema_id = cinema.id
         LEFT JOIN room ON record.room_id = room.id
@@ -30,7 +32,9 @@
         SELECT
         record.*,
         cinema.name as cinemaName,
-        room.name as roomName
+        room.name as roomName,
+        room.seat_rows as roomSeatRows,
+        room.seat_cols as roomSeatCols
         FROM record
         LEFT JOIN cinema ON record.cinema_id = cinema.id
         LEFT JOIN room ON record.room_id = room.id

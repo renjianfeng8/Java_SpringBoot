@@ -13,6 +13,9 @@
         <el-table-column type="selection" width="55" />
         <el-table-column label="影院名称" prop="title" />
         <el-table-column label="影厅名称" prop="name" />
+        <el-table-column label="座位规模" width="120">
+          <template #default="scope">{{ scope.row.seatRows }} 排 × {{ scope.row.seatCols }} 座</template>
+        </el-table-column>
         <el-table-column label="操作">
           <template #default="scope">
             <el-button style="font-size: 18px" link :icon="Delete" @click="handleDel(scope.row.id)" type="danger" />

@@ -31,6 +31,11 @@
                 <div style="width: 22px; height: 22px; background: #2196F3;  border-radius: 5px;"></div>
                 <div style="font-size: 14px; color: #666;">已选座位</div>
               </div>
+              <!-- 本人未支付锁座：只有存在未支付订单时才出现 -->
+              <div v-if="myPendingOrders.length > 0" style="display: flex; align-items: center; gap: 8px;">
+                <div style="width: 22px; height: 22px; background: #FF9800; border-radius: 5px;"></div>
+                <div style="font-size: 14px; color: #666;">我的未支付</div>
+              </div>
             </div>
           </div>
 
@@ -45,12 +50,15 @@
           <div v-else-if="seatError" style="text-align: center; padding: 60px 0; color: #ef4238;">
             <i class="el-icon-error" style="font-size: 20px; margin-bottom: 8px;"></i>
             <div>{{ seatError }}</div>
+            <el-button style="margin-top: 16px;" type="primary" @click="router.push('/front/cinema')">
+              返回影院列表
+            </el-button>
           </div>
 
-          <!-- 8x8座位矩阵 -->
+          <!-- 座位矩阵：行列数取自所属影厅的 seat_rows / seat_cols 配置 -->
           <div v-else style="display: flex; flex-direction: column; align-items: center; gap: 10px;  ">
-            <div v-for="row in 8" :key="'row' + row" style="display: flex; gap: 10px;">
-              <div v-for="col in 8" :key="`seat-${row}-${col}`"
+            <div v-for="row in seatRows" :key="'row' + row" style="display: flex; gap: 10px;">
+              <div v-for="col in seatCols" :key="`seat-${row}-${col}`"
                    :style="{
                      width: '22px',
                      height: '22px',
@@ -59,6 +67,21 @@
                    @click="selectSeat(row, col)"
                    class="seat-item"
               ></div>
+            </div>
+          </div>
+
+          <!-- 本人未支付锁座：可直接继续支付或取消释放，不必重新选座 -->
+          <div v-if="myPendingOrders.length > 0"
+               style="margin-top: 20px; padding: 12px; border: 1px solid #ffe0b2;
+                      background: #fff8e1; border-radius: 5px;">
+            <div v-for="pending in myPendingOrders" :key="pending.id"
+                 style="display: flex; align-items: center; justify-content: space-between;
+                        font-size: 14px; color: #8d6e63;">
+              <span>未支付订单 {{ pending.orders }}（{{ pending.seat }}）</span>
+              <span style="white-space: nowrap;">
+                <el-button link type="warning" @click="continuePay(pending)">继续支付</el-button>
+                <el-button link type="danger" @click="cancelPendingOrder(pending)">取消锁座</el-button>
+              </span>
             </div>
           </div>
 
@@ -135,70 +158,24 @@
     </div>
   </div>
 
-  <!-- 支付弹窗 -->
-  <div v-if="paymentDialogVisible"
-       style="position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-              background: rgba(0,0,0,0.5); display: flex; align-items: center;
-              justify-content: center; z-index: 1000;">
-    <div style="background: white; border-radius: 8px; padding: 30px; width: 400px;
-                box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
-      <div style="font-size: 20px; font-weight: bold; text-align: center; margin-bottom: 20px;">
-        确认支付
-      </div>
-      <div style="margin-bottom: 15px;">
-        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-          <span style="color: #666;">订单编号：</span>
-          <span>{{ currentOrder?.orders }}</span>
-        </div>
-        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-          <span style="color: #666;">座位：</span>
-          <span>{{ currentOrder?.seat }}</span>
-        </div>
-        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;
-                    font-size: 18px; font-weight: bold;">
-          <span style="color: #333;">总价：</span>
-          <span style="color: #ef4238;">¥{{ currentOrder?.total }}</span>
-        </div>
-        <div v-if="paymentCountdown > 0"
-             style="text-align: center; margin: 15px 0; font-size: 14px; color: #999;">
-          剩余支付时间：
-          <span :style="{ color: paymentCountdown <= 30 ? '#ef4238' : '#333',
-                          fontWeight: 'bold', fontSize: '18px' }">
-            {{ formatCountdown(paymentCountdown) }}
-          </span>
-        </div>
-        <div v-else style="text-align: center; margin: 15px 0; color: #ef4238; font-weight: bold;">
-          支付已超时
-        </div>
-      </div>
-      <div style="display: flex; gap: 15px; justify-content: center;">
-        <button @click="cancelPaymentOrder"
-                style="padding: 8px 25px; border: 1px solid #ddd; border-radius: 4px;
-                       background: white; cursor: pointer; font-size: 14px;">
-          取消订单
-        </button>
-        <button @click="payOrder"
-                :disabled="paymentCountdown <= 0"
-                :style="{
-                  padding: '8px 25px', border: 'none', borderRadius: '4px',
-                  background: paymentCountdown > 0 ? '#ef4238' : '#ccc',
-                  color: 'white', cursor: paymentCountdown > 0 ? 'pointer' : 'not-allowed',
-                  fontSize: '14px'
-                }">
-          模拟支付
-        </button>
-      </div>
-    </div>
-  </div>
+  <!-- 支付弹窗：与订单列表页"继续支付"共用同一组件 -->
+  <OrderPayDialog
+      v-model="paymentDialogVisible"
+      :order="currentOrder"
+      @paid="onPaid"
+      @cancelled="initSeats"
+      @timeout="initSeats"
+  />
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue';
+import { ref, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { ElMessage } from 'element-plus';
+import { ElMessage, ElMessageBox } from 'element-plus';
 import request from "@/utils/request.js";
 import { API_PATHS, ORDER_API, apiById } from '@/constants';
 import { clearStoredUser, getStoredUser } from '@/utils/authStorage';
+import OrderPayDialog from '@/components/OrderPayDialog.vue';
 
 // 1. Read the current signed-in user from shared auth storage.
 const userInfo = ref(null); // 存储登录用户完整信息
@@ -245,78 +222,41 @@ const { cinemaId, filmId, recordId, roomId } = route.query;
 // 状态初始化
 const loading = ref(true);
 const seatError = ref('');
-const seats = ref([]); // 座位矩阵：0=可选，1=已售，2=已选
+const seats = ref([]); // 座位矩阵：0=可选，1=他人占用，2=已选，3=本人未支付锁座
 const selectedSeats = ref([]); // 已选座位（格式：["1排1座", ...]）
+const seatRows = ref(8); // 选座图行数，取自场次所属影厅
+const seatCols = ref(8); // 选座图列数
+const myPendingOrders = ref([]); // 本人待支付订单，可继续支付或取消锁座
 
-// 支付弹窗状态
+// 支付弹窗状态：倒计时与支付/取消逻辑由 OrderPayDialog 承担
 const paymentDialogVisible = ref(false);
 const currentOrder = ref(null);
-const paymentCountdown = ref(0);
-let countdownTimer = null;
 
-const startCountdown = () => {
-  stopCountdown();
-  countdownTimer = setInterval(() => {
-    paymentCountdown.value--;
-    if (paymentCountdown.value <= 0) {
-      stopCountdown();
-      paymentDialogVisible.value = false;
-      ElMessage.warning('支付超时，订单已自动取消');
-      initSeats();
-    }
-  }, 1000);
+// 支付成功后订单已进入待取票，跳转订单列表查看
+const onPaid = () => {
+  router.push('/front/orders');
 };
 
-const stopCountdown = () => {
-  if (countdownTimer) {
-    clearInterval(countdownTimer);
-    countdownTimer = null;
-  }
+// 对本人未支付订单继续支付：直接复用支付弹窗，不必重新选座
+const continuePay = (order) => {
+  currentOrder.value = order;
+  paymentDialogVisible.value = true;
 };
 
-const formatCountdown = (seconds) => {
-  const m = Math.floor(seconds / 60);
-  const s = seconds % 60;
-  return `${m}:${s.toString().padStart(2, '0')}`;
+const cancelPendingOrder = (order) => {
+  ElMessageBox.confirm('取消后座位将被释放，确认取消该未支付订单吗？', '取消确认', { type: 'warning' })
+      .then(() => {
+        request.put(ORDER_API.CANCEL(order.id)).then(res => {
+          if (res.code === '200') {
+            ElMessage.success('订单已取消');
+            initSeats();
+          } else {
+            ElMessage.error(res.msg || '取消失败');
+          }
+        });
+      })
+      .catch(() => {});
 };
-
-const payOrder = async () => {
-  if (!currentOrder.value || !currentOrder.value.id) return;
-  try {
-    const res = await request.put(ORDER_API.PAY(currentOrder.value.id));
-    if (res.code === '200') {
-      stopCountdown();
-      ElMessage.success('支付成功');
-      paymentDialogVisible.value = false;
-      router.push('/front/orders');
-    } else {
-      ElMessage.error(res.msg || '支付失败');
-      if (res.msg && res.msg.includes('超时')) {
-        paymentDialogVisible.value = false;
-        initSeats();
-      }
-    }
-  } catch (error) {}
-};
-
-const cancelPaymentOrder = async () => {
-  if (!currentOrder.value || !currentOrder.value.id) return;
-  try {
-    const res = await request.put(ORDER_API.CANCEL(currentOrder.value.id));
-    if (res.code === '200') {
-      stopCountdown();
-      ElMessage.success('订单已取消');
-      paymentDialogVisible.value = false;
-      initSeats();
-    } else {
-      ElMessage.error(res.msg || '取消失败');
-    }
-  } catch (error) {}
-};
-
-onUnmounted(() => {
-  stopCountdown();
-});
 
 // 数据存储（与后端实体字段对应）
 const filmInfo = ref({
@@ -356,10 +296,9 @@ onMounted(() => {
 
   // 第三步：加载页面数据（仅登录且为USER角色时加载）
   if (isLogin.value) {
-    Promise.all([
-      initSeats(), // 初始化座位状态
-      fetchBaseInfo() // 加载电影/影院/场次信息
-    ])
+    // 座位图行列数取自场次所属影厅，必须先取到场次信息再初始化座位
+    fetchBaseInfo()
+        .then(() => initSeats())
         .then(() => {
           loading.value = false;
         })
@@ -377,51 +316,53 @@ onMounted(() => {
   }
 });
 
-// 初始化座位状态
+// 初始化座位状态：0=可选 1=他人占用 2=已选 3=本人未支付锁座
 const initSeats = () => {
   return new Promise((resolve) => {
-    // 1. 先查询该场次已售座位（通过订单接口反向获取）
-    request.get(`${API_PATHS.ORDERS}/seats`, {
+    const rows = seatRows.value;
+    const cols = seatCols.value;
+    const emptyMatrix = () => Array(rows).fill().map(() => Array(cols).fill(0));
+
+    request.get(ORDER_API.SEATS, {
       params: {
         recordId: Number(recordId)
       }
     }).then(res => {
-      if (res.code === '200') {
-        const soldSeats = [];
-        // 收集所有已售座位（去重处理，避免重复标记）
-        const seatSet = new Set();
-        res.data.forEach(order => {
-          if (order.seat) {
-            order.seat.split(',').forEach(seat => {
-              seatSet.add(seat);
-            });
-          }
-        });
-        soldSeats.push(...seatSet);
-        // 2. 初始化8x8座位矩阵
-        const seatMatrix = Array(8).fill().map(() => Array(8).fill(0));
-        // 标记已售座位（格式："1排1座" → 行=1，列=1）
-        soldSeats.forEach(seat => {
+      if (res.code !== '200') {
+        seatError.value = res.msg || '座位数据加载失败';
+        seats.value = emptyMatrix();
+        resolve();
+        return;
+      }
+
+      const seatMatrix = emptyMatrix();
+      const myOrders = [];
+      (res.data || []).forEach(order => {
+        const mine = Number(order.userId) === userId.value;
+        const myPending = mine && order.status === '待支付';
+        if (myPending) {
+          myOrders.push(order);
+        }
+        // 已被前一张订单标记的座位不覆盖，避免多订单重叠时着色抖动
+        (order.seat || '').split(',').forEach(rawSeat => {
+          const seat = rawSeat.trim();
           const rowMatch = seat.match(/(\d+)排/);
           const colMatch = seat.match(/排(\d+)座/);
-          if (rowMatch && colMatch) {
-            const row = parseInt(rowMatch[1]);
-            const col = parseInt(colMatch[1]);
-            if (row >= 1 && row <= 8 && col >= 1 && col <= 8) {
-              seatMatrix[row - 1][col - 1] = 1; // 1=已售
-            }
-          }
+          if (!rowMatch || !colMatch) return;
+          const row = parseInt(rowMatch[1]);
+          const col = parseInt(colMatch[1]);
+          if (row < 1 || row > rows || col < 1 || col > cols) return;
+          // 本人未支付锁座单独着色，其余一律按已占用处理
+          seatMatrix[row - 1][col - 1] = myPending ? 3 : 1;
         });
-        seats.value = seatMatrix;
-        resolve();
-      } else {
-        seatError.value = res.msg || '座位数据加载失败';
-        seats.value = Array(8).fill().map(() => Array(8).fill(0));
-        resolve();
-      }
+      });
+
+      seats.value = seatMatrix;
+      myPendingOrders.value = myOrders;
+      resolve();
     }).catch(() => {
       seatError.value = '座位数据加载失败，请稍后重试';
-      seats.value = Array(8).fill().map(() => Array(8).fill(0));
+      seats.value = emptyMatrix();
       resolve();
     });
   });
@@ -446,7 +387,7 @@ const fetchBaseInfo = () => {
         throw new Error(`影院信息加载失败：${res.msg || '未知错误'}`);
       }
     }),
-    // 场次信息（获取影厅ID等关键字段）
+    // 场次信息（获取影厅、座位布局等关键字段）
     request.get(apiById(API_PATHS.RECORDS, Number(recordId))).then(res => {
       if (res.code === '200' && res.data) {
         showInfo.value = {
@@ -456,6 +397,9 @@ const fetchBaseInfo = () => {
           start: res.data.start,
           price: res.data.price || 0
         };
+        // 座位图规模由所属影厅决定；后端未配置时退回 8×8
+        seatRows.value = res.data.roomSeatRows > 0 ? res.data.roomSeatRows : 8;
+        seatCols.value = res.data.roomSeatCols > 0 ? res.data.roomSeatCols : 8;
       } else {
         throw new Error(`场次信息加载失败：${res.msg || '未知错误'}`);
       }
@@ -470,8 +414,9 @@ const getSeatColor = (row, col) => {
   if (!seats.value[r] || seats.value[r][c] === undefined) return '#f5f5f5';
   switch (seats.value[r][c]) {
     case 0: return '#4CAF50'; // 可选（绿色）
-    case 1: return '#f30656';    // 已售（灰色）
+    case 1: return '#f30656';    // 他人占用（红色）
     case 2: return '#2196F3'; // 已选（蓝色）
+    case 3: return '#FF9800'; // 本人未支付锁座（橙色）
     default: return '#f5f5f5';
   }
 };
@@ -545,16 +490,7 @@ const confirmBooking = async () => {
     });
     if (res.code === '200' && res.data) {
       currentOrder.value = res.data;
-      const timeoutStr = res.data.pendingTimeoutAt;
-      if (timeoutStr) {
-        const timeoutDate = new Date(timeoutStr.replace(' ', 'T'));
-        const now = new Date();
-        paymentCountdown.value = Math.max(0, Math.floor((timeoutDate - now) / 1000));
-      } else {
-        paymentCountdown.value = 300;
-      }
       paymentDialogVisible.value = true;
-      startCountdown();
     } else {
       ElMessage.error(res.msg || '下单失败');
     }

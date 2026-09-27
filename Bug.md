@@ -512,6 +512,36 @@
 
 ---
 
+### BUG-034: 订单状态流转清空订单金额（total 被写成 0.00）
+
+- **日期**: 2026-09-27
+- **Bug 描述**: 订单一旦发生状态流转（支付/取票/取消），其 `total` 就变成 0.00，`pay_amount`/`refund_amount` 也随之失真。开发库中 18 笔订单（7 笔待取票、11 笔已取消）全部中招，用户看到的是"总费用 0 元"的订单；退票时记录的退款金额也是 0
+- **根因分析**: `Ordered.total` 声明为原始类型 `double`，而 `OrderedMapper.xml` 的 `updateById` 用 `<if test="total != null">total = #{total},</if>` 守卫。原始类型经 getter 取值时永远非 null，MyBatis 的 OGNL 判断恒为真，于是任何**不带** total 的局部更新对象都会被补写 `total = 0.0`。状态流转只设置 `status`，恰好命中该路径。`Film.boxOffice`（同为原始 `double`）存在同样写法，但 `manage/Film.vue` 用 `Object.assign(form, row)` 提交整个对象，带上了 `boxOffice`，因此当前不可达 —— 属于同类地雷，未在本次改动
+- **解决方案**:
+  - `entity/Ordered.java` 的 `total` 改为包装类型 `Double`，使 `!= null` 守卫真正生效；调用点（`setPayAmount`/`setRefundAmount`）签名本为 `Double`，无需改动
+  - 提供一次性数据修复脚本，按 `total = record.price × ordered.number` 重建被归零的存量订单金额（18 笔全部可确定性重建，0 笔不可恢复）
+  - 端到端验证新增断言：支付、取票、退票、超时取消四条路径后 `total` 必须保持原值
+- **相关文件**: `entity/Ordered.java`、`mapper/OrderedMapper.xml`、`service/OrderedService.java`
+- **提交记录**: 待提交
+- **状态**: 已修复
+
+---
+
+### BUG-035: 支付超时取消被事务回滚，订单停在待支付
+
+- **日期**: 2026-09-27
+- **Bug 描述**: 用户对已超时的待支付订单发起支付时，接口返回"支付超时，订单已自动取消"，但数据库里该订单仍是**待支付**——提示与实际状态不符
+- **根因分析**: `OrderedService.payOrder` 在超时分支里先用 `updateById` 把订单置为已取消，紧接着 `throw new CustomException(...)`。该方法标注了 `@Transactional(rollbackFor = Exception.class)`，异常触发事务回滚，把刚刚写入的取消一并撤销。整体表现被 `OrderCleanupTask`（每 15 秒扫描一次）掩盖，所以端到端难复现，只能通过单元测试或代码审查发现
+- **解决方案**:
+  - 超时分支不再抛异常：`payOrder` 返回 `PayResult.TIMEOUT_CANCELLED`，由 `OrderedController` 翻译成 409 业务错误返回客户端，取消得以正常提交
+  - 新增 `common/enums/PayResult.java`，并在类注释中写明"为何不能用异常表达"
+  - 补单元测试 `payOrderAfterTimeoutCancelsOrderInsteadOfThrowing`：断言返回超时结果**且**调用了状态更新，实现若改回抛异常该用例即失败
+- **相关文件**: `service/OrderedService.java`、`controller/OrderedController.java`、`common/enums/PayResult.java`、`src/test/java/com/example/springboot/OrderedServiceTest.java`
+- **提交记录**: 待提交
+- **状态**: 已修复
+
+---
+
 ## 预防清单
 
 1. **数据库初始化**: 新环境部署时务必执行 `xm_film/sql/init.sql`（或依次执行 `schema.sql` + `data.sql`）
@@ -540,3 +570,8 @@
 24. **派生状态不落库**: 凡是能由时间/其他字段算出的状态（如场次的未开始/放映中/已结束）一律运行时计算，表字段只保留无法推导的人工开关（`status` = 正常/停售）
 25. **公开页面依赖的接口必须在白名单内**: 新增公开页面时，先确认其调用的所有 GET 接口都在 `AuthInterceptor.PUBLIC_READ_PREFIXES` 中，否则匿名访问会 401
 26. **必填外键要给到数据库约束**: 关键关联字段（如 `record.film_id`）应声明 `NOT NULL`，并在服务层校验后回填冗余字段（如影片名），避免只有应用层约定导致的脏数据
+27. **实体字段可空性必须与 `<if test="X != null">` 守卫一致**: 原始类型（`double`/`int`）经 OGNL 取值恒非 null，"只更新非空字段"会退化成"用 0 覆盖"。金额/计数/比率类字段一律用包装类型（`Double`/`Integer`）。同类地雷：`Film.boxOffice` 目前仍是原始 `double`，但 `manage/Film.vue` 提交整个对象所以不可达，改动影片编辑表单时要一并处理
+28. **事务方法内不得"先写入再抛异常"表达失败**: `rollbackFor = Exception.class` 会把刚写入的状态一起回滚（见 BUG-035）。失败用返回值（枚举/结果对象）传出，由控制器翻译成错误码；这类缺陷会被定时任务掩盖，只能靠单元测试或代码审查发现
+29. **资源占用状态集合只留一处**: 占用座位的状态集合定义在 `OrderedMapper.countSeatInUse` / `selectActiveByRecordId`（`NOT IN ('已取消','已退票')`）。新增任何"释放资源"的状态时必须同步这两处，否则座位永远锁死
+30. **容量/尺寸限制必须数据驱动**: 写死的 8×8 选座图与 `[1-8]排[1-8]座` 正则会让他厅配置直接不可用。容量随实体列走（`room.seat_rows`/`seat_cols`），后端按实体校验、前端只负责渲染
+31. **派生字段不接受前端输入**: 影厅的影院名、排片的影片名等冗余字段一律由后端按外键回填。前端可提供输入框会造成同一事实的两份数据长期漂移（`room.title` 与 `cinema.name` 在种子数据里就已经不一致）

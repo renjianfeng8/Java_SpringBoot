@@ -2,9 +2,8 @@
   <div>
     <div class="card" style="margin-bottom: 5px">
       <el-input v-model="data.orders" placeholder="请输入订单号" style="width: 300px; margin-right:10px" :prefix-icon="Search"/>
-      <el-select v-model="data.status" placeholder="请选择放映状态" style="width: 300px; margin-right:10px">
-        <el-option label="已取票" value="已取票" />
-        <el-option label="待取票" value="待取票" />
+      <el-select v-model="data.status" placeholder="请选择订单状态" style="width: 300px; margin-right:10px">
+        <el-option v-for="status in ORDER_STATUS_OPTIONS" :key="status" :label="status" :value="status" />
       </el-select>
       <el-button type="primary" @click="load">查 询</el-button>
       <el-button type="warning" @click="reset">重 置</el-button>
@@ -29,8 +28,7 @@
               <el-descriptions-item label="用户名称">{{props.row.userName}}</el-descriptions-item>
               <el-descriptions-item label="电影名称">{{props.row.filmName}}</el-descriptions-item>
               <el-descriptions-item label="影院名称">{{props.row.cinemaName}}</el-descriptions-item>
-              <!-- 修改展开面板中的影厅房间字段 -->
-              <el-descriptions-item label="影厅房间">{{ getRoomName(props.row.roomId) }}</el-descriptions-item>
+              <el-descriptions-item label="影厅房间">{{ props.row.roomName || getRoomName(props.row.roomId) }}</el-descriptions-item>
               <el-descriptions-item label="座位号">{{props.row.seat}}</el-descriptions-item>
               <el-descriptions-item label="预约时间">{{props.row.start}}</el-descriptions-item>
               <el-descriptions-item label="电影票数量">{{props.row.number}}</el-descriptions-item>
@@ -39,6 +37,14 @@
                 <el-tag :type="getStatusType(props.row.status)">
                   {{ props.row.status }}
                 </el-tag>
+              </el-descriptions-item>
+              <el-descriptions-item label="支付时间">{{ props.row.payTime || '—' }}</el-descriptions-item>
+              <el-descriptions-item label="实付金额">
+                {{ props.row.payAmount != null ? `¥${props.row.payAmount}` : '—' }}
+              </el-descriptions-item>
+              <el-descriptions-item label="退票时间">{{ props.row.refundTime || '—' }}</el-descriptions-item>
+              <el-descriptions-item label="退款金额">
+                {{ props.row.refundAmount != null ? `¥${props.row.refundAmount}` : '—' }}
               </el-descriptions-item>
             </el-descriptions>
 
@@ -58,10 +64,9 @@
           </template>
         </el-table-column>
         <el-table-column label="影院名称" prop="cinemaName"/>
-        <!-- 修改影厅名称列的参数 -->
         <el-table-column label="影厅名称">
           <template #default="prop">
-            {{ getRoomName(prop.row.roomId) }}
+            {{ prop.row.roomName || getRoomName(prop.row.roomId) }}
           </template>
         </el-table-column>
         <el-table-column label="预约时间" prop="start" show-overflow-tooltip />
@@ -76,6 +81,8 @@
         </el-table-column>
         <el-table-column label="操作">
           <template #default="scope">
+            <el-button v-if="scope.row.status === '待取票'" style="font-size: 14px" link type="primary"
+                       @click="() => pickupOrder(scope.row)">取票</el-button>
             <el-button style="font-size: 18px" link :icon="Delete" @click="() => del(scope.row.id)" type="danger"></el-button>
           </template>
         </el-table-column>
@@ -102,7 +109,7 @@ import { reactive } from "vue";
 import { Delete, Search } from "@element-plus/icons-vue";
 import request from "@/utils/request.js";
 import { ElMessage, ElMessageBox } from "element-plus";
-import { API_PATHS, getOrderStatusType as getStatusType, apiBatch, apiById, apiPage } from "@/constants";
+import { API_PATHS, ORDER_API, ORDER_STATUS_OPTIONS, getOrderStatusType as getStatusType, apiBatch, apiById, apiPage } from "@/constants";
 
 
 interface Ordered {
@@ -208,6 +215,21 @@ const delBatch = () => {
     })
   }).catch()
 }
+
+// 取票：仅"待取票"订单可操作；取票由影院/管理端执行，用户端无权调用
+const pickupOrder = async (order: Ordered) => {
+  try {
+    const res = await request.put(ORDER_API.PICKUP(order.id));
+    if (res.code === '200') {
+      ElMessage.success('取票成功');
+      load();
+    } else {
+      ElMessage.error(res.msg || '取票失败');
+    }
+  } catch (error) {
+    // request.js has already shown the backend message.
+  }
+};
 
 const handleSelectionChange = (rows: Ordered[]) => {
   data.ids = rows.map(row => row.id).filter((id): id is number => id !== undefined);

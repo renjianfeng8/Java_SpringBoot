@@ -334,8 +334,8 @@ file:
 - **影片管理** — 影片 CRUD、分类/地区关联、演员关联、预告片上传
 - **影院管理** — 影院注册审核、信息维护、影厅管理
 - **排片管理** — 创建放映场次（关联影厅、时间、价格）
-- **在线选座** — 可视化座位图、选定下单
-- **订单系统** — 购票下单、订单状态流转
+- **在线选座** — 按影厅座位规模渲染的可视化座位图、选定下单
+- **订单系统** — 购票下单、订单状态流转（含超时取消、取票、退票）与支付/退款凭证留痕
 - **评价系统** — 用户对影片评分评价
 - **排行榜** — 票房榜、评分榜（SQL 级排序）
 - **搜索筛选** — 按影片名称、类型、年份、地区多维筛选
@@ -406,9 +406,9 @@ file:
 | `area` | 地区 | title |
 | `type` | 电影分类 | title |
 | `notice` | 系统公告 | title, content, time |
-| `room` | 影厅 | name, cinema_id, seat_data |
+| `room` | 影厅 | name, title, cinema_id, seat_rows, seat_cols |
 | `record` | 放映记录（排片） | film_id, cinema_id, room_id, start, price, status |
-| `ordered` | 购票订单 | record_id, user_id, seats, total |
+| `ordered` | 购票订单 | record_id, user_id, seat, total, status, pay_time/refund_time |
 | `mark` | 用户评价 | film_id, user_id, content, score |
 | `video` | 预告片 | film_id, url, title |
 
