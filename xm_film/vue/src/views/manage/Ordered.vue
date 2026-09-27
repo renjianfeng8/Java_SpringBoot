@@ -95,7 +95,7 @@
 import { Delete, Search } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useCrud } from '@/composables/useCrud'
-import { API_PATHS, getOrderStatusType } from '@/constants'
+import { API_PATHS, getOrderStatusType as getStatusType } from '@/constants'
 import request from '@/utils/request'
 
 const crud = useCrud(API_PATHS.ORDERS)
@@ -125,8 +125,6 @@ function handleDelBatch() {
   ElMessageBox.confirm(`确定删除选中的 ${selectedIds.value.length} 条数据吗？`, '删除确认', { type: 'warning' })
     .then(() => delBatch(selectedIds.value)).catch()
 }
-
-const getStatusType = (status) => getOrderStatusType(status)
 
 crud.load()
 loadRoom()

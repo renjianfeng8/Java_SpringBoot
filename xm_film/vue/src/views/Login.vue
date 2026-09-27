@@ -34,7 +34,7 @@
 import { reactive, ref } from "vue"
 import { useRouter, useRoute } from 'vue-router'
 import { useAuth } from "@/composables/useAuth"
-import { ElMessage, ElMessageBox } from "element-plus"
+import { ElMessageBox } from "element-plus"
 
 const router = useRouter()
 const route = useRoute()

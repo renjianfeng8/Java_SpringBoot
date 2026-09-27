@@ -182,7 +182,7 @@ import { Delete, Edit, Search } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useCrud } from '@/composables/useCrud'
 import { useFormDialog } from '@/composables/useFormDialog'
-import { API_PATHS, FILE_UPLOAD_URL } from '@/constants'
+import { API_PATHS, FILE_UPLOAD_URL, getFilmStatusType as getStatusType } from '@/constants'
 import request from '@/utils/request'
 
 const crud = useCrud(API_PATHS.FILMS)
@@ -255,14 +255,6 @@ function getTypeTagType(type) {
   return tagTypes[Math.abs(seed) % tagTypes.length]
 }
 
-function getStatusType(status) {
-  switch (status) {
-    case '待上映': return 'warning'
-    case '已上映': return 'success'
-    case '停止上映': return 'danger'
-    default: return 'info'
-  }
-}
 </script>
 
 <style scoped>

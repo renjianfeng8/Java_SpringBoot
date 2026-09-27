@@ -112,7 +112,7 @@ import { reactive, ref } from "vue";
 import {Delete, Edit, Search} from "@element-plus/icons-vue";
 import request from "@/utils/request.js";
 import { ElMessage, ElMessageBox } from "element-plus";
-import { API_PATHS, apiBatch, apiById, apiPage } from "@/constants";
+import { API_PATHS, apiBatch, apiById, apiPage, getFilmStatusType as getStatusType } from "@/constants";
 
 interface Record {
   id?: number;
@@ -264,14 +264,6 @@ const save = () => {
 }
 
 
-const getStatusType = (status: string | undefined) => {
-  switch (status) {
-    case '待上映': return 'warning';
-    case '已上映': return 'success';
-    case '停止上映': return 'danger';
-    default: return 'info';
-  }
-};
 
 
 const loadCinema = () => {

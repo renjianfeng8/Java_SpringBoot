@@ -7,8 +7,7 @@
     </div>
 
     <div class="card" style="margin-bottom: 5px">
-      <el-table stripe :data="data.tableData" @selection-change="handleSelectionChange">
-        <el-table-column type="selection" width="55"/>
+      <el-table stripe :data="data.tableData">
         <el-table-column type="expand">
           <template #default="props">
 
@@ -22,7 +21,7 @@
               <el-descriptions-item label="上映日期">{{props.row.start}}</el-descriptions-item>
               <el-descriptions-item label="电影时长">{{props.row.time}}分钟</el-descriptions-item>
               <el-descriptions-item label="电影类型">
-                <el-tag v-for="item in props.row.types" style="margin-right: 5px; margin-bottom: 5px" type="info">{{item}}</el-tag>
+                <el-tag v-for="item in props.row.typeList" style="margin-right: 5px; margin-bottom: 5px" type="info">{{item.title}}</el-tag>
               </el-descriptions-item>
               <el-descriptions-item label="电影语言">{{props.row.language}}</el-descriptions-item>
               <el-descriptions-item label="电影分辨率">{{props.row.resolution}}</el-descriptions-item>
@@ -67,9 +66,9 @@
         </el-table-column>
         <el-table-column label="上映日期" prop="start" show-overflow-tooltip />
         <el-table-column label="电影时长" prop="time" />
-        <el-table-column label="电影类型" prop="types" width="180">
+        <el-table-column label="电影类型" prop="typeList" width="180">
           <template v-slot="scope">
-            <el-tag v-for="item in scope.row.types" style="margin-right: 5px; margin-bottom: 5px" type="info">{{item}}</el-tag>
+            <el-tag v-for="item in scope.row.typeList" style="margin-right: 5px; margin-bottom: 5px" type="info">{{item.title}}</el-tag>
           </template>
         </el-table-column>
         <el-table-column label="语言" prop="language" />
@@ -102,11 +101,11 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, ref } from "vue";
+import { reactive } from "vue";
 import { Search } from "@element-plus/icons-vue";
 import request from "@/utils/request.js";
 import { ElMessage } from "element-plus";
-import { API_PATHS, apiPage } from "@/constants";
+import { API_PATHS, apiPage, getFilmStatusType as getStatusType } from "@/constants";
 
 interface FormData {
   id?: number;
@@ -115,7 +114,7 @@ interface FormData {
   img?: string;         // 封面图
   start?: string;       // 上映日期
   time?: number;        // 时长
-  types?: string[];     // 电影类型（数组）
+  typeList?: Array<{ id: number; title: string }>;  // 电影类型（后端已解析）
   language?: string;    // 语言
   content?: string;     // 简介
   areaName?: string;    // 区域名称
@@ -123,57 +122,16 @@ interface FormData {
   employee?: string;    // 制作公司
   areaId?: number;      // 区域ID
   status?: string;      // 状态（待上映/已上映/停止上映）
-  ids?: number[];       // 类型ID数组（用于表单）
 }
 
-
-interface TypeData {
-  id: number;
-  title: string;
-}
-
-
-interface AreaData {
-  id: number;
-  title: string;
-}
 
 const data = reactive({
-  name: null as string | null,
   tableData: [] as FormData[],
   pageNumber: 1,
   pageSize: 10,
   total: 0,
-  formVisible: false,
-  form: {} as FormData,
-  ids: [] as number[],
-  typeData: [] as TypeData[],
-  areaData: [] as AreaData[],
-  title: null,
-  status: null as string | null
+  title: null
 });
-
-const formRef = ref();
-
-const loadType = () => {
-  request.get(API_PATHS.TYPES).then(res => {
-    if(res.code === '200') {
-      data.typeData = res.data
-    } else {
-      ElMessage.error(res.msg)
-    }
-  })
-}
-
-const loadArea = () => {
-  request.get(API_PATHS.AREAS).then(res => {
-    if(res.code === '200') {
-      data.areaData = res.data
-    } else {
-      ElMessage.error(res.msg)
-    }
-  })
-}
 
 const load = () => {
   request.get(apiPage(API_PATHS.FILMS), {
@@ -193,10 +151,6 @@ const load = () => {
   });
 }
 
-const handleSelectionChange = (rows: FormData[]) => {
-  data.ids = rows.map(row => row.id).filter((id): id is number => id !== undefined);
-}
-
 const reset = () => {
   data.title = null;
   load();
@@ -205,18 +159,6 @@ const reset = () => {
 // 初始加载
 load()
 
-loadType()
-
-loadArea()
-
-const getStatusType = (status: string | undefined) => {
-  switch (status) {
-    case '待上映': return 'warning';
-    case '已上映': return 'success';
-    case '停止上映': return 'danger';
-    default: return 'info';
-  }
-}
 
 </script>
 

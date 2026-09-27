@@ -20,15 +20,7 @@ const router = useRouter();
 
 // 跳转到对应角色的主页
 const goHome = () => {
-  // 从本地存储获取用户信息（JSON字符串）并解析为对象
-  const userStr = getStoredUser();
-  let userRole = 'USER';
-  try {
-    const userInfo = userStr;
-    userRole = userInfo?.role || 'USER';
-  } catch (e) {
-    // 默认USER角色
-  }
+  const userRole = getStoredUser()?.role || 'USER';
 
   // 根据用户角色跳转到对应的主页
   if (userRole === 'USER') {

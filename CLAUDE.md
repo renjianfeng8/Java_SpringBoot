@@ -67,13 +67,28 @@ project_02/
 │   │           └── mapper/                     # MyBatis XML 映射（14个）
 │   ├── vue/                            # 前端（Vue 3）
 │   │   ├── index.html                  # HTML 入口
-│   │   ├── vite.config.js              # Vite 配置
+│   │   ├── vite.config.js              # Vite 配置（含 AutoImport / Components 插件）
+│   │   ├── jsconfig.json               # 路径别名与编译选项
 │   │   ├── package.json                # 前端依赖
 │   │   ├── src/
-│   │   │   ├── main.js                 # Vue 入口
-│   │   │   ├── App.vue                 # 根组件
-│   │   │   ├── router/index.js         # 路由配置
-│   │   │   ├── utils/request.js        # Axios 封装
+│   │   │   ├── main.js                 # Vue 入口（含全局 errorHandler）
+│   │   │   ├── App.vue                 # 根组件（ElConfigProvider + ErrorBoundary）
+│   │   │   ├── router/index.js         # 路由配置 + 角色守卫
+│   │   │   ├── components/             # 通用组件
+│   │   │   │   └── ErrorBoundary.vue   # 渲染异常兜底
+│   │   │   ├── composables/            # 组合式函数
+│   │   │   │   ├── useAuth.js          # 登录态 / 角色判断
+│   │   │   │   ├── useCrud.js          # 分页 CRUD 通用逻辑
+│   │   │   │   └── useFormDialog.js    # 表单弹窗通用逻辑
+│   │   │   ├── constants/index.js      # API 路径 / 状态映射（订单 · 影片）
+│   │   │   ├── types/axios.d.ts        # Axios 响应类型增强
+│   │   │   ├── env.d.ts                # 环境变量类型声明
+│   │   │   ├── auto-imports.d.ts       # 自动导入声明（unplugin-auto-import 生成）
+│   │   │   ├── components.d.ts         # 自动注册组件声明（unplugin-vue-components 生成）
+│   │   │   ├── utils/                  # 工具层
+│   │   │   │   ├── request.js          # Axios 封装（拦截器 + 统一错误提示）
+│   │   │   │   ├── authStorage.js      # 登录态本地存储
+│   │   │   │   └── format.js           # 票房格式化（DB 万元 → 万/亿）
 │   │   │   ├── views/                  # 页面视图
 │   │   │   │   ├── Login.vue / Register.vue / 404.vue
 │   │   │   │   ├── Front.vue           # 用户前台布局
@@ -82,7 +97,7 @@ project_02/
 │   │   │   │   ├── front/              # 12个用户端页面
 │   │   │   │   ├── back/               # 7个影院端页面
 │   │   │   │   └── manage/             # 16个管理端页面
-│   │   │   └── assets/                 # 静态资源
+│   │   │   └── assets/                 # 静态资源（css / imgs）
 │   ├── sql/                           # 数据库初始化脚本
 │   │   ├── README.md                  # 数据库说明
 │   │   ├── schema.sql                 # 14张表建表语句
@@ -279,6 +294,9 @@ npm run dev
 - Backend password changes trust the JWT-derived request role instead of the request body role.
 - `AuthInterceptor` enforces role boundaries for admin-only resources and write operations on protected resources.
 - Database relations now use explicit keys for the main booking path: `room.cinema_id`, `record.film_id`, and `ordered.record_id`; `xm_film/sql` is the single source of truth for both schema and seed data.
+- Film type/area display reads backend-resolved fields only: `areaName` (SQL `LEFT JOIN area`) and `typeList` (filled by `FilmService.fillFilmTypes` from `film_type`). `Film` has no `types` field — do not reintroduce frontend type/area dictionaries.
+- Box office formatting is centralized in `xm_film/vue/src/utils/format.js`; `film.box_office` is stored in **万元** (see `xm_film/sql/schema.sql`), so it renders 万 below 1 亿 and 亿 at or above it.
+- Status tag colors are centralized in `xm_film/vue/src/constants/index.js` (`FILM_STATUS_MAP`/`getFilmStatusType`, `ORDER_STATUS_MAP`/`getOrderStatusType`); views import them instead of re-declaring the switch.
 
 ## Git 提交历史
 

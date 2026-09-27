@@ -162,6 +162,7 @@ import request from "@/utils/request.js";
 import 'element-plus/theme-chalk/el-pagination.css';
 import 'element-plus/theme-chalk/el-button.css';
 import { API_PATHS, apiById, apiPage } from '@/constants';
+import { formatBoxOffice } from '@/utils/format.js';
 
 // 1. 路由相关（获取电影ID + 路由跳转）
 const route = useRoute();
@@ -194,14 +195,7 @@ const cinemaData = reactive({
   total: 0      // 总影院数（后端返回的PageInfo.total）
 });
 
-// 4. 工具函数
-// 票房格式化（保持原逻辑，适配后端数值）
-const formatBoxOffice = (value) => {
-  if (value === 0 || !value) return '暂无数据';
-  return value >= 10000 ? `${(value / 10000).toFixed(1)}万` : `${value}元`;
-};
-
-// 5. 路由跳转函数
+// 4. 路由跳转函数
 // 跳转到电影详情页
 const goToFilmDetail = (filmId) => {
   if (!filmId || isNaN(Number(filmId))) {
@@ -224,7 +218,7 @@ const goCinemaDetail = (cinemaId, filmId) => {
   });
 };
 
-// 6. 加载电影完整信息（补充所有字段，与后端返回对齐）
+// 5. 加载电影完整信息（补充所有字段，与后端返回对齐）
 const fetchFilmFullInfo = () => {
   // 前置校验：电影ID无效直接提示
   if (!filmId || isNaN(Number(filmId))) {
@@ -236,18 +230,6 @@ const fetchFilmFullInfo = () => {
       .then(res => {
         if (res.code === '200' && res.data) {
           const data = res.data;
-          // 类型映射表（与后端typeIds返回值对齐）
-          const typeMap = {
-            1: '记录', 4: '恐怖', 5: '喜剧', 6: '动漫', 7: '伦理', 13: '爱情', 14: '动作',
-            15: '灾难', 16: '体育', 17: '动画', 18: '历史', 19: '犯罪', 20: '科幻', 21: '悬疑',
-            22: '剧情', 23: '冒险', 24: '家庭'
-          };
-          // 地区映射表（与后端areaId返回值对齐）
-          const areaMap = {
-            1: '中国大陆', 2: '美国', 3: '日本', 4: '德国', 5: '法国', 6: '韩国', 7: '中国香港',
-            8: '波兰', 9: '西班牙', 10: '意大利', 11: '印度', 12: '俄罗斯', 13: '英国', 14: '中国台湾', 15: '葡萄牙'
-          };
-
           // 完整赋值电影信息（覆盖所有前端展示字段）
           Object.assign(film, {
             id: data.id,
@@ -256,10 +238,8 @@ const fetchFilmFullInfo = () => {
             img: data.img,
             score: data.score || 0,
             boxOffice: data.boxOffice || 0,
-            // 处理类型数组（后端返回typeIds为JSON字符串，需解析）
-            types: data.typeIds ? (() => { try { return JSON.parse(data.typeIds).map(id => typeMap[id] || `未知类型(${id})`); } catch { return []; } })() : [],
-            // 处理地区（后端返回areaId，映射为地区名称）
-            area: data.areaId ? (areaMap[data.areaId] || `未知地区(${data.areaId})`) : '未知地区',
+            types: (data.typeList || []).map(t => t.title),
+            area: data.areaName || '未知地区',
             time: data.time ? `${data.time}分钟` : '未知时长',
             language: data.language || '未知语言',
             resolution: data.resolution || '未知格式',
@@ -281,7 +261,7 @@ const fetchFilmFullInfo = () => {
       });
 };
 
-// 7. 核心功能：加载“当前电影上映的影院”（与后端接口参数严格对齐）
+// 6. 核心功能：加载“当前电影上映的影院”（与后端接口参数严格对齐）
 const loadCinemaList = () => {
   // 前置校验：电影ID无效不发起请求
   if (!filmId || isNaN(Number(filmId))) {
@@ -322,7 +302,7 @@ const loadCinemaList = () => {
       });
 };
 
-// 8. 分页事件处理（与后端分页逻辑联动）
+// 7. 分页事件处理（与后端分页逻辑联动）
 // 每页条数改变
 const handleSizeChange = (newSize) => {
   cinemaData.pageSize = newSize;
@@ -336,7 +316,7 @@ const handleCurrentChange = (newPage) => {
   loadCinemaList(); // 重新加载筛选后的影院列表
 };
 
-// 9. 页面初始化：先加载电影信息，再加载对应影院（确保筛选条件有效）
+// 8. 页面初始化：先加载电影信息，再加载对应影院（确保筛选条件有效）
 onMounted(() => {
   // 先加载电影信息，成功后再加载影院列表
   fetchFilmFullInfo().then(() => {
