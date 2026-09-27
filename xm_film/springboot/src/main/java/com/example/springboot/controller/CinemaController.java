@@ -53,7 +53,23 @@ public class CinemaController extends BaseController<Cinema> {
                 filmId = Integer.valueOf(filmIdStr);
             }
         }
-        return Result.success(cinemaService.selectPage(cinema, filmId, pageNum, pageSize));
+        return Result.success(cinemaService.selectPage(cinema, filmId, pageNum, pageSize, !isAdmin()));
+    }
+
+    @Operation(summary = "查询全部影院", description = "未登录/非管理员只会看到「已审核」的影院")
+    @Override
+    @GetMapping
+    public Result list(Cinema cinema) {
+        return Result.success(cinemaService.selectAll(cinema, !isAdmin()));
+    }
+
+    @Operation(summary = "新增影院", description = "仅管理员；新影院初始状态为「未审核」")
+    @Override
+    @PostMapping
+    public Result add(@RequestBody Cinema cinema) {
+        requireAdmin();
+        cinemaService.add(cinema);
+        return Result.success();
     }
 
     @Override

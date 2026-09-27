@@ -53,7 +53,7 @@ project_02/
 │   │       │   │   ├── FileUtil.java           # 文件上传工具（含 MIME 白名单）
 │   │       │   │   ├── JwtUtils.java           # JWT 令牌工具（JJWT 新版 API）
 │   │       │   │   ├── Result.java             # 统一响应封装
-│   │       │   │   └── enums/RoleEnum.java     # 角色枚举
+│   │       │   │   └── enums/                  # 词表枚举（RoleEnum / OrderStatus / RecordStatus / PayResult / CinemaStatus）
 │   │       │   ├── common/config/
 │   │       │   │   ├── AuthInterceptor.java    # JWT 认证拦截器
 │   │       │   │   └── WebMvcConfig.java       # Web MVC 配置
@@ -75,7 +75,8 @@ project_02/
 │   │   │   ├── App.vue                 # 根组件（ElConfigProvider + ErrorBoundary）
 │   │   │   ├── router/index.js         # 路由配置 + 角色守卫
 │   │   │   ├── components/             # 通用组件
-│   │   │   │   └── ErrorBoundary.vue   # 渲染异常兜底
+│   │   │   │   ├── ErrorBoundary.vue   # 渲染异常兜底
+│   │   │   │   └── OrderPayDialog.vue  # 支付弹窗（选座页与订单页共用）
 │   │   │   ├── composables/            # 组合式函数
 │   │   │   │   ├── useAuth.js          # 登录态 / 角色判断
 │   │   │   │   ├── useCrud.js          # 分页 CRUD 通用逻辑
@@ -116,12 +117,12 @@ project_02/
 
 ### 功能模块
 - **影片管理** — 影片 CRUD、分类/地区关联、演员关联、预告片上传
-- **影院管理** — 影院注册审核、信息维护、影厅管理
+- **影院管理** — 影院注册审核（未审核既不可登录也不对外展示，管理端提供「审核通过」入口）、信息维护、影厅管理
 - **排片管理** — 创建放映场次（关联影片、影厅、时间、票价）；校验时间晚于当前、票价大于 0、同影厅时段不重叠
 - **在线选座** — 座位规模由影厅配置（`room.seat_rows` / `seat_cols`，默认 8×8）驱动的可视化选座图、选定下单；本人未支付锁座可继续支付或释放
 - **订单系统** — 购票下单、订单状态流转（待支付 → 待取票 → 已取票；待支付可取消或超时自动取消；待取票可退票 → 已退票）、支付与退款资金凭证留痕
-- **评价系统** — 用户对影片评分评价
-- **排行榜** — 票房榜 Top10、评分榜 Top5
+- **评价系统** — 已取票用户在订单页对影片评分 + 评语（一人一片一条，可修改）；评价均分回写 `film.score` 并驱动评分榜；影片详情页公开展示评价列表
+- **排行榜** — 票房榜 Top10、评分榜 Top5（按 `film.score`，即该片评价均分）
 - **搜索筛选** — 按影片名称、类型、年份、地区多维筛选
 - **文件上传** — 图片/视频上传，支持本地存储（MIME 白名单校验）
 
@@ -148,7 +149,10 @@ project_02/
 | `/api/v1/auth/password` | PUT | 修改密码 | Bearer |
 | `/api/v1/auth/years` | GET | 获取年份列表（搜索筛选用） | 否 |
 
-> 匿名 GET 访问 `/api/v1/films`、`/api/v1/cinemas`、`/api/v1/types`、`/api/v1/areas`、`/api/v1/notices`、`/api/v1/actors` 等公开资源无需认证，由 AuthInterceptor 自动放行。写操作（POST/PUT/DELETE）仍需登录。
+> 匿名 GET 访问 `/api/v1/films`、`/api/v1/cinemas`、`/api/v1/types`、`/api/v1/areas`、`/api/v1/notices`、`/api/v1/actors`、`/api/v1/records`、`/api/v1/marks` 等公开资源无需认证，由 AuthInterceptor 自动放行。写操作（POST/PUT/DELETE）仍需登录；**令牌失效时公开只读资源仍按匿名放行**，否则前端 401 处理会把游客从公开页踢去登录页。
+
+> `marks` 的写操作有额外规则（在 `MarkController` 内校验，拦截器只做前缀级判断）：发表评价仅限 USER 且评价人取自 JWT；修改/删除仅限本人，ADMIN 可管理全部。
+> `cinemas` 的公开列表只返回 `已审核` 影院，管理员（含后台审核列表）返回全部；新增影院仅管理员可用，初始状态固定为 `未审核`。
 
 ### 资源管理接口 (`/api/v1/{resources}`)
 13 个资源（`admins`、`users`、`cinemas`、`films`、`actors`、`areas`、`types`、`notices`、`rooms`、`records`、`orders`、`marks`、`videos`）统一提供以下 RESTful 接口：
@@ -170,7 +174,7 @@ project_02/
 | `/api/v1/films/mark/top` | GET | 评分排行榜 Top5 |
 | `/api/v1/films/search` | GET | 按标题搜索电影 |
 | `/api/v1/films/by-cinema` | GET | 按影院查询电影 |
-| `/api/v1/cinemas/page` | GET | 影院分页（支持按电影筛选） |
+| `/api/v1/cinemas/page` | GET | 影院分页（支持按电影筛选）；匿名/非管理员只返回 `已审核` 影院，管理员返回全部（否则后台审核列表查不到待审核影院） |
 | `/api/v1/files/upload` | POST | 文件上传（图片/视频） |
 
 ### 订单状态机接口（`/api/v1/orders/**`）
@@ -202,6 +206,8 @@ home, film, room, record, ordered, person, password
 | 需登录（USER） | buyTicket, orders, person, password | 操作类页面，未登录时弹框提示跳转登录 |
 
 访问受保护页面时，系统弹出确认框 → 跳转 `/login?redirect=<原路径>` → 登录成功后自动回跳。登录页根据角色（USER/CINEMA/ADMIN）分别跳转 `/front/home`、`/back/home`、`/manage/home`。
+
+评价闭环：`orders` 页对 `已取票` 的订单提供「去评价 / 修改评价」（弹窗内评分 + 评语）；`filmDetail/:id`（公开页）展示该片的评价列表，匿名可读。
 
 ## 快速启动命令
 
@@ -264,7 +270,7 @@ npm run dev
 3. **文件存储**：当前为本地存储，建议生产环境迁移至 OSS（阿里云/S3）
 4. **日志配置**：✅ 已切换为 SLF4J + Logback，`logback-spring.xml` 按 mapper 包级别控制 SQL 日志（可通过 `MYBATIS_LOG_LEVEL` 环境变量调整）
 5. **API 文档**：✅ 已集成 SpringDoc OpenAPI —— `SwaggerConfig` 定义 OpenAPI Bean 与全局 Bearer 鉴权方案，控制器标注 `@Tag`/`@Operation`，规范端点 `/v3/api-docs`，UI 页面 `static/swagger-ui.html`（swagger-ui 资源走 CDN，离线环境需改用 `springdoc-openapi-starter-webmvc-ui` 本地内嵌）
-6. **单元测试**：✅ 已覆盖 9 个测试类 / 90 个用例 —— Service 层 CRUD 与权限（Admin/User/Cinema/Film/Ordered）、订单状态机（支付超时/退票窗口/座位边界与单笔上限）、订单座位并发冲突、AuthInterceptor 访问边界、全局异常处理；`mvn test` 可复现
+6. **单元测试**：✅ 已覆盖 10 个测试类 / 114 个用例 —— Service 层 CRUD 与权限（Admin/User/Cinema/Film/Ordered/Mark）、订单状态机（支付超时/退票窗口/座位边界与单笔上限）、评价规则（评分区间/一人一片去重/均分回写/归属不可转移）、影院审核与可见性下推、订单座位并发冲突、AuthInterceptor 访问边界（含令牌失效与匿名放行）、全局异常处理；`mvn test` 可复现
 7. **前端构建**：生产构建后建议接入 CDN 分发静态资源
 8. **CI/CD**：✅ 已配置 GitHub Actions 流水线（后端编译 → 前端构建）
 9. **错误边界**：前端可引入 Vue ErrorBoundary 机制处理渲染异常
@@ -310,7 +316,7 @@ npm run dev
 - Database relations now use explicit keys for the main booking path: `room.cinema_id`, `record.film_id`, and `ordered.record_id`; `xm_film/sql` is the single source of truth for both schema and seed data.
 - Film type/area display reads backend-resolved fields only: `areaName` (SQL `LEFT JOIN area`) and `typeList` (filled by `FilmService.fillFilmTypes` from `film_type`). `Film` has no `types` field — do not reintroduce frontend type/area dictionaries.
 - Box office formatting is centralized in `xm_film/vue/src/utils/format.js`; `film.box_office` is stored in **万元** (see `xm_film/sql/schema.sql`), so it renders 万 below 1 亿 and 亿 at or above it.
-- Status tag colors are centralized in `xm_film/vue/src/constants/index.js` (`FILM_STATUS_MAP`/`getFilmStatusType`, `ORDER_STATUS_MAP`/`getOrderStatusType`, `RECORD_STATUS_MAP`/`getRecordStatusType`); views import them instead of re-declaring the switch.
+- Status tag colors are centralized in `xm_film/vue/src/constants/index.js` (`FILM_STATUS_MAP`/`getFilmStatusType`, `ORDER_STATUS_MAP`/`getOrderStatusType`, `RECORD_STATUS_MAP`/`getRecordStatusType`, `CINEMA_STATUS_MAP`/`getCinemaStatusType`); views import them instead of re-declaring the switch.
 - 影院"上映哪些影片"由排片 `record` 派生（`FilmMapper.selectByCinema` / `CinemaMapper.selectByFilmId` 用 `EXISTS` 子查询）。**不存在影院-影片关联表**（原 `cinema_film` 已删除）——新建排片后前台立即可见，不要再引入第二张关联表。`record.film_id` 为 `NOT NULL`。
 - 场次可购票性由 `start` 与 `status` 共同决定，唯一权威实现在 `RecordService.isPurchasable`（`start` 晚于当前 且 `status != 停售`）；`OrderedService.insertOrder` 复用该规则做下单拦截，前端 `CinemaDetail.vue` 的 `recordState()`/`canBuy()` 与之同构。`未开始/放映中/已结束` 是派生状态，不落库；`record.status` 只保留 `正常/停售` 一个人工开关。
 - 排片的创建/编辑统一走 `RecordController` → `RecordService.validateSchedule(record, previousStart)`：校验影厅与影片归属、`start` 晚于当前（编辑时时间未改动则不重复校验，保证存量过期场次仍可停售）、`price > 0`、同影厅时段不重叠（按影片片长计算区间，无片长时按 120 分钟兜底），并按 `filmId` 回填 `title`。
@@ -322,6 +328,11 @@ npm run dev
 - 金额字段必须是包装类型：`ordered.total` 为 `Double` 而非 `double`。`updateById` 用 `<if test="total != null">` 守卫，原始类型永远非 null，会让支付/取票/取消等局部更新把金额写成 0.00（另见 Bug.md BUG-034）。
 - 选座图的座位来源是 `record.roomSeatRows` / `roomSeatCols`（`RecordMapper` 从 `room` 表 JOIN 出来），而不是写死的 8×8，也不是让用户端去读 `/api/v1/rooms`（USER 无权访问影厅接口）。后端座位合法性校验同样按影厅边界，单笔订单座位数上限 6（`OrderedService.MAX_SEATS_PER_ORDER`）。
 - 影厅的 `title`（影院名称）由后端按所属影院记录派生，前端不再手填；`back/Room.vue` 的影院名是只读展示。影厅 `seat_rows`/`seat_cols` 合法区间为 1~50，由 `RoomController.validateSeatLayout` 兜底。
+- 影片评分只有一个数值来源：`mark.score`（`DECIMAL(3,1)`，0~10）。`film.score` 是派生缓存，由 `MarkService` 在评价增删改后经 `FilmMapper.recalculateScore` 回写；无评价时保留基线分、**不归零**（种子数据用同一条 `EXISTS` 守卫的 SQL 规则，保证新库与增量库一致）。评价唯一性由 `MarkMapper.countByUserAndFilm` 保证（一人一片一条），评价人只认 JWT 里的 `userId`。前端「去评价」入口在 `front/Orders.vue`（仅 `已取票` 订单），`front/FilmDetail.vue` 展示评价列表。
+- 影院审核状态词表 `CinemaStatus` 只有 `未审核`/`已审核`（与 `schema.sql` 默认值、`data.sql` 种子一致）。`CinemaService.login` 拒绝未审核影院；公开列表经 `CinemaMapper.selectByFilmId` 的 `approvedOnly` 过滤，该标记由 `CinemaController` 按 `!isAdmin()` 传入 —— 管理员必须看得到未审核的，否则无法审核（见 Bug.md BUG-036）。
+- `WebMvcConfig.excludePathPatterns` 是**角色盲区**：被排除的路径不执行 `AuthInterceptor`，request 上没有 `role`/`userId`，控制器里的角色判断会静默失效（BUG-036 即由此而来）。公开访问统一交给 `PUBLIC_READ_PREFIXES`，**不要往排除表里加路径**。
+- 令牌失效时公开只读资源仍按匿名放行（`AuthInterceptor.isAnonymousRead`）。否则游客带着过期令牌浏览公开页会被判 401，而前端 `request.js` 的 401 处理会跳登录页 —— 公开内容就变成了事实上的必须登录。
+- `Film.boxOffice` 已由原始 `double` 改为 `Double`，与 `ordered.total` 同因同治（`film.box_office` 有 `DEFAULT 0.0`，新增影片不受影响）。凡是被 `<if test="X != null">` 守卫的字段一律用包装类型。
 
 ## Git 提交历史
 

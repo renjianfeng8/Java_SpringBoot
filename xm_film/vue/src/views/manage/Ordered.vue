@@ -14,7 +14,7 @@
     </div>
 
     <div class="card" style="margin-bottom: 5px">
-      <el-table stripe :data="dataList" @selection-change="onSelectionChange">
+      <el-table v-loading="loading" stripe :data="dataList" @selection-change="onSelectionChange">
         <el-table-column type="selection" width="55"/>
         <el-table-column type="expand">
           <template #default="props">
@@ -109,7 +109,7 @@ import request from '@/utils/request'
 
 const crud = useCrud(API_PATHS.ORDERS)
 const { dataList, total, pageNum, pageSize, searchForm, selectedIds,
-        del, delBatch, onSearch, onReset, onPageChange, onSizeChange, onSelectionChange } = crud
+        loading, del, delBatch, onSearch, onReset, onPageChange, onSizeChange, onSelectionChange } = crud
 
 const roomData = []
 

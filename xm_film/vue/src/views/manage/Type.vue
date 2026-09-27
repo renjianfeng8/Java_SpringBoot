@@ -12,7 +12,7 @@
     </div>
 
     <div class="card mb-2">
-      <el-table stripe :data="dataList" @selection-change="onSelectionChange">
+      <el-table v-loading="loading" stripe :data="dataList" @selection-change="onSelectionChange">
         <el-table-column type="selection" width="55" />
         <el-table-column label="分类名称" prop="title" />
         <el-table-column label="操作">
@@ -62,7 +62,7 @@ import { API_PATHS } from '@/constants'
 
 const crud = useCrud(API_PATHS.TYPES)
 const { dataList, total, pageNum, pageSize, searchForm, selectedIds,
-        del, delBatch, onSearch, onReset, onPageChange, onSizeChange, onSelectionChange } = crud
+        loading, del, delBatch, onSearch, onReset, onPageChange, onSizeChange, onSelectionChange } = crud
 const { dialogVisible, formRef, form, rules, openAdd, openEdit, submit, close } = useFormDialog(crud, {
   defaultForm: { title: '' },
   rules: { title: [{ required: true, message: '请输入电影分类', trigger: 'blur' }] }

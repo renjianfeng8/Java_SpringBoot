@@ -40,8 +40,10 @@ public class WebMvcConfig implements WebMvcConfigurer {
                         "/api/v1/films/mark/**",
                         "/api/v1/films/search",
                         "/api/v1/films/by-cinema",
-                        "/api/v1/cinemas/page",
                         "/api/v1/notices/page"
                 );
+        // 注意：不要把 /api/v1/cinemas/page 加进排除表。匿名 GET 已由 AuthInterceptor 的
+        // PUBLIC_READ_PREFIXES 放行，而一旦排除在这里，拦截器就不工作、不会往 request 写
+        // role 属性，控制器里的 role 判断（管理员看全部 / 其他人只看已审核）就永远失效。
     }
 }

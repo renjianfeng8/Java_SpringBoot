@@ -9,7 +9,7 @@
       <el-button type="danger" @click="handleDelBatch">批量删除</el-button>
     </div>
     <div class="card" style="margin-bottom: 5px">
-      <el-table stripe :data="dataList" @selection-change="onSelectionChange">
+      <el-table v-loading="loading" stripe :data="dataList" @selection-change="onSelectionChange">
         <el-table-column type="selection" width="55" />
         <el-table-column label="影院名称" prop="title" />
         <el-table-column label="影厅名称" prop="name" />
@@ -35,7 +35,7 @@ import { ElMessageBox } from 'element-plus'
 import { useCrud } from '@/composables/useCrud'
 import { API_PATHS } from '@/constants'
 
-const { dataList, total, pageNum, pageSize, searchForm, selectedIds, load, del, delBatch, onSearch, onReset, onPageChange, onSizeChange, onSelectionChange } = useCrud(API_PATHS.ROOMS)
+const { dataList, total, pageNum, pageSize, searchForm, selectedIds, loading, load, del, delBatch, onSearch, onReset, onPageChange, onSizeChange, onSelectionChange } = useCrud(API_PATHS.ROOMS)
 
 load()
 

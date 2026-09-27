@@ -332,11 +332,11 @@ file:
 ### 核心功能
 
 - **影片管理** — 影片 CRUD、分类/地区关联、演员关联、预告片上传
-- **影院管理** — 影院注册审核、信息维护、影厅管理
+- **影院管理** — 影院注册审核（未审核既不可登录也不对外展示，管理员审核入口）、信息维护、影厅管理
 - **排片管理** — 创建放映场次（关联影厅、时间、价格）
 - **在线选座** — 按影厅座位规模渲染的可视化座位图、选定下单
 - **订单系统** — 购票下单、订单状态流转（含超时取消、取票、退票）与支付/退款凭证留痕
-- **评价系统** — 用户对影片评分评价
+- **评价系统** — 已取票用户在订单页评价影片（一单一评一人一片），评价均分回写 `film.score` 并驱动评分榜；影片详情页展示评价
 - **排行榜** — 票房榜、评分榜（SQL 级排序）
 - **搜索筛选** — 按影片名称、类型、年份、地区多维筛选
 - **文件上传** — 图片/视频上传，支持本地存储
@@ -399,8 +399,8 @@ file:
 |------|------|----------|
 | `admin` | 系统管理员 | username, password, name, role |
 | `user` | 普通用户 | username, password, name, phone |
-| `cinema` | 影院 | name, address, phone, status |
-| `film` | 电影 | title, content, score, boxOffice（多对多关联 type） |
+| `cinema` | 影院 | name, address, phone, status（未审核/已审核） |
+| `film` | 电影 | title, content, score（由评价均分回写）, boxOffice（多对多关联 type） |
 | `film_type` | 电影-类型关联（多对多） | film_id, type_id |
 | `actor` | 演职人员 | actor, title, figure, grade |
 | `area` | 地区 | title |
@@ -409,7 +409,7 @@ file:
 | `room` | 影厅 | name, title, cinema_id, seat_rows, seat_cols |
 | `record` | 放映记录（排片） | film_id, cinema_id, room_id, start, price, status |
 | `ordered` | 购票订单 | record_id, user_id, seat, total, status, pay_time/refund_time |
-| `mark` | 用户评价 | film_id, user_id, content, score |
+| `mark` | 用户评价 | film_id, user_id, score（评分 0~10，影片评分的唯一数值来源）, mark（评语） |
 | `video` | 预告片 | film_id, url, title |
 
 > 密码字段统一使用 BCrypt 加密存储（兼容旧版明文密码迁移）。

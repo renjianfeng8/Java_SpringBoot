@@ -12,6 +12,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
+import java.util.List;
+
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
@@ -107,10 +109,45 @@ class CinemaServiceTest {
         cinemaService.add(cinema);
 
         assertEquals("CINEMA", cinema.getRole());
-        assertEquals("待审核", cinema.getStatus());
+        assertEquals("未审核", cinema.getStatus());
         assertNotNull(cinema.getPassword());
         assertNotEquals("pwd123", cinema.getPassword());
         verify(cinemaMapper).insert(cinema);
+    }
+
+    @Test
+    void login_withUnauditedCinema_shouldThrow() {
+        mockCinema.setStatus("未审核");
+        when(cinemaMapper.selectByUsername("asks")).thenReturn(mockCinema);
+
+        Account account = new Account();
+        account.setUsername("asks");
+        account.setPassword("cinema123");
+
+        CustomException ex = assertThrows(CustomException.class, () -> cinemaService.login(account));
+        assertTrue(ex.getMsg().contains("审核"));
+    }
+
+    @Test
+    void selectPage_shouldForwardApprovedOnlyFlag() {
+        when(cinemaMapper.selectByFilmId(any(Cinema.class), isNull(), eq(true)))
+                .thenReturn(List.of(mockCinema));
+
+        cinemaService.selectPage(new Cinema(), null, 1, 10, true);
+
+        // 公开列表必须按「仅已审核」下推给 SQL，否则未审核影院会对外可见
+        verify(cinemaMapper).selectByFilmId(any(Cinema.class), isNull(), eq(true));
+    }
+
+    @Test
+    void selectAll_shouldForwardApprovedOnlyFlag() {
+        when(cinemaMapper.selectByFilmId(any(Cinema.class), isNull(), eq(false)))
+                .thenReturn(List.of(mockCinema));
+
+        cinemaService.selectAll(new Cinema(), false);
+
+        // 管理端审核列表需要看到未审核影院，故该路径不得过滤
+        verify(cinemaMapper).selectByFilmId(any(Cinema.class), isNull(), eq(false));
     }
 
     @Test

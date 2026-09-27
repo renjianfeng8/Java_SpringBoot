@@ -10,7 +10,7 @@
       <el-button type="danger" @click="handleDelBatch">批量删除</el-button>
     </div>
     <div class="card" style="margin-bottom: 5px">
-      <el-table stripe :data="dataList" @selection-change="onSelectionChange">
+      <el-table v-loading="loading" stripe :data="dataList" @selection-change="onSelectionChange">
         <el-table-column type="selection" width="70" />
         <el-table-column label="电影名称" prop="title" />
         <el-table-column label="电影图片" prop="img">
@@ -82,7 +82,7 @@ import { API_PATHS, FILE_UPLOAD_URL } from '@/constants'
 const uploadUrl = FILE_UPLOAD_URL
 
 const crud = useCrud(API_PATHS.VIDEOS)
-const { dataList, total, pageNum, pageSize, searchForm, selectedIds, del, delBatch, onSearch, onReset, onPageChange, onSizeChange, onSelectionChange } = crud
+const { dataList, total, pageNum, pageSize, searchForm, selectedIds, loading, del, delBatch, onSearch, onReset, onPageChange, onSizeChange, onSelectionChange } = crud
 const { dialogVisible, formRef, form, rules, openAdd, openEdit, submit, close } = useFormDialog(crud, {
   defaultForm: { title: '', name: '', img: '', preview: '', start: '' },
   rules: {

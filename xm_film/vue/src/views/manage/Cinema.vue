@@ -12,7 +12,7 @@
     </div>
 
     <div class="card" style="margin-bottom: 5px">
-      <el-table stripe :data="dataList" @selection-change="onSelectionChange">
+      <el-table v-loading="loading" stripe :data="dataList" @selection-change="onSelectionChange">
         <el-table-column type="selection" width="50"/>
         <el-table-column type="expand">
           <template #default="props">
@@ -38,9 +38,7 @@
                 <el-image style="width:36px;height:36px;object-fit:cover;" :src="props.row.certificate"/>
               </el-descriptions-item>
               <el-descriptions-item label="审核状态">
-                <el-tag :type="getStatusType(getTransformedStatus(props.row.status))">
-                  {{ getTransformedStatus(props.row.status) }}
-                </el-tag>
+                <el-tag :type="getStatusType(props.row.status)">{{ props.row.status || '未知状态' }}</el-tag>
               </el-descriptions-item>
             </el-descriptions>
           </template>
@@ -59,9 +57,7 @@
         <el-table-column label="地址" prop="address" show-overflow-tooltip/>
         <el-table-column label="审核状态" prop="status">
           <template #default="scope">
-            <el-tag :type="getStatusType(getTransformedStatus(scope.row.status))">
-              {{ getTransformedStatus(scope.row.status) }}
-            </el-tag>
+            <el-tag :type="getStatusType(scope.row.status)">{{ scope.row.status || '未知状态' }}</el-tag>
           </template>
         </el-table-column>
         <el-table-column label="角色" prop="role">
@@ -71,6 +67,8 @@
         </el-table-column>
         <el-table-column label="操作">
           <template #default="scope">
+            <el-button v-if="scope.row.status !== CINEMA_STATUS.APPROVED" style="font-size: 14px" link type="success"
+                       @click="approve(scope.row)">审核通过</el-button>
             <el-button style="font-size: 18px" link :icon="Edit" @click="openEdit(scope.row)" type="primary"></el-button>
             <el-button style="font-size: 18px" link :icon="Delete" @click="() => handleDel(scope.row.id)" type="danger"></el-button>
           </template>
@@ -125,6 +123,12 @@
             <el-button type="primary">上传影院的营业执照</el-button>
           </el-upload>
         </el-form-item>
+        <!-- 新增时状态由后端固定为「未审核」，故仅在编辑时暴露审核状态 -->
+        <el-form-item v-if="form.id" label="审核状态" prop="status">
+          <el-select v-model="form.status" placeholder="请选择审核状态" style="width: 100%">
+            <el-option v-for="s in CINEMA_STATUS_OPTIONS" :key="s" :label="s" :value="s" />
+          </el-select>
+        </el-form-item>
       </el-form>
       <template #footer>
         <div class="dialog-footer">
@@ -142,13 +146,17 @@ import { Delete, Edit, Search } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useCrud } from '@/composables/useCrud'
 import { useFormDialog } from '@/composables/useFormDialog'
-import { API_PATHS, FILE_UPLOAD_URL } from '@/constants'
+import request from '@/utils/request'
+import {
+  API_PATHS, CINEMA_STATUS, CINEMA_STATUS_OPTIONS, FILE_UPLOAD_URL,
+  getCinemaStatusType as getStatusType
+} from '@/constants'
 
 const crud = useCrud(API_PATHS.CINEMAS)
 const { dataList, total, pageNum, pageSize, searchForm, selectedIds,
-        del, delBatch, onSearch, onReset, onPageChange, onSizeChange, onSelectionChange } = crud
+        loading, del, delBatch, onSearch, onReset, onPageChange, onSizeChange, onSelectionChange } = crud
 const { dialogVisible, formRef, form, rules, openAdd, openEdit, submit, close } = useFormDialog(crud, {
-  defaultForm: { username: '', name: '', phone: '', email: '', address: '', leader: '', code: '', certificate: '', avatar: '' },
+  defaultForm: { username: '', name: '', phone: '', email: '', address: '', leader: '', code: '', certificate: '', avatar: '', status: CINEMA_STATUS.UNAUDITED },
   rules: {
     username: [{ required: true, message: '请输入账号', trigger: 'blur' }],
     name: [{ required: true, message: '请输入影院名称', trigger: 'blur' }],
@@ -183,24 +191,23 @@ function handleCertificateUpload(res) {
   else { ElMessage.error(res.msg || '营业执照上传失败') }
 }
 
-function getTransformedStatus(status) {
-  if (!status) return '未知状态'
-  if (status === '未审核') return '待审核'
-  if (status === '审核通过') return '已审核'
-  return status
-}
-
-function getStatusType(status) {
-  if (!status) return 'info'
-  switch (status) {
-    case '未审核': return 'warning'
-    case '待审核': return 'info'
-    case '已审核': return 'success'
-    case '审核拒绝': return 'danger'
-    case '审核通过': return 'success'
-    case '已审批': return 'warning'
-    default: return 'info'
-  }
+// 审核通过：只提交状态，后端按 id 局部更新（影院信息其余字段不变）
+function approve(row) {
+  ElMessageBox.confirm(`确认通过「${row.name}」的影院审核吗？通过后该影院会在前台可见。`, '审核确认', { type: 'warning' })
+    .then(async () => {
+      try {
+        const res = await request.put(API_PATHS.CINEMAS, { id: row.id, status: CINEMA_STATUS.APPROVED })
+        if (res.code === '200') {
+          ElMessage.success('审核通过')
+          await crud.load()
+        } else {
+          ElMessage.error(res.msg || '审核失败')
+        }
+      } catch (error) {
+        // request.js 已提示后端返回的错误信息
+      }
+    })
+    .catch(() => {})
 }
 </script>
 

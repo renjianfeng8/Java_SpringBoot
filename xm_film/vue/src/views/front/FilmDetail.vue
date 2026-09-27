@@ -175,6 +175,25 @@
           </div>
         </div>
       </div>
+
+      <!-- 3.3 用户评价区域（数据来自 /api/v1/marks，匿名可读） -->
+      <div style="width: 60%; margin: 30px auto 0;">
+        <h3 style="font-size: 18px; color: #333; border-left: 4px solid #ef4238; padding-left: 10px;">
+          用户评价
+          <span style="font-size: 14px; color: #999; font-weight: normal;">（{{ marks.length }} 条）</span>
+        </h3>
+        <div v-if="loadingMarks" style="padding: 20px; color: #999;">正在加载评价...</div>
+        <div v-else-if="!marks.length" style="padding: 20px; color: #999;">暂无评价，购票取票后可以发表第一条</div>
+        <div v-else style="margin-top: 15px;">
+          <div v-for="item in marks" :key="item.id" style="padding: 12px 0; border-bottom: 1px solid #f0f0f0;">
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+              <span style="color: #333; font-weight: bold;">{{ item.userName || '匿名用户' }}</span>
+              <span style="color: #ff9900; font-weight: bold;">{{ item.score }} 分</span>
+            </div>
+            <div v-if="item.mark" style="margin-top: 6px; color: #666; line-height: 1.6;">{{ item.mark }}</div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -365,9 +384,31 @@ const goToFilmCinema = (filmId) => {
   });
 };
 
-// 6. 页面初始化：加载电影详情和演职人员
+// 6. 用户评价（公开数据；由用户在订单页「已取票 → 去评价」发表）
+const marks = ref([]);        // 该影片的评价列表
+const loadingMarks = ref(false);
+
+const fetchMarks = () => {
+  if (!filmId || Number.isNaN(Number(filmId))) return;
+  loadingMarks.value = true;
+  request.get(API_PATHS.MARKS, { params: { filmId } })
+      .then(res => {
+        if (res.code === '200') {
+          marks.value = res.data || [];
+        }
+      })
+      .catch(() => {
+        marks.value = [];
+      })
+      .finally(() => {
+        loadingMarks.value = false;
+      });
+};
+
+// 7. 页面初始化：加载电影详情、演职人员与评价
 onMounted(() => {
   fetchFilmDetail();
+  fetchMarks();
 });
 </script>
 

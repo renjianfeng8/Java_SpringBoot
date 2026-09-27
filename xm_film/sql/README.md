@@ -8,7 +8,8 @@ sql/
 ├── data.sql                                 # 初始数据（所有表的 INSERT 语句）
 ├── init.sql                                 # 一键初始化脚本（整合 schema + data）
 ├── migration-20260927-delete-guard.sql      # 增量迁移（删除守卫 + 上映关系派生）
-└── migration-20260927-p2-seat-payment.sql   # 增量迁移（座位容量 + 订单资金凭证）
+├── migration-20260927-p2-seat-payment.sql   # 增量迁移（座位容量 + 订单资金凭证）
+└── migration-20260928-p3-review-score-cinema-audit.sql  # 增量迁移（评价数值评分 + 影院审核词表）
 ```
 
 ## 使用方式
@@ -47,7 +48,7 @@ SOURCE data.sql;
 |---|------|------|
 | 1 | admin | 管理员表 |
 | 2 | user | 用户表 |
-| 3 | cinema | 影院表 |
+| 3 | cinema | 影院表（`status` 只有 `未审核`/`已审核`，未审核不可登录且不对外展示） |
 | 4 | area | 区域/产地表 |
 | 5 | type | 电影类型表 |
 | 6 | film | 电影表 |
@@ -56,7 +57,7 @@ SOURCE data.sql;
 | 9 | room | 放映厅表 |
 | 10 | record | 放映记录（排片）表，`film_id` 非空 |
 | 11 | ordered | 订单表 |
-| 12 | mark | 评分表 |
+| 12 | mark | 评价表（`score` 是影片评分的唯一数值来源，`mark` 只存评语；一人一片一条） |
 | 13 | notice | 通知公告表 |
 | 14 | video | 视频/预告片表 |
 
@@ -70,6 +71,7 @@ SOURCE data.sql;
 ```bash
 mysql -u root -p --default-character-set=utf8mb4 xm-film < migration-20260927-delete-guard.sql
 mysql -u root -p --default-character-set=utf8mb4 xm-film < migration-20260927-p2-seat-payment.sql
+mysql -u root -p --default-character-set=utf8mb4 xm-film < migration-20260928-p3-review-score-cinema-audit.sql
 ```
 
 `migration-20260927-delete-guard.sql` 内容（幂等，可重复执行）：
@@ -85,6 +87,18 @@ mysql -u root -p --default-character-set=utf8mb4 xm-film < migration-20260927-p2
 2. `ordered` 新增 `pay_time` / `pay_amount` / `refund_time` / `refund_amount`
 3. `ordered.status` 词表补 `已退票`
 4. 为存量已支付订单（待取票/已取票）回填支付凭证，仅填充空值
+
+`migration-20260928-p3-review-score-cinema-audit.sql` 内容（幂等，可重复执行）：
+
+1. `mark` 新增 `score`（DECIMAL(3,1)，影片评分的唯一数值来源）
+2. `mark.mark` 语义由「评分/评语」收敛为「评语」并加宽到 `VARCHAR(255)`
+3. 回填存量评价：数字文本（如 `'9.5'`）搬进 `score`，原列改填评语；其余空评分按所属影片基线分补齐
+4. 写入演示评价（每部影片 3 条，均分恰好等于原基线分，评分榜排序不变但从此由评价派生）
+5. `film.score` 按 `mark.score` 均分回写（`EXISTS` 守卫：无评价的影片保留基线分，不归零）
+6. 影院审核词表收敛：`待审核` → `未审核`，种子影院 8 改为 `已审核`
+
+> 第 3、4 步的演示评价与 `data.sql` 完全一致，目的是让"已有库执行迁移"与"新库执行 init.sql"收敛到同一状态；
+> `data.sql` 才是种子数据的权威副本。
 
 > 迁移不会修改排片时间。若库中的 `record.start` 停留在过去，场次在前台会显示"已结束"且不可购票，
 > 需另行把演示场次时间调整到未来（新库由 `data.sql` 直接写入未来时间）。

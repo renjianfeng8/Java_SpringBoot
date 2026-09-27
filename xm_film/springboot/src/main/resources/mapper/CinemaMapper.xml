@@ -30,6 +30,8 @@
     <select id="selectByFilmId" resultType="com.example.springboot.entity.Cinema">
         SELECT DISTINCT c.* FROM cinema c
         <where>
+            <!-- 未审核影院不对外展示；管理员（含后台审核列表）传 false 看全部 -->
+            <if test="approvedOnly">AND c.status = '已审核'</if>
             <!-- 原有影院自身条件 -->
             <if test="cinema.name != null">
                 AND c.name LIKE CONCAT('%', #{cinema.name}, '%')

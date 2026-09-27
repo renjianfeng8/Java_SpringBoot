@@ -12,7 +12,7 @@
     </div>
 
     <div class="card mb-2">
-      <el-table stripe :data="crud.dataList.value" @selection-change="crud.onSelectionChange">
+      <el-table v-loading="loading" stripe :data="crud.dataList.value" @selection-change="crud.onSelectionChange">
         <el-table-column type="selection" width="55" />
         <el-table-column label="区域名称" prop="title" />
         <el-table-column label="操作">
@@ -61,6 +61,7 @@ import { useFormDialog } from '@/composables/useFormDialog'
 import { API_PATHS } from '@/constants'
 
 const crud = useCrud(API_PATHS.AREAS)
+const { loading } = crud
 const dialog = useFormDialog(crud, {
   defaultForm: { title: '' },
   rules: { title: [{ required: true, message: '请输入电影区域', trigger: 'blur' }] }

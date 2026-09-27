@@ -10,7 +10,8 @@
         SELECT
         mark.*,
         user.name as userName,
-        film.title as filmName
+        film.title as filmName,
+        film.img as filmImg
         FROM mark
         LEFT JOIN user ON mark.user_id = user.id
         LEFT JOIN film ON mark.film_id = film.id
@@ -27,11 +28,16 @@
         SELECT
         mark.*,
         user.name as userName,
-        film.title as filmName
+        film.title as filmName,
+        film.img as filmImg
         FROM mark
         LEFT JOIN user ON mark.user_id = user.id
         LEFT JOIN film ON mark.film_id = film.id
         WHERE mark.id = #{id}
+    </select>
+
+    <select id="countByUserAndFilm" resultType="int">
+        SELECT COUNT(*) FROM mark WHERE user_id = #{userId} AND film_id = #{filmId}
     </select>
 
     <!-- 插入操作 -->
@@ -42,6 +48,7 @@
             <if test="userId != null">user_id,</if>
             <if test="filmId != null">film_id,</if>
             <if test="img != null">img,</if>
+            <if test="score != null">score,</if>
             <if test="mark != null">mark,</if>
         </trim>
         VALUES
@@ -49,6 +56,7 @@
             <if test="userId != null">#{userId},</if>
             <if test="filmId != null">#{filmId},</if>
             <if test="img != null">#{img},</if>
+            <if test="score != null">#{score},</if>
             <if test="mark != null">#{mark},</if>
         </trim>
     </insert>
@@ -60,6 +68,7 @@
             <if test="userId != null">user_id = #{userId},</if>
             <if test="filmId != null">film_id = #{filmId},</if>
             <if test="img != null">img = #{img},</if>
+            <if test="score != null">score = #{score},</if>
             <if test="mark != null">mark = #{mark},</if>
         </set>
         WHERE id = #{id}

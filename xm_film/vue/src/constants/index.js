@@ -65,6 +65,24 @@ export const ORDER_STATUS_MAP = {
 /** 订单状态筛选下拉选项，直接由 ORDER_STATUS_MAP 派生，保证筛选项与状态色始终对齐 */
 export const ORDER_STATUS_OPTIONS = Object.keys(ORDER_STATUS_MAP)
 
+/** 影院审核状态取值，与后端 CinemaStatus 枚举、数据库词表保持一致 */
+export const CINEMA_STATUS = {
+  UNAUDITED: '未审核',
+  APPROVED: '已审核',
+}
+
+/** 影院审核状态 → el-tag type；键序即下拉选项顺序 */
+export const CINEMA_STATUS_MAP = {
+  [CINEMA_STATUS.UNAUDITED]: 'warning',
+  [CINEMA_STATUS.APPROVED]: 'success',
+}
+
+export const CINEMA_STATUS_OPTIONS = Object.keys(CINEMA_STATUS_MAP)
+
+export function getCinemaStatusType(status) {
+  return CINEMA_STATUS_MAP[status] || 'info'
+}
+
 export const FILM_STATUS_MAP = {
   '待上映': 'warning',
   '已上映': 'success',

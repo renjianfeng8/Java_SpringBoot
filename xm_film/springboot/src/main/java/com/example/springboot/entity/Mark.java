@@ -17,10 +17,12 @@ public class Mark {
     private Integer userId; // 用户 ID（关联 Account/Admin/Cinema 等用户表）
     private Integer filmId; // 电影 ID（关联 Film 表）
     private String img; // 相关图片（如评分截图、标记配图）
+    private Double score; // 评分（0.0~10.0）—— 影片评分的唯一数值来源，film.score 由它聚合回写
     // 字段名与类名同名（SonarLint java:S1700），刻意保留：mark 同时是 DB 列名、MyBatis 自动映射目标与前端 prop="mark" 的契约键
-    private String mark; // 评分 / 标记内容（如："五星好评"、"推荐观看"）
+    private String mark; // 评语
     // 关联展示字段（非数据库存储，通过关联查询获取，用于前端展示）
     private String userName; // 用户名（通过 userId 关联查询用户表获得）
     private String filmName; // 电影名（通过 filmId 关联查询电影表获得）
+    private String filmImg; // 电影海报（通过 filmId 关联查询电影表获得）
 
 }
