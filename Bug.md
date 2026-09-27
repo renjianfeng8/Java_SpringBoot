@@ -364,7 +364,7 @@
   - (b) `vite.config.js` 中 `fs.allow` 改为允许项目根目录
   - (c) `vue/.env` 取消 git 跟踪，默认值改为 `/`，新增 `.env.development` 本地开发配置；`request.js` 回退值从 `http://localhost:9090` 改为 `/`
   - (d) `npm audit fix` 修复 8 个前端安全漏洞（1 critical, 4 high, 3 moderate）
-- **相关文件**: `nginx.conf`、`docker-compose.yml`、`vite.config.js`、`request.js`、`.env` → `.env.development`
+- **相关文件**: `nginx.conf`、`docker-compose.yml`、`vite.config.js`、`request.js`、`.env` → `.env.development`（其中 `nginx.conf`、`docker-compose.yml` 已于 2026-09-27 随 Docker 层移除；(b)(c) 两处在 `vite.config.js` 与 `.env.development` 的修复仍然生效）
 - **提交记录**: `1bbb6571`
 - **状态**: 已修复
 
@@ -393,7 +393,7 @@
   - 新增 `scripts/docker-entrypoint.sh` Docker 入口包装脚本
   - Dockerfile 在构建时将种子文件拷入镜像，entrypoint 在首次启动时自动填充空卷
   - 用户后续上传不受影响（仅首次部署时填充空卷）
-- **相关文件**: `Dockerfile`、`scripts/docker-entrypoint.sh`、`scripts/generate-seed-uploads.ps1`、`xm_film/sql/seed-uploads/`（61 个文件）
+- **相关文件**: `Dockerfile`、`scripts/docker-entrypoint.sh`、`scripts/generate-seed-uploads.ps1`、`xm_film/sql/seed-uploads/`（61 个文件）—— **以上文件已于 2026-09-27 随 Docker 层一并移除**，本项目改为纯本地运行，本 Bug 的修复机制不再适用
 - **提交记录**: `6adac709`
 - **状态**: 已修复
 
@@ -405,7 +405,7 @@
 - **Bug 描述**: 替换 seed-uploads 为真实素材后，部分占位图未被替换，仍显示占位内容
 - **根因分析**: 映射脚本使用合并对象（`{源文件: UUID}`）存储映射关系，当多个不同 UUID 文件名映射到同名源文件时，后一个覆盖前一个，导致"毒液：最后一舞"海报被视频封面覆盖、演员张梓宸头像被其他映射覆盖
 - **解决方案**: 映射结构改为数组存储 `[源文件, UUID]` 对，支持一源多目标映射
-- **相关文件**: `scripts/replace-with-real-images.mjs`（**该脚本已于 2026-09-27 移除**；素材现直接放入 `xm_film/sql/seed-uploads/`）
+- **相关文件**: `scripts/replace-with-real-images.mjs`（**该脚本与 `xm_film/sql/seed-uploads/` 目录均已于 2026-09-27 随 Docker 层移除**）
 - **提交记录**: `2e6f2856`
 - **状态**: 已修复
 
@@ -417,7 +417,7 @@
 - **Bug 描述**: 替换占位图为真实素材后，用户浏览器仍显示旧占位图，需手动刷新或清除缓存
 - **根因分析**: Nginx 代理 `/files/` 静态资源时未设置 `Cache-Control` 头，浏览器默认强缓存旧占位图
 - **解决方案**: Nginx location `/files/` 添加 `add_header Cache-Control 'no-cache'`，每次请求回源验证
-- **相关文件**: `xm_film/vue/nginx.conf`
+- **相关文件**: `xm_film/vue/nginx.conf`（**已于 2026-09-27 随 Docker 层移除**；若将来改用裸 jar + Nginx 反代部署，需在新配置的 `/files/` location 重新加上 `add_header Cache-Control`）
 - **提交记录**: `22c6b60b`
 - **状态**: 已修复
 
@@ -439,7 +439,7 @@
 12. **MyBatis `<if>` null 语义**: UPDATE 语句中用 `<if test="field != null">` 包裹字段时，Java 显式设为 `null` 会导致该字段被跳过不更新。若需要允许将字段设为 `null`，应移除 `<if>` 包装
 13. **CORS 生产安全**: 生产环境 CORS 禁止使用 `*` 通配符，应使用环境变量白名单精确控制允许的域名
 14. **JDBC 编码**: MySQL JDBC 连接 URL 必须显式指定 `useUnicode=true&characterEncoding=utf-8`，防止生产环境中文乱码
-15. **Docker 卷初始化**: Docker 部署中首次挂载的命名卷为空，需要 entrypoint 脚本检测并自动填充种子数据
-16. **Nginx 静态资源缓存**: 替换静态资源后，需在 Nginx 中设置 `Cache-Control: no-cache` 防止浏览器缓存旧版本
+15. **Docker 卷初始化**: Docker 部署中首次挂载的命名卷为空，需要 entrypoint 脚本检测并自动填充种子数据（Docker 层已于 2026-09-27 移除，本项目改为纯本地运行，该项不再适用）
+16. **静态资源缓存**: 替换静态资源后需设置 `Cache-Control: no-cache` 防止浏览器缓存旧版本。原先配在 `nginx.conf`（已于 2026-09-27 移除）；本地开发由 Spring 静态资源处理器服务 `/files/**`，如需防缓存可设 `spring.web.resources.cache.period=0`
 17. **映射结构选择**: 文件映射关系使用 `Object` 存储时同名 key 会覆盖，应使用 `Array<[源, 目标]>` 支持一源多目标
 18. **角色权限校验范围**: 资源控制器的角色校验应区分读写操作——读操作放行 USER，写操作保持 CINEMA/ADMIN 权限保护

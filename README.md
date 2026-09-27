@@ -1,6 +1,6 @@
 # 多角色影院票务运营平台
 
-基于 **Spring Boot 3.3 + Vue 3 + MySQL** 构建的多角色影院票务运营平台，覆盖用户购票、影院排片、平台审核、订单流转、权限隔离、CI/E2E 自动化验证与 Docker 化部署。
+基于 **Spring Boot 3.3 + Vue 3 + MySQL** 构建的多角色影院票务运营平台，覆盖用户购票、影院排片、平台审核、订单流转、权限隔离与 CI/E2E 自动化验证。
 
 ![CI](https://github.com/renjianfeng8/Java_SpringBoot/actions/workflows/ci.yml/badge.svg)
 
@@ -28,8 +28,8 @@
 - **多角色 RBAC**：管理员、影院端、用户端分离，后端拦截器和业务层共同保证权限边界。
 - **订单一致性**：购票链路校验排片、座位、订单状态，防止重复购票和越权操作。
 - **工程化验证**：GitHub Actions 自动执行后端构建、前端构建、MySQL 初始化和 Playwright E2E。
-- **部署交付**：支持 Docker Compose 轻量化部署，生产配置通过环境变量注入。
-- **文档闭环**：产品、设计、数据库、接口、安全、Bug 复盘和面试材料同步维护。
+- **部署交付**：生产配置通过环境变量注入，后端裸 jar 启动 + Nginx 反代静态资源。
+- **文档闭环**：CLAUDE.md、README.md、Bug 复盘与代码、数据库同步维护。
 
 ---
 
@@ -278,14 +278,6 @@ http://localhost:9090/swagger-ui.html
 所有 API 接口自动生成文档，支持在线调试（需先获取 JWT Token 登录）。
 
 > 注意：Swagger UI 从 CDN 加载，服务端无需额外依赖，首次加载需联网。
-
-### 6. Docker 部署
-
-```bash
-docker compose up -d --build
-```
-
-构建并启动 MySQL、Spring Boot 后端和 Nginx 前端。访问 `http://localhost/` 打开系统，访问 `http://localhost:9090/api/v1/health` 验证后端健康状态。
 
 ---
 
