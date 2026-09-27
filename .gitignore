@@ -32,19 +32,14 @@ Thumbs.db
 !.env.production
 /claude.log
 scripts/start-claude.bat
+/start_claude.bat
+/SonarLint.txt
 backend.log
 frontend.log
 
 # === 数据库备份 ===
 *backup*.sql
 *.sql.bak
-
-# === E2E 测试产出 ===
-**/e2e-tests/screenshots/
-**/e2e-tests/playwright-report/
-**/e2e-tests/*.html
-**/e2e-tests/test-output.txt
-test-results/
 
 # === Claude ===
 .claude/
@@ -56,9 +51,7 @@ AGENTS.md
 login.json
 JIANLI.txt
 
-# === 本地素材与测试产出（不入库）===
+# === 本地素材（不入库）===
 # picture/ 与 video/ 为本地素材源，不入库；video/ 内容与 picture/ 完全重复。
-# output/ 为 E2E 截图产出。
 /picture/
 /video/
-/output/

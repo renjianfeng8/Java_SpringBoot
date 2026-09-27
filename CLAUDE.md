@@ -14,7 +14,8 @@
 | PageHelper | 1.4.6 | 分页插件 |
 | JJWT | 0.11.5 | JWT 令牌认证 |
 | Spring Security Crypto | - | BCrypt 密码加密 |
-| Fastjson | 2.0.33 | JSON 处理 |
+| Jackson | 2.17.3 | JSON 序列化（随 starter-web 传递引入） |
+| SpringDoc OpenAPI | 2.8.17 | API 文档（OpenAPI 规范 + UI 页面） |
 | Lombok | - | 代码简化 |
 
 ### 前端
@@ -27,7 +28,6 @@
 | Axios | 1.9.0 | HTTP 请求 |
 | ECharts | 6.0.0 | 数据可视化 |
 | wangEditor | 5.x | 富文本编辑器 |
-| Playwright | 1.59.1 | E2E 测试 |
 
 ## 目录结构
 
@@ -38,8 +38,7 @@ project_02/
 ├── LICENSE                            # 许可证
 ├── Bug.md                             # Bug 修复记录（修复前先查阅）
 ├── scripts/                           # 通用脚本
-│   ├── start-dev.bat                  # 一键启动
-│   └── run-e2e-tests.bat              # E2E 测试运行
+│   └── start-dev.bat                  # 一键启动
 ├── xm_film/                           # 项目主目录
 │   ├── springboot/                    # 后端（Spring Boot）
 │   │   ├── pom.xml                    # Maven 依赖配置
@@ -84,11 +83,6 @@ project_02/
 │   │   │   │   ├── back/               # 7个影院端页面
 │   │   │   │   └── manage/             # 16个管理端页面
 │   │   │   └── assets/                 # 静态资源
-│   │   └── e2e-tests/                  # E2E 测试
-│   │       ├── playwright.config.mjs   # Playwright 配置
-│   │       ├── e2e-scan.spec.mjs       # 全量测试脚本
-│   │       ├── test.mjs                # 旧版测试脚本
-│   │       └── screenshots/            # 截图目录
 │   ├── sql/                           # 数据库初始化脚本
 │   │   ├── README.md                  # 数据库说明
 │   │   ├── schema.sql                 # 14张表建表语句
@@ -181,32 +175,6 @@ home, film, room, record, ordered, person, password
 
 访问受保护页面时，系统弹出确认框 → 跳转 `/login?redirect=<原路径>` → 登录成功后自动回跳。登录页根据角色（USER/CINEMA/ADMIN）分别跳转 `/front/home`、`/back/home`、`/manage/home`。
 
-## Playwright E2E 验证说明
-
-### 安装与运行
-```bash
-cd xm_film/vue
-npm install
-npx playwright install chromium
-node e2e-tests/e2e-scan.spec.mjs
-```
-
-### 测试覆盖范围
-- 后端 API 健康检查（10 个接口）
-- 前端页面渲染与路由跳转（5 个场景）
-- 管理员登录与完整页面导航（16 个管理页面）
-- 电影分类 CRUD 流程闭环
-- 分页功能验证
-- 搜索功能验证
-- 用户前台页面（7 个场景）
-- 影院后台页面（7 个页面）
-- 负面测试（5 个场景：错误密码、无 token 访问、路由越权、空选批量删除、未登录重定向）
-
-### 生成 HTML 报告
-```bash
-npx playwright show-report xm_film/vue/e2e-tests/playwright-report
-```
-
 ## 快速启动命令
 
 ### 环境要求
@@ -241,12 +209,6 @@ npm run dev
 ```
 前端默认运行在 `http://localhost:5173`
 
-### 4. 运行 E2E 测试
-```bash
-cd xm_film/vue
-node e2e-tests/e2e-scan.spec.mjs
-```
-
 ### 默认账号
 | 角色 | 用户名 | 密码 | 说明 |
 |------|--------|------|------|
@@ -272,10 +234,10 @@ node e2e-tests/e2e-scan.spec.mjs
 2. **JWT 密钥**：✅ 已通过环境变量注入解决（`${JWT_SECRET:...}`）
 3. **文件存储**：当前为本地存储，建议生产环境迁移至 OSS（阿里云/S3）
 4. **日志配置**：✅ 已切换为 SLF4J + Logback，`logback-spring.xml` 按 mapper 包级别控制 SQL 日志（可通过 `MYBATIS_LOG_LEVEL` 环境变量调整）
-5. **API 文档**：建议集成 Swagger/SpringDoc OpenAPI 自动生成接口文档
-6. **单元测试**：后端仅依赖测试（spring-boot-starter-test），缺少业务单元测试
+5. **API 文档**：✅ 已集成 SpringDoc OpenAPI —— `SwaggerConfig` 定义 OpenAPI Bean 与全局 Bearer 鉴权方案，控制器标注 `@Tag`/`@Operation`，规范端点 `/v3/api-docs`，UI 页面 `static/swagger-ui.html`（swagger-ui 资源走 CDN，离线环境需改用 `springdoc-openapi-starter-webmvc-ui` 本地内嵌）
+6. **单元测试**：✅ 已覆盖 9 个测试类 / 73 个用例 —— Service 层 CRUD 与权限（Admin/User/Cinema/Film/Ordered）、订单座位并发冲突、AuthInterceptor 访问边界、全局异常处理；`mvn test` 可复现
 7. **前端构建**：生产构建后建议接入 CDN 分发静态资源
-8. **CI/CD**：✅ 已配置 GitHub Actions 完整流水线（后端编译 → 前端构建 → MySQL 初始化 → 后端启动 → 59 用例 E2E 验证），支持 `application-ci.yml` CI 专属配置
+8. **CI/CD**：✅ 已配置 GitHub Actions 流水线（后端编译 → 前端构建）
 9. **错误边界**：前端可引入 Vue ErrorBoundary 机制处理渲染异常
 10. **权限校验**：✅ 已实现前端路由守卫 + 后端 AuthInterceptor 双重角色校验
 

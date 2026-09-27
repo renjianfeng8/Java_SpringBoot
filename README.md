@@ -1,6 +1,6 @@
 # 多角色影院票务运营平台
 
-基于 **Spring Boot 3.3 + Vue 3 + MySQL** 构建的多角色影院票务运营平台，覆盖用户购票、影院排片、平台审核、订单流转、权限隔离与 CI/E2E 自动化验证。
+基于 **Spring Boot 3.3 + Vue 3 + MySQL** 构建的多角色影院票务运营平台，覆盖用户购票、影院排片、平台审核、订单流转、权限隔离与 CI 自动化构建。
 
 ![CI](https://github.com/renjianfeng8/Java_SpringBoot/actions/workflows/ci.yml/badge.svg)
 
@@ -19,7 +19,7 @@
 | 影院管理员 | asks | cinema123 |
 | 普通用户 | zhangsan | user123 |
 
-**代码质量**: 全栈 E2E 自动化测试覆盖（64 用例 + 契约测试，含负面测试，100% 通过率），BCrypt 密码加密 + JWT 认证 + RBAC 权限控制，GitHub Actions CI 流水线。
+**代码质量**: 单元测试覆盖核心 Service 与权限边界（73 用例），BCrypt 密码加密 + JWT 认证 + RBAC 权限控制，GitHub Actions CI 流水线。
 
 ---
 
@@ -27,7 +27,7 @@
 
 - **多角色 RBAC**：管理员、影院端、用户端分离，后端拦截器和业务层共同保证权限边界。
 - **订单一致性**：购票链路校验排片、座位、订单状态，防止重复购票和越权操作。
-- **工程化验证**：GitHub Actions 自动执行后端构建、前端构建、MySQL 初始化和 Playwright E2E。
+- **工程化验证**：GitHub Actions 自动执行后端编译与前端构建。
 - **部署交付**：生产配置通过环境变量注入，后端裸 jar 启动 + Nginx 反代静态资源。
 - **文档闭环**：CLAUDE.md、README.md、Bug 复盘与代码、数据库同步维护。
 
@@ -45,7 +45,6 @@
 - [API 概览](#api-概览)
 - [数据库设计](#数据库设计)
 - [安全机制](#安全机制)
-- [E2E 测试](#e2e-测试)
 - [部署指南](#部署指南)
 - [相关文档](#相关文档)
 
@@ -501,20 +500,6 @@ mvn test
 
 覆盖 4 个核心 Service（AdminService、UserService、CinemaService、FilmService）及订单、权限拦截、异常处理、健康检查模块，包括登录认证、密码加密、注册去重、密码修改、批量赋值防护、排行榜查询、类型关联维护、订单状态流转、座位冲突检测、RBAC 权限边界、全局异常处理等业务逻辑。
 
-### E2E 测试（64 用例）
-
-项目使用 Playwright 进行全栈自动化扫描测试，覆盖后端 API、前端页面渲染、CRUD 流程、分页、搜索、三端导航、订单流程、负面场景等。
-
-```bash
-cd xm_film/vue
-npm install
-npx playwright install chromium
-node e2e-tests/e2e-scan.spec.mjs
-```
-
-> 运行前需确保后端服务运行在 `http://localhost:9090`，前端运行在 `http://localhost:5173`。
-> 测试报告输出为 `e2e-tests/e2e-scan-report.html`，截图保存至 `e2e-tests/screenshots/`。
-
 ### 本地复现 CI
 
 ```bash
@@ -524,7 +509,6 @@ mvn clean package
 cd ../vue
 npm install
 npm run build
-node e2e-tests/e2e-scan.spec.mjs
 ```
 
 ---
