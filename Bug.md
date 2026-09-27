@@ -451,6 +451,67 @@
 
 ---
 
+### BUG-030: 影院上映影片与排片脱节，新建场次在前台不可见
+
+- **日期**: 2026-09-27
+- **Bug 描述**: 影院后台新建一条排片后，前台该影院的影片/场次列表里看不到它，用户无法购票。实测影院 11（丁丁影城）的排片 18、19（影片 26、22）在前台完全不可见；同时后台排片表单的"电影名称"是手工输入的文本框，与 `film` 表无任何关联
+- **根因分析**: 前台"影院上映哪些影片"由 `FilmMapper.selectByCinema` / `CinemaMapper.selectByFilmId` 通过 `INNER JOIN cinema_film` 决定，而 `cinema_film` 没有任何写入入口（无 Controller、无前端页面），只在 `data.sql` 里手工维护了 16 行。新建排片只写 `record` 表，不会写 `cinema_film`，于是排片与"上映关系"两张表长期漂移：`(11,22)`、`(11,26)` 两行关联缺失，对应场次成为前台不可达的死数据。`record.film_id` 当时还可空，排片本身也可能不指向任何影片
+- **解决方案**:
+  - 影院上映影片改为由排片派生：`FilmMapper.selectByCinema` 用 `EXISTS (SELECT 1 FROM record ...)` 取代 `cinema_film` 关联，`showCount` 改为真实场次数量；`CinemaMapper.selectByFilmId` 同样改为按 `record` 判断
+  - 删除冗余表 `cinema_film`（schema.sql / data.sql / README 表清单同步移除），使 `record` 成为"影院是否上映某片"的唯一数据源
+  - `record.film_id` 改为 `NOT NULL`，后端 `RecordService.validateSchedule` 强制校验影片存在并回填 `title`，后台表单的"电影名称"改为只读、"影片"改为下拉（`GET /api/v1/films`）
+- **相关文件**: `mapper/FilmMapper.xml`、`mapper/CinemaMapper.xml`、`service/RecordService.java`、`sql/schema.sql`、`sql/data.sql`、`vue/src/views/back/Record.vue`
+- **提交记录**: 待提交
+- **状态**: 已修复
+
+---
+
+### BUG-031: 删除影片/影院/影厅会级联删除订单（交易凭证丢失）
+
+- **日期**: 2026-09-27
+- **Bug 描述**: 管理端删除一部影片、一个影院或一个影厅时，SQL 不会报错，但其历史订单会被数据库静默删除。演示时"删掉一个影院看看效果"会直接抹掉该影院的所有交易记录
+- **根因分析**: `schema.sql` 中 `ordered` 表的 5 个外键全部是 `ON DELETE CASCADE`（`record_id` 为 `SET NULL`），`record` 的 `cinema_id`/`room_id` 是 `CASCADE`、`film_id` 是 `SET NULL`，`room.cinema_id` 是 `SET NULL`。级联动作完全由数据库执行，ORM 层不感知，因此删除接口返回成功而数据已丢失
+- **解决方案**:
+  - `ordered` 的 5 个外键（record/user/film/cinema/room）、`record` 的 3 个外键、`room.cinema_id` 全部改为 `ON DELETE RESTRICT`，并把约束显式命名（`fk_ordered_film` 等）便于后续迁移
+  - 五个删除入口（Film/Cinema/Room/Record/User Controller）增加引用计数前置校验，返回可读提示（如"该影片已有 4 个排片、4 笔订单，无法删除；如需下架请将状态改为「停止上映」"）
+  - 确立业务语义：**影片/影院/场次的下架走 `status`，不做物理删除**
+  - 批量删除在循环校验通过后才执行，保证整批原子（不会删一半）
+  - 提供幂等迁移脚本 `sql/migration-20260927-delete-guard.sql`
+- **相关文件**: `sql/schema.sql`、`sql/migration-20260927-delete-guard.sql`、`controller/{Film,Cinema,Room,Record,User}Controller.java`、`service/{Record,Room,Ordered}Service.java`、`mapper/{Record,Ordered,Room}Mapper.{java,xml}`
+- **提交记录**: 待提交
+- **状态**: 已修复
+
+---
+
+### BUG-032: 公开的影院详情页排片列表返回 401
+
+- **日期**: 2026-09-27
+- **Bug 描述**: 未登录用户浏览影院详情页时，该影院的场次列表加载失败（401 "登录已过期"），而页面本身是公开可访问的
+- **根因分析**: `front/CinemaDetail.vue` 通过 `GET /api/v1/records/page` 拉取场次，但 `AuthInterceptor.PUBLIC_READ_PREFIXES` 白名单里没有 `/api/v1/records`，匿名 GET 被直接拒绝
+- **解决方案**: 将 `/api/v1/records` 加入匿名 GET 白名单（该资源不含用户隐私字段）；写操作仍受保护，由 `RecordController.requireAdminOrCinema()` 做业务层校验。补充 `AuthInterceptorAccessTest` 匿名读放行/写拒绝用例
+- **相关文件**: `common/config/AuthInterceptor.java`、`src/test/java/com/example/springboot/AuthInterceptorAccessTest.java`
+- **提交记录**: 待提交
+- **状态**: 已修复
+
+---
+
+### BUG-033: 场次可购票判断与放映时间无关，过去场次仍可下单
+
+- **日期**: 2026-09-27
+- **Bug 描述**: 可以给已经放映结束的场次下单并生成"待支付"订单；后台也无法区分"未开始/放映中/已结束"，`record.status` 手工填的"待上映/已上映/停止上映"与前台判断用的"未开始/放映中/已结束"是两套互不匹配的取值
+- **根因分析**: `record.status` 被当成人工维护的派生状态字段（放映状态本应是 `start` 的函数），而 `OrderedService.insertOrder` 校验场次存在后直接售票，从不比较 `start` 与当前时间；前端 `CinemaDetail.vue` 用 `status === '已上映' || '放映中' || '未开始'` 判断可购票，其中"已上映"与后台表单的取值重合、另两个永远不会被写入
+- **解决方案**:
+  - 派生状态不落库：`未开始/放映中/已结束` 一律由 `start` 计算（前端 `recordState()`），`status` 收敛为 `正常/停售` 单一人工开关
+  - 新增 `common/enums/RecordStatus.java`；`RecordService.isPurchasable()` 作为唯一权威判定
+  - `OrderedService.insertOrder` 增加"已停售""已开场"拒绝分支，作为下单的最后一道关
+  - 新增/编辑校验：`start` 必须晚于当前（编辑时未改动时间则不重复校验，保证存量过期场次仍可停售）、`price > 0`、同影厅时段不重叠（按影片片长计算区间，默认 120 分钟兜底）
+  - 种子数据 `record.start` 整体平移到未来（原来停留在 2024~2025，新规则上线后所有场次都会显示不可购票）
+- **相关文件**: `service/{RecordService,OrderedService}.java`、`controller/RecordController.java`、`common/enums/RecordStatus.java`、`mapper/RecordMapper.{java,xml}`、`vue/src/views/front/CinemaDetail.vue`、`vue/src/views/back/Record.vue`、`vue/src/constants/index.js`、`sql/{data.sql,schema.sql}`
+- **提交记录**: 待提交
+- **状态**: 已修复
+
+---
+
 ## 预防清单
 
 1. **数据库初始化**: 新环境部署时务必执行 `xm_film/sql/init.sql`（或依次执行 `schema.sql` + `data.sql`）
@@ -474,3 +535,8 @@
 19. **字段单位以数据库列注释为准**: `film.box_office` 单位是**万元**而非元（见 `schema.sql` 列注释）。前端做数值格式化前先查列注释，否则整站数值可能差 10000 倍
 20. **关联字段以后端返回为准**: 影片的 `areaName` 与 `typeList` 已由 SQL `JOIN` 和 `fillFilmTypes` 解析好。前端不得再维护同名硬编码字典，也不得猜测字段形状（`Film` 实体没有 `types` 字段，`typeIds` 是数组不是 JSON 字符串）
 21. **状态映射与格式化函数集中维护**: 影片状态色、订单状态色、票房格式化统一放 `constants/index.js` 与 `utils/format.js`，视图内不再复制实现（本次清理了 5 处状态 switch、3 处透传包装、4 处票房格式化副本）
+22. **关联关系只留一个数据源**: "影院上映哪些影片"由排片 `record` 派生，不要再维护第二张关联表（原 `cinema_film` 无写入入口，必然与排片漂移，造成前台看不到新建场次）
+23. **父数据禁止级联删除**: 交易凭证（`ordered`）引用的影片/影院/影厅/场次/用户一律用 `ON DELETE RESTRICT` 兜底，删除接口再做引用计数校验给出可读提示；下架语义用 `status` 而非物理删除
+24. **派生状态不落库**: 凡是能由时间/其他字段算出的状态（如场次的未开始/放映中/已结束）一律运行时计算，表字段只保留无法推导的人工开关（`status` = 正常/停售）
+25. **公开页面依赖的接口必须在白名单内**: 新增公开页面时，先确认其调用的所有 GET 接口都在 `AuthInterceptor.PUBLIC_READ_PREFIXES` 中，否则匿名访问会 401
+26. **必填外键要给到数据库约束**: 关键关联字段（如 `record.film_id`）应声明 `NOT NULL`，并在服务层校验后回填冗余字段（如影片名），避免只有应用层约定导致的脏数据

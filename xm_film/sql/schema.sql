@@ -138,21 +138,7 @@ CREATE TABLE `film_type` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='电影-类型关联表';
 
 -- ---------------------------
--- 9. 影院-电影关联表 (cinema_film)
--- ---------------------------
-DROP TABLE IF EXISTS `cinema_film`;
-CREATE TABLE `cinema_film` (
-    `id`        INT AUTO_INCREMENT PRIMARY KEY COMMENT '关联ID',
-    `cinema_id` INT NOT NULL                   COMMENT '影院ID',
-    `film_id`   INT NOT NULL                   COMMENT '电影ID',
-    UNIQUE KEY uk_cinema_film (cinema_id, film_id),
-    INDEX idx_cinema_film_film_id (film_id),
-    FOREIGN KEY (cinema_id) REFERENCES cinema(id) ON DELETE CASCADE,
-    FOREIGN KEY (film_id) REFERENCES film(id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='影院-电影关联表';
-
--- ---------------------------
--- 10. 放映厅表 (room)
+-- 9. 放映厅表 (room)
 -- ---------------------------
 DROP TABLE IF EXISTS `room`;
 CREATE TABLE `room` (
@@ -161,33 +147,34 @@ CREATE TABLE `room` (
     `title` VARCHAR(100) NOT NULL                   COMMENT '所属影院名称',
     `name`  VARCHAR(50)  NOT NULL                   COMMENT '放映厅名称（如一号厅）',
     INDEX idx_room_cinema_id (cinema_id),
-    FOREIGN KEY (cinema_id) REFERENCES cinema(id) ON DELETE SET NULL
+    FOREIGN KEY (cinema_id) REFERENCES cinema(id) ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='放映厅表';
 
 -- ---------------------------
--- 11. 放映记录表 (record)
+-- 10. 放映记录表 (record)
 -- ---------------------------
 DROP TABLE IF EXISTS `record`;
 CREATE TABLE `record` (
     `id`        INT           AUTO_INCREMENT PRIMARY KEY COMMENT '放映记录ID',
     `cinema_id` INT           NOT NULL                    COMMENT '影院ID',
     `room_id`   INT           NOT NULL                    COMMENT '放映厅ID',
-    `film_id`   INT                                      COMMENT '电影ID',
+    `film_id`   INT           NOT NULL                    COMMENT '电影ID（排片必须关联影片，否则前台不可见）',
     `title`     VARCHAR(100)  NOT NULL                    COMMENT '电影名称',
-    `start`     DATETIME                                 COMMENT '放映时间',
+    `start`     DATETIME                                 COMMENT '放映时间（可购票性由该时间派生）',
     `price`     DECIMAL(10,2) DEFAULT 0.00                COMMENT '票价（元）',
-    `status`    VARCHAR(20)   DEFAULT '未开始'            COMMENT '放映状态',
+    `status`    VARCHAR(20)   DEFAULT '正常'              COMMENT '售卖状态（正常/停售），展示状态由 start 派生',
     INDEX idx_record_cinema_id (cinema_id),
     INDEX idx_record_room_id (room_id),
     INDEX idx_record_film_id (film_id),
     INDEX idx_record_start (start),
-    FOREIGN KEY (cinema_id) REFERENCES cinema(id) ON DELETE CASCADE,
-    FOREIGN KEY (room_id) REFERENCES room(id) ON DELETE CASCADE,
-    FOREIGN KEY (film_id) REFERENCES film(id) ON DELETE SET NULL
+    -- 排片是订单的父数据，禁止级联删除，避免删影片/影院/影厅时静默抹掉订单
+    FOREIGN KEY (cinema_id) REFERENCES cinema(id) ON DELETE RESTRICT,
+    FOREIGN KEY (room_id) REFERENCES room(id) ON DELETE RESTRICT,
+    FOREIGN KEY (film_id) REFERENCES film(id) ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='放映记录表（排片/场次）';
 
 -- ---------------------------
--- 12. 订单表 (ordered)
+-- 11. 订单表 (ordered)
 -- ---------------------------
 DROP TABLE IF EXISTS `ordered`;
 CREATE TABLE `ordered` (
@@ -215,15 +202,16 @@ CREATE TABLE `ordered` (
     INDEX idx_ordered_room_id (room_id),
     INDEX idx_ordered_status (status),
     INDEX idx_ordered_status_timeout (status, pending_timeout_at),
-    FOREIGN KEY (record_id) REFERENCES record(id) ON DELETE SET NULL,
-    FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE CASCADE,
-    FOREIGN KEY (film_id) REFERENCES film(id) ON DELETE CASCADE,
-    FOREIGN KEY (cinema_id) REFERENCES cinema(id) ON DELETE CASCADE,
-    FOREIGN KEY (room_id) REFERENCES room(id) ON DELETE CASCADE
+    -- 订单是交易凭证，禁止级联删除：任何被订单引用的影片/影院/影厅/场次/用户都不能物理删除
+    FOREIGN KEY (record_id) REFERENCES record(id) ON DELETE RESTRICT,
+    FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE RESTRICT,
+    FOREIGN KEY (film_id) REFERENCES film(id) ON DELETE RESTRICT,
+    FOREIGN KEY (cinema_id) REFERENCES cinema(id) ON DELETE RESTRICT,
+    FOREIGN KEY (room_id) REFERENCES room(id) ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='订单表';
 
 -- ---------------------------
--- 13. 评分表 (mark)
+-- 12. 评分表 (mark)
 -- ---------------------------
 DROP TABLE IF EXISTS `mark`;
 CREATE TABLE `mark` (
@@ -239,7 +227,7 @@ CREATE TABLE `mark` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='评分表';
 
 -- ---------------------------
--- 14. 通知公告表 (notice)
+-- 13. 通知公告表 (notice)
 -- ---------------------------
 DROP TABLE IF EXISTS `notice`;
 CREATE TABLE `notice` (
@@ -250,7 +238,7 @@ CREATE TABLE `notice` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='通知公告表';
 
 -- ---------------------------
--- 15. 视频/预告片表 (video)
+-- 14. 视频/预告片表 (video)
 -- ---------------------------
 DROP TABLE IF EXISTS `video`;
 CREATE TABLE `video` (

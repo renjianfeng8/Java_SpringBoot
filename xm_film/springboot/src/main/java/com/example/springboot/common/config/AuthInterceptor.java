@@ -39,7 +39,9 @@ public class AuthInterceptor implements HandlerInterceptor {
             "/api/v1/types",
             "/api/v1/areas",
             "/api/v1/notices",
-            "/api/v1/actors"
+            "/api/v1/actors",
+            // 影院详情的放映场次列表需匿名可读，否则公开页会 401
+            "/api/v1/records"
     );
 
     @Resource

@@ -5,6 +5,7 @@ import com.example.springboot.common.Result;
 import com.example.springboot.common.enums.ErrorCode;
 import com.example.springboot.entity.User;
 import com.example.springboot.exception.CustomException;
+import com.example.springboot.service.OrderedService;
 import com.example.springboot.service.UserService;
 import com.github.pagehelper.PageInfo;
 import com.github.pagehelper.page.PageMethod;
@@ -21,10 +22,12 @@ import java.util.List;
 @RequestMapping("/api/v1/users")
 public class UserController extends BaseController<User> {
     private final UserService userService;
+    private final OrderedService orderedService;
 
-    public UserController(UserService userService) {
+    public UserController(UserService userService, OrderedService orderedService) {
         super(userService);
         this.userService = userService;
+        this.orderedService = orderedService;
     }
 
     @Override
@@ -84,6 +87,7 @@ public class UserController extends BaseController<User> {
     @DeleteMapping("/{id}")
     public Result delete(@PathVariable Integer id) {
         requireAdmin();
+        ensureNoOrders(id);
         userService.delete(id);
         return Result.success();
     }
@@ -92,8 +96,20 @@ public class UserController extends BaseController<User> {
     @DeleteMapping("/batch")
     public Result deleteBatch(@RequestBody List<Integer> ids) {
         requireAdmin();
+        for (Integer id : ids) {
+            ensureNoOrders(id);
+        }
         userService.deleteBatch(ids);
         return Result.success();
+    }
+
+    /** 用户有订单时禁止物理删除，避免连带删除交易凭证 */
+    private void ensureNoOrders(Integer userId) {
+        int orders = orderedService.countByUserId(userId);
+        if (orders > 0) {
+            throw new CustomException(ErrorCode.BUSINESS_CONFLICT,
+                    "该用户已有 " + orders + " 笔订单，无法删除");
+        }
     }
 
     private boolean isAdmin() {

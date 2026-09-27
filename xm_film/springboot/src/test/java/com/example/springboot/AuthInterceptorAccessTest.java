@@ -3,6 +3,8 @@ package com.example.springboot;
 import com.example.springboot.common.JwtUtils;
 import com.example.springboot.common.config.AuthInterceptor;
 import org.junit.jupiter.api.Test;
+import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -19,6 +21,18 @@ class AuthInterceptorAccessTest {
     private boolean hasAccess(AuthInterceptor interceptor, String path, String method, String role) {
         return (boolean) ReflectionTestUtils.invokeMethod(
                 interceptor, "hasAccess", path, method, role);
+    }
+
+    /** 匿名（无 token）请求是否被放行，覆盖 preHandle 的白名单分支 */
+    private boolean anonymousAllowed(String path, String method) {
+        AuthInterceptor interceptor = newInterceptor();
+        MockHttpServletRequest request = new MockHttpServletRequest(method, path);
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        try {
+            return interceptor.preHandle(request, response, new Object());
+        } catch (Exception e) {
+            throw new IllegalStateException(e);
+        }
     }
 
     // ========== Film write protection ==========
@@ -119,5 +133,27 @@ class AuthInterceptorAccessTest {
     @Test
     void interceptorAllowsUserPostOrders() {
         assertThat(hasAccess(newInterceptor(), "/api/v1/orders", "POST", "USER")).isTrue();
+    }
+
+    // ========== Anonymous read allowlist (preHandle) ==========
+
+    @Test
+    void anonymousCanReadRecords() {
+        assertThat(anonymousAllowed("/api/v1/records/page", "GET")).isTrue();
+    }
+
+    @Test
+    void anonymousCanReadRecordById() {
+        assertThat(anonymousAllowed("/api/v1/records/1", "GET")).isTrue();
+    }
+
+    @Test
+    void anonymousCannotWriteRecords() {
+        assertThat(anonymousAllowed("/api/v1/records", "POST")).isFalse();
+    }
+
+    @Test
+    void anonymousCannotReadOrders() {
+        assertThat(anonymousAllowed("/api/v1/orders/page", "GET")).isFalse();
     }
 }

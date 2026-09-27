@@ -17,4 +17,16 @@ public interface OrderedMapper extends BaseMapper<Ordered> {
     List<Ordered> selectExpiredPendingOrders();
 
     int batchCancelExpiredOrders(@Param("ids") List<Integer> ids);
+
+    /* 删除守卫引用计数：被订单引用的影片/影院/影厅/场次/用户不允许物理删除 */
+
+    int countByFilmId(Integer filmId);
+
+    int countByCinemaId(Integer cinemaId);
+
+    int countByRoomId(Integer roomId);
+
+    int countByRecordId(Integer recordId);
+
+    int countByUserId(Integer userId);
 }

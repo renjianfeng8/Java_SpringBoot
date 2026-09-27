@@ -4,9 +4,8 @@
       <el-input v-model="searchForm.title"  placeholder="请输入电影名称查询" style="width: 300px; margin-right:10px" :prefix-icon="Search"/>
       <el-input  v-model="searchForm.start"  placeholder="按放映日期查询 (YYYY-MM-DD)" style="width: 300px; margin-right:10px" :prefix-icon="Search"/>
       <el-select v-model="searchForm.status" placeholder="请选择放映状态" style="width: 300px; margin-right:10px">
-        <el-option label="待上映" value="待上映" />
-        <el-option label="已上映" value="已上映" />
-        <el-option label="停止上映" value="停止上映" />
+        <el-option label="正常" value="正常" />
+        <el-option label="停售" value="停售" />
       </el-select>
       <el-button type="primary" @click="onSearch">查 询</el-button>
       <el-button type="warning" @click="onReset">重 置</el-button>
@@ -58,38 +57,18 @@
 import { Delete, Search } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useCrud } from '@/composables/useCrud'
-import { API_PATHS, apiBatch, apiById, apiPage, getFilmStatusType as getStatusType } from '@/constants'
+import { API_PATHS, apiBatch, apiById, apiPage, getRecordStatusType as getStatusType } from '@/constants'
 import request from '@/utils/request'
 
-// 仅使用 useCrud 的响应式状态（dataList 需自定义 load 做名称映射）
+// 仅使用 useCrud 的响应式状态（后端 selectAll 已 JOIN 出 cinemaName / roomName）
 const crud = useCrud(API_PATHS.RECORDS)
 const { dataList, total, pageNum, pageSize, searchForm, selectedIds, onSelectionChange } = crud
 
-const cinemaData = []
-const roomData = []
-
-function loadCinema() {
-  return request.get(API_PATHS.CINEMAS).then(res => {
-    if (res.code === '200') { cinemaData.length = 0; cinemaData.push(...res.data) }
-  })
-}
-
-function loadRoom() {
-  return request.get(API_PATHS.ROOMS).then(res => {
-    if (res.code === '200') { roomData.length = 0; roomData.push(...res.data) }
-  })
-}
-
-// 自定义 load：映射影院/影厅名称
 function load() {
   const params = { pageNum: pageNum.value, pageSize: pageSize.value, ...searchForm }
   request.get(apiPage(API_PATHS.RECORDS), { params }).then(res => {
     if (res && res.data) {
-      dataList.value = (res.data.list || []).map(record => ({
-        ...record,
-        cinemaName: cinemaData.find(c => c.id === record.cinemaId)?.name,
-        roomName: roomData.find(r => r.id === record.roomId)?.name
-      }))
+      dataList.value = res.data.list || []
       total.value = res.data.total || 0
     }
   }).catch(() => ElMessage.error('加载数据失败，请重试'))
@@ -116,7 +95,7 @@ function handleDelBatch() {
 }
 
 // 初始加载
-Promise.all([loadCinema(), loadRoom()]).then(() => load())
+load()
 
 </script>
 

@@ -80,7 +80,7 @@ project_02/
 │   │   │   │   ├── useAuth.js          # 登录态 / 角色判断
 │   │   │   │   ├── useCrud.js          # 分页 CRUD 通用逻辑
 │   │   │   │   └── useFormDialog.js    # 表单弹窗通用逻辑
-│   │   │   ├── constants/index.js      # API 路径 / 状态映射（订单 · 影片）
+│   │   │   ├── constants/index.js      # API 路径 / 状态映射（订单 · 影片 · 场次）
 │   │   │   ├── types/axios.d.ts        # Axios 响应类型增强
 │   │   │   ├── env.d.ts                # 环境变量类型声明
 │   │   │   ├── auto-imports.d.ts       # 自动导入声明（unplugin-auto-import 生成）
@@ -102,7 +102,8 @@ project_02/
 │   │   ├── README.md                  # 数据库说明
 │   │   ├── schema.sql                 # 14张表建表语句
 │   │   ├── data.sql                   # 初始数据
-│   │   └── init.sql                   # 一键初始化入口
+│   │   ├── init.sql                   # 一键初始化入口
+│   │   └── migration-*.sql            # 增量迁移（已有库执行，幂等）
 
 ## 核心模块说明
 
@@ -116,7 +117,7 @@ project_02/
 ### 功能模块
 - **影片管理** — 影片 CRUD、分类/地区关联、演员关联、预告片上传
 - **影院管理** — 影院注册审核、信息维护、影厅管理
-- **排片管理** — 创建放映场次（关联影厅、时间、价格）
+- **排片管理** — 创建放映场次（关联影片、影厅、时间、票价）；校验时间晚于当前、票价大于 0、同影厅时段不重叠
 - **在线选座** — 8×8 可视化座位图、选定下单
 - **订单系统** — 购票下单、订单状态流转（待取票/已取票/已取消）
 - **评价系统** — 用户对影片评分评价
@@ -241,6 +242,7 @@ npm run dev
 - 文件上传：`D:/project/picture`（支持环境变量 `FILE_UPLOAD_DIR`）
 - 文件大小限制：50MB
 - DB 密码：支持环境变量 `DB_PASSWORD`（默认 `123456`）
+- DB 库名：支持环境变量 `DB_NAME`（默认 `xm-film`，便于用临时库做验证而不影响开发库）
 - MyBatis 日志：SLF4J + Logback，支持环境变量 `MYBATIS_LOG_IMPL`（默认 `Slf4jImpl`）和 `MYBATIS_LOG_LEVEL`（默认 `DEBUG`）
 
 ## 项目优化建议（当前状态）
@@ -296,7 +298,12 @@ npm run dev
 - Database relations now use explicit keys for the main booking path: `room.cinema_id`, `record.film_id`, and `ordered.record_id`; `xm_film/sql` is the single source of truth for both schema and seed data.
 - Film type/area display reads backend-resolved fields only: `areaName` (SQL `LEFT JOIN area`) and `typeList` (filled by `FilmService.fillFilmTypes` from `film_type`). `Film` has no `types` field — do not reintroduce frontend type/area dictionaries.
 - Box office formatting is centralized in `xm_film/vue/src/utils/format.js`; `film.box_office` is stored in **万元** (see `xm_film/sql/schema.sql`), so it renders 万 below 1 亿 and 亿 at or above it.
-- Status tag colors are centralized in `xm_film/vue/src/constants/index.js` (`FILM_STATUS_MAP`/`getFilmStatusType`, `ORDER_STATUS_MAP`/`getOrderStatusType`); views import them instead of re-declaring the switch.
+- Status tag colors are centralized in `xm_film/vue/src/constants/index.js` (`FILM_STATUS_MAP`/`getFilmStatusType`, `ORDER_STATUS_MAP`/`getOrderStatusType`, `RECORD_STATUS_MAP`/`getRecordStatusType`); views import them instead of re-declaring the switch.
+- 影院"上映哪些影片"由排片 `record` 派生（`FilmMapper.selectByCinema` / `CinemaMapper.selectByFilmId` 用 `EXISTS` 子查询）。**不存在影院-影片关联表**（原 `cinema_film` 已删除）——新建排片后前台立即可见，不要再引入第二张关联表。`record.film_id` 为 `NOT NULL`。
+- 场次可购票性由 `start` 与 `status` 共同决定，唯一权威实现在 `RecordService.isPurchasable`（`start` 晚于当前 且 `status != 停售`）；`OrderedService.insertOrder` 复用该规则做下单拦截，前端 `CinemaDetail.vue` 的 `recordState()`/`canBuy()` 与之同构。`未开始/放映中/已结束` 是派生状态，不落库；`record.status` 只保留 `正常/停售` 一个人工开关。
+- 排片的创建/编辑统一走 `RecordController` → `RecordService.validateSchedule(record, previousStart)`：校验影厅与影片归属、`start` 晚于当前（编辑时时间未改动则不重复校验，保证存量过期场次仍可停售）、`price > 0`、同影厅时段不重叠（按影片片长计算区间，无片长时按 120 分钟兜底），并按 `filmId` 回填 `title`。
+- 父数据禁止物理删除：`ordered` 的 5 个外键、`record` 的 3 个外键、`room.cinema_id` 均为 `ON DELETE RESTRICT`；Film/Cinema/Room/Record/User 五个删除入口先做引用计数校验并返回可读提示。下架影片/场次请改 `status`，不要删除。
+- `/api/v1/records` 在 `AuthInterceptor.PUBLIC_READ_PREFIXES` 内（匿名 GET 放行），因为公开的影院详情页需要拉取场次列表。
 
 ## Git 提交历史
 
