@@ -99,14 +99,14 @@ class OrderedServiceTest {
 
     @Test
     void createOrderLocksRecordBeforeCheckingSeats() {
-        Record record = new Record();
-        record.setId(1);
-        record.setFilmId(24);
-        record.setCinemaId(10);
-        record.setRoomId(7);
-        record.setPrice("45.00");
-        record.setStart("2026-06-12 20:00");
-        when(recordMapper.selectByIdForUpdate(1)).thenReturn(record);
+        Record recordRow = new Record();
+        recordRow.setId(1);
+        recordRow.setFilmId(24);
+        recordRow.setCinemaId(10);
+        recordRow.setRoomId(7);
+        recordRow.setPrice("45.00");
+        recordRow.setStart("2026-06-12 20:00");
+        when(recordMapper.selectByIdForUpdate(1)).thenReturn(recordRow);
         when(orderedMapper.countSeatInUse(1, "1排1座")).thenReturn(0);
 
         Ordered ordered = new Ordered();

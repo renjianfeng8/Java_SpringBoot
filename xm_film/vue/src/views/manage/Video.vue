@@ -22,7 +22,9 @@
         <el-table-column label="预告视频" prop="preview" width="220">
           <template #default="scope">
             <div v-if="scope.row.preview" class="video-wrapper">
-              <video :src="scope.row.preview" class="small-video" controls />
+              <video :src="scope.row.preview" class="small-video" controls>
+                <track kind="captions" src="/subtitles/trailer-zh.vtt" srclang="zh" label="中文字幕" />
+              </video>
             </div>
           </template>
         </el-table-column>

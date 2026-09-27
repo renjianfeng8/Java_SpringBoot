@@ -13,6 +13,8 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class SwaggerConfig {
 
+    private static final String BEARER_AUTH = "BearerAuth";
+
     @Bean
     public OpenAPI customOpenAPI() {
         return new OpenAPI()
@@ -26,10 +28,10 @@ public class SwaggerConfig {
                         .license(new License()
                                 .name("MIT")
                                 .url("https://opensource.org/licenses/MIT")))
-                .addSecurityItem(new SecurityRequirement().addList("BearerAuth"))
+                .addSecurityItem(new SecurityRequirement().addList(BEARER_AUTH))
                 .components(new Components()
-                        .addSecuritySchemes("BearerAuth", new SecurityScheme()
-                                .name("BearerAuth")
+                        .addSecuritySchemes(BEARER_AUTH, new SecurityScheme()
+                                .name(BEARER_AUTH)
                                 .type(SecurityScheme.Type.HTTP)
                                 .scheme("bearer")
                                 .bearerFormat("JWT")
