@@ -5,18 +5,24 @@
 
 <mapper namespace="com.example.springboot.mapper.ActorMapper">
 
+    <!-- 数据库列 actor 与实体属性 actorName 不同名，需显式映射（其余列走自动映射） -->
+    <resultMap id="ActorMap" type="com.example.springboot.entity.Actor">
+        <id column="id" property="id"/>
+        <result column="actor" property="actorName"/>
+    </resultMap>
+
     <!-- 查询操作 -->
-    <select id="selectAll" resultType="com.example.springboot.entity.Actor">
+    <select id="selectAll" resultMap="ActorMap">
         SELECT * FROM actor
         <where>
-            <if test="actor != null">
-                AND actor LIKE CONCAT('%', #{actor}, '%')
+            <if test="actorName != null">
+                AND actor LIKE CONCAT('%', #{actorName}, '%')
             </if>
         </where>
         ORDER BY id DESC
     </select>
 
-    <select id="selectById" parameterType="java.lang.Integer" resultType="com.example.springboot.entity.Actor">
+    <select id="selectById" parameterType="java.lang.Integer" resultMap="ActorMap">
         SELECT * FROM actor WHERE id = #{id}
     </select>
 
@@ -26,7 +32,7 @@
         <trim prefix="(" suffix=")" suffixOverrides=",">
             <if test="title != null">title,</if>
             <if test="img != null">img,</if>
-            <if test="actor != null">actor,</if>
+            <if test="actorName != null">actor,</if>
             <if test="figure != null">figure,</if>
             <if test="picture != null">picture,</if>
             <if test="grade != null">grade,</if>
@@ -36,7 +42,7 @@
         <trim prefix="(" suffix=")" suffixOverrides=",">
             <if test="title != null">#{title},</if>
             <if test="img != null">#{img},</if>
-            <if test="actor != null">#{actor},</if>
+            <if test="actorName != null">#{actorName},</if>
             <if test="figure != null">#{figure},</if>
             <if test="picture != null">#{picture},</if>
             <if test="grade != null">#{grade},</if>
@@ -51,7 +57,7 @@
         <set>
             <if test="title != null">title = #{title},</if>
             <if test="img != null">img = #{img},</if>
-            <if test="actor != null">actor = #{actor},</if>
+            <if test="actorName != null">actor = #{actorName},</if>
             <if test="figure != null">figure = #{figure},</if>
             <if test="picture != null">picture = #{picture},</if>
             <if test="grade != null">grade = #{grade},</if>

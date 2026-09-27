@@ -10,12 +10,15 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
 
+import java.io.IOException;
 import java.util.Set;
 
 @Component
 public class AuthInterceptor implements HandlerInterceptor {
 
     private static final Logger log = LoggerFactory.getLogger(AuthInterceptor.class);
+
+    private static final String JSON_CONTENT_TYPE = "application/json;charset=UTF-8";
 
     private static final Set<String> ADMIN_ONLY_PREFIXES = Set.of(
             "/api/v1/admins"
@@ -57,7 +60,7 @@ public class AuthInterceptor implements HandlerInterceptor {
                 return true;
             }
             response.setStatus(401);
-            response.setContentType("application/json;charset=UTF-8");
+            response.setContentType(JSON_CONTENT_TYPE);
             response.getWriter().write("{\"code\":\"401\",\"msg\":\"登录已过期，请重新登录\"}");
             return false;
         }
@@ -81,7 +84,7 @@ public class AuthInterceptor implements HandlerInterceptor {
         }
 
         response.setStatus(401);
-        response.setContentType("application/json;charset=UTF-8");
+        response.setContentType(JSON_CONTENT_TYPE);
         response.getWriter().write("{\"code\":\"401\",\"msg\":\"登录已过期，请重新登录\"}");
         return false;
     }
@@ -103,9 +106,9 @@ public class AuthInterceptor implements HandlerInterceptor {
                 || "PATCH".equalsIgnoreCase(method);
     }
 
-    private void writeForbidden(HttpServletResponse response) throws Exception {
+    private void writeForbidden(HttpServletResponse response) throws IOException {
         response.setStatus(403);
-        response.setContentType("application/json;charset=UTF-8");
+        response.setContentType(JSON_CONTENT_TYPE);
         response.getWriter().write("{\"code\":\"403\",\"msg\":\"权限不足\"}");
     }
 }

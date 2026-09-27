@@ -8,8 +8,8 @@ import com.example.springboot.entity.Room;
 import com.example.springboot.exception.CustomException;
 import com.example.springboot.service.RecordService;
 import com.example.springboot.service.RoomService;
-import com.github.pagehelper.PageHelper;
 import com.github.pagehelper.PageInfo;
+import com.github.pagehelper.page.PageMethod;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.web.bind.annotation.*;
@@ -44,18 +44,18 @@ public class RecordController extends BaseController<Record> {
                        @RequestParam(defaultValue = "1") Integer pageNum,
                        @RequestParam(defaultValue = "10") Integer pageSize) {
         applyCinemaScope(entity);
-        PageHelper.startPage(pageNum, pageSize);
+        PageMethod.startPage(pageNum, pageSize);
         return Result.success(new PageInfo<>(recordService.selectAll(entity)));
     }
 
     @Override
     @GetMapping("/{id}")
     public Result getById(@PathVariable Integer id) {
-        Record record = recordService.selectById(id);
-        if (record == null) {
+        Record recordItem = recordService.selectById(id);
+        if (recordItem == null) {
             throw new CustomException(ErrorCode.NOT_FOUND, "排片不存在");
         }
-        return Result.success(record);
+        return Result.success(recordItem);
     }
 
     @Override
@@ -86,8 +86,8 @@ public class RecordController extends BaseController<Record> {
     @Override
     @DeleteMapping("/{id}")
     public Result delete(@PathVariable Integer id) {
-        Record record = recordService.selectById(id);
-        ensureRecordAccess(record);
+        Record recordItem = recordService.selectById(id);
+        ensureRecordAccess(recordItem);
         recordService.delete(id);
         return Result.success();
     }
@@ -102,34 +102,37 @@ public class RecordController extends BaseController<Record> {
         return Result.success();
     }
 
-    private void applyCinemaScope(Record record) {
+    private void applyCinemaScope(Record recordItem) {
         if (isCinema()) {
-            record.setCinemaId(currentUserId());
+            recordItem.setCinemaId(currentUserId());
         }
     }
 
-    private void ensureRecordAccess(Record record) {
-        if (record == null) {
+    private void ensureRecordAccess(Record recordItem) {
+        if (recordItem == null) {
             throw new CustomException(ErrorCode.NOT_FOUND, "排片不存在");
         }
         if (isAdmin()) {
             return;
         }
-        if (isCinema() && currentUserId().equals(record.getCinemaId())) {
-            return;
+        if (isCinema()) {
+            Integer cinemaId = currentUserId();
+            if (cinemaId != null && cinemaId.equals(recordItem.getCinemaId())) {
+                return;
+            }
         }
         throw new CustomException(ErrorCode.FORBIDDEN, "无权操作该排片");
     }
 
-    private void ensureRoomBelongsToCinema(Record record) {
-        if (record.getRoomId() == null || record.getCinemaId() == null) {
+    private void ensureRoomBelongsToCinema(Record recordItem) {
+        if (recordItem.getRoomId() == null || recordItem.getCinemaId() == null) {
             return;
         }
-        Room room = roomService.selectById(record.getRoomId());
+        Room room = roomService.selectById(recordItem.getRoomId());
         if (room == null) {
             throw new CustomException(ErrorCode.PARAM_INVALID, "影厅不存在");
         }
-        if (!record.getCinemaId().equals(room.getCinemaId())) {
+        if (!recordItem.getCinemaId().equals(room.getCinemaId())) {
             throw new CustomException(ErrorCode.PARAM_INVALID, "影厅不属于当前影院");
         }
     }

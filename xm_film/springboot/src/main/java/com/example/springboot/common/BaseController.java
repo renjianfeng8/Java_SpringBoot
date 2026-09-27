@@ -1,7 +1,7 @@
 package com.example.springboot.common;
 
-import com.github.pagehelper.PageHelper;
 import com.github.pagehelper.PageInfo;
+import com.github.pagehelper.page.PageMethod;
 import io.swagger.v3.oas.annotations.Operation;
 import org.springframework.web.bind.annotation.*;
 
@@ -11,7 +11,7 @@ public abstract class BaseController<T> {
 
     protected final BaseService<T> service;
 
-    public BaseController(BaseService<T> service) {
+    protected BaseController(BaseService<T> service) {
         this.service = service;
     }
 
@@ -32,7 +32,7 @@ public abstract class BaseController<T> {
     public Result page(T entity,
                        @RequestParam(defaultValue = "1") Integer pageNum,
                        @RequestParam(defaultValue = "10") Integer pageSize) {
-        PageHelper.startPage(pageNum, pageSize);
+        PageMethod.startPage(pageNum, pageSize);
         return Result.success(new PageInfo<>(service.selectAll(entity)));
     }
 

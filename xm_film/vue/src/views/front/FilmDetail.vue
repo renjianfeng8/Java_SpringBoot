@@ -163,6 +163,7 @@
             <div style="margin-top: 15px; border-radius: 4px; overflow: hidden;">
               <!-- 有视频URL时显示播放器 -->
               <video v-if="film.video" :src="film.video" controls style="width: 100%; height: 200px; object-fit: cover; background-color: #000;">
+                <track kind="captions" src="/subtitles/trailer-zh.vtt" srclang="zh" label="中文字幕" />
                 您的浏览器不支持HTML5视频播放，请升级浏览器。
               </video>
               <!-- 无视频URL时显示提示 -->
@@ -184,8 +185,7 @@ import {ElMessage} from 'element-plus';
 import request from "@/utils/request.js";
 import 'element-plus/theme-chalk/el-button.css';
 import { API_PATHS, apiById } from '@/constants';
-// 导入路由跳转函数
-import { useRouter } from 'vue-router';
+
 
 // 初始化路由实例
 const router = useRouter();
@@ -307,7 +307,7 @@ const supportActorList = computed(() => {
  * 作用：获取电影基础信息+单个actorId+actorInfo
  */
 const fetchFilmDetail = () => {
-  if (!filmId || isNaN(Number(filmId))) {
+  if (!filmId || Number.isNaN(Number(filmId))) {
     errorMsg.value = '电影ID无效，请返回列表重试';
     return;
   }
@@ -366,7 +366,7 @@ const fetchFilmDetail = () => {
  */
 const fetchCastBySingleId = (actorId) => {
   // 前置校验：演员ID无效时直接提示
-  if (!actorId || isNaN(Number(actorId))) {
+  if (!actorId || Number.isNaN(Number(actorId))) {
     castError.value = '演员ID无效，无法加载演职人员信息';
     return;
   }
@@ -381,12 +381,12 @@ const fetchCastBySingleId = (actorId) => {
         if (res.code === '200' && res.data) {
           const actorData = res.data;
           // 验证演员数据是否包含必要字段
-          if (actorData.id && actorData.actor) {
+          if (actorData.id && actorData.actorName) {
             // 将单个演员信息转为数组，统一存入castList
             castList.value = [
               {
                 id: actorData.id,
-                actor: actorData.actor, // 演员/导演名称（actor表的actor字段）
+                actor: actorData.actorName, // 演员/导演名称（actor表的actor列）
                 roleType: actorData.roleType || 2, // 角色类型（默认2=主演）
                 role: actorData.role || '' ,// 具体角色名称（如"Jackie"）
                 picture: actorData.picture,//演员图片
@@ -433,15 +433,6 @@ onMounted(() => {
   margin-bottom: 15px;
 }
 
-/* 角色标签（如“导演：”“主演：”） */
-.cast-label {
-  font-weight: bold;
-  color: #666;
-  margin-right: 8px;
-  display: inline-block;
-  width: 60px; /* 固定标签宽度，对齐更美观 */
-  vertical-align: top; /* 与卡片容器顶部对齐 */
-}
 
 /* 演职人员卡片容器：横向排列，自动换行 */
 .cast-card-container {

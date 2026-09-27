@@ -7,8 +7,8 @@ import com.example.springboot.entity.Cinema;
 import com.example.springboot.common.enums.ErrorCode;
 import com.example.springboot.exception.CustomException;
 import com.example.springboot.mapper.CinemaMapper;
-import com.github.pagehelper.PageHelper;
 import com.github.pagehelper.PageInfo;
+import com.github.pagehelper.page.PageMethod;
 import jakarta.annotation.Resource;
 import org.springframework.beans.BeanUtils;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -33,7 +33,7 @@ public class CinemaService extends BaseService<Cinema> {
     }
 
     public PageInfo<Cinema> selectPage(Cinema cinema, Integer filmId, Integer pageNum, Integer pageSize) {
-        PageHelper.startPage(pageNum, pageSize);
+        PageMethod.startPage(pageNum, pageSize);
         List<Cinema> list = cinemaMapper.selectByFilmId(cinema, filmId);
         return PageInfo.of(list);
     }
@@ -41,6 +41,10 @@ public class CinemaService extends BaseService<Cinema> {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void add(Cinema cinema) {
+        insertCinema(cinema);
+    }
+
+    private void insertCinema(Cinema cinema) {
         String username = cinema.getUsername();
         Cinema dbCinema = cinemaMapper.selectByUsername(username);
         if (dbCinema != null) {
@@ -73,10 +77,9 @@ public class CinemaService extends BaseService<Cinema> {
             throw new CustomException(ErrorCode.UNAUTHORIZED.code(), "账号不存在");
         }
         String password = account.getPassword();
-        if (!passwordEncoder.matches(password, dbCinema.getPassword())) {
-            if (!dbCinema.getPassword().equals(password)) {
-                throw new CustomException(ErrorCode.UNAUTHORIZED.code(), "账号或密码错误");
-            }
+        if (!passwordEncoder.matches(password, dbCinema.getPassword())
+                && !dbCinema.getPassword().equals(password)) {
+            throw new CustomException(ErrorCode.UNAUTHORIZED.code(), "账号或密码错误");
         }
         return dbCinema;
     }
@@ -88,10 +91,9 @@ public class CinemaService extends BaseService<Cinema> {
         if (cinema == null) {
             throw new CustomException(ErrorCode.UNAUTHORIZED.code(), "账号不存在");
         }
-        if (!passwordEncoder.matches(account.getPassword(), cinema.getPassword())) {
-            if (!cinema.getPassword().equals(account.getPassword())) {
-                throw new CustomException(ErrorCode.UNAUTHORIZED.code(), "原密码错误");
-            }
+        if (!passwordEncoder.matches(account.getPassword(), cinema.getPassword())
+                && !cinema.getPassword().equals(account.getPassword())) {
+            throw new CustomException(ErrorCode.UNAUTHORIZED.code(), "原密码错误");
         }
         cinema.setPassword(passwordEncoder.encode(account.getNewPassword()));
         cinemaMapper.updatePassword(cinema);
@@ -101,6 +103,6 @@ public class CinemaService extends BaseService<Cinema> {
     public void register(Account account) {
         Cinema cinema = new Cinema();
         BeanUtils.copyProperties(account, cinema);
-        add(cinema);
+        insertCinema(cinema);
     }
 }

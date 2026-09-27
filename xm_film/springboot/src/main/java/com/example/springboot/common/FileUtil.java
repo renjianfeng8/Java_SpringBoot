@@ -12,6 +12,9 @@ import java.util.UUID;
 
 public class FileUtil {
 
+    private FileUtil() {
+    }
+
     private static final Set<String> ALLOWED_MIME_TYPES = Set.of(
             "image/jpeg", "image/png", "image/webp", "image/gif",
             "video/mp4", "video/webm"

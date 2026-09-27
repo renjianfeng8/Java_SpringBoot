@@ -6,8 +6,8 @@ import com.example.springboot.common.enums.ErrorCode;
 import com.example.springboot.entity.Room;
 import com.example.springboot.exception.CustomException;
 import com.example.springboot.service.RoomService;
-import com.github.pagehelper.PageHelper;
 import com.github.pagehelper.PageInfo;
+import com.github.pagehelper.page.PageMethod;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.web.bind.annotation.*;
@@ -40,7 +40,7 @@ public class RoomController extends BaseController<Room> {
                        @RequestParam(defaultValue = "1") Integer pageNum,
                        @RequestParam(defaultValue = "10") Integer pageSize) {
         applyCinemaScope(entity);
-        PageHelper.startPage(pageNum, pageSize);
+        PageMethod.startPage(pageNum, pageSize);
         return Result.success(new PageInfo<>(roomService.selectAll(entity)));
     }
 
@@ -107,8 +107,11 @@ public class RoomController extends BaseController<Room> {
         if (isAdmin()) {
             return;
         }
-        if (isCinema() && currentUserId().equals(room.getCinemaId())) {
-            return;
+        if (isCinema()) {
+            Integer cinemaId = currentUserId();
+            if (cinemaId != null && cinemaId.equals(room.getCinemaId())) {
+                return;
+            }
         }
         throw new CustomException(ErrorCode.FORBIDDEN, "无权操作该影厅");
     }
