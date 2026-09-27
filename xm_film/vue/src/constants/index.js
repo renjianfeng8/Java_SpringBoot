@@ -64,10 +64,20 @@ export const FILM_STATUS_MAP = {
   '停止上映': 'danger',
 }
 
+/** 放映场次的售卖状态；未开始/放映中/已结束由 start 派生，不落库 */
+export const RECORD_STATUS_MAP = {
+  '正常': 'success',
+  '停售': 'info',
+}
+
 export function getOrderStatusType(status) {
   return ORDER_STATUS_MAP[status] || 'info'
 }
 
 export function getFilmStatusType(status) {
   return FILM_STATUS_MAP[status] || 'info'
+}
+
+export function getRecordStatusType(status) {
+  return RECORD_STATUS_MAP[status] || 'info'
 }

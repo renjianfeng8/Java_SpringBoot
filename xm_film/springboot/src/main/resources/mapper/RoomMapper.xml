@@ -50,6 +50,11 @@
         WHERE id = #{id}
     </update>
 
+    <!-- 删除守卫引用计数 -->
+    <select id="countByCinemaId" resultType="int">
+        SELECT COUNT(*) FROM room WHERE cinema_id = #{cinemaId}
+    </select>
+
     <!-- 删除操作 -->
     <delete id="deleteById" parameterType="com.example.springboot.entity.Room">
         DELETE FROM room WHERE id = #{id}

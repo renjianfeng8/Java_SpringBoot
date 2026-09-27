@@ -19,4 +19,8 @@ public class RoomService extends BaseService<Room> {
     protected BaseMapper<Room> mapper() {
         return roomMapper;
     }
+
+    public int countByCinemaId(Integer cinemaId) {
+        return roomMapper.countByCinemaId(cinemaId);
+    }
 }

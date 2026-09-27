@@ -4,6 +4,7 @@ import com.example.springboot.common.BaseMapper;
 import com.example.springboot.common.BaseService;
 import com.example.springboot.common.enums.ErrorCode;
 import com.example.springboot.common.enums.OrderStatus;
+import com.example.springboot.common.enums.RecordStatus;
 import com.example.springboot.entity.Film;
 import com.example.springboot.entity.Ordered;
 import com.example.springboot.entity.Record;
@@ -91,6 +92,12 @@ public class OrderedService extends BaseService<Ordered> {
         if (recordItem == null) {
             throw new CustomException(ErrorCode.PARAM_INVALID, "放映场次不存在");
         }
+        if (RecordStatus.STOPPED.equals(recordItem.getStatus())) {
+            throw new CustomException(ErrorCode.BUSINESS_CONFLICT, "该场次已停售");
+        }
+        if (!RecordService.isPurchasable(recordItem)) {
+            throw new CustomException(ErrorCode.BUSINESS_CONFLICT, "该场次已开场，无法购票");
+        }
 
         List<String> seats = normalizeSeats(ordered.getSeat());
         int number = seats.size();
@@ -170,6 +177,26 @@ public class OrderedService extends BaseService<Ordered> {
 
     public List<Ordered> selectActiveByRecordId(Integer recordId) {
         return orderedMapper.selectActiveByRecordId(recordId);
+    }
+
+    public int countByFilmId(Integer filmId) {
+        return orderedMapper.countByFilmId(filmId);
+    }
+
+    public int countByCinemaId(Integer cinemaId) {
+        return orderedMapper.countByCinemaId(cinemaId);
+    }
+
+    public int countByRoomId(Integer roomId) {
+        return orderedMapper.countByRoomId(roomId);
+    }
+
+    public int countByRecordId(Integer recordId) {
+        return orderedMapper.countByRecordId(recordId);
+    }
+
+    public int countByUserId(Integer userId) {
+        return orderedMapper.countByUserId(userId);
     }
 
     public Ordered selectByIdScoped(Integer id, String role, Integer userId) {

@@ -26,21 +26,17 @@
         SELECT * FROM cinema WHERE username = #{username}
     </select>
 
-    <!-- 根据电影ID筛选影院 -->
+    <!-- 根据电影ID筛选影院：上映关系由排片(record)派生 -->
     <select id="selectByFilmId" resultType="com.example.springboot.entity.Cinema">
         SELECT DISTINCT c.* FROM cinema c
-        <!-- 关联中间表：只有当filmId不为空时才进行关联 -->
-        <if test="filmId != null">
-            INNER JOIN cinema_film cf ON c.id = cf.cinema_id
-        </if>
         <where>
             <!-- 原有影院自身条件 -->
             <if test="cinema.name != null">
                 AND c.name LIKE CONCAT('%', #{cinema.name}, '%')
             </if>
-            <!-- 电影筛选条件 -->
+            <!-- 电影筛选条件：该影院存在这部电影的排片 -->
             <if test="filmId != null">
-                AND cf.film_id = #{filmId}
+                AND EXISTS (SELECT 1 FROM record r WHERE r.cinema_id = c.id AND r.film_id = #{filmId})
             </if>
         </where>
         ORDER BY c.id DESC

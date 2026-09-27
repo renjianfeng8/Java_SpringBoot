@@ -3,9 +3,11 @@ package com.example.springboot.controller;
 import com.example.springboot.common.BaseController;
 import com.example.springboot.common.Result;
 import com.example.springboot.common.enums.ErrorCode;
+import com.example.springboot.common.enums.RecordStatus;
 import com.example.springboot.entity.Record;
 import com.example.springboot.entity.Room;
 import com.example.springboot.exception.CustomException;
+import com.example.springboot.service.OrderedService;
 import com.example.springboot.service.RecordService;
 import com.example.springboot.service.RoomService;
 import com.github.pagehelper.PageInfo;
@@ -24,11 +26,15 @@ import java.util.List;
 public class RecordController extends BaseController<Record> {
     private final RecordService recordService;
     private final RoomService roomService;
+    private final OrderedService orderedService;
 
-    public RecordController(RecordService recordService, RoomService roomService) {
+    public RecordController(RecordService recordService,
+                            RoomService roomService,
+                            OrderedService orderedService) {
         super(recordService);
         this.recordService = recordService;
         this.roomService = roomService;
+        this.orderedService = orderedService;
     }
 
     @Override
@@ -65,7 +71,11 @@ public class RecordController extends BaseController<Record> {
             entity.setCinemaId(currentUserId());
         }
         requireAdminOrCinema();
+        entity.setStatus(entity.getStatus() == null
+                ? RecordStatus.NORMAL
+                : RecordService.normalizeStatus(entity.getStatus()));
         ensureRoomBelongsToCinema(entity);
+        recordService.validateSchedule(entity, null);
         recordService.add(entity);
         return Result.success();
     }
@@ -78,7 +88,24 @@ public class RecordController extends BaseController<Record> {
         if (isCinema()) {
             entity.setCinemaId(currentUserId());
         }
+        // 局部更新：未提交的字段沿用库内值，避免"仅停售"这类操作被整表校验挡住
+        if (entity.getRoomId() == null) {
+            entity.setRoomId(dbRecord.getRoomId());
+        }
+        if (entity.getFilmId() == null) {
+            entity.setFilmId(dbRecord.getFilmId());
+        }
+        if (entity.getStart() == null) {
+            entity.setStart(dbRecord.getStart());
+        }
+        if (entity.getPrice() == null) {
+            entity.setPrice(dbRecord.getPrice());
+        }
+        entity.setStatus(entity.getStatus() == null
+                ? dbRecord.getStatus()
+                : RecordService.normalizeStatus(entity.getStatus()));
         ensureRoomBelongsToCinema(entity);
+        recordService.validateSchedule(entity, dbRecord.getStart());
         recordService.update(entity);
         return Result.success();
     }
@@ -88,6 +115,7 @@ public class RecordController extends BaseController<Record> {
     public Result delete(@PathVariable Integer id) {
         Record recordItem = recordService.selectById(id);
         ensureRecordAccess(recordItem);
+        ensureNoOrders(id);
         recordService.delete(id);
         return Result.success();
     }
@@ -97,9 +125,19 @@ public class RecordController extends BaseController<Record> {
     public Result deleteBatch(@RequestBody List<Integer> ids) {
         for (Integer id : ids) {
             ensureRecordAccess(recordService.selectById(id));
+            ensureNoOrders(id);
         }
         recordService.deleteBatch(ids);
         return Result.success();
+    }
+
+    /** 订单引用排片，物理删除会带走交易凭证 —— 已产生订单的场次只能停售 */
+    private void ensureNoOrders(Integer recordId) {
+        int count = orderedService.countByRecordId(recordId);
+        if (count > 0) {
+            throw new CustomException(ErrorCode.BUSINESS_CONFLICT,
+                    "该场次已有 " + count + " 笔订单，无法删除；如需下架请将放映状态改为「停售」");
+        }
     }
 
     private void applyCinemaScope(Record recordItem) {

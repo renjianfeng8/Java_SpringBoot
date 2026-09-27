@@ -83,6 +83,27 @@
           AND status = '待支付'
     </update>
 
+    <!-- 删除守卫引用计数 -->
+    <select id="countByFilmId" resultType="int">
+        SELECT COUNT(*) FROM ordered WHERE film_id = #{filmId}
+    </select>
+
+    <select id="countByCinemaId" resultType="int">
+        SELECT COUNT(*) FROM ordered WHERE cinema_id = #{cinemaId}
+    </select>
+
+    <select id="countByRoomId" resultType="int">
+        SELECT COUNT(*) FROM ordered WHERE room_id = #{roomId}
+    </select>
+
+    <select id="countByRecordId" resultType="int">
+        SELECT COUNT(*) FROM ordered WHERE record_id = #{recordId}
+    </select>
+
+    <select id="countByUserId" resultType="int">
+        SELECT COUNT(*) FROM ordered WHERE user_id = #{userId}
+    </select>
+
     <!-- 插入操作 -->
     <insert id="insert" parameterType="com.example.springboot.entity.Ordered"
             useGeneratedKeys="true" keyProperty="id">

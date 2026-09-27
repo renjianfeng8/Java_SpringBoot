@@ -22,7 +22,8 @@
             <if test="roomId != null">AND record.room_id = #{roomId} </if>
             <if test="filmId != null">AND record.film_id = #{filmId} </if>
         </where>
-        ORDER BY id DESC
+        <!-- 未来场次在前且按时间升序，历史场次排在后面 -->
+        ORDER BY (record.start &gt;= NOW()) DESC, record.start ASC, record.id ASC
     </select>
 
     <select id="selectById" parameterType="java.lang.Integer" resultType="com.example.springboot.entity.Record">
@@ -39,6 +40,30 @@
     <select id="selectByIdForUpdate" parameterType="java.lang.Integer"
             resultType="com.example.springboot.entity.Record">
         SELECT * FROM record WHERE id = #{id} FOR UPDATE
+    </select>
+
+    <!-- 同一影厅时段冲突检测（已停售的场次不占用影厅） -->
+    <select id="countRoomOverlap" resultType="int">
+        SELECT COUNT(*) FROM record r
+        LEFT JOIN film f ON r.film_id = f.id
+        WHERE r.room_id = #{roomId}
+          AND COALESCE(r.status, '正常') != '停售'
+          AND #{start} &lt; DATE_ADD(r.start, INTERVAL GREATEST(COALESCE(f.time, 120), 1) MINUTE)
+          AND #{end} &gt; r.start
+        <if test="id != null">AND r.id != #{id}</if>
+    </select>
+
+    <!-- 删除守卫引用计数：被排片引用的影片/影院/影厅不允许物理删除 -->
+    <select id="countByFilmId" resultType="int">
+        SELECT COUNT(*) FROM record WHERE film_id = #{filmId}
+    </select>
+
+    <select id="countByCinemaId" resultType="int">
+        SELECT COUNT(*) FROM record WHERE cinema_id = #{cinemaId}
+    </select>
+
+    <select id="countByRoomId" resultType="int">
+        SELECT COUNT(*) FROM record WHERE room_id = #{roomId}
     </select>
 
     <!-- 插入操作 -->

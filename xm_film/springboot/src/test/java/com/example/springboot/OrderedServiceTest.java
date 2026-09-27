@@ -12,6 +12,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.argThat;
@@ -105,7 +108,7 @@ class OrderedServiceTest {
         recordRow.setCinemaId(10);
         recordRow.setRoomId(7);
         recordRow.setPrice("45.00");
-        recordRow.setStart("2026-06-12 20:00");
+        recordRow.setStart(futureStart());
         when(recordMapper.selectByIdForUpdate(1)).thenReturn(recordRow);
         when(orderedMapper.countSeatInUse(1, "1排1座")).thenReturn(0);
 
@@ -117,6 +120,48 @@ class OrderedServiceTest {
 
         verify(recordMapper).selectByIdForUpdate(1);
         verify(orderedMapper).insert(ordered);
+    }
+
+    @Test
+    void cannotCreateOrderForStartedRecord() {
+        Record recordRow = new Record();
+        recordRow.setId(1);
+        recordRow.setFilmId(24);
+        recordRow.setPrice("45.00");
+        recordRow.setStart("2020-01-01 10:00");
+        when(recordMapper.selectByIdForUpdate(1)).thenReturn(recordRow);
+
+        Ordered ordered = new Ordered();
+        ordered.setRecordId(1);
+        ordered.setSeat("1排1座");
+
+        assertThatThrownBy(() -> orderedService.createOrder(ordered, "USER", 8))
+                .isInstanceOf(CustomException.class)
+                .hasMessageContaining("已开场");
+    }
+
+    @Test
+    void cannotCreateOrderForStoppedRecord() {
+        Record recordRow = new Record();
+        recordRow.setId(1);
+        recordRow.setFilmId(24);
+        recordRow.setPrice("45.00");
+        recordRow.setStatus("停售");
+        recordRow.setStart(futureStart());
+        when(recordMapper.selectByIdForUpdate(1)).thenReturn(recordRow);
+
+        Ordered ordered = new Ordered();
+        ordered.setRecordId(1);
+        ordered.setSeat("1排1座");
+
+        assertThatThrownBy(() -> orderedService.createOrder(ordered, "USER", 8))
+                .isInstanceOf(CustomException.class)
+                .hasMessageContaining("停售");
+    }
+
+    private static String futureStart() {
+        return LocalDateTime.now().plusDays(1).withNano(0)
+                .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
     }
 
     @Test

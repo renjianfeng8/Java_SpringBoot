@@ -5,19 +5,16 @@
 
 <mapper namespace="com.example.springboot.mapper.FilmMapper">
 
-    <!-- 根据影院ID查询上映电影 -->
+    <!-- 根据影院ID查询上映电影：影院上映哪些影片由排片(record)派生，新建排片后前台即可见 -->
     <select id="selectByCinema" resultType="com.example.springboot.entity.Film">
         SELECT
         f.*,
         a.title AS areaName,
-        CONCAT(actor.id, ':', actor.actor) as actorInfo,
-        -- 子查询获取当前影院的场次数量
-        (SELECT COUNT(*) FROM cinema_film cf WHERE cf.film_id = f.id AND cf.cinema_id = #{cinemaId}) AS showCount
+        CONCAT(actor.id, ':', actor.actor) as actorInfo
         FROM film f
         LEFT JOIN area a ON f.area_id = a.id
         LEFT JOIN actor ON f.actor_id = actor.id
-        INNER JOIN cinema_film cf ON f.id = cf.film_id
-        WHERE cf.cinema_id = #{cinemaId}
+        WHERE EXISTS (SELECT 1 FROM record r WHERE r.film_id = f.id AND r.cinema_id = #{cinemaId})
         <if test="filmId != null">AND f.id = #{filmId}</if>
         ORDER BY f.id DESC
     </select>

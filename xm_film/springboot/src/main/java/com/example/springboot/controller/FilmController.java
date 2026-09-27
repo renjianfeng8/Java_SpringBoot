@@ -2,11 +2,17 @@ package com.example.springboot.controller;
 
 import com.example.springboot.common.BaseController;
 import com.example.springboot.common.Result;
+import com.example.springboot.common.enums.ErrorCode;
 import com.example.springboot.entity.Film;
+import com.example.springboot.exception.CustomException;
 import com.example.springboot.service.FilmService;
+import com.example.springboot.service.OrderedService;
+import com.example.springboot.service.RecordService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @Tag(name = "电影管理", description = "电影 CRUD、排行榜、搜索、按影院查询")
 @RestController
@@ -14,10 +20,44 @@ import org.springframework.web.bind.annotation.*;
 public class FilmController extends BaseController<Film> {
 
     private final FilmService filmService;
+    private final RecordService recordService;
+    private final OrderedService orderedService;
 
-    public FilmController(FilmService filmService) {
+    public FilmController(FilmService filmService,
+                          RecordService recordService,
+                          OrderedService orderedService) {
         super(filmService);
         this.filmService = filmService;
+        this.recordService = recordService;
+        this.orderedService = orderedService;
+    }
+
+    @Override
+    @DeleteMapping("/{id}")
+    public Result delete(@PathVariable Integer id) {
+        ensureNoReferences(id);
+        filmService.delete(id);
+        return Result.success();
+    }
+
+    @Override
+    @DeleteMapping("/batch")
+    public Result deleteBatch(@RequestBody List<Integer> ids) {
+        for (Integer id : ids) {
+            ensureNoReferences(id);
+        }
+        filmService.deleteBatch(ids);
+        return Result.success();
+    }
+
+    /** 影片被排片或订单引用时禁止物理删除，下架请改用 status = 停止上映 */
+    private void ensureNoReferences(Integer filmId) {
+        int records = recordService.countByFilmId(filmId);
+        int orders = orderedService.countByFilmId(filmId);
+        if (records > 0 || orders > 0) {
+            throw new CustomException(ErrorCode.BUSINESS_CONFLICT,
+                    "该影片已有 " + records + " 个排片、" + orders + " 笔订单，无法删除；如需下架请将状态改为「停止上映」");
+        }
     }
 
     @Operation(summary = "搜索电影", description = "按标题模糊搜索")

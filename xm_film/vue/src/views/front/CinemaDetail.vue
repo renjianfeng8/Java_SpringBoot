@@ -187,18 +187,18 @@
                         </div>
                         <!-- 操作：选座购票按钮/状态标签 -->
                         <div style="width: 40%; text-align: center; display: flex; justify-content: center; gap: 10px; align-items: center;">
-                          <!-- 可购票状态：显示选座购票按钮（增加按钮尺寸和样式） -->
+                          <!-- 可购票 = 未开场且未停售，与后端 RecordService.isPurchasable 同一规则 -->
                           <button
-                              v-if="record.status === '已上映' || record.status === '放映中' || record.status === '未开始'"
+                              v-if="canBuy(record, film.time)"
                               style="background-color: #ef4238; color: white; border: none; border-radius: 4px; padding: 4px 12px; font-size: 12px; cursor: pointer; transition: background-color 0.2s;"
                               @click="goToBuyTicket(cinemaId, film.id, record.id, record.roomId)"
                           >
                             选座购票
                           </button>
-                          <!-- 其他状态：显示状态标签 + 不可点击提示 -->
+                          <!-- 其他状态：显示派生状态标签 + 不可点击提示 -->
                           <div v-else style="display: flex; align-items: center; gap: 8px;">
-                            <div :style="getStatusStyle(record.status)" class="status-tag">
-                              {{ record.status }}
+                            <div :style="getStatusStyle(recordState(record, film.time))" class="status-tag">
+                              {{ recordState(record, film.time) }}
                             </div>
                             <span style="color: #999; font-size: 11px;">不可购票</span>
                           </div>
@@ -276,18 +276,40 @@ const recordLoading = ref({}); // 按电影ID存储加载状态
 const recordData = reactive({}); // 格式：{ filmId: { list: [], pageNum: 1, pageSize: 5, total: 0 } }
 
 // 6. 工具函数：日期格式化
+// "2026-10-01 14:30:00" 在部分浏览器下 Date 无法解析，统一转成 ISO 形式
+const toDate = (dateTimeStr) => {
+  if (!dateTimeStr) return null;
+  const date = new Date(String(dateTimeStr).replace(' ', 'T'));
+  return Number.isNaN(date.getTime()) ? null : date;
+};
+
 const formatDate = (dateTimeStr) => {
-  if (!dateTimeStr) return '未知日期';
-  const date = new Date(dateTimeStr);
+  const date = toDate(dateTimeStr);
+  if (!date) return '未知日期';
   return `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`;
 };
 
 // 7. 工具函数：时间格式化
 const formatTime = (dateTimeStr) => {
-  if (!dateTimeStr) return '未知时间';
-  const date = new Date(dateTimeStr);
+  const date = toDate(dateTimeStr);
+  if (!date) return '未知时间';
   return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
 };
+
+// 7.1 场次展示状态由 start 派生（未开始/放映中/已结束），status 只作为人工停售开关
+const DEFAULT_DURATION_MINUTES = 120;
+
+const recordState = (record, durationMinutes) => {
+  if (record.status === '停售') return '停售';
+  const start = toDate(record.start);
+  if (!start) return '未开始';
+  const now = Date.now();
+  if (now < start.getTime()) return '未开始';
+  const duration = durationMinutes > 0 ? durationMinutes : DEFAULT_DURATION_MINUTES;
+  return now < start.getTime() + duration * 60 * 1000 ? '放映中' : '已结束';
+};
+
+const canBuy = (record, durationMinutes) => recordState(record, durationMinutes) === '未开始';
 
 // 8. 状态样式处理
 const getStatusStyle = (status) => {
@@ -306,6 +328,7 @@ const getStatusStyle = (status) => {
         padding: '2px 6px',
         fontSize: '11px'
       };
+    case '停售':
     case '已结束':
       return {
         color: '#909399',

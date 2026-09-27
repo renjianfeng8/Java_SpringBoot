@@ -393,7 +393,7 @@ file:
 
 ## 数据库设计
 
-系统共 15 张核心表：
+系统共 14 张核心表：
 
 | 表名 | 说明 | 关键字段 |
 |------|------|----------|
@@ -407,13 +407,15 @@ file:
 | `type` | 电影分类 | title |
 | `notice` | 系统公告 | title, content, time |
 | `room` | 影厅 | name, cinema_id, seat_data |
-| `record` | 放映记录 | film_id, cinema_id, room_id, time, price |
+| `record` | 放映记录（排片） | film_id, cinema_id, room_id, start, price, status |
 | `ordered` | 购票订单 | record_id, user_id, seats, total |
 | `mark` | 用户评价 | film_id, user_id, content, score |
 | `video` | 预告片 | film_id, url, title |
-| `cinema_film` | 影院-影片关联 | cinema_id, film_id |
 
 > 密码字段统一使用 BCrypt 加密存储（兼容旧版明文密码迁移）。
+
+> 影院"上映哪些影片"由 `record`（排片）派生，没有独立的影院-影片关联表；
+> 订单引用的影片/影院/影厅/场次/用户均为 `ON DELETE RESTRICT`，需下架时改状态而不做物理删除。
 
 ---
 
