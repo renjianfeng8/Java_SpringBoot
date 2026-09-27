@@ -84,10 +84,9 @@
   - 新增 `schema.sql`：14 张表的完整 CREATE TABLE（含字段类型、注释、默认值）
   - 合并数据为 `data.sql`：所有初始数据按表分区、统一管理
   - 新增 `init.sql`：一键初始化入口（建库 → 建表 → 导数据）
-  - 在 `src/main/resources/db/` 下放置副本，支持 `spring.sql.init` 自动初始化
+  - 在 `src/main/resources/db/` 下放置副本，支持 `spring.sql.init` 自动初始化 —— **已于 2026-09-27 移除**（`spring.sql.init.mode` 恒为 `never`，该副本从未被加载，且 `data.sql` 已与 `xm_film/sql/` 漂移）
 - **相关文件**:
   - `xm_film/sql/schema.sql`、`xm_film/sql/data.sql`、`xm_film/sql/init.sql`
-  - `xm_film/springboot/src/main/resources/db/schema.sql`、`db/data.sql`
   - `xm_film/springboot/src/main/resources/application.yml`
   - `CLAUDE.md`
 - **提交记录**: `9525efa4`
@@ -406,7 +405,7 @@
 - **Bug 描述**: 替换 seed-uploads 为真实素材后，部分占位图未被替换，仍显示占位内容
 - **根因分析**: 映射脚本使用合并对象（`{源文件: UUID}`）存储映射关系，当多个不同 UUID 文件名映射到同名源文件时，后一个覆盖前一个，导致"毒液：最后一舞"海报被视频封面覆盖、演员张梓宸头像被其他映射覆盖
 - **解决方案**: 映射结构改为数组存储 `[源文件, UUID]` 对，支持一源多目标映射
-- **相关文件**: `scripts/replace-with-real-images.mjs`
+- **相关文件**: `scripts/replace-with-real-images.mjs`（**该脚本已于 2026-09-27 移除**；素材现直接放入 `xm_film/sql/seed-uploads/`）
 - **提交记录**: `2e6f2856`
 - **状态**: 已修复
 
