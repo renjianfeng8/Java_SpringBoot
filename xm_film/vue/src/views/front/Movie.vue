@@ -91,7 +91,7 @@ import { reactive } from "vue"; // 补充导入reactive
 import { useRouter } from "vue-router"; // 导入路由
 import request from "@/utils/request.js";
 import { ElMessage } from "element-plus"; // 补充导入ElMessage
-import { API_PATHS, apiPage } from '@/constants';
+import { API_PATHS, apiPage, getFilmStatusType as getStatusType } from '@/constants';
 
 // 初始化路由实例
 const router = useRouter();
@@ -185,14 +185,6 @@ const changeAreaFlag = (id) => {
   load()
 }
 
-const getStatusType = (status) => {
-  switch (status) {
-    case '待上映': return 'warning';
-    case '已上映': return 'success';
-    case '停止上映': return 'danger';
-    default: return 'info';
-  }
-}
 
 const handleSizeChange = (newSize) => {
   data.pageSize = newSize;

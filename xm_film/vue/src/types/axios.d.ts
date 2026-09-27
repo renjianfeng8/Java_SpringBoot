@@ -1,5 +1,5 @@
 
-import { AxiosResponse } from 'axios';
+export {};
 
 interface ApiResponse<T = any> {
     code: string;

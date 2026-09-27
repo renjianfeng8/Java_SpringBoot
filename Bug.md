@@ -427,6 +427,30 @@
 
 ---
 
+### BUG-028: 票房显示比真实值小 10000 倍
+
+- **日期**: 2026-09-27
+- **Bug 描述**: 所有展示票房的页面（`front/FilmDetail.vue`、`front/FilmCinema.vue`、`front/Home.vue`、`front/Rank.vue`）把影片票房显示成 `8868.5元` / `8,868.5元`，而真实值是 8868.5 **万元**——相差 10000 倍。同一字段在 4 个页面上还有两种互不相同的格式（万级 vs 千分位）
+- **根因分析**: `film.box_office` 在数据库中的单位是万元，`schema.sql` 的列注释已写明 `DECIMAL(10,1) ... COMMENT '票房（万元）'`；但前端 5 处独立实现（含已作为死代码删除的旧 `utils/format.js`）一律按"元"处理——`toFixed`/`toLocaleString`/万级除法各写一套，结果全部差 10000 倍
+- **解决方案**: 统一为 `xm_film/vue/src/utils/format.js` 的单一实现 `formatBoxOffice`，按行业惯例（猫眼/灯塔）输出：`0` 或空 → `暂无数据`；`< 10000` 万 → `8868.5万`；`>= 10000` 万（即 ≥ 1 亿）→ `1.23亿`。4 个视图删除本地副本改为导入
+- **相关文件**: `xm_film/vue/src/utils/format.js`、`xm_film/vue/src/views/front/{FilmDetail,FilmCinema,Home,Rank}.vue`、`xm_film/sql/schema.sql`
+- **提交记录**: 待提交
+- **状态**: 已修复
+
+---
+
+### BUG-029: 电影"类型"字段前端取错，长期显示空白或"未知类型"
+
+- **日期**: 2026-09-27
+- **Bug 描述**: 5 个页面的电影类型展示失效——`back/Film.vue` 的类型列与展开面板空白；`front/Home.vue`、`front/Rank.vue`、`front/FilmDetail.vue`、`front/FilmCinema.vue` 恒显示"未知类型"；且硬编码字典把 id=1 写成"记录"，而数据库实为"纪录"
+- **根因分析**: 后端 `Film` 实体没有 `types` 字段，只有 `typeIds`(`List<Integer>`) 与 `typeList`(`List<Type>{id,title}`)，类型名由 `FilmService.fillFilmTypes` 从 `film_type` 关联表填充；地区名也早已由 `FilmMapper.xml` 的 `LEFT JOIN area` 解析为 `areaName`。但前端用 3 种方式猜字段形状：`props.row.types` / `movie.types`（字段不存在 → `undefined` → 渲染空白）、`JSON.parse(data.typeIds)`（`typeIds` 是数组，`JSON.parse([5,22])` 抛错被 `try` 吞掉 → 恒为空数组），同时另行维护两份硬编码类型/地区字典
+- **解决方案**: 删除全部前端硬编码 `typeMap`/`areaMap` 以及零引用的死代码 `roleTypeMap`，统一改用后端已解析字段：类型用 `typeList.map(t => t.title)`，地区用 `areaName`
+- **相关文件**: `xm_film/vue/src/views/back/Film.vue`、`xm_film/vue/src/views/front/{Home,Rank,FilmDetail,FilmCinema}.vue`、`xm_film/springboot/src/main/java/com/example/springboot/entity/Film.java`、`service/FilmService.java`、`src/main/resources/mapper/FilmMapper.xml`
+- **提交记录**: 待提交
+- **状态**: 已修复
+
+---
+
 ## 预防清单
 
 1. **数据库初始化**: 新环境部署时务必执行 `xm_film/sql/init.sql`（或依次执行 `schema.sql` + `data.sql`）
@@ -447,3 +471,6 @@
 16. **静态资源缓存**: 替换静态资源后需设置 `Cache-Control: no-cache` 防止浏览器缓存旧版本。原先配在 `nginx.conf`（已于 2026-09-27 移除）；本地开发由 Spring 静态资源处理器服务 `/files/**`，如需防缓存可设 `spring.web.resources.cache.period=0`
 17. **映射结构选择**: 文件映射关系使用 `Object` 存储时同名 key 会覆盖，应使用 `Array<[源, 目标]>` 支持一源多目标
 18. **角色权限校验范围**: 资源控制器的角色校验应区分读写操作——读操作放行 USER，写操作保持 CINEMA/ADMIN 权限保护
+19. **字段单位以数据库列注释为准**: `film.box_office` 单位是**万元**而非元（见 `schema.sql` 列注释）。前端做数值格式化前先查列注释，否则整站数值可能差 10000 倍
+20. **关联字段以后端返回为准**: 影片的 `areaName` 与 `typeList` 已由 SQL `JOIN` 和 `fillFilmTypes` 解析好。前端不得再维护同名硬编码字典，也不得猜测字段形状（`Film` 实体没有 `types` 字段，`typeIds` 是数组不是 JSON 字符串）
+21. **状态映射与格式化函数集中维护**: 影片状态色、订单状态色、票房格式化统一放 `constants/index.js` 与 `utils/format.js`，视图内不再复制实现（本次清理了 5 处状态 switch、3 处透传包装、4 处票房格式化副本）

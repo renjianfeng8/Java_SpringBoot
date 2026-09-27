@@ -195,7 +195,7 @@
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { ElMessage, ElMessageBox } from 'element-plus';
+import { ElMessage } from 'element-plus';
 import request from "@/utils/request.js";
 import { API_PATHS, ORDER_API, apiById } from '@/constants';
 import { clearStoredUser, getStoredUser } from '@/utils/authStorage';
@@ -529,14 +529,6 @@ const formatShowTime = (timeStr) => {
 const calculateTotalPrice = () => {
   const price = Number(showInfo.value.price) || 0;
   return (price * selectedSeats.value.length).toFixed(2); // 保留2位小数，符合金额格式
-};
-
-// 生成唯一订单编号（格式：年月日+4位随机数，确保唯一性）
-const generateOrderNo = () => {
-  const date = new Date();
-  const dateStr = date.toISOString().slice(0, 10).replace(/-/g, ''); // 20240520
-  const randomStr = Math.floor(Math.random() * 10000).toString().padStart(4, '0'); // 0001-9999
-  return `${dateStr}${randomStr}`;
 };
 
 // 确认购票（使用 DTO 端点处理参数校验）

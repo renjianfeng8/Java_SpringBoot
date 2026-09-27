@@ -185,6 +185,7 @@ import {ElMessage} from 'element-plus';
 import request from "@/utils/request.js";
 import 'element-plus/theme-chalk/el-button.css';
 import { API_PATHS, apiById } from '@/constants';
+import { formatBoxOffice } from '@/utils/format.js';
 
 
 // 初始化路由实例
@@ -223,64 +224,7 @@ const castList = ref([]);    // 演职人员列表（存储所有查询到的人
 const loadingCast = ref(false); // 演职人员加载状态
 const castError = ref('');   // 演职人员加载错误
 
-// 4. 字典映射表（新增：角色类型映射，需与后端actor表的roleType字段匹配）
-const roleTypeMap = {
-  1: '导演',
-  2: '主演',
-  3: '编剧',
-  4: '二级演员'
-};
-
-// 电影类型映射（匹配接口返回的typeIds）
-const typeMap = {
-  1: '记录',
-  4: '恐怖',
-  5: '喜剧',
-  6: '动漫',
-  7: '伦理',
-  13: '爱情',
-  14: '动作',
-  15: '灾难',
-  16: '体育',
-  17: '动画',
-  18: '历史',
-  19: '犯罪',
-  20: '科幻',
-  21: '悬疑',
-  22: '剧情',
-  23: '冒险',
-  24: '家庭',
-};
-
-// 电影地区映射
-const areaMap = {
-  1: '中国大陆',
-  2: '美国',
-  3: '日本',
-  4: '德国',
-  5: '法国',
-  6: '韩国',
-  7: '中国香港',
-  8: '波兰',
-  9: '西班牙',
-  10: '意大利',
-  11: '印度',
-  12: '俄罗斯',
-  13: '英国',
-  14: '中国台湾',
-  15: '葡萄牙',
-};
-
-// 5. 工具函数
-// 票房格式化（万级单位转换）
-const formatBoxOffice = (value) => {
-  if (value === 0 || !value) return '暂无数据';
-  return value >= 10000
-      ? `${(value / 10000).toFixed(1)}万`
-      : `${value}元`;
-};
-
-// 6. 计算属性（按角色类型筛选演职人员，核心修改）
+// 4. 计算属性（按角色类型筛选演职人员，核心修改）
 // 筛选导演列表（roleType=1）
 const directorList = computed(() => {
   return castList.value.filter(item => item.roleType === 1);
@@ -301,7 +245,7 @@ const supportActorList = computed(() => {
   return castList.value.filter(item => item.roleType === 4);
 });
 
-// 7. 核心接口请求函数（核心修改：适配单个actorId查询）
+// 5. 核心接口请求函数（核心修改：适配单个actorId查询）
 /**
  * 请求电影详情数据
  * 作用：获取电影基础信息+单个actorId+actorInfo
@@ -323,12 +267,8 @@ const fetchFilmDetail = () => {
             img: data.img || '默认海报地址（可选）',
             score: data.score || 0,
             start: data.start || '未知上映时间',
-            types: data.typeIds
-                ? (() => { try { return JSON.parse(data.typeIds).map(id => typeMap[id] || `未知类型(${id})`); } catch { return []; } })()
-                : [],
-            area: data.areaId
-                ? (areaMap[data.areaId] || `未知地区(${data.areaId})`)
-                : '未知地区',
+            types: (data.typeList || []).map(t => t.title),
+            area: data.areaName || '未知地区',
             time: data.time ? `${data.time}分钟` : '未知时长',
             language: data.language || '未知语言',
             resolution: data.resolution || '未知格式',
@@ -420,7 +360,7 @@ const goToFilmCinema = (filmId) => {
   });
 };
 
-// 8. 页面初始化：加载电影详情和演职人员
+// 6. 页面初始化：加载电影详情和演职人员
 onMounted(() => {
   fetchFilmDetail();
 });

@@ -102,7 +102,7 @@ import { reactive } from "vue";
 import { Delete, Search } from "@element-plus/icons-vue";
 import request from "@/utils/request.js";
 import { ElMessage, ElMessageBox } from "element-plus";
-import { API_PATHS, getOrderStatusType, apiBatch, apiById, apiPage } from "@/constants";
+import { API_PATHS, getOrderStatusType as getStatusType, apiBatch, apiById, apiPage } from "@/constants";
 
 
 interface Ordered {
@@ -120,22 +120,6 @@ interface Ordered {
   seat?: string;
 }
 
-// 其他接口定义保持不变...
-interface UserData {
-  id: number;
-  name: string;
-}
-
-interface FilmData {
-  id: number;
-  title: string;
-}
-
-interface CinemaData {
-  id: number;
-  name: string;
-}
-
 interface RoomData {
   id: number;
   name: string;
@@ -147,50 +131,12 @@ const data = reactive({
   pageNumber: 1,
   pageSize: 10,
   total: 0,
-  formVisible: false,
-  form: {} as Ordered,
   ids: [] as number[],
-  UserData: [] as UserData[],
-  FilmData: [] as FilmData[],
-  CinemaData: [] as CinemaData[],
   RoomData: [] as RoomData[],
   orders: null,
-  start: null,
-  seat: null,
   status: undefined
 });
 
-
-// 加载数据的方法保持不变...
-const loadUser = () => {
-  return request.get(API_PATHS.USERS).then(res => {
-    if(res.code === '200') {
-      data.UserData = res.data
-    } else {
-      ElMessage.error(res.msg)
-    }
-  })
-}
-
-const loadFilm = () => {
-  return request.get(API_PATHS.FILMS).then(res => {
-    if(res.code === '200') {
-      data.FilmData = res.data
-    } else {
-      ElMessage.error(res.msg)
-    }
-  })
-}
-
-const loadCinema = () => {
-  return request.get(API_PATHS.CINEMAS).then(res => {
-    if(res.code === '200') {
-      data.CinemaData = res.data
-    } else {
-      ElMessage.error(res.msg)
-    }
-  })
-}
 
 const loadRoom = () => {
   return request.get(API_PATHS.ROOMS).then(res => {
@@ -224,7 +170,6 @@ const load = () => {
   });
 }
 
-// 获取影厅名称的方法保持不变，但传入的参数变为row.id
 const getRoomName = (roomId?: number) => {
   if (!roomId) return '无ID';
   const room = data.RoomData.find(room => room.id === roomId);
@@ -234,14 +179,12 @@ const getRoomName = (roomId?: number) => {
   return room.name;
 }
 
-// 其他方法保持不变...
 const del = (id: number) => {
   ElMessageBox.confirm('删除数据后无法恢复,您确认删除吗?', '删除确认', { type: 'warning' }).then(() => {
     request.delete(apiById(API_PATHS.ORDERS, id)).then(res => {
       if (res.code === '200') {
         ElMessage.success('操作成功')
         load()
-        data.formVisible = false
       } else {
         ElMessage.error(res.msg)
       }
@@ -286,8 +229,6 @@ const initLoad = async () => {
 
 // 执行初始加载
 initLoad();
-
-const getStatusType = (status) => getOrderStatusType(status)
 </script>
 
 <style scoped>

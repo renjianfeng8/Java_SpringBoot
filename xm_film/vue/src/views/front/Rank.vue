@@ -47,7 +47,7 @@
                   <span style="font-size: 12px; color: #999; font-weight: normal; margin-left: 5px;">({{ film.english || '无英文标题' }})</span>
                 </h4>
                 <div style="font-size: 12px; color: #666; line-height: 1.5;">
-                  <span style="display: block; margin-bottom: 4px;">类型：{{ film.types?.join(' / ') || '未知类型' }}</span>
+                  <span style="display: block; margin-bottom: 4px;">类型：{{ film.typeList?.map(t => t.title).join(' / ') || '未知类型' }}</span>
                   <span style="margin-right: 15px;">上映时间：{{ film.start || '未知时间' }}</span>
                   <span>时长：{{ film.time || '未知时长' }}</span>
                 </div>
@@ -108,7 +108,7 @@
                   <span style="font-size: 12px; color: #999; font-weight: normal; margin-left: 5px;">({{ film.english || '无英文标题' }})</span>
                 </h4>
                 <div style="font-size: 12px; color: #666; line-height: 1.5;">
-                  <span style="display: block; margin-bottom: 4px;">类型：{{ film.types?.join(' / ') || '未知类型' }}</span>
+                  <span style="display: block; margin-bottom: 4px;">类型：{{ film.typeList?.map(t => t.title).join(' / ') || '未知类型' }}</span>
                   <span style="margin-right: 15px;">上映时间：{{ film.start || '未知时间' }}</span>
                   <span>时长：{{ film.time || '未知时长' }}</span>
                 </div>
@@ -130,6 +130,7 @@ import { reactive } from 'vue';
 import request from "@/utils/request.js";
 import { ElMessage } from 'element-plus';
 import { FILM_API } from '@/constants';
+import { formatBoxOffice } from '@/utils/format.js';
 import 'element-plus/theme-chalk/el-skeleton.css';
 import 'element-plus/theme-chalk/el-empty.css';
 import 'element-plus/theme-chalk/el-image.css';
@@ -144,16 +145,6 @@ const loading = reactive({
   boxOffice: false,
   mark: false,
 });
-
-const formatBoxOffice = (num) => {
-  if (!num && num !== 0) return '0元';
-  const unit = '元';
-  const numericValue = Number(num);
-  const formattedNum = isNaN(numericValue)
-      ? String(num)
-      : numericValue.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-  return `${formattedNum}${unit}`;
-};
 
 const loadFilmBoxOfficeTop = () => {
   loading.boxOffice = true;

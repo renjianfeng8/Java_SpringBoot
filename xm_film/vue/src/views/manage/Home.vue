@@ -115,8 +115,6 @@ const handleResize = () => {
 const data = reactive({
   cinemaList: [] as Array<{ status: string }>,
   filmList: [] as Array<{ type_ids: number[] | string, typeIds?: number[] | string }>,
-  adminList: [] as any[],
-  userList: [] as any[],
   typeList: [] as Array<{ id: number; title: string }>
 });
 
@@ -342,12 +340,6 @@ const initData = async () => {
   try {
     const cinemaRes = await request.get(API_PATHS.CINEMAS);
     data.cinemaList = cinemaRes.data || [];
-
-    const adminRes = await request.get(API_PATHS.ADMINS);
-    data.adminList = adminRes.data || [];
-
-    const userRes = await request.get(API_PATHS.USERS);
-    data.userList = userRes.data || [];
 
     const typeRes = await request.get(API_PATHS.TYPES);
     data.typeList = typeRes.data || [];

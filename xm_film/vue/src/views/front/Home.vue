@@ -92,7 +92,7 @@
                 <!-- 电影标题点击跳转 -->
                 <div style="font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #333;">{{ movie.title }}</div>
                 <div style="font-size: 12px; color: #666; margin-top: 3px;">
-                  {{ movie.types?.join(' / ') || '未知类型' }} | {{ movie.start || '未知时间' }}
+                  {{ movie.typeList?.map(t => t.title).join(' / ') || '未知类型' }} | {{ movie.start || '未知时间' }}
                 </div>
               </div>
 
@@ -157,7 +157,7 @@
               <div style="flex: 1; margin-left: 10px;">
                 <!-- 电影标题点击跳转 -->
                 <div style="font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #333;">{{ movie.title }}</div>
-                <div style="font-size: 12px; color: #666; margin-top: 3px;">{{ movie.types?.join(' / ') || '未知类型' }}</div>
+                <div style="font-size: 12px; color: #666; margin-top: 3px;">{{ movie.typeList?.map(t => t.title).join(' / ') || '未知类型' }}</div>
                 <!-- 评分：移除el-rate星级，改为分数显示 -->
                 <div style="font-size: 14px; color: orange; font-weight: 500; margin-top: 3px;">
                   {{ movie.score || 0 }} 分
@@ -178,6 +178,7 @@ import { useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import request from "@/utils/request.js";
 import { API_PATHS, FILM_API } from '@/constants';
+import { formatBoxOffice } from '@/utils/format.js';
 // 引入Element Plus样式（移除el-rate相关样式）
 import 'element-plus/theme-chalk/el-skeleton.css';
 import 'element-plus/theme-chalk/el-button.css';
@@ -236,17 +237,6 @@ const goToMovieList = (type) => {
 
 const goToRankPage = () => {
   router.push('/front/rank');
-};
-
-// 票房金额格式化
-const formatBoxOffice = (num) => {
-  if (!num && num !== 0) return '0元';
-  const unit = '元';
-  const numericValue = Number(num);
-  const formattedNum = isNaN(numericValue)
-      ? String(num)
-      : numericValue.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-  return `${formattedNum}${unit}`;
 };
 
 // 加载总票房Top10数据

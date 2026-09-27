@@ -58,7 +58,7 @@
 import { Delete, Search } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useCrud } from '@/composables/useCrud'
-import { API_PATHS, apiBatch, apiById, apiPage } from '@/constants'
+import { API_PATHS, apiBatch, apiById, apiPage, getFilmStatusType as getStatusType } from '@/constants'
 import request from '@/utils/request'
 
 // 仅使用 useCrud 的响应式状态（dataList 需自定义 load 做名称映射）
@@ -118,14 +118,6 @@ function handleDelBatch() {
 // 初始加载
 Promise.all([loadCinema(), loadRoom()]).then(() => load())
 
-function getStatusType(status) {
-  switch (status) {
-    case '待上映': return 'warning'
-    case '已上映': return 'success'
-    case '停止上映': return 'danger'
-    default: return 'info'
-  }
-}
 </script>
 
 <style scoped>

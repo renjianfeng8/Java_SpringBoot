@@ -14,8 +14,7 @@
       </div>
 
       <div class="card" style="margin-bottom: 5px">
-        <el-table stripe :data="data.tableData" @selection-change="handleSelectionChange">
-          <el-table-column type="selection" width="55"/>
+        <el-table stripe :data="data.tableData">
           <el-table-column type="expand">
             <template #default="props">
               <el-descriptions title="订单信息" :column="4" border>
@@ -27,8 +26,7 @@
                 <el-descriptions-item label="用户名称">{{props.row.userName}}</el-descriptions-item>
                 <el-descriptions-item label="电影名称">{{props.row.filmName}}</el-descriptions-item>
                 <el-descriptions-item label="影院名称">{{props.row.cinemaName}}</el-descriptions-item>
-                <!-- 关键修改1：改用后端返回的roomName，或传roomId给getRoomName -->
-                <el-descriptions-item label="影厅房间">{{ props.row.roomName || getRoomName(props.row.roomId) }}</el-descriptions-item>
+                <el-descriptions-item label="影厅房间">{{ props.row.roomName }}</el-descriptions-item>
                 <el-descriptions-item label="座位号">{{props.row.seat}}</el-descriptions-item>
                 <el-descriptions-item label="预约时间">{{props.row.start}}</el-descriptions-item>
                 <el-descriptions-item label="电影票数量">{{props.row.number}}</el-descriptions-item>
@@ -55,10 +53,9 @@
             </template>
           </el-table-column>
           <el-table-column label="影院名称" prop="cinemaName"/>
-          <!-- 关键修改2：改用后端返回的roomName，或传roomId给getRoomName -->
           <el-table-column label="影厅名称">
             <template #default="prop">
-              {{ prop.row.roomName || getRoomName(prop.row.roomId) }}
+              {{ prop.row.roomName }}
             </template>
           </el-table-column>
           <el-table-column label="预约时间" prop="start" show-overflow-tooltip />
@@ -101,9 +98,8 @@ import { reactive } from "vue";
 import { Delete, Search } from "@element-plus/icons-vue";
 import request from "@/utils/request.js";
 import { ElMessage, ElMessageBox } from "element-plus";
-import { API_PATHS, ORDER_API, getOrderStatusType, apiById, apiPage } from '@/constants';
+import { API_PATHS, ORDER_API, getOrderStatusType as getStatusType, apiById, apiPage } from '@/constants';
 
-// 关键修改3：扩展Ordered接口，增加后端返回的字段
 interface Ordered {
   id?: number;
   orders?: string;
@@ -122,27 +118,7 @@ interface Ordered {
   userName?: string;
   filmName?: string;
   cinemaName?: string;
-  roomName?: string; // 新增roomName字段
-}
-
-interface UserData {
-  id: number;
-  name: string;
-}
-
-interface FilmData {
-  id: number;
-  title: string;
-}
-
-interface CinemaData {
-  id: number;
-  name: string;
-}
-
-interface RoomData {
-  id: number;
-  name: string;
+  roomName?: string;
 }
 
 const data = reactive({
@@ -150,68 +126,9 @@ const data = reactive({
   pageNumber: 1,
   pageSize: 10,
   total: 0,
-  formVisible: false,
-  form: {} as Ordered,
-  ids: [] as number[],
-  UserData: [] as UserData[],
-  FilmData: [] as FilmData[],
-  CinemaData: [] as CinemaData[],
-  RoomData: [] as RoomData[],
   orders: null,
-  start: null,
-  seat: null,
   status: undefined
 });
-
-const loadUser = () => {
-  request.get(API_PATHS.USERS).then(res => {
-    if(res.code === '200') {
-      data.UserData = res.data
-    } else {
-      ElMessage.error(res.msg)
-    }
-  })
-}
-
-const loadFilm = () => {
-  request.get(API_PATHS.FILMS).then(res => {
-    if(res.code === '200') {
-      data.FilmData = res.data
-    } else {
-      ElMessage.error(res.msg)
-    }
-  })
-}
-
-// 关键修改4：函数逻辑优化，兜底文本和后端保持一致
-const getRoomName = (roomId?: number) => {
-  if (!roomId) return '暂未关联影厅'; // 改为和后端一致的兜底文本
-  const room = data.RoomData.find(room => room.id === roomId);
-  if (!room) {
-    return '暂未关联影厅'; // 改为和后端一致的兜底文本
-  }
-  return room.name;
-}
-
-const loadCinema = () => {
-  request.get(API_PATHS.CINEMAS).then(res => {
-    if(res.code === '200') {
-      data.CinemaData = res.data
-    } else {
-      ElMessage.error(res.msg)
-    }
-  })
-}
-
-const loadRoom = () => {
-  request.get(API_PATHS.ROOMS).then(res => {
-    if(res.code === '200') {
-      data.RoomData = res.data
-    } else {
-      ElMessage.error(res.msg)
-    }
-  })
-}
 
 const load = () => {
   request.get(apiPage(API_PATHS.ORDERS), {
@@ -238,7 +155,6 @@ const del = (id: number) => {
       if (res.code === '200') {
         ElMessage.success('操作成功')
         load()
-        data.formVisible = false
       } else {
         ElMessage.error(res.msg)
       }
@@ -260,10 +176,6 @@ const cancelOrder = async (id: number) => {
   }
 }
 
-const handleSelectionChange = (rows: Ordered[]) => {
-  data.ids = rows.map(row => row.id).filter((id): id is number => id !== undefined);
-}
-
 const reset = () => {
   data.orders = null;
   data.status = undefined;
@@ -272,8 +184,6 @@ const reset = () => {
 
 // 初始加载
 load()
-
-const getStatusType = (status) => getOrderStatusType(status)
 </script>
 
 <style scoped>
