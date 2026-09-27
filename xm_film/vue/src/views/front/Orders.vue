@@ -4,10 +4,7 @@
       <div class="card" style="margin-bottom: 5px">
         <el-input v-model="data.orders" placeholder="请输入订单号" style="width: 300px; margin-right:10px" :prefix-icon="Search"/>
         <el-select v-model="data.status" placeholder="请选择订单状态" style="width: 300px; margin-right:10px">
-          <el-option label="待支付" value="待支付" />
-          <el-option label="待取票" value="待取票" />
-          <el-option label="已取票" value="已取票" />
-          <el-option label="已取消" value="已取消" />
+          <el-option v-for="status in ORDER_STATUS_OPTIONS" :key="status" :label="status" :value="status" />
         </el-select>
         <el-button type="primary" @click="load">查 询</el-button>
         <el-button type="warning" @click="reset">重 置</el-button>
@@ -35,6 +32,14 @@
                   <el-tag :type="getStatusType(props.row.status)">
                     {{ props.row.status }}
                   </el-tag>
+                </el-descriptions-item>
+                <el-descriptions-item label="支付时间">{{ props.row.payTime || '—' }}</el-descriptions-item>
+                <el-descriptions-item label="实付金额">
+                  {{ props.row.payAmount != null ? `¥${props.row.payAmount}` : '—' }}
+                </el-descriptions-item>
+                <el-descriptions-item label="退票时间">{{ props.row.refundTime || '—' }}</el-descriptions-item>
+                <el-descriptions-item label="退款金额">
+                  {{ props.row.refundAmount != null ? `¥${props.row.refundAmount}` : '—' }}
                 </el-descriptions-item>
               </el-descriptions>
             </template>
@@ -70,7 +75,11 @@
           </el-table-column>
           <el-table-column label="操作">
             <template #default="scope">
+              <el-button v-if="scope.row.status === '待支付'" style="font-size: 14px" link type="danger"
+                         @click="() => continuePay(scope.row)">继续支付</el-button>
               <el-button v-if="scope.row.status === '待支付'" style="font-size: 14px" link type="warning" @click="() => cancelOrder(scope.row.id)">取消</el-button>
+              <el-button v-if="scope.row.status === '待取票'" style="font-size: 14px" link type="warning"
+                         @click="() => refundOrder(scope.row)">退票</el-button>
               <el-button style="font-size: 18px" link :icon="Delete" @click="() => del(scope.row.id)" type="danger"></el-button>
             </template>
           </el-table-column>
@@ -91,14 +100,18 @@
       </div>
     </div>
   </div>
+
+  <OrderPayDialog v-model="payDialogVisible" :order="payingOrder"
+                  @paid="load" @cancelled="load" @timeout="load" />
 </template>
 
 <script setup lang="ts">
-import { reactive } from "vue";
+import { reactive, ref } from "vue";
 import { Delete, Search } from "@element-plus/icons-vue";
 import request from "@/utils/request.js";
 import { ElMessage, ElMessageBox } from "element-plus";
-import { API_PATHS, ORDER_API, getOrderStatusType as getStatusType, apiById, apiPage } from '@/constants';
+import { API_PATHS, ORDER_API, ORDER_STATUS_OPTIONS, getOrderStatusType as getStatusType, apiById, apiPage } from '@/constants';
+import OrderPayDialog from '@/components/OrderPayDialog.vue';
 
 interface Ordered {
   id?: number;
@@ -114,6 +127,11 @@ interface Ordered {
   status?: string;
   start?: string;
   seat?: string;
+  // 资金凭证（后端写入，只读展示）
+  payTime?: string;
+  payAmount?: number;
+  refundTime?: string;
+  refundAmount?: number;
   // 新增后端返回的关联字段
   userName?: string;
   filmName?: string;
@@ -180,6 +198,35 @@ const reset = () => {
   data.orders = null;
   data.status = undefined;
   load();
+}
+
+// 继续支付：复用选座页同一套支付弹窗（含 5 分钟倒计时与超时自动取消）
+const payDialogVisible = ref(false);
+const payingOrder = ref(null);
+
+const continuePay = (order: Ordered) => {
+  payingOrder.value = order;
+  payDialogVisible.value = true;
+}
+
+// 退票：规则与后端一致 —— 仅"待取票"且距放映 60 分钟以上
+const refundOrder = (order: Ordered) => {
+  ElMessageBox.confirm(
+      `退票后座位释放、款项退回。确认退掉订单 ${order.orders} 吗？`,
+      '退票确认', { type: 'warning' }
+  ).then(async () => {
+    try {
+      const res = await request.put(ORDER_API.REFUND(order.id))
+      if (res.code === '200') {
+        ElMessage.success('退票成功')
+        await load()
+      } else {
+        ElMessage.error(res.msg || '退票失败')
+      }
+    } catch (error) {
+      // request.js has already shown the backend message.
+    }
+  }).catch(() => {})
 }
 
 // 初始加载

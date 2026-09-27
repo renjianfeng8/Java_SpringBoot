@@ -74,7 +74,11 @@ public class RecordService extends BaseService<Record> {
         return RecordStatus.STOPPED.equals(status) ? RecordStatus.STOPPED : RecordStatus.NORMAL;
     }
 
-    private static LocalDateTime readStart(String raw) {
+    /**
+     * 宽容解析数据库中的时间字符串（兼容 "yyyy-MM-dd"、"yyyy-MM-dd HH:mm"、"yyyy-MM-dd HH:mm:ss" 与 ISO 的 T 分隔）。
+     * 解析失败返回 null，由调用方决定是拒绝还是降级；订单退票窗口判断复用此方法，避免第二套解析实现。
+     */
+    public static LocalDateTime readStart(String raw) {
         if (raw == null || raw.trim().isEmpty()) {
             return null;
         }

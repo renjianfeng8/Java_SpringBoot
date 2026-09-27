@@ -4,10 +4,11 @@
 
 ```
 sql/
-├── schema.sql                              # 数据库表结构（14 张表的 CREATE TABLE 语句）
-├── data.sql                                # 初始数据（所有表的 INSERT 语句）
-├── init.sql                                # 一键初始化脚本（整合 schema + data）
-└── migration-20260927-delete-guard.sql     # 增量迁移（仅已有库需要执行）
+├── schema.sql                               # 数据库表结构（14 张表的 CREATE TABLE 语句）
+├── data.sql                                 # 初始数据（所有表的 INSERT 语句）
+├── init.sql                                 # 一键初始化脚本（整合 schema + data）
+├── migration-20260927-delete-guard.sql      # 增量迁移（删除守卫 + 上映关系派生）
+└── migration-20260927-p2-seat-payment.sql   # 增量迁移（座位容量 + 订单资金凭证）
 ```
 
 ## 使用方式
@@ -64,10 +65,11 @@ SOURCE data.sql;
 
 ## 增量迁移（已有数据库）
 
-已初始化过的库不要重跑 `schema.sql` / `data.sql`（会与现有数据冲突），改用迁移脚本：
+已初始化过的库不要重跑 `schema.sql` / `data.sql`（会与现有数据冲突），改用迁移脚本，按文件名日期顺序执行：
 
 ```bash
 mysql -u root -p --default-character-set=utf8mb4 xm-film < migration-20260927-delete-guard.sql
+mysql -u root -p --default-character-set=utf8mb4 xm-film < migration-20260927-p2-seat-payment.sql
 ```
 
 `migration-20260927-delete-guard.sql` 内容（幂等，可重复执行）：
@@ -77,5 +79,15 @@ mysql -u root -p --default-character-set=utf8mb4 xm-film < migration-20260927-de
 3. `record.status` 旧词汇（待上映/已上映/停止上映）归一为 `正常/停售`
 4. 删除冗余表 `cinema_film`
 
+`migration-20260927-p2-seat-payment.sql` 内容（幂等，可重复执行）：
+
+1. `room` 新增 `seat_rows` / `seat_cols`（默认 8×8）
+2. `ordered` 新增 `pay_time` / `pay_amount` / `refund_time` / `refund_amount`
+3. `ordered.status` 词表补 `已退票`
+4. 为存量已支付订单（待取票/已取票）回填支付凭证，仅填充空值
+
 > 迁移不会修改排片时间。若库中的 `record.start` 停留在过去，场次在前台会显示"已结束"且不可购票，
 > 需另行把演示场次时间调整到未来（新库由 `data.sql` 直接写入未来时间）。
+>
+> 已有影厅一律按 8×8 初始化 —— 这是旧规则下唯一合法的座位范围，因此存量订单的座位号必然落在新边界内。
+> 需要更大的厅，请到影院后台修改该厅的座位行列数（1~50）。

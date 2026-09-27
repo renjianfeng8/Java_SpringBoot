@@ -3,8 +3,10 @@ package com.example.springboot.controller;
 import com.example.springboot.common.BaseController;
 import com.example.springboot.common.Result;
 import com.example.springboot.common.enums.ErrorCode;
+import com.example.springboot.entity.Cinema;
 import com.example.springboot.entity.Room;
 import com.example.springboot.exception.CustomException;
+import com.example.springboot.service.CinemaService;
 import com.example.springboot.service.OrderedService;
 import com.example.springboot.service.RecordService;
 import com.example.springboot.service.RoomService;
@@ -22,17 +24,25 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/v1/rooms")
 public class RoomController extends BaseController<Room> {
+
+    /** 影厅座位行列数的合法区间，与前端选座图渲染规模相称 */
+    private static final int MIN_SEAT_DIMENSION = 1;
+    private static final int MAX_SEAT_DIMENSION = 50;
+
     private final RoomService roomService;
     private final RecordService recordService;
     private final OrderedService orderedService;
+    private final CinemaService cinemaService;
 
     public RoomController(RoomService roomService,
                           RecordService recordService,
-                          OrderedService orderedService) {
+                          OrderedService orderedService,
+                          CinemaService cinemaService) {
         super(roomService);
         this.roomService = roomService;
         this.recordService = recordService;
         this.orderedService = orderedService;
+        this.cinemaService = cinemaService;
     }
 
     @Override
@@ -67,6 +77,16 @@ public class RoomController extends BaseController<Room> {
             entity.setCinemaId(currentUserId());
         }
         requireAdminOrCinema();
+        if (entity.getCinemaId() == null) {
+            throw new CustomException(ErrorCode.PARAM_INVALID, "请选择所属影院");
+        }
+        validateSeatLayout(entity);
+        // 影院名称由影院记录派生，不接受前端手填
+        String title = cinemaTitleOf(entity.getCinemaId());
+        if (title == null) {
+            throw new CustomException(ErrorCode.BUSINESS_CONFLICT, "所属影院不存在，无法确定影厅归属");
+        }
+        entity.setTitle(title);
         roomService.add(entity);
         return Result.success();
     }
@@ -79,8 +99,35 @@ public class RoomController extends BaseController<Room> {
         if (isCinema()) {
             entity.setCinemaId(currentUserId());
         }
+        validateSeatLayout(entity);
+        Integer cinemaId = entity.getCinemaId() != null ? entity.getCinemaId() : dbRoom.getCinemaId();
+        String title = cinemaTitleOf(cinemaId);
+        if (title != null) {
+            entity.setTitle(title);
+        }
         roomService.update(entity);
         return Result.success();
+    }
+
+    /** 影厅所属影院名称，由影院记录派生；影院不存在时返回 null，由调用方决定拒绝还是保持原值 */
+    private String cinemaTitleOf(Integer cinemaId) {
+        if (cinemaId == null) {
+            return null;
+        }
+        Cinema cinema = cinemaService.selectById(cinemaId);
+        return cinema == null ? null : cinema.getName();
+    }
+
+    private void validateSeatLayout(Room room) {
+        validateSeatDimension(room.getSeatRows(), "座位行数");
+        validateSeatDimension(room.getSeatCols(), "座位列数");
+    }
+
+    private void validateSeatDimension(Integer value, String label) {
+        if (value != null && (value < MIN_SEAT_DIMENSION || value > MAX_SEAT_DIMENSION)) {
+            throw new CustomException(ErrorCode.PARAM_INVALID,
+                    label + "需在 " + MIN_SEAT_DIMENSION + "~" + MAX_SEAT_DIMENSION + " 之间");
+        }
     }
 
     @Override

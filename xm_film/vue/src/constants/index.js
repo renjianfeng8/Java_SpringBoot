@@ -40,6 +40,9 @@ export const ORDER_API = {
   CREATE: `${API_PATHS.ORDERS}/create`,
   CANCEL: (id) => `${API_PATHS.ORDERS}/${id}/cancel`,
   PAY: (id) => `${API_PATHS.ORDERS}/${id}/pay`,
+  PICKUP: (id) => `${API_PATHS.ORDERS}/${id}/pickup`,
+  REFUND: (id) => `${API_PATHS.ORDERS}/${id}/refund`,
+  SEATS: `${API_PATHS.ORDERS}/seats`,
 }
 
 export const AUTH_API = {
@@ -50,13 +53,17 @@ export const AUTH_API = {
   ME: `${API_PATHS.AUTH}/me`,
 }
 
-/** 状态 → el-tag 的 type，缺省 info */
+/** 状态 → el-tag 的 type，缺省 info；键序即下拉选项顺序 */
 export const ORDER_STATUS_MAP = {
   '待支付': 'warning',
   '待取票': 'success',
   '已取票': 'primary',
+  '已退票': 'danger',
   '已取消': 'info',
 }
+
+/** 订单状态筛选下拉选项，直接由 ORDER_STATUS_MAP 派生，保证筛选项与状态色始终对齐 */
+export const ORDER_STATUS_OPTIONS = Object.keys(ORDER_STATUS_MAP)
 
 export const FILM_STATUS_MAP = {
   '待上映': 'warning',

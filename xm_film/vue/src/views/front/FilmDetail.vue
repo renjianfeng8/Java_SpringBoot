@@ -7,7 +7,8 @@
 
     <!-- 2. 错误提示 -->
     <div v-else-if="errorMsg" style="padding: 20px; color: #ef4238; text-align: center;">
-      {{ errorMsg }}
+      <div>{{ errorMsg }}</div>
+      <el-button style="margin-top: 16px;" type="primary" @click="goBackToList">返回影片列表</el-button>
     </div>
 
     <!-- 3. 电影内容区域 -->
@@ -250,6 +251,10 @@ const supportActorList = computed(() => {
  * 请求电影详情数据
  * 作用：获取电影基础信息+单个actorId+actorInfo
  */
+const goBackToList = () => {
+  router.push('/front/movie');
+}
+
 const fetchFilmDetail = () => {
   if (!filmId || Number.isNaN(Number(filmId))) {
     errorMsg.value = '电影ID无效，请返回列表重试';

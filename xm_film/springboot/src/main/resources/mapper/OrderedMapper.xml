@@ -50,17 +50,18 @@
         SELECT * FROM ordered WHERE id = #{id} FOR UPDATE
     </select>
 
+    <!-- 占用座位的订单：已取消/已退票都不再锁座；待支付仅在未超时时锁座 -->
     <select id="selectActiveByRecordId" resultType="com.example.springboot.entity.Ordered">
         SELECT * FROM ordered
         WHERE record_id = #{recordId}
-          AND status != '已取消'
+          AND status NOT IN ('已取消', '已退票')
           AND (status != '待支付' OR pending_timeout_at IS NULL OR pending_timeout_at &gt; NOW())
     </select>
 
     <select id="countSeatInUse" resultType="int">
         SELECT COUNT(*) FROM ordered
         WHERE record_id = #{recordId}
-          AND status != '已取消'
+          AND status NOT IN ('已取消', '已退票')
           AND (status != '待支付' OR pending_timeout_at IS NULL OR pending_timeout_at &gt; NOW())
           AND FIND_IN_SET(#{seat}, REPLACE(seat, '，', ',')) > 0
     </select>
@@ -124,6 +125,10 @@
             <if test="seat != null">seat,</if>
             <if test="createTime != null">create_time,</if>
             <if test="pendingTimeoutAt != null">pending_timeout_at,</if>
+            <if test="payTime != null">pay_time,</if>
+            <if test="payAmount != null">pay_amount,</if>
+            <if test="refundTime != null">refund_time,</if>
+            <if test="refundAmount != null">refund_amount,</if>
         </trim>
         VALUES
         <trim prefix="(" suffix=")" suffixOverrides=",">
@@ -142,6 +147,10 @@
             <if test="seat != null">#{seat},</if>
             <if test="createTime != null">#{createTime},</if>
             <if test="pendingTimeoutAt != null">#{pendingTimeoutAt},</if>
+            <if test="payTime != null">#{payTime},</if>
+            <if test="payAmount != null">#{payAmount},</if>
+            <if test="refundTime != null">#{refundTime},</if>
+            <if test="refundAmount != null">#{refundAmount},</if>
         </trim>
     </insert>
 
@@ -164,6 +173,11 @@
             <if test="seat != null">seat = #{seat},</if>
             <if test="createTime != null">create_time = #{createTime},</if>
             pending_timeout_at = #{pendingTimeoutAt},
+            <!-- 资金凭证：留痕字段只增不改，退票不得抹掉 pay_time -->
+            <if test="payTime != null">pay_time = #{payTime},</if>
+            <if test="payAmount != null">pay_amount = #{payAmount},</if>
+            <if test="refundTime != null">refund_time = #{refundTime},</if>
+            <if test="refundAmount != null">refund_amount = #{refundAmount},</if>
         </set>
         WHERE id = #{id}
     </update>

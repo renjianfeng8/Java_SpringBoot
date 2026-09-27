@@ -2,9 +2,8 @@
   <div>
     <div class="card" style="margin-bottom: 5px">
       <el-input v-model="searchForm.orders" placeholder="请输入订单号" style="width: 300px; margin-right:10px" :prefix-icon="Search"/>
-      <el-select v-model="searchForm.status" placeholder="请选择放映状态" style="width: 300px; margin-right:10px">
-        <el-option label="已取票" value="已取票" />
-        <el-option label="待取票" value="待取票" />
+      <el-select v-model="searchForm.status" placeholder="请选择订单状态" style="width: 300px; margin-right:10px">
+        <el-option v-for="status in ORDER_STATUS_OPTIONS" :key="status" :label="status" :value="status" />
       </el-select>
       <el-button type="primary" @click="onSearch">查 询</el-button>
       <el-button type="warning" @click="onReset">重 置</el-button>
@@ -36,6 +35,14 @@
                 <el-tag :type="getStatusType(props.row.status)">
                   {{ props.row.status }}
                 </el-tag>
+              </el-descriptions-item>
+              <el-descriptions-item label="支付时间">{{ props.row.payTime || '—' }}</el-descriptions-item>
+              <el-descriptions-item label="实付金额">
+                {{ props.row.payAmount != null ? `¥${props.row.payAmount}` : '—' }}
+              </el-descriptions-item>
+              <el-descriptions-item label="退票时间">{{ props.row.refundTime || '—' }}</el-descriptions-item>
+              <el-descriptions-item label="退款金额">
+                {{ props.row.refundAmount != null ? `¥${props.row.refundAmount}` : '—' }}
               </el-descriptions-item>
             </el-descriptions>
           </template>
@@ -70,6 +77,8 @@
         </el-table-column>
         <el-table-column label="操作">
           <template #default="scope">
+            <el-button v-if="scope.row.status === '待取票'" style="font-size: 14px" link type="primary"
+                       @click="() => pickupOrder(scope.row)">取票</el-button>
             <el-button style="font-size: 18px" link :icon="Delete" @click="() => handleDel(scope.row.id)" type="danger"></el-button>
           </template>
         </el-table-column>
@@ -95,7 +104,7 @@
 import { Delete, Search } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useCrud } from '@/composables/useCrud'
-import { API_PATHS, getOrderStatusType as getStatusType } from '@/constants'
+import { API_PATHS, ORDER_API, ORDER_STATUS_OPTIONS, getOrderStatusType as getStatusType } from '@/constants'
 import request from '@/utils/request'
 
 const crud = useCrud(API_PATHS.ORDERS)
@@ -124,6 +133,20 @@ function handleDelBatch() {
   if (!selectedIds.value.length) { ElMessage.warning('请选择数据'); return }
   ElMessageBox.confirm(`确定删除选中的 ${selectedIds.value.length} 条数据吗？`, '删除确认', { type: 'warning' })
     .then(() => delBatch(selectedIds.value)).catch()
+}
+
+async function pickupOrder(order) {
+  try {
+    const res = await request.put(ORDER_API.PICKUP(order.id))
+    if (res.code === '200') {
+      ElMessage.success('取票成功')
+      crud.load()
+    } else {
+      ElMessage.error(res.msg || '取票失败')
+    }
+  } catch (error) {
+    // request.js has already shown the backend message.
+  }
 }
 
 crud.load()

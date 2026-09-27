@@ -20,6 +20,9 @@
         <el-table-column type="selection" width="55" />
         <el-table-column label="影院名称" prop="title" />
         <el-table-column label="影厅名称" prop="name" />
+        <el-table-column label="座位规模" width="120">
+          <template #default="scope">{{ scope.row.seatRows }} 排 × {{ scope.row.seatCols }} 座</template>
+        </el-table-column>
         <el-table-column label="操作">
           <template #default="scope">
             <el-button style="font-size: 18px" link :icon="Edit" @click="handleUpdate(scope.row)" type="primary" />
@@ -44,11 +47,17 @@
 
     <el-dialog v-model="data.formVisible" title="影厅房间信息" width="500" destroy-on-close>
       <el-form ref="formRef" :rules="data.rules" :model="data.form" style="padding-right: 50px;padding-top: 20px" label-width="85px">
-        <el-form-item label="影院名称" prop="title">
-          <el-input v-model="data.form.title" autocomplete="off" placeholder="请输入影院名称"/>
+        <el-form-item label="影院名称">
+          <el-input :model-value="cinemaName" disabled/>
         </el-form-item>
         <el-form-item label="影厅名称" prop="name">
           <el-input v-model="data.form.name" autocomplete="off" placeholder="请输入影厅名称"/>
+        </el-form-item>
+        <el-form-item label="座位行数" prop="seatRows">
+          <el-input-number v-model="data.form.seatRows" :min="1" :max="50" style="width: 100%;"/>
+        </el-form-item>
+        <el-form-item label="座位列数" prop="seatCols">
+          <el-input-number v-model="data.form.seatCols" :min="1" :max="50" style="width: 100%;"/>
         </el-form-item>
       </el-form>
       <template #footer>
@@ -63,24 +72,34 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, ref } from "vue";
+import { computed, reactive, ref } from "vue";
 import {Delete, Edit, Search} from "@element-plus/icons-vue";
 import request from "@/utils/request.js";
 import {ElMessage, ElMessageBox, FormRules} from "element-plus";
 import { API_PATHS, apiBatch, apiById, apiPage } from "@/constants";
+import { useAuth } from "@/composables/useAuth";
 
 interface RoomForm {
   id?: number;
   title?: string;
   name?: string;
+  seatRows?: number;
+  seatCols?: number;
 }
 
+// 影院名称由后端按 token 的影院归属派生，前端不再手填（避免同一影院出现多个影院名）
+const { user } = useAuth();
+const cinemaName = computed(() => user.value?.name || '当前影院');
+
 const rules: FormRules = {
-  title: [
-    { required: true, message: '请输入影院名称', trigger: 'blur' }
-  ],
   name: [
     { required: true, message: '请输入影厅名称', trigger: 'blur' }
+  ],
+  seatRows: [
+    { required: true, message: '请输入座位行数', trigger: 'blur' }
+  ],
+  seatCols: [
+    { required: true, message: '请输入座位列数', trigger: 'blur' }
   ]
 };
 
@@ -160,8 +179,8 @@ load();
 
 const handleAdd = () => {
   data.formVisible = true;
-  // 初始化空表单数据
-  data.form = {} as RoomForm;
+  // 新影厅默认 8×8，与 room 表列默认值一致
+  data.form = { seatRows: 8, seatCols: 8 } as RoomForm;
 }
 
 

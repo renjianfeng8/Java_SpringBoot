@@ -44,6 +44,7 @@ declare module 'vue' {
     ElTag: typeof import('element-plus/es')['ElTag']
     ElUpload: typeof import('element-plus/es')['ElUpload']
     ErrorBoundary: typeof import('./components/ErrorBoundary.vue')['default']
+    OrderPayDialog: typeof import('./components/OrderPayDialog.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
   }

@@ -30,12 +30,16 @@
             <if test="cinemaId != null">cinema_id,</if>
             <if test="title != null">title,</if>
             <if test="name != null">name,</if>
+            <if test="seatRows != null">seat_rows,</if>
+            <if test="seatCols != null">seat_cols,</if>
         </trim>
         VALUES
         <trim prefix="(" suffix=")" suffixOverrides=",">
             <if test="cinemaId != null">#{cinemaId},</if>
             <if test="title != null">#{title},</if>
             <if test="name != null">#{name},</if>
+            <if test="seatRows != null">#{seatRows},</if>
+            <if test="seatCols != null">#{seatCols},</if>
         </trim>
     </insert>
 
@@ -46,6 +50,8 @@
             <if test="cinemaId != null">cinema_id = #{cinemaId},</if>
             <if test="title != null">title = #{title},</if>
             <if test="name != null">name = #{name},</if>
+            <if test="seatRows != null">seat_rows = #{seatRows},</if>
+            <if test="seatCols != null">seat_cols = #{seatCols},</if>
         </set>
         WHERE id = #{id}
     </update>

@@ -7,7 +7,8 @@
 
     <!-- 2. 错误提示 -->
     <div v-else-if="errorMsg" style="padding: 20px; color: #ef4238; text-align: center;">
-      {{ errorMsg }}
+      <div>{{ errorMsg }}</div>
+      <el-button style="margin-top: 16px;" type="primary" @click="goBackToCinemaList">返回影院列表</el-button>
     </div>
 
     <!-- 3. 核心内容：影院完整信息 + 上线电影列表 -->
@@ -248,6 +249,11 @@ const filmId = ref(route.query.filmId ? Number(route.query.filmId) : null);
 // 2. 基础状态管理
 const loading = ref(false);
 const errorMsg = ref('');
+
+// 影院ID无效或加载失败时，给出回到列表的出口，避免用户停留在死页面
+const goBackToCinemaList = () => {
+  router.push('/front/cinema');
+};
 const cinema = reactive({
   id: '',
   name: '',
