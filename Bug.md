@@ -551,7 +551,7 @@
   - 从 `excludePathPatterns` 移除 `/api/v1/cinemas/page`，并在代码里留注释说明"公开访问交给 `PUBLIC_READ_PREFIXES`，不要往排除表里加"
   - 端到端验证补断言：管理员的 `/cinemas/page` 必须能看到未审核影院，且审核通过后该影院出现在前台列表并可以登录
 - **相关文件**: `common/config/WebMvcConfig.java`、`common/config/AuthInterceptor.java`、`controller/CinemaController.java`、`mapper/CinemaMapper.xml`
-- **提交记录**: 待提交
+- **提交记录**: `e3a250f1`
 - **状态**: 已修复
 
 ---
