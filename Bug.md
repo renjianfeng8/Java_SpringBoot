@@ -461,7 +461,7 @@
   - 删除冗余表 `cinema_film`（schema.sql / data.sql / README 表清单同步移除），使 `record` 成为"影院是否上映某片"的唯一数据源
   - `record.film_id` 改为 `NOT NULL`，后端 `RecordService.validateSchedule` 强制校验影片存在并回填 `title`，后台表单的"电影名称"改为只读、"影片"改为下拉（`GET /api/v1/films`）
 - **相关文件**: `mapper/FilmMapper.xml`、`mapper/CinemaMapper.xml`、`service/RecordService.java`、`sql/schema.sql`、`sql/data.sql`、`vue/src/views/back/Record.vue`
-- **提交记录**: 待提交
+- **提交记录**: `96324f28`
 - **状态**: 已修复
 
 ---
@@ -478,7 +478,7 @@
   - 批量删除在循环校验通过后才执行，保证整批原子（不会删一半）
   - 提供幂等迁移脚本 `sql/migration-20260927-delete-guard.sql`
 - **相关文件**: `sql/schema.sql`、`sql/migration-20260927-delete-guard.sql`、`controller/{Film,Cinema,Room,Record,User}Controller.java`、`service/{Record,Room,Ordered}Service.java`、`mapper/{Record,Ordered,Room}Mapper.{java,xml}`
-- **提交记录**: 待提交
+- **提交记录**: `96324f28`
 - **状态**: 已修复
 
 ---
@@ -490,7 +490,7 @@
 - **根因分析**: `front/CinemaDetail.vue` 通过 `GET /api/v1/records/page` 拉取场次，但 `AuthInterceptor.PUBLIC_READ_PREFIXES` 白名单里没有 `/api/v1/records`，匿名 GET 被直接拒绝
 - **解决方案**: 将 `/api/v1/records` 加入匿名 GET 白名单（该资源不含用户隐私字段）；写操作仍受保护，由 `RecordController.requireAdminOrCinema()` 做业务层校验。补充 `AuthInterceptorAccessTest` 匿名读放行/写拒绝用例
 - **相关文件**: `common/config/AuthInterceptor.java`、`src/test/java/com/example/springboot/AuthInterceptorAccessTest.java`
-- **提交记录**: 待提交
+- **提交记录**: `96324f28`
 - **状态**: 已修复
 
 ---
@@ -507,7 +507,7 @@
   - 新增/编辑校验：`start` 必须晚于当前（编辑时未改动时间则不重复校验，保证存量过期场次仍可停售）、`price > 0`、同影厅时段不重叠（按影片片长计算区间，默认 120 分钟兜底）
   - 种子数据 `record.start` 整体平移到未来（原来停留在 2024~2025，新规则上线后所有场次都会显示不可购票）
 - **相关文件**: `service/{RecordService,OrderedService}.java`、`controller/RecordController.java`、`common/enums/RecordStatus.java`、`mapper/RecordMapper.{java,xml}`、`vue/src/views/front/CinemaDetail.vue`、`vue/src/views/back/Record.vue`、`vue/src/constants/index.js`、`sql/{data.sql,schema.sql}`
-- **提交记录**: 待提交
+- **提交记录**: `96324f28`
 - **状态**: 已修复
 
 ---
@@ -522,7 +522,7 @@
   - 提供一次性数据修复脚本，按 `total = record.price × ordered.number` 重建被归零的存量订单金额（18 笔全部可确定性重建，0 笔不可恢复）
   - 端到端验证新增断言：支付、取票、退票、超时取消四条路径后 `total` 必须保持原值
 - **相关文件**: `entity/Ordered.java`、`mapper/OrderedMapper.xml`、`service/OrderedService.java`
-- **提交记录**: 待提交
+- **提交记录**: `60fa75f8`
 - **状态**: 已修复
 
 ---
@@ -537,7 +537,7 @@
   - 新增 `common/enums/PayResult.java`，并在类注释中写明"为何不能用异常表达"
   - 补单元测试 `payOrderAfterTimeoutCancelsOrderInsteadOfThrowing`：断言返回超时结果**且**调用了状态更新，实现若改回抛异常该用例即失败
 - **相关文件**: `service/OrderedService.java`、`controller/OrderedController.java`、`common/enums/PayResult.java`、`src/test/java/com/example/springboot/OrderedServiceTest.java`
-- **提交记录**: 待提交
+- **提交记录**: `60fa75f8`
 - **状态**: 已修复
 
 ---
