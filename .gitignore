@@ -13,6 +13,10 @@ springboot-jar/
 node_modules/
 dist/
 
+# === Python（验证脚本的字节码缓存）===
+__pycache__/
+*.pyc
+
 # === 日志 ===
 *.log
 
