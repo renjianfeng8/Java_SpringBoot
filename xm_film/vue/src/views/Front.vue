@@ -225,20 +225,12 @@ const updateActivePath = (path) => {
  * 收缩优先级：左组(不缩) > 导航项(不缩、不换行) > 右组(可缩，搜索框是唯一泄压阀)
  * ============================================================ */
 .front-header {
-  /* Type Scale 字体标尺：浏览器根字号 16px 的固定倍数阶梯，禁止零散 px 字号
-   * --fs-2xs 16×0.75 | --fs-sm 16×0.875 | --fs-md 16×1 | --fs-lg 16×1.125 | --fs-xl 16×1.25
-   * 令牌声明在组件根节点上，随级联向下继承，不污染其它页面 */
-  --fs-2xs: 0.75rem;
-  --fs-sm: 0.875rem;
-  --fs-md: 1rem;
-  --fs-lg: 1.125rem;
-  --fs-xl: 1.25rem;
-
-  /* 尺寸与间距令牌：间距统一走 gap，不再逐个硬写 margin */
+  /* 字号令牌已上移为全局令牌（tokens.scss 的 :root），组件不再重复声明。
+   * 组件级只保留本组件专有的尺寸令牌，命名不得与全局令牌冲突。 */
   --header-height: 60px;
   --header-padding-x: 20px;
   --group-gap: 16px;
-  --nav-gap: 25px;
+  --nav-gap: 24px;
   --search-width: 200px;
   --header-min-width: 1120px;     /* 临界阈值：低于此宽度停止压缩，改为整页横向滚动 */
 
@@ -249,7 +241,7 @@ const updateActivePath = (path) => {
   height: var(--header-height);
   padding: 0 var(--header-padding-x);
   background: white;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-edge);
   /* 最小宽度保护：低于该阈值不再继续压缩，改为整页横向滚动。
      刻意不用 overflow: hidden —— 裁切会让按钮/输入框不可见不可点 */
   min-width: var(--header-min-width);
@@ -298,14 +290,14 @@ const updateActivePath = (path) => {
 }
 
 .nav-item:hover {
-  color: #409eff;
+  color: var(--el-color-primary);
   transform: translateY(-2px);
 }
 
 /* 激活状态的样式 */
 .active {
-  color: #e53935 !important;
-  font-weight: bold;
+  color: var(--el-color-primary) !important;
+  font-weight: var(--fw-bold);
 }
 
 .active::after {
@@ -315,7 +307,7 @@ const updateActivePath = (path) => {
   bottom: 0;
   width: 100%;
   height: 2px;
-  background-color: #e53935;
+  background-color: var(--el-color-primary);
   border-radius: 1px;
 }
 
@@ -378,7 +370,7 @@ const updateActivePath = (path) => {
 }
 
 .username {
-  font-size: var(--fs-sm);
+  font-size: var(--fs-base);
   /* 超长用户名截断，避免撑爆右组引发元素互挤 */
   max-width: 6em;
   overflow: hidden;
@@ -413,11 +405,11 @@ const updateActivePath = (path) => {
 
 .footer-title {
   font-size: 15px;
-  font-weight: bold;
+  font-weight: var(--fw-bold);
   margin-bottom: 10px;
   position: relative;
   padding-bottom: 10px;
-  color: #e53935;
+  color: var(--el-color-primary);
 }
 
 .footer-title::after {
@@ -427,7 +419,7 @@ const updateActivePath = (path) => {
   bottom: 0;
   width: 30px;
   height: 2px;
-  background-color: #e53935;
+  background-color: var(--el-color-primary);
 }
 
 .footer-links {
@@ -444,7 +436,7 @@ const updateActivePath = (path) => {
 }
 
 .footer-links li:hover {
-  color: #e53935;
+  color: var(--el-color-primary);
 }
 
 .contact-column {
@@ -477,12 +469,12 @@ const updateActivePath = (path) => {
 .header-link {
   color: #333;
   text-decoration: none;
-  font-size: var(--fs-sm);
+  font-size: var(--fs-base);
   white-space: nowrap;
   transition: color 0.3s;
 }
 .header-link:hover {
-  color: #409eff;
+  color: var(--el-color-primary);
 }
 .header-divider {
   color: #ccc;

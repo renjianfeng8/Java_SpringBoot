@@ -2,6 +2,7 @@ import { createApp } from 'vue'
 import App from './App.vue'
 import router from './router'
 import { ElNotification } from 'element-plus'
+import '@/assets/css/tokens.scss'
 import '@/assets/css/global.css'
 
 const app = createApp(App)

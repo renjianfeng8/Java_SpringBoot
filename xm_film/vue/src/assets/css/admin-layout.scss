@@ -1,0 +1,105 @@
+/* 影院后台 / 管理后台共用的外壳样式
+ * 由 Back.vue 与 Manage.vue 各自 @use 进 <style scoped>，因此仍带组件作用域，
+ * 不会外泄到前台。集中一份，避免双份维护。 */
+
+.manage-container {
+  width: 100%;
+  min-height: 100vh;
+  background-color: var(--el-bg-color-page);
+  display: flex;
+  flex-direction: column;
+}
+
+.manage-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 50px;
+  padding: 0 var(--space-8);
+  box-shadow: var(--shadow-edge);
+  z-index: var(--el-index-normal);
+}
+
+.manage-header-left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+}
+
+.logo {
+  height: 25px;
+  width: auto;
+}
+
+.title {
+  font-size: var(--fs-base);
+  margin: 0;
+  font-weight: var(--fw-bold);
+}
+
+.manage-header-center {
+  flex: 1;
+  padding: 0 var(--space-20);
+  text-align: center;
+}
+
+.manage-header-right {
+  display: flex;
+  align-items: center;
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  cursor: pointer;
+}
+
+.avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: var(--el-border-radius-circle);
+  object-fit: cover;
+  border: 1px solid var(--el-border-color);
+  transition: transform 100ms ease-out;
+}
+
+.avatar:hover {
+  transform: scale(1.2);
+}
+
+.username {
+  font-size: var(--fs-base);
+  color: var(--el-text-color-secondary);
+  /* 用户名可能为中文，按 §2.3 只能 400 / 700（500 会触发伪粗体） */
+  font-weight: var(--fw-regular);
+}
+
+.manage-main {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.manage-main-left {
+  width: 175px;
+  transition: width 0.3s;
+  border-right: 1px solid var(--el-border-color-lighter);
+}
+
+.manage-content {
+  flex: 1;
+  overflow-y: auto;
+  background-color: var(--el-bg-color);
+  padding: var(--space-16);
+  min-height: calc(100vh - 160px);
+}
+
+.admin-footer {
+  text-align: center;
+  padding: var(--space-12);
+  font-size: var(--fs-xs);
+  color: var(--el-text-color-secondary);
+  background: var(--el-fill-color-light);
+  border-top: 1px solid var(--el-border-color-lighter);
+}
