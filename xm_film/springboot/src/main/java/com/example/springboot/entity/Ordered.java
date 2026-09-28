@@ -4,6 +4,8 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
+
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -23,6 +25,8 @@ public class Ordered {
      * 都会把订单金额写成 0.00。
      */
     private Double total;
+    /** 下单时的单价快照，取自场次票价；场次改价不影响历史订单 */
+    private BigDecimal unitPrice;
     private Integer number;
     private String status;
     private String start;

@@ -6,6 +6,7 @@ import com.example.springboot.common.enums.ErrorCode;
 import com.example.springboot.common.enums.OrderStatus;
 import com.example.springboot.common.enums.PayResult;
 import com.example.springboot.common.enums.RecordStatus;
+import com.example.springboot.dto.response.SeatOccupancy;
 import com.example.springboot.entity.Film;
 import com.example.springboot.entity.Ordered;
 import com.example.springboot.entity.Record;
@@ -53,6 +54,13 @@ public class OrderedService extends BaseService<Ordered> {
     /** 退票截止：放映前 60 分钟（与前台词：未取票用户在放映前60分钟可退票） */
     private static final int REFUND_DEADLINE_MINUTES = 60;
 
+    /**
+     * 只有终态废单可以清理。已成交订单必须走退票流程，
+     * 否则「删除订单」会成为绕过退票与资金凭证的后门。
+     */
+    private static final Set<String> DELETABLE_STATUSES =
+            Set.of(OrderStatus.CANCELLED, OrderStatus.REFUNDED);
+
     @Resource
     private OrderedMapper orderedMapper;
 
@@ -64,6 +72,9 @@ public class OrderedService extends BaseService<Ordered> {
 
     @Resource
     private RoomMapper roomMapper;
+
+    @Resource
+    private WalletService walletService;
 
     @Override
     protected BaseMapper<Ordered> mapper() {
@@ -138,6 +149,8 @@ public class OrderedService extends BaseService<Ordered> {
         ordered.setStart(recordItem.getStart());
         ordered.setNumber(number);
         ordered.setTotal(total.doubleValue());
+        // 单价快照：场次日后改价不影响这张订单的金额还原
+        ordered.setUnitPrice(price);
         ordered.setStatus(OrderStatus.PENDING_PAYMENT);
         ordered.setSeat(String.join(",", seats));
         ordered.setCreateTime(LocalDateTime.now(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern(DATE_TIME_PATTERN)));
@@ -176,6 +189,10 @@ public class OrderedService extends BaseService<Ordered> {
             return PayResult.TIMEOUT_CANCELLED;
         }
 
+        // 余额校验与扣减必须与出票在同一事务内：扣款失败（余额不足）整笔回滚，
+        // 订单停在待支付、pending_timeout_at 不变、座位继续锁定，用户充值后可继续支付。
+        walletService.debitPurchase(ordered.getUserId(), orderAmount(ordered), id);
+
         Ordered update = new Ordered();
         update.setId(id);
         update.setStatus(OrderStatus.PENDING);
@@ -207,6 +224,9 @@ public class OrderedService extends BaseService<Ordered> {
                     "已过退票截止时间（放映前 " + REFUND_DEADLINE_MINUTES + " 分钟）");
         }
 
+        // 退款入账与状态流转同事务：入账成功但状态没改回去的情况不会出现
+        walletService.creditRefund(ordered.getUserId(), orderAmount(ordered), id);
+
         Ordered update = new Ordered();
         update.setId(id);
         update.setStatus(OrderStatus.REFUNDED);
@@ -236,8 +256,32 @@ public class OrderedService extends BaseService<Ordered> {
         mapper().updateById(ordered);
     }
 
-    public List<Ordered> selectActiveByRecordId(Integer recordId) {
-        return orderedMapper.selectActiveByRecordId(recordId);
+    /**
+     * 选座图视角：只给座位与归属，本人订单附带继续支付所需的字段。
+     *
+     * 不能直接把 {@code Ordered} 实体发给前端 —— 那等于把该场次所有订单的
+     * 订单号、用户 ID、金额都给到任意登录用户。归属判定只看 JWT 里的 userId。
+     */
+    public List<SeatOccupancy> selectSeatOccupancy(Integer recordId, Integer tokenUserId) {
+        return orderedMapper.selectActiveByRecordId(recordId).stream()
+                .map(ordered -> toSeatOccupancy(ordered, tokenUserId))
+                .toList();
+    }
+
+    private SeatOccupancy toSeatOccupancy(Ordered ordered, Integer tokenUserId) {
+        SeatOccupancy view = new SeatOccupancy();
+        view.setSeat(ordered.getSeat());
+        boolean mine = tokenUserId != null && tokenUserId.equals(ordered.getUserId());
+        view.setMine(mine);
+        if (!mine) {
+            return view;
+        }
+        view.setOrderId(ordered.getId());
+        view.setOrders(ordered.getOrders());
+        view.setStatus(ordered.getStatus());
+        view.setTotal(ordered.getTotal());
+        view.setPendingTimeoutAt(ordered.getPendingTimeoutAt());
+        return view;
     }
 
     public int countByFilmId(Integer filmId) {
@@ -277,6 +321,7 @@ public class OrderedService extends BaseService<Ordered> {
     public void deleteScoped(Integer id, String role, Integer userId) {
         Ordered ordered = selectById(id);
         ensureOrderAccess(ordered, role, userId);
+        ensureDeletable(ordered);
         orderedMapper.deleteById(id);
     }
 
@@ -288,6 +333,7 @@ public class OrderedService extends BaseService<Ordered> {
         for (Integer id : ids) {
             Ordered ordered = selectById(id);
             ensureOrderAccess(ordered, role, userId);
+            ensureDeletable(ordered);
         }
         orderedMapper.deleteBatch(ids);
     }
@@ -330,6 +376,25 @@ public class OrderedService extends BaseService<Ordered> {
         }
         List<Integer> ids = expired.stream().map(Ordered::getId).toList();
         orderedMapper.batchCancelExpiredOrders(ids);
+    }
+
+    /**
+     * 删除守卫：只有「已取消 / 已退票」的终态废单可以物理删除。
+     * 待支付/待取票/已取票订单一律拒绝，把「删订单当免费退票用」的旁路堵死。
+     */
+    private void ensureDeletable(Ordered ordered) {
+        if (ordered == null || !DELETABLE_STATUSES.contains(ordered.getStatus())) {
+            throw new CustomException(ErrorCode.BUSINESS_CONFLICT,
+                    "仅「已取消 / 已退票」订单可删除；已支付订单请走退票流程");
+        }
+    }
+
+    /** 资金操作使用的订单金额。金额缺失属存量脏数据，给出可读提示而不是抛 NPE */
+    private BigDecimal orderAmount(Ordered ordered) {
+        if (ordered.getTotal() == null) {
+            throw new CustomException(ErrorCode.SYSTEM_ERROR, "订单缺失金额，无法完成资金操作，请联系管理员");
+        }
+        return BigDecimal.valueOf(ordered.getTotal());
     }
 
     private void ensureOrderAccess(Ordered ordered, String role, Integer userId) {

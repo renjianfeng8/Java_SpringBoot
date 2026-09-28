@@ -1,8 +1,11 @@
 <!--
-  订单支付弹窗（模拟支付）。
+  订单支付弹窗（账户余额支付）。
 
   选座页（确认购票后立即支付）与订单列表页（待支付订单"继续支付"）共用同一套
   倒计时与支付/取消逻辑，避免两处各写一遍。
+
+  余额不足时不关闭弹窗：提示差额并给出去充值入口，订单留在待支付、座位继续锁定，
+  用户充值回来后仍可从这个弹窗完成支付。
 
   父组件用法：
     <OrderPayDialog v-model="visible" :order="currentOrder"
@@ -29,9 +32,27 @@
         </div>
         <div style="display: flex; justify-content: space-between; margin-bottom: 8px;
                     font-size: 18px; font-weight: bold;">
-          <span style="color: #333;">总价：</span>
-          <span style="color: #ef4238;">¥{{ order?.total }}</span>
+          <span style="color: #333;">应付金额：</span>
+          <span style="color: #ef4238;">¥{{ money(payable) }}</span>
         </div>
+        <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 14px;">
+          <span style="color: #666;">账户余额：</span>
+          <span :style="{ color: insufficient ? '#ef4238' : '#333', fontWeight: 'bold' }">
+            {{ balance === null ? '加载中…' : `¥${money(balance)}` }}
+          </span>
+        </div>
+        <div v-if="!insufficient && balance !== null"
+             style="display: flex; justify-content: space-between; font-size: 14px;">
+          <span style="color: #666;">支付后余额：</span>
+          <span style="color: #333;">¥{{ money(afterPay) }}</span>
+        </div>
+
+        <div v-if="insufficient"
+             style="margin: 12px 0; padding: 8px 10px; background: #fef0f0;
+                    color: #f56c6c; border-radius: 4px; font-size: 13px;">
+          余额不足，还差 ¥{{ money(payable - balance) }}，请先充值后再支付。
+        </div>
+
         <div v-if="countdown > 0"
              style="text-align: center; margin: 15px 0; font-size: 14px; color: #999;">
           剩余支付时间：
@@ -51,15 +72,23 @@
                        background: white; cursor: pointer; font-size: 14px;">
           取消订单
         </button>
-        <button @click="submitPayment"
-                :disabled="countdown <= 0 || submitting"
+        <button v-if="insufficient"
+                @click="goRecharge"
+                :disabled="submitting"
+                style="padding: 8px 25px; border: none; border-radius: 4px;
+                       background: #ef4238; color: white; cursor: pointer; font-size: 14px;">
+          去充值
+        </button>
+        <button v-else @click="submitPayment"
+                :disabled="countdown <= 0 || submitting || balance === null"
                 :style="{
                   padding: '8px 25px', border: 'none', borderRadius: '4px',
-                  background: countdown > 0 ? '#ef4238' : '#ccc',
-                  color: 'white', cursor: countdown > 0 ? 'pointer' : 'not-allowed',
+                  background: (countdown > 0 && balance !== null) ? '#ef4238' : '#ccc',
+                  color: 'white',
+                  cursor: (countdown > 0 && balance !== null) ? 'pointer' : 'not-allowed',
                   fontSize: '14px'
                 }">
-          模拟支付
+          余额支付
         </button>
       </div>
     </div>
@@ -67,10 +96,11 @@
 </template>
 
 <script setup>
-import { onUnmounted, ref, watch } from 'vue';
+import { computed, onUnmounted, ref, watch } from 'vue';
+import { useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import request from '@/utils/request.js';
-import { ORDER_API } from '@/constants';
+import { ACCOUNT_API, ORDER_API } from '@/constants';
 
 const DEFAULT_PAY_SECONDS = 300;
 
@@ -81,9 +111,17 @@ const props = defineProps({
 
 const emit = defineEmits(['update:modelValue', 'paid', 'cancelled', 'timeout']);
 
+const router = useRouter();
+
 const countdown = ref(0);
 const submitting = ref(false);
+const balance = ref(null);
 let countdownTimer = null;
+
+const money = (value) => Number(value ?? 0).toFixed(2);
+const payable = computed(() => Number(props.order?.total ?? 0));
+const insufficient = computed(() => balance.value !== null && balance.value < payable.value);
+const afterPay = computed(() => (balance.value === null ? 0 : balance.value - payable.value));
 
 const stopCountdown = () => {
   if (countdownTimer) {
@@ -93,6 +131,21 @@ const stopCountdown = () => {
 };
 
 const close = () => emit('update:modelValue', false);
+
+/** 余额取自后端，不在前端缓存，保证下单/退款后看到的都是当前值 */
+const loadBalance = async () => {
+  try {
+    const res = await request.get(ACCOUNT_API.SUMMARY);
+    balance.value = res.code === '200' ? Number(res.data?.balance ?? 0) : null;
+  } catch (error) {
+    balance.value = null;
+  }
+};
+
+const goRecharge = () => {
+  close();
+  router.push('/front/account');
+};
 
 const resolveRemainingSeconds = () => {
   const timeoutStr = props.order?.pendingTimeoutAt;
@@ -109,7 +162,9 @@ const startCountdown = () => {
     countdown.value -= 1;
     if (countdown.value <= 0) {
       stopCountdown();
-      ElMessage.warning('支付超时，订单已自动取消');
+      // 前端倒计时归零只是把弹窗收掉；真正的取消由后端定时任务完成，
+      // 所以这里不能说"已取消"，只能提示即将取消。
+      ElMessage.warning('支付时间已到，未支付的订单将自动取消');
       close();
       emit('timeout');
     }
@@ -121,7 +176,9 @@ watch(
     ([visible]) => {
       if (visible && props.order?.id) {
         submitting.value = false;
+        balance.value = null;
         startCountdown();
+        loadBalance();
       } else {
         stopCountdown();
       }
@@ -153,6 +210,9 @@ const submitPayment = async () => {
         stopCountdown();
         close();
         emit('timeout');
+      } else {
+        // 失败可能是余额变动导致，重新拉取让按钮与提示同步
+        await loadBalance();
       }
     }
   } finally {

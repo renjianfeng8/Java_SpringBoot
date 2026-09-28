@@ -62,6 +62,25 @@
         UPDATE user SET password = #{password} WHERE id = #{id}
     </update>
 
+    <!-- 账户余额：行锁读 + 原子增减，是「变更余额并记账」的唯一 SQL 出处 -->
+    <select id="selectBalanceForUpdate" resultType="java.math.BigDecimal">
+        SELECT balance FROM user WHERE id = #{id} FOR UPDATE
+    </select>
+
+    <select id="selectBalance" resultType="java.math.BigDecimal">
+        SELECT balance FROM user WHERE id = #{id}
+    </select>
+
+    <update id="deductBalance">
+        UPDATE user SET balance = balance - #{amount}
+        WHERE id = #{id} AND balance &gt;= #{amount}
+    </update>
+
+    <update id="addBalance">
+        UPDATE user SET balance = balance + #{amount}
+        WHERE id = #{id}
+    </update>
+
     <!-- 删除操作 -->
     <delete id="deleteById" parameterType="java.lang.Integer">
         DELETE FROM user WHERE id = #{id}

@@ -104,8 +104,8 @@ public class OrderedController extends BaseController<Ordered> {
 
     @GetMapping("/seats")
     public Result seats(@RequestParam Integer recordId) {
-        List<Ordered> orders = orderedService.selectActiveByRecordId(recordId);
-        return Result.success(orders);
+        // 归属判定在后端按 JWT 完成；响应里不含他人订单的订单号/用户/金额
+        return Result.success(orderedService.selectSeatOccupancy(recordId, currentUserId()));
     }
 
     @Override

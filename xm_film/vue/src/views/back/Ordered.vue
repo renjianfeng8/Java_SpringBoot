@@ -15,7 +15,8 @@
 
     <div class="card" style="margin-bottom: 5px">
       <el-table stripe :data="data.tableData" @selection-change="handleSelectionChange">
-        <el-table-column type="selection" width="55"/>
+        <!-- 不可删除的订单（待支付/待取票/已取票）连勾选都不允许，批量删除自然不会带上它们 -->
+        <el-table-column type="selection" width="55" :selectable="(row) => isOrderDeletable(row.status)"/>
         <el-table-column type="expand">
           <template #default="props">
 
@@ -32,6 +33,9 @@
               <el-descriptions-item label="座位号">{{props.row.seat}}</el-descriptions-item>
               <el-descriptions-item label="预约时间">{{props.row.start}}</el-descriptions-item>
               <el-descriptions-item label="电影票数量">{{props.row.number}}</el-descriptions-item>
+              <el-descriptions-item label="单价（元）">
+                {{ props.row.unitPrice != null ? `¥${props.row.unitPrice}` : '—' }}
+              </el-descriptions-item>
               <el-descriptions-item label="总费用">{{props.row.total}}</el-descriptions-item>
               <el-descriptions-item label="订单状态">
                 <el-tag :type="getStatusType(props.row.status)">
@@ -71,6 +75,7 @@
         </el-table-column>
         <el-table-column label="预约时间" prop="start" show-overflow-tooltip />
         <el-table-column label="电影票数量" prop="number"/>
+        <el-table-column label="单价" prop="unitPrice"/>
         <el-table-column label="总费用" prop="total"/>
         <el-table-column label="订单状态" prop="status">
           <template #default="scope">
@@ -83,7 +88,9 @@
           <template #default="scope">
             <el-button v-if="scope.row.status === '待取票'" style="font-size: 14px" link type="primary"
                        @click="() => pickupOrder(scope.row)">取票</el-button>
-            <el-button style="font-size: 18px" link :icon="Delete" @click="() => del(scope.row.id)" type="danger"></el-button>
+            <!-- 只有终态废单可删除，与后端删除守卫同构 -->
+            <el-button v-if="isOrderDeletable(scope.row.status)" style="font-size: 18px" link :icon="Delete"
+                       @click="() => del(scope.row.id)" type="danger"></el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -109,7 +116,7 @@ import { reactive } from "vue";
 import { Delete, Search } from "@element-plus/icons-vue";
 import request from "@/utils/request.js";
 import { ElMessage, ElMessageBox } from "element-plus";
-import { API_PATHS, ORDER_API, ORDER_STATUS_OPTIONS, getOrderStatusType as getStatusType, apiBatch, apiById, apiPage } from "@/constants";
+import { API_PATHS, ORDER_API, ORDER_STATUS_OPTIONS, getOrderStatusType as getStatusType, apiBatch, apiById, apiPage, isOrderDeletable } from "@/constants";
 
 
 interface Ordered {
@@ -121,6 +128,7 @@ interface Ordered {
   cinemaId?: number;
   appointment?: string;
   total?: string;
+  unitPrice?: number;
   number?: number;
   status?: string;
   start?: string;

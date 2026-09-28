@@ -49,6 +49,7 @@ const router = createRouter({
       children: [
         { path: 'home', meta: { guest: true, name: '首页', title: '电影购票网站' }, component: () => import('../views/front/Home.vue') },
         { path: 'orders', meta: { requiresAuth: true, roles: ['USER'], name: '购票记录' }, component: () => import('../views/front/Orders.vue') },
+        { path: 'account', meta: { requiresAuth: true, roles: ['USER'], name: '我的账户' }, component: () => import('../views/front/Account.vue') },
         { path: 'buyTicket', meta: { requiresAuth: true, roles: ['USER'], name: '购票' }, component: () => import('../views/front/BuyTicket.vue') },
         { path: 'person', meta: { requiresAuth: true, roles: ['USER'], name: '个人中心' }, component: () => import('../views/front/Person.vue') },
         { path: 'password', meta: { requiresAuth: true, roles: ['USER'], name: '修改密码' }, component: () => import('../views/front/Password.vue') },

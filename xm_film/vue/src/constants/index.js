@@ -13,6 +13,9 @@ export const API_PATHS = {
   ORDERS: '/api/v1/orders',
   MARKS: '/api/v1/marks',
   VIDEOS: '/api/v1/videos',
+  RECHARGES: '/api/v1/recharges',
+  FUND_FLOWS: '/api/v1/fund-flows',
+  ACCOUNT: '/api/v1/account',
   FILES: '/api/v1/files/upload',
   YEARS: '/api/v1/auth/years',
 }
@@ -51,6 +54,44 @@ export const AUTH_API = {
   PASSWORD: `${API_PATHS.AUTH}/password`,
   YEARS: `${API_PATHS.AUTH}/years`,
   ME: `${API_PATHS.AUTH}/me`,
+}
+
+/** 账户余额（只返回当前登录用户自己的余额） */
+export const ACCOUNT_API = {
+  SUMMARY: `${API_PATHS.ACCOUNT}/summary`,
+}
+
+/** 充值单据：提交申请不改余额，回调成功才入账 */
+export const RECHARGE_API = {
+  CREATE: API_PATHS.RECHARGES,
+  PAGE: apiPage(API_PATHS.RECHARGES),
+  CALLBACK: (id) => `${API_PATHS.RECHARGES}/${id}/callback`,
+}
+
+/** 资金流水（只读账本） */
+export const FUND_FLOW_API = {
+  PAGE: apiPage(API_PATHS.FUND_FLOWS),
+}
+
+/** 充值单据状态 → el-tag type，取值与后端 RechargeStatus 一致 */
+export const RECHARGE_STATUS_MAP = {
+  '处理中': 'warning',
+  '已完成': 'success',
+  '已失败': 'danger',
+}
+
+export function getRechargeStatusType(status) {
+  return RECHARGE_STATUS_MAP[status] || 'info'
+}
+
+/**
+ * 允许物理删除的订单状态，必须与后端 OrderedService.DELETABLE_STATUSES 保持一致。
+ * 已成交订单只能走退票，删订单不得成为绕过退票与资金凭证的旁路。
+ */
+export const ORDER_DELETABLE_STATUSES = ['已取消', '已退票']
+
+export function isOrderDeletable(status) {
+  return ORDER_DELETABLE_STATUSES.includes(status)
 }
 
 /** 状态 → el-tag 的 type，缺省 info；键序即下拉选项顺序 */

@@ -19,7 +19,7 @@
 | 影院管理员 | asks | cinema123 |
 | 普通用户 | zhangsan | user123 |
 
-**代码质量**: 单元测试覆盖核心 Service 与权限边界（73 用例），BCrypt 密码加密 + JWT 认证 + RBAC 权限控制，GitHub Actions CI 流水线。
+**代码质量**: 单元测试覆盖核心 Service 与权限边界（154 用例），BCrypt 密码加密 + JWT 认证 + RBAC 权限控制，GitHub Actions CI 流水线。
 
 ---
 
@@ -334,8 +334,9 @@ file:
 - **影片管理** — 影片 CRUD、分类/地区关联、演员关联、预告片上传
 - **影院管理** — 影院注册审核（未审核既不可登录也不对外展示，管理员审核入口）、信息维护、影厅管理
 - **排片管理** — 创建放映场次（关联影厅、时间、价格）
-- **在线选座** — 按影厅座位规模渲染的可视化座位图、选定下单
-- **订单系统** — 购票下单、订单状态流转（含超时取消、取票、退票）与支付/退款凭证留痕
+- **在线选座** — 按影厅座位规模渲染的可视化座位图、选定下单；座位占用接口只返回「座位 + 是否本人」投影，归属由后端按 JWT 判定，不泄露他人订单明细
+- **订单系统** — 购票下单、订单状态流转（含超时取消、取票、退票）与支付/退款凭证留痕；订单留存单价快照，场次改价不影响历史订单
+- **账户与资金** — 用户账户余额、充值单据（处理中/已完成/已失败）、资金流水账本（充值/购票/退票三类来源，记录变动前后余额与关联单据ID）。**购票为余额支付**：支付时校验余额并原子扣减，余额不足则支付失败、订单保持待支付且座位继续锁定；退票时金额退回余额。充值走"提交单据 + 模拟支付回调"两步，提交单据不改余额，回调成功才入账，重复回调被拒
 - **评价系统** — 已取票用户在订单页评价影片（一单一评一人一片），评价均分回写 `film.score` 并驱动评分榜；影片详情页展示评价
 - **排行榜** — 票房榜、评分榜（SQL 级排序）
 - **搜索筛选** — 按影片名称、类型、年份、地区多维筛选
@@ -359,6 +360,8 @@ file:
 
 > `resources` 取值：`admins`、`users`、`cinemas`、`films`、`actors`、`areas`、`types`、`notices`、`rooms`、`records`、`orders`、`marks`、`videos`
 
+> 充值单据（`recharges`）与资金流水（`fund-flows`）**不是**通用 CRUD 资源：单据是资金凭证、账本只增不改，只有下面列出的显式端点，不暴露 PUT/DELETE。
+
 ### 认证与公共接口
 
 | 路径 | 方法 | 说明 | 认证 |
@@ -378,6 +381,11 @@ file:
 | `/api/v1/films/by-cinema` | GET | 按影院查询电影 | Bearer |
 | `/api/v1/cinemas/page` | GET | 影院分页（支持按电影筛选） | 否 |
 | `/api/v1/files/upload` | POST | 文件上传 | Bearer |
+| `/api/v1/account/summary` | GET | 当前登录用户账户余额 | Bearer |
+| `/api/v1/recharges` | POST | 提交充值申请（生成「处理中」单据，余额不变） | Bearer |
+| `/api/v1/recharges/page` | GET | 充值单据分页（USER 只看自己的） | Bearer |
+| `/api/v1/recharges/{id}/callback` | POST | 模拟支付网关回调（幂等，终态不可再流转） | Bearer |
+| `/api/v1/fund-flows/page` | GET | 资金流水分页（USER 只看自己的） | Bearer |
 
 统一响应格式：
 
@@ -393,12 +401,12 @@ file:
 
 ## 数据库设计
 
-系统共 14 张核心表：
+系统共 16 张核心表：
 
 | 表名 | 说明 | 关键字段 |
 |------|------|----------|
 | `admin` | 系统管理员 | username, password, name, role |
-| `user` | 普通用户 | username, password, name, phone |
+| `user` | 普通用户 | username, password, name, phone, balance（账户余额，资金唯一可信来源） |
 | `cinema` | 影院 | name, address, phone, status（未审核/已审核） |
 | `film` | 电影 | title, content, score（由评价均分回写）, boxOffice（多对多关联 type） |
 | `film_type` | 电影-类型关联（多对多） | film_id, type_id |
@@ -408,9 +416,11 @@ file:
 | `notice` | 系统公告 | title, content, time |
 | `room` | 影厅 | name, title, cinema_id, seat_rows, seat_cols |
 | `record` | 放映记录（排片） | film_id, cinema_id, room_id, start, price, status |
-| `ordered` | 购票订单 | record_id, user_id, seat, total, status, pay_time/refund_time |
+| `ordered` | 购票订单 | record_id, user_id, seat, total, unit_price（单价快照）, status, pay_time/refund_time |
 | `mark` | 用户评价 | film_id, user_id, score（评分 0~10，影片评分的唯一数值来源）, mark（评语） |
 | `video` | 预告片 | film_id, url, title |
+| `recharge_order` | 充值单据 | recharge_no, user_id, amount, status（处理中/已完成/已失败） |
+| `fund_flow` | 资金流水（只增不改不删） | user_id, source（充值/购票/退票）, change_amount, balance_before, balance_after, related_id |
 
 > 密码字段统一使用 BCrypt 加密存储（兼容旧版明文密码迁移）。
 
@@ -493,14 +503,24 @@ server {
 
 ## 测试
 
-### 单元测试（73 用例）
+### 单元测试（154 用例）
 
 ```bash
 cd xm_film/springboot
 mvn test
 ```
 
-覆盖 4 个核心 Service（AdminService、UserService、CinemaService、FilmService）及订单、权限拦截、异常处理、健康检查模块，包括登录认证、密码加密、注册去重、密码修改、批量赋值防护、排行榜查询、类型关联维护、订单状态流转、座位冲突检测、RBAC 权限边界、全局异常处理等业务逻辑。
+覆盖核心 Service（Admin/User/Cinema/Film/Ordered/Mark/Wallet/Recharge/FundFlow）及权限拦截、异常处理、健康检查模块，包括登录认证、密码加密、注册去重、密码修改、批量赋值防护、排行榜查询、类型关联维护、订单状态流转、座位冲突检测、RBAC 权限边界、全局异常处理，以及**账户资金**（余额足额/不足扣减、退款入账、金额非正拒绝、流水前后余额与关联单据）、**充值单据状态机**（提交不改余额、回调成功/失败、重复回调被拒、金额上限、跨用户回调被拒）、**订单删除守卫**（按状态拒绝）等业务逻辑。
+
+### 端到端验证（临时库 + 备用端口）
+
+```bash
+# 见脚本头部说明：建临时库 → 用 DB_NAME 指向它并在备用端口起后端 → 跑脚本
+python scripts/verify/p4-account-wallet-e2e.py   # 账户-充值-订单闭环 + 选座接口越权读，69 断言
+python scripts/verify/p4-concurrency.py          # 余额扣减并发正确性，11 断言
+```
+
+两个脚本都自带状态重置、可反复运行，且**不触碰开发库 `xm-film` 与本机 9090/5173**。
 
 ### 本地复现 CI
 
@@ -532,3 +552,9 @@ MIT License
 - Backend password changes trust the JWT-derived request role instead of the request body role.
 - `AuthInterceptor` enforces role boundaries for admin-only resources and write operations on protected resources.
 - Database relations now use explicit keys for the main booking path: `room.cinema_id`, `record.film_id`, and `ordered.record_id`; `xm_film/sql` is the single source of truth for both schema and seed data.
+- `user.balance` is the single source of truth for account funds; `fund_flow` is an append-only audit copy. Every balance mutation must go through `WalletService` (`creditRecharge` / `debitPurchase` / `creditRefund`), which does row-lock read → validate/mutate → write one ledger row inside one transaction. Going around it skips the ledger and the balance check.
+- Balance deduction is `SELECT balance ... FOR UPDATE` plus a conditional `UPDATE ... WHERE balance >= ?`. Both layers exist so a concurrent payment can never overdraw (verified by `scripts/verify/p4-concurrency.py`).
+- Recharge is a two-step flow: submitting an application only creates a `处理中` voucher and does **not** move the balance; only a successful callback flips it to `已完成` and credits the account. Terminal vouchers cannot be re-processed, which is how callback idempotency is implemented — there is no separate idempotency key.
+- Order payment is balance-based: `payOrder` deducts in the same transaction as issuing the ticket, so insufficient balance rolls the whole thing back and leaves the order `待支付` with its seat still locked. Refunds credit the balance back.
+- Order hard delete is limited to terminal waste states (`已取消` / `已退票`) via `OrderedService.DELETABLE_STATUSES`; the front end mirrors this with `constants.isOrderDeletable`. Deleting a paid order would otherwise function as a refund that skips the money movement.
+- Balance is deliberately **not** a field on the `User` entity — `/api/v1/users` is a `SELECT *` generic query, so putting it there would publish every user's balance. It is only served per-JWT at `/api/v1/account/summary`.

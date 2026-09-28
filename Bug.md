@@ -556,6 +556,85 @@
 
 ---
 
+### BUG-037: 支付不校验余额、不扣减、不记账 —— "点一下按钮就出票"
+
+- **日期**: 2026-09-28
+- **Bug 描述**: 订单进入「待支付」后点「模拟支付」，无论用户账户有没有钱都直接出票（`待取票`）。系统既没有用户余额字段，也没有充值单据与资金流水模型 —— 所谓"模拟支付"只是一次无条件的状态流转，"余额不足则支付失败、订单保持待支付"这条分支根本不存在
+- **根因分析**: `OrderedService.payOrder` 的校验只有两条：订单存在、状态为「待支付」，随后直接 `status = 待取票` + `pay_amount = total`。整条链路没有任何一处读 `user` 表，`user` 表也确实没有余额列；充值单据表与资金流水表在 `schema.sql` 中不存在，因此"提交充值单不改余额""回调成功才入账""重复回调幂等"这些约束没有任何载体
+- **解决方案**:
+  - 数据层：`user.balance`、`recharge_order`（处理中/已完成/已失败）、`fund_flow`（来源 + 变动前后余额 + 关联单据ID）、`ordered.unit_price` 单价快照
+  - 新增 `WalletService` 作为余额读写的**唯一出处**：`SELECT balance ... FOR UPDATE` 行锁 + `UPDATE ... WHERE balance >= ?` 条件更新，并在同一事务内写一条 `fund_flow`。充值入账/购票扣减/退票入账三条路径全部复用它，消除"同一套金额逻辑多处各写一遍"
+  - `payOrder` 在超时判定之后调用 `walletService.debitPurchase`，余额不足抛业务冲突。因为扣款与出票在同一事务，失败时整笔回滚 —— 订单停在待支付、`pending_timeout_at` 不变、座位继续锁定，用户充值后可回到订单页继续支付
+  - 新增 `RechargeService` / `RechargeController`：提交申请只生成「处理中」单据（余额不变）；`POST /api/v1/recharges/{id}/callback` 仅允许「处理中」单据流转，成功入账、失败置「已失败」且余额不变，重复回调一律拒绝
+  - 余额不挂 `User` 实体，避免 `/api/v1/users` 的 `SELECT *` 把他人余额带出去；余额只经 `/api/v1/account/summary` 按 JWT 返回本人
+  - 前端新增 `/front/account`（余额 + 档位/自由输入充值 + 单据列表含模拟回调双按钮 + 资金流水），`OrderPayDialog` 改为余额支付并展示余额不足差额与「去充值」入口
+- **验证**: 单测 25 例（`WalletServiceTest` / `RechargeServiceTest` / `FundFlowServiceTest`）+ 端到端 59 断言（`scripts/verify/p4-account-wallet-e2e.py`）+ 并发 11 断言（`scripts/verify/p4-concurrency.py`：余额只够一单时并发支付恰好一单成功、余额为 0.50 且不为负）
+- **相关文件**: `sql/schema.sql`、`sql/migration-20260928-p4-account-wallet.sql`、`service/WalletService.java`、`service/RechargeService.java`、`service/FundFlowService.java`、`controller/RechargeController.java`、`controller/FundFlowController.java`、`controller/AccountController.java`、`service/OrderedService.java`、`mapper/UserMapper.java(+xml)`、`views/front/Account.vue`、`components/OrderPayDialog.vue`
+- **提交记录**: `待提交`
+- **状态**: 已修复
+
+---
+
+### BUG-038: 退票只改状态与凭证字段，款项没有回到用户账户
+
+- **日期**: 2026-09-28
+- **Bug 描述**: 用户退票后订单变成「已退票」、`refund_amount` 也写了金额，但用户账户上什么都没发生 —— 没有余额增加，也没有任何资金流水。前台退票确认框却写着"退票后座位释放、款项退回"，属有文案无实现
+- **根因分析**: `OrderedService.refundOrder` 只做 `updateById(status=已退票, refundTime, refundAmount)`，没有任何余额入账动作；且当时项目里根本没有"用户余额"这个概念，`refund_amount` 只是一份写给自己看的凭证
+- **解决方案**: 在退票窗口与状态校验全部通过之后调用 `walletService.creditRefund(userId, total, orderId)`，与状态更新同事务 —— 入账成功但状态没改回去（或反之）的情况不会出现；取消未扣款的待支付订单依旧不触碰余额
+- **验证**: `OrderedServiceTest.refundOrderCreditsBalanceWithOrderAmount` / `refundOrderDoesNotCreditWhenDeadlinePassed`（校验必须先于资金动作）；端到端断言余额 `181.50 → 300.00`、座位释放、新增一条 `+118.50` 且关联订单ID 的退票流水
+- **相关文件**: `service/OrderedService.java`、`service/WalletService.java`、`mapper/OrderedMapper.xml`
+- **提交记录**: `待提交`
+- **状态**: 已修复
+
+---
+
+### BUG-039: 订单可被物理删除，删单成为绕过退票的免费后门
+
+- **日期**: 2026-09-28
+- **Bug 描述**: 用户端、影院端、管理端三处订单列表的删除按钮都不判状态，后端 `deleteScoped` 也只校验归属。用户对一张「待取票」（已付款）订单点删除，订单行直接消失、座位被静默释放、既没有退票记录也没有退款流水 —— 等于用删除当免费退票用，资金凭证链彻底断裂
+- **根因分析**: 删除接口是从通用 CRUD 继承下来的，只做了"这条订单是不是你的"的归属校验，没有做"这条订单允不允许被删"的状态校验。资金模型落地后这个缺口更严重：退票会回款而删除不会，只要后门开着，用户必然走后门
+- **解决方案**:
+  - 后端新增 `OrderedService.DELETABLE_STATUSES = {已取消, 已退票}` 与 `ensureDeletable` 守卫，单删与批删都先校验（批删任一不合格则整批拒绝）
+  - 前端三端按钮由 `constants.isOrderDeletable` 同构条件渲染；列表勾选列加 `:selectable`，不可删除的订单连勾选都不允许，批量删除自然带不上它们
+- **验证**: `OrderedServiceTest` 六个用例（待支付/待取票/已取票拒绝，已取消/已退票放行，批删整批拒绝）；端到端断言删除待取票订单被拒且订单仍存在、已退票与已取消订单可删除
+- **相关文件**: `service/OrderedService.java`、`views/front/Orders.vue`、`views/back/Ordered.vue`、`views/manage/Ordered.vue`、`constants/index.js`
+- **提交记录**: `待提交`
+- **状态**: 已修复
+
+---
+
+### BUG-040: 选座接口把全场次订单明细发给任意登录用户（越权读）
+
+- **日期**: 2026-09-28
+- **Bug 描述**: `GET /api/v1/orders/seats?recordId=X` 直接返回 `Ordered` 实体列表，任何登录用户只要换一个 `recordId`，就能拿到该场次**所有**订单的订单编号、购票用户ID、订单金额、支付/退款凭证字段。选座图渲染只需要"哪个座位被占"，其余字段全是越权可见的他人交易信息；前端也确实是拿响应里的 `userId` 和自己本地存的 ID 比对来判断"是不是我的锁座"
+- **根因分析**: 该端点当初直接复用了面向后台列表的 `selectActiveByRecordId`（`SELECT *`），把"内部查询"当成了"对外响应"。归属信息（`user_id`）被一并下发，判定"是不是我的"这件事被推给了前端 —— 等于先泄露再让前端自觉忽略
+- **解决方案**:
+  - 新增 `dto/response/SeatOccupancy`：只含 `seat` 与 `mine`；仅当 `mine` 为真时才带 `orderId` / `orders` / `status` / `total` / `pendingTimeoutAt`（继续支付与取消锁座所需）
+  - `OrderedService.selectSeatOccupancy(recordId, tokenUserId)` 在后端按 JWT 里的 `userId` 完成归属判定与字段裁剪，他人订单只回 `{seat, mine:false}`；`tokenUserId` 为空时一律判定为非本人，避免误把他人订单当成自己的
+  - `OrderedController.seats` 改用该方法；原先只做透传的 `OrderedService.selectActiveByRecordId` 随之删除
+  - `BuyTicket.vue` 改读 `order.mine`（不再比对 `userId`），并把选座视角的字段映射成支付弹窗需要的订单形态；本地不再保存 `userId`
+- **验证**: `OrderedServiceTest` 三例（他人订单只出 `seat`+`mine:false`、本人订单带齐字段、无令牌用户不得被判成本人）；端到端新增 10 条断言（他人座位可见但 `orderId`/`orders`/`total` 为 null、响应中不含 `userId` 键、本人座位 `mine:true` 且带 `orderId`）—— E2E 共 69 断言全通过
+- **相关文件**: `dto/response/SeatOccupancy.java`、`service/OrderedService.java`、`controller/OrderedController.java`、`views/front/BuyTicket.vue`、`scripts/verify/p4-account-wallet-e2e.py`
+- **提交记录**: `待提交`
+- **状态**: 已修复
+
+---
+
+### BUG-041: 购票可双击重复提交、支付超时提示与真实行为不符
+
+- **日期**: 2026-09-28
+- **Bug 描述**: 两个前端交互缺陷合在一起：① 选座页「确认购票」在网络往返期间不禁用，双击会连发两次下单请求，第二次必然被"座位已售"拒绝并在成功弹窗旁边弹出一条错误提示；② 支付弹窗倒计时归零时提示"支付超时，订单已自动取消"，但前端归零只关闭弹窗，订单其实仍停在待支付，要等后端定时任务（约 15 秒后）才真正取消 —— 文案断言了一件当时还没发生的事
+- **根因分析**: ① 提交类按钮缺少在途状态，只挡了"未选座/未登录/加载中"，没挡"上一次请求还在飞"；② 文案把"前端倒计时结束"等同于"订单已取消"，混淆了前端计时器与后端 `OrderCleanupTask` 两条独立路径
+- **解决方案**:
+  - `BuyTicket.vue` 新增 `submitting` 在途标记与 `canSubmit` 计算属性，提交期间按钮禁用并显示"提交中…"，`finally` 中复位
+  - `OrderPayDialog.vue` 倒计时归零改提示"支付时间已到，未支付的订单将自动取消"，并注释说明真正的取消由后端定时任务完成
+- **验证**: 前端 `npm run build` 通过；后端全量单测 154 例全绿（改动未触及后端逻辑）。**两条均为纯前端交互改动，没有浏览器点击验证，仅验证到构建通过与后端接口未回归**
+- **相关文件**: `views/front/BuyTicket.vue`、`components/OrderPayDialog.vue`
+- **提交记录**: `待提交`
+- **状态**: 已修复
+
+---
+
 ## 预防清单
 
 1. **数据库初始化**: 新环境部署时务必执行 `xm_film/sql/init.sql`（或依次执行 `schema.sql` + `data.sql`）
@@ -595,3 +674,16 @@
 35. **"同一主体对同一目标"要显式去重**: 一个用户对一部影片只能有一条评价（`MarkMapper.countByUserAndFilm` 拦截），否则单人反复评分即可带偏均分。评价人只认 JWT 里的 `userId`，请求体里的同名字段一律忽略
 36. **审核状态要同时落到"能否登录"和"是否公开"两条路径**: 影院未审核时既不可登录（`CinemaService.login`）也不出现在公开列表（`CinemaMapper.selectByFilmId` 的 `approvedOnly`，管理员豁免）。只做其一就会出现"审核前就能用"或"审核后仍看不见"
 37. **词表以数据库真实取值为准**: 影院审核状态只有 `未审核`/`已审核`（后端 `CinemaStatus`）。不要引入 `待审核`/`审核通过`/`审核拒绝` 等同义值 —— 每多一个同义值，过滤条件就多一处漏网
+38. **余额变更只留一个入口**: 任何改余额的代码都必须走 `WalletService`（`creditRecharge`/`debitPurchase`/`creditRefund`），它统一做"行锁读余额 → 校验/变更 → 写流水"。绕过它直接用 `UserMapper.addBalance` 一定漏掉流水或校验，余额与账本必然对不上（见 BUG-037）
+39. **扣款必须与业务结果同事务**: 余额扣减和订单出票写在同一个 `@Transactional` 方法里，余额不足时整体回滚 —— 订单停在待支付、`pending_timeout_at` 与座位占用都不动，用户充值后能继续支付。分两个事务做就会出现"扣了钱没出票"或"出了票没扣钱"
+40. **扣余额要"行锁 + 条件更新"双保险**: `SELECT balance ... FOR UPDATE` 串行化并发，`UPDATE ... WHERE balance >= ?` 保证扣不动时影响行数为 0。只靠先查后改在并发下会把余额扣成负数（并发用例见 `scripts/verify/p4-concurrency.py`）
+41. **金额一律正数校验**: 负数入账等于凭空造钱，负数扣款等于把扣款变成加钱。金额必须 > 0 且为 `BigDecimal`，不要用 `double`（见 BUG-037）
+42. **充值回调端点必须幂等**: 支付网关会重试。只有「处理中」单据可流转，终态（已完成/已失败）再次回调一律返回业务冲突。中途失败只允许置终态、不得改余额（见 BUG-037）
+43. **子表是资金凭证时禁止级联删除**: `recharge_order.user_id` 与 `fund_flow.user_id` 用 `ON DELETE RESTRICT`；`fund_flow` 不提供任何 update/delete 端点，账本只增不改
+44. **"删除"可能是资金后门**: 任何能删掉已成交业务数据的入口，都要先问"它能不能替代某个会回滚资金的流程"。订单物理删除只允许「已取消/已退票」，否则删除就是免费退票（见 BUG-039）
+45. **敏感字段不进通用查询结果**: `/api/v1/users` 是 `SELECT *` + `resultType=User`，往 `User` 实体上挂什么字段就等于公开什么字段。余额这类只应对本人可见的数据必须走独立端点按 JWT 返回，不要挂实体
+46. **同步写库面测试的库名与端口**: 隔离验证一律用临时库（`DB_NAME`）+ 备用端口，不要指向开发库 `xm-film` 与本机 9090/5173；验证脚本要能反复运行（自带状态重置），否则第二次跑就会被上一次的残留数据判失败
+47. **只读视图不要回传实体**: 面向"占用/状态"这类共享视图的接口，不能直接把 `SELECT *` 的实体列表发给客户端 —— 会把他人订单号、用户ID、金额一并带出去。用专门的投影 DTO，只给渲染必需字段（见 BUG-040）
+48. **归属判定必须在后端按 JWT 做**: "是不是我的"不能靠下发 `userId` 让前端自己比对，那等于先泄露再要求前端自觉。归属依据只认令牌里的 `userId`，且取不到令牌用户时一律判定为非本人（见 BUG-040）
+49. **提交类按钮要有在途标记**: 下单/支付/取票这类会改变状态的按钮必须带 `submitting` 在途标记并禁用，否则双击会连发两次请求，第二次被"座位已售"之类的并发拒绝，弹出与成功提示并存的错误提示（见 BUG-041）
+50. **前端文案不得断言后端未发生的事**: 倒计时归零只是把弹窗收掉，真正的取消由后端定时任务完成，此时不能提示"订单已自动取消"。前端只能提示"将自动取消"，或改为中性表述（见 BUG-041）

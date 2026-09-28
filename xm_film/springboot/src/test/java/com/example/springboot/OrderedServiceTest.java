@@ -1,6 +1,8 @@
 package com.example.springboot;
 
+import com.example.springboot.common.enums.ErrorCode;
 import com.example.springboot.common.enums.PayResult;
+import com.example.springboot.dto.response.SeatOccupancy;
 import com.example.springboot.entity.Ordered;
 import com.example.springboot.entity.Record;
 import com.example.springboot.entity.Room;
@@ -10,18 +12,28 @@ import com.example.springboot.mapper.OrderedMapper;
 import com.example.springboot.mapper.RecordMapper;
 import com.example.springboot.mapper.RoomMapper;
 import com.example.springboot.service.OrderedService;
+import com.example.springboot.service.WalletService;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentMatcher;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @SpringBootTest(classes = OrderedService.class)
@@ -41,6 +53,9 @@ class OrderedServiceTest {
 
     @MockBean
     RoomMapper roomMapper;
+
+    @MockBean
+    WalletService walletService;
 
     // ========== 反向用例 ==========
 
@@ -440,6 +455,234 @@ class OrderedServiceTest {
         assertThatThrownBy(() -> orderedService.createOrder(ordered, "USER", 8))
                 .isInstanceOf(CustomException.class)
                 .hasMessageContaining("最多选择 6 个座位");
+    }
+
+    // ========== 余额支付 / 退款入账 / 单价快照 ==========
+
+    /** 下单只锁座不扣款：钱包必须等到支付时才被触碰 */
+    @Test
+    void createOrderDoesNotTouchWallet() {
+        when(recordMapper.selectByIdForUpdate(1)).thenReturn(futureRecord());
+
+        Ordered ordered = new Ordered();
+        ordered.setRecordId(1);
+        ordered.setSeat("1排1座");
+        orderedService.createOrder(ordered, "USER", 100);
+
+        verifyNoInteractions(walletService);
+    }
+
+    @Test
+    void createOrderSnapshotsUnitPrice() {
+        when(recordMapper.selectByIdForUpdate(1)).thenReturn(futureRecord());
+
+        Ordered ordered = new Ordered();
+        ordered.setRecordId(1);
+        ordered.setSeat("1排1座,1排2座");
+        orderedService.createOrder(ordered, "USER", 100);
+
+        verify(orderedMapper).insert(argThat(o ->
+                o.getUnitPrice() != null
+                        && o.getUnitPrice().compareTo(new BigDecimal("45.00")) == 0
+                        && Double.valueOf(90.0).equals(o.getTotal())
+        ));
+    }
+
+    @Test
+    void payOrderDeductsBalanceWithOrderAmount() {
+        Ordered ordered = pendingPaymentOrder();
+        when(orderedMapper.selectByIdForUpdate(1)).thenReturn(ordered);
+
+        orderedService.payOrder(1, "USER", 100);
+
+        verify(walletService).debitPurchase(eq(100), argThat(amountIs("90.00")), eq(1));
+    }
+
+    /**
+     * 余额不足是本次修复的核心分支：订单必须停在「待支付」且不写任何库
+     * （status 与 pending_timeout_at 都不动），座位继续锁定，
+     * 用户去充值后可回到订单页继续支付。
+     */
+    @Test
+    void payOrderWhenBalanceInsufficientLeavesOrderPendingAndSeatLocked() {
+        Ordered ordered = pendingPaymentOrder();
+        when(orderedMapper.selectByIdForUpdate(1)).thenReturn(ordered);
+        doThrow(new CustomException(ErrorCode.BUSINESS_CONFLICT, "账户余额不足，请先充值"))
+                .when(walletService).debitPurchase(anyInt(), any(), anyInt());
+
+        assertThatThrownBy(() -> orderedService.payOrder(1, "USER", 100))
+                .isInstanceOf(CustomException.class)
+                .hasMessageContaining("余额不足");
+
+        verify(orderedMapper, never()).updateById(any());
+    }
+
+    @Test
+    void refundOrderCreditsBalanceWithOrderAmount() {
+        Ordered ordered = paidOrder();
+        ordered.setStart(minutesFromNow(120));
+        when(orderedMapper.selectByIdForUpdate(1)).thenReturn(ordered);
+
+        orderedService.refundOrder(1, "USER", 100);
+
+        verify(walletService).creditRefund(eq(100), argThat(amountIs("90.00")), eq(1));
+    }
+
+    /** 过了退票窗口的订单不得退款：校验必须先于任何资金动作 */
+    @Test
+    void refundOrderDoesNotCreditWhenDeadlinePassed() {
+        Ordered ordered = paidOrder();
+        ordered.setStart(minutesFromNow(30));
+        when(orderedMapper.selectByIdForUpdate(1)).thenReturn(ordered);
+
+        assertThatThrownBy(() -> orderedService.refundOrder(1, "USER", 100))
+                .isInstanceOf(CustomException.class)
+                .hasMessageContaining("退票截止");
+
+        verifyNoInteractions(walletService);
+    }
+
+    // ========== 订单物理删除守卫（删除不得再充当免费退票） ==========
+
+    @Test
+    void cannotDeletePaidOrder() {
+        when(orderedMapper.selectById(1)).thenReturn(orderWithStatus("待取票"));
+
+        assertThatThrownBy(() -> orderedService.deleteScoped(1, "USER", 100))
+                .isInstanceOf(CustomException.class)
+                .hasMessageContaining("已取消 / 已退票");
+
+        verify(orderedMapper, never()).deleteById(anyInt());
+    }
+
+    @Test
+    void cannotDeletePickedUpOrder() {
+        when(orderedMapper.selectById(1)).thenReturn(orderWithStatus("已取票"));
+
+        assertThatThrownBy(() -> orderedService.deleteScoped(1, "USER", 100))
+                .isInstanceOf(CustomException.class);
+
+        verify(orderedMapper, never()).deleteById(anyInt());
+    }
+
+    @Test
+    void cannotDeletePendingPaymentOrder() {
+        when(orderedMapper.selectById(1)).thenReturn(orderWithStatus("待支付"));
+
+        assertThatThrownBy(() -> orderedService.deleteScoped(1, "USER", 100))
+                .isInstanceOf(CustomException.class);
+
+        verify(orderedMapper, never()).deleteById(anyInt());
+    }
+
+    @Test
+    void canDeleteCancelledOrder() {
+        when(orderedMapper.selectById(1)).thenReturn(orderWithStatus("已取消"));
+
+        orderedService.deleteScoped(1, "USER", 100);
+
+        verify(orderedMapper).deleteById(1);
+    }
+
+    @Test
+    void canDeleteRefundedOrder() {
+        when(orderedMapper.selectById(1)).thenReturn(orderWithStatus("已退票"));
+
+        orderedService.deleteScoped(1, "USER", 100);
+
+        verify(orderedMapper).deleteById(1);
+    }
+
+    @Test
+    void batchDeleteRejectsWholeBatchWhenAnyOrderIsNotDeletable() {
+        when(orderedMapper.selectById(1)).thenReturn(orderWithStatus("已取消"));
+        when(orderedMapper.selectById(2)).thenReturn(orderWithStatus("待取票"));
+
+        assertThatThrownBy(() -> orderedService.deleteBatchScoped(List.of(1, 2), "USER", 100))
+                .isInstanceOf(CustomException.class);
+
+        verify(orderedMapper, never()).deleteBatch(any());
+    }
+
+    // ========== 选座图视角：只暴露座位与归属，不泄露他人订单明细 ==========
+
+    /** 他人订单在选座图上只能体现出"这个座位被占"，订单号/用户/金额一概不出参 */
+    @Test
+    void seatOccupancyHidesOtherUsersOrderDetails() {
+        Ordered other = new Ordered();
+        other.setId(11);
+        other.setUserId(200);
+        other.setOrders("20260928DEADBEEF");
+        other.setSeat("1排1座");
+        other.setStatus("待取票");
+        other.setTotal(45.00);
+        other.setPendingTimeoutAt("2026-09-28 12:00:00");
+        when(orderedMapper.selectActiveByRecordId(1)).thenReturn(List.of(other));
+
+        List<SeatOccupancy> view = orderedService.selectSeatOccupancy(1, 100);
+
+        assertThat(view).hasSize(1);
+        assertThat(view.get(0).getSeat()).isEqualTo("1排1座");
+        assertThat(view.get(0).isMine()).isFalse();
+        assertThat(view.get(0).getOrderId()).isNull();
+        assertThat(view.get(0).getOrders()).isNull();
+        assertThat(view.get(0).getStatus()).isNull();
+        assertThat(view.get(0).getTotal()).isNull();
+        assertThat(view.get(0).getPendingTimeoutAt()).isNull();
+    }
+
+    /** 本人订单要带齐字段，否则选座图的"继续支付 / 取消锁座"会失去数据 */
+    @Test
+    void seatOccupancyExposesOwnOrderDetailsForContinuePayment() {
+        Ordered mine = new Ordered();
+        mine.setId(11);
+        mine.setUserId(100);
+        mine.setOrders("20260928DEADBEEF");
+        mine.setSeat("1排1座");
+        mine.setStatus("待支付");
+        mine.setTotal(45.00);
+        mine.setPendingTimeoutAt("2026-09-28 12:00:00");
+        when(orderedMapper.selectActiveByRecordId(1)).thenReturn(List.of(mine));
+
+        List<SeatOccupancy> view = orderedService.selectSeatOccupancy(1, 100);
+
+        assertThat(view).hasSize(1);
+        assertThat(view.get(0).getSeat()).isEqualTo("1排1座");
+        assertThat(view.get(0).isMine()).isTrue();
+        assertThat(view.get(0).getOrderId()).isEqualTo(11);
+        assertThat(view.get(0).getOrders()).isEqualTo("20260928DEADBEEF");
+        assertThat(view.get(0).getStatus()).isEqualTo("待支付");
+        assertThat(view.get(0).getTotal()).isEqualTo(45.00);
+        assertThat(view.get(0).getPendingTimeoutAt()).isEqualTo("2026-09-28 12:00:00");
+    }
+
+    /** 拿不到 JWT 用户时不得误判成"本人的单" */
+    @Test
+    void seatOccupancyTreatsNobodyAsOwnWhenTokenUserMissing() {
+        Ordered other = new Ordered();
+        other.setId(11);
+        other.setUserId(100);
+        other.setSeat("1排1座");
+        when(orderedMapper.selectActiveByRecordId(1)).thenReturn(List.of(other));
+
+        List<SeatOccupancy> view = orderedService.selectSeatOccupancy(1, null);
+
+        assertThat(view).hasSize(1);
+        assertThat(view.get(0).isMine()).isFalse();
+        assertThat(view.get(0).getOrderId()).isNull();
+    }
+
+    private Ordered orderWithStatus(String status) {
+        Ordered ordered = new Ordered();
+        ordered.setId(1);
+        ordered.setUserId(100);
+        ordered.setStatus(status);
+        return ordered;
+    }
+
+    /** 金额按数值比较，不依赖 BigDecimal 的小数位（90.0 / 90.00 视为同一笔钱） */
+    private static ArgumentMatcher<BigDecimal> amountIs(String expected) {
+        return amount -> amount != null && amount.compareTo(new BigDecimal(expected)) == 0;
     }
 
     private Record futureRecord() {

@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.springboot.mapper.RechargeOrderMapper">
+
+    <select id="selectAll" resultType="com.example.springboot.entity.RechargeOrder">
+        SELECT * FROM recharge_order
+        <where>
+            <if test="userId != null">AND user_id = #{userId}</if>
+            <if test="status != null">AND status = #{status}</if>
+            <if test="rechargeNo != null and rechargeNo != ''">
+                AND recharge_no LIKE CONCAT('%', #{rechargeNo}, '%')
+            </if>
+        </where>
+        ORDER BY id DESC
+    </select>
+
+    <select id="selectById" parameterType="java.lang.Integer"
+            resultType="com.example.springboot.entity.RechargeOrder">
+        SELECT * FROM recharge_order WHERE id = #{id}
+    </select>
+
+    <!-- 回调处理前取行锁：并发重复回调同一张单据时会被串行化 -->
+    <select id="selectByIdForUpdate" parameterType="java.lang.Integer"
+            resultType="com.example.springboot.entity.RechargeOrder">
+        SELECT * FROM recharge_order WHERE id = #{id} FOR UPDATE
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id"
+            parameterType="com.example.springboot.entity.RechargeOrder">
+        INSERT INTO recharge_order
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="rechargeNo != null">recharge_no,</if>
+            <if test="userId != null">user_id,</if>
+            <if test="amount != null">amount,</if>
+            <if test="status != null">status,</if>
+            <if test="createTime != null">create_time,</if>
+            <if test="finishTime != null">finish_time,</if>
+            <if test="remark != null">remark,</if>
+        </trim>
+        VALUES
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="rechargeNo != null">#{rechargeNo},</if>
+            <if test="userId != null">#{userId},</if>
+            <if test="amount != null">#{amount},</if>
+            <if test="status != null">#{status},</if>
+            <if test="createTime != null">#{createTime},</if>
+            <if test="finishTime != null">#{finishTime},</if>
+            <if test="remark != null">#{remark},</if>
+        </trim>
+    </insert>
+
+    <!-- 单据是资金凭证，只允许回调推进状态与完成时间，不接受业务字段改写 -->
+    <update id="updateById" parameterType="com.example.springboot.entity.RechargeOrder">
+        UPDATE recharge_order
+        <set>
+            <if test="status != null">status = #{status},</if>
+            <if test="finishTime != null">finish_time = #{finishTime},</if>
+            <if test="remark != null">remark = #{remark},</if>
+        </set>
+        WHERE id = #{id}
+    </update>
+
+</mapper>
