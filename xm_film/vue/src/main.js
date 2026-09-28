@@ -4,6 +4,8 @@ import router from './router'
 import { ElNotification } from 'element-plus'
 import '@/assets/css/tokens.scss'
 import '@/assets/css/global.css'
+import '@/assets/css/admin-pages.scss'
+import '@/assets/css/front-pages.scss'
 
 const app = createApp(App)
 

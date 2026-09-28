@@ -55,11 +55,35 @@
   --dark-text-muted: #aaaaaa;    /* 7.49:1 */
   --dark-text-faint: #8a8a8a;    /* 5.04:1；原 #666 只有 3.03:1，不达 AA */
   --dark-divider: #333333;
+  --overlay-mask: rgba(0, 0, 0, 0.5); /* 自绘弹窗的遮罩，EP 的 --el-mask-color 是浅色，不适用 */
+
+  /* 图片上的半透明面板（登录 / 注册页表单卡）—— 压在照片上，不能用不透明 --el-bg-color
+   * 会遮掉背景图；也不能就地写死 rgba（规范 §3.1） */
+  --surface-glass: rgba(255, 255, 255, 0.8);
 
   /* §2.8 受控扩展色板（封闭集合，新增色相必须先改规范 §2.8） */
   --color-rating: #ffd700;      /* 深底 / 图片叠加 12.41:1；白底仅 1.40:1，禁止白底文字 */
   --color-rating-text: #a86400; /* 白底评分文字 4.68:1 */
   --color-tag-promo: #fa8c16;   /* 营销标签底，配白字，仅作底色 */
+
+  /* 深色横幅上的装饰图标强调色 —— 仅用于深底，实测对 #41036a 为 8.45~11.28:1。
+   * 这四个色相是封闭集合，新增须先改规范 §2.8。 */
+  --color-accent-gold: #ffd700;
+  --color-accent-mint: #4effb7;
+  --color-accent-cyan: #4ee1ff;
+  --color-accent-amber: #ffb84d;
+
+  /* 榜单名次徽章 1~3 名（白字压其上须达 AA：金 4.68 / 银 5.44 / 铜 5.62） */
+  --color-rank-1: #A86400;
+  --color-rank-2: #5F6B78;
+  --color-rank-3: #A0522D;
+
+  /* 选座图座位状态（四态必须互相可辨。图形 ≥3:1，实测均在 5:1 以上）
+   * 「已选」用蓝而非主色 —— 前台主色是红，会与「已售」红撞色。 */
+  --color-seat-available: #007E1D; /* 可选（5.25:1） */
+  --color-seat-taken: #C43232;     /* 已售（5.46:1） */
+  --color-seat-selected: #165DFF;  /* 已选（5.19:1） */
+  --color-seat-mine: #B35800;      /* 本人未支付锁座（4.87:1） */
 
   /* §2.11 贴边投影 —— EP 四档阴影均为四周辉光，表达不了贴顶栏的下边缘投影 */
   --shadow-edge: 0 1px 4px rgba(0, 0, 0, 0.1);

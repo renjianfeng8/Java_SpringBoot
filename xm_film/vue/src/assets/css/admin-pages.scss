@@ -1,0 +1,113 @@
+/* 管理端「表格 CRUD 页」的共用骨架样式
+ *
+ * 影院后台与管理后台的十几个列表页是同一套骨架：搜索卡片 + 表格卡片 + 分页 + 弹窗表单。
+ * 这些内联样式在项目里重复了几十次（`margin-bottom: 5px` 单值就 56 处），因此统一抽到本文件。
+ *
+ * 全部挂在 .manage-container 下 —— 这些页面都渲染在 Manage.vue / Back.vue 的外壳内，
+ * 加这一层即把作用域限制在管理端，既不会外泄到前台，也无需给每个类名加前缀。
+ * 由 main.js 引入一次。 */
+
+.manage-container {
+  /* 页面里成叠的卡片（搜索区 / 表格区 / 分页区 / 弹窗） */
+  .page-card {
+    margin-bottom: var(--space-8);
+  }
+
+  /* 列表页顶部的搜索输入框 */
+  .search-input {
+    width: 300px;
+    margin-right: var(--space-12);
+  }
+
+  /* 表格行内的操作按钮（编辑 / 删除）——放大图标便于点击 */
+  .row-action {
+    font-size: var(--fs-lg);
+  }
+
+  /* 表格单元格里的方形缩略图（影片海报、视频封面） */
+  .cell-thumb {
+    width: 36px;
+    height: 36px;
+    margin-top: var(--space-8);
+    border-radius: var(--el-border-radius-base);
+    object-fit: cover;
+  }
+
+  /* 表格单元格里的圆形头像 */
+  .cell-avatar {
+    width: 40px;
+    height: 40px;
+    margin-top: var(--space-4);
+    border-radius: var(--el-border-radius-circle);
+    object-fit: cover;
+  }
+
+  /* 弹窗内表单：右侧留出滚动条与校验提示的空间 */
+  .dialog-form {
+    padding-top: var(--space-20);
+    padding-right: var(--space-48);
+  }
+
+  /* 表单控件的固定宽度档位 */
+  .field-full {
+    width: 100%;
+  }
+
+  .field-sm {
+    width: 180px;
+  }
+
+  .field-md {
+    width: 220px;
+  }
+
+  .field-lg {
+    width: 350px;
+  }
+
+  /* 与下方内容拉开距离的区块标题 */
+  .section-title--spaced {
+    margin-bottom: var(--space-12);
+  }
+
+  /* 个人资料 / 修改密码页：居中卡片 */
+  .profile-wrapper {
+    display: flex;
+    justify-content: center;
+    min-height: 50vh;
+    padding: var(--space-20);
+  }
+
+  .profile-card {
+    width: 50%;
+    max-width: 500px;
+    padding: var(--space-40) var(--space-20);
+  }
+
+  .form-actions {
+    text-align: center;
+  }
+
+  .submit-button {
+    padding: var(--space-20) var(--space-32);
+  }
+
+  /* 表格里成串的 el-tag 之间的间隙 */
+  .tag-gap {
+    margin-right: var(--space-4);
+    margin-bottom: var(--space-4);
+  }
+
+  /* 表格单元格的文字截断宽度（按内容角色分档，避免写死 px） */
+  .line--code {
+    width: 50px;
+  }
+
+  .line--content {
+    width: 80px;
+  }
+
+  .line--employee {
+    width: 100px;
+  }
+}

@@ -1,0 +1,89 @@
+/* 用户前台页面的共用样式
+ *
+ * 与 admin-pages.scss 对称：前台的列表页 / 筛选页也反复用同一套骨架
+ * （窄容器 + 筛选面板 + 卡片 + 搜索框 + 表格缩略图）。
+ * 挂在 Front.vue 的 .front-content 下，作用域限定在前台内容区。
+ * 由 main.js 引入一次。 */
+
+.front-content {
+  /* 内容容器：详情 / 列表页统一 1200px 上限（规范 §7.1） */
+  .page-narrow {
+    width: 55%;
+    max-width: 1200px;
+    margin: var(--space-20) auto;
+  }
+
+  .page-wide {
+    width: 85%;
+    max-width: 1200px;
+    margin: var(--space-20) auto;
+  }
+
+  /* 成叠的卡片 */
+  .page-card {
+    margin-bottom: var(--space-8);
+  }
+
+  /* 列表页搜索框 */
+  .search-input {
+    width: 300px;
+    margin-right: var(--space-12);
+  }
+
+  /* 表格单元格里的方形缩略图 */
+  .cell-thumb {
+    width: 36px;
+    height: 36px;
+    border-radius: var(--el-border-radius-base);
+    object-fit: cover;
+  }
+
+  .cell-thumb--spaced {
+    margin-top: var(--space-8);
+  }
+
+  /* 表格行内的操作按钮 */
+  .row-action {
+    font-size: var(--fs-lg);
+  }
+
+  .field-full {
+    width: 100%;
+  }
+
+  /* 影片筛选面板（类型 / 年代 / 区域三行） */
+  .filter-panel {
+    padding: var(--space-20) var(--space-32);
+    border: 1px solid var(--el-border-color-darker);
+    border-radius: var(--el-border-radius-base);
+  }
+
+  .filter-row {
+    display: flex;
+    align-items: center;
+    padding: var(--space-16) 0;
+    border-bottom: 1px solid var(--el-border-color-lighter);
+  }
+
+  .filter-row--last {
+    border-bottom: none;
+  }
+
+  .filter-label {
+    width: 60px;
+    font-size: var(--fs-md);
+  }
+
+  .filter-options {
+    flex: 1;
+  }
+
+  /* 影院卡片上的营销标签（如"儿童优惠"） */
+  .promo-tag {
+    padding: var(--space-4) var(--space-12);
+    border-radius: var(--el-border-radius-base);
+    font-size: var(--fs-xs);
+    color: #ffffff;
+    background-color: var(--color-tag-promo);
+  }
+}
