@@ -386,7 +386,7 @@ onMounted(() => {
   margin-top: var(--space-20);
   border: none;
   background-color: var(--el-color-primary);
-  color: #ffffff;
+  color: var(--color-on-accent);
   font-size: var(--fs-lg);
 }
 
@@ -521,7 +521,7 @@ onMounted(() => {
   padding: var(--space-4) var(--space-8);
   border-radius: var(--el-border-radius-base);
   font-size: var(--fs-xs);
-  color: #ffffff;
+  color: var(--color-on-accent);
 }
 
 .service-tag--refund {

@@ -167,7 +167,7 @@ load()
   padding: var(--space-4) var(--space-12);
   border-radius: var(--el-border-radius-base);
   font-size: var(--fs-xs);
-  color: #ffffff;
+  color: var(--color-on-accent);
 }
 
 .service-tag--refund {

@@ -41,42 +41,43 @@ const goHome = () => {
   justify-content: center;
   align-items: center;
   height: 100vh;
-  background-color: #f5f7fa;
   margin: 0;
   padding: 0;
+  background-color: var(--el-fill-color-light);
 }
 
 .error-content {
-  text-align: center;
-  padding: 40px;
-  background-color: white;
-  border-radius: 12px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
-  max-width: 500px;
   width: 100%;
-  margin: 20px;
+  max-width: 500px;
+  margin: var(--space-20);
+  padding: var(--space-40);
+  border-radius: var(--el-border-radius-base);
+  background-color: var(--el-bg-color);
+  box-shadow: var(--el-box-shadow-light);
+  text-align: center;
 }
 
+/* 404 错误码，规范 §2.1 唯一豁免的 120px 特例 */
 .error-code {
-  font-size: 120px;
-  font-weight: bold;
-  color: #409eff;
-  margin-bottom: 20px;
-  transition: transform 0.5s ease;
   position: relative;
+  margin-bottom: var(--space-20);
+  font-size: 120px;
+  font-weight: var(--fw-bold);
+  color: var(--el-color-primary);
+  transition: transform 200ms ease-in-out;
 }
 
-/* 增加数字装饰效果 */
+/* 数字下方装饰短线 */
 .error-code::after {
   content: '';
   position: absolute;
+  bottom: var(--space-12);
+  left: 50%;
   width: 80px;
   height: 8px;
-  background-color: #e6f7ff;
-  bottom: 10px;
-  left: 50%;
   transform: translateX(-50%);
-  border-radius: 4px;
+  border-radius: var(--el-border-radius-base);
+  background-color: var(--el-color-primary-light-9);
 }
 
 .error-code:hover {
@@ -84,27 +85,27 @@ const goHome = () => {
 }
 
 .error-title {
-  font-size: 32px;
-  color: #303133;
-  margin-bottom: 10px;
+  margin-bottom: var(--space-12);
+  font-size: var(--fs-4xl);
+  color: var(--el-text-color-primary);
 }
 
 .error-message {
-  font-size: 16px;
-  color: #606266;
-  margin-bottom: 30px;
-  line-height: 1.6;
+  margin-bottom: var(--space-32);
+  font-size: var(--fs-md);
+  line-height: var(--lh-base);
+  color: var(--el-text-color-regular);
 }
 
 .home-button {
-  padding: 12px 24px;
-  font-size: 16px;
-  border-radius: 6px;
-  transition: all 0.3s ease;
+  padding: var(--space-12) var(--space-24);
+  border-radius: var(--el-border-radius-base);
+  font-size: var(--fs-md);
+  transition: transform 200ms ease-in-out, box-shadow 200ms ease-in-out;
 }
 
 .home-button:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 5px 15px rgba(64, 158, 255, 0.3);
+  transform: translateY(-4px);
+  box-shadow: var(--el-box-shadow-light);
 }
 </style>

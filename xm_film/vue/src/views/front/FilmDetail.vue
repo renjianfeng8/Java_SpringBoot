@@ -476,7 +476,7 @@ onMounted(() => {
   margin-top: var(--space-20);
   border: none;
   background-color: var(--el-color-primary);
-  color: #ffffff;
+  color: var(--color-on-accent);
   font-size: var(--fs-lg);
 }
 
@@ -587,7 +587,7 @@ onMounted(() => {
   width: 100%;
   height: 200px;
   object-fit: cover;
-  background-color: #000000;
+  background-color: var(--dark-bg-video);
 }
 
 .video-placeholder {

@@ -1,7 +1,7 @@
 <template>
   <div v-if="hasError" class="error-boundary-fallback">
     <div class="error-boundary-content">
-      <el-icon class="error-icon" :size="48" color="#f56c6c">
+      <el-icon class="error-icon" :size="48" color="var(--el-color-danger)">
         <WarningFilled />
       </el-icon>
       <h2 class="error-boundary-title">页面渲染异常</h2>
@@ -60,34 +60,41 @@ function handleGoBack() {
   justify-content: center;
   align-items: center;
   min-height: 300px;
-  padding: 40px;
+  padding: var(--space-40);
 }
+
 .error-boundary-content {
-  text-align: center;
   max-width: 480px;
+  text-align: center;
 }
+
 .error-icon {
-  margin-bottom: 16px;
+  margin-bottom: var(--space-16);
 }
+
 .error-boundary-title {
-  font-size: 20px;
-  color: #303133;
-  margin: 0 0 8px;
+  margin: 0 0 var(--space-8);
+  font-size: var(--fs-xl);
+  color: var(--el-text-color-primary);
 }
+
+/* 正文尺寸的文字须达 4.5:1；--el-text-color-secondary 只有 3.08:1，仅够大文本 */
 .error-boundary-message {
-  font-size: 14px;
-  color: #909399;
-  margin: 0 0 12px;
+  margin: 0 0 var(--space-12);
+  font-size: var(--fs-base);
+  color: var(--el-text-color-regular);
 }
+
 .error-boundary-detail {
-  font-size: 12px;
-  color: #c0c4cc;
-  margin: 0 0 24px;
-  word-break: break-all;
   max-height: 60px;
+  margin: 0 0 var(--space-24);
+  font-size: var(--fs-xs);
+  color: var(--el-text-color-regular);
+  word-break: break-all;
   overflow: hidden;
 }
+
 .retry-btn {
-  margin-right: 8px;
+  margin-right: var(--space-8);
 }
 </style>

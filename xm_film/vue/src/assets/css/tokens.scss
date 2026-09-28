@@ -55,7 +55,11 @@
   --dark-text-muted: #aaaaaa;    /* 7.49:1 */
   --dark-text-faint: #8a8a8a;    /* 5.04:1；原 #666 只有 3.03:1，不达 AA */
   --dark-divider: #333333;
+  --dark-bg-video: #000000; /* 视频播放器底（画布黑，非深灰） */
   --overlay-mask: rgba(0, 0, 0, 0.5); /* 自绘弹窗的遮罩，EP 的 --el-mask-color 是浅色，不适用 */
+
+  /* 彩底上的白字（按钮 / 徽章 / 标签）。白字能否达 AA 取决于底色，见 §8.1 */
+  --color-on-accent: #ffffff;
 
   /* 图片上的半透明面板（登录 / 注册页表单卡）—— 压在照片上，不能用不透明 --el-bg-color
    * 会遮掉背景图；也不能就地写死 rgba（规范 §3.1） */

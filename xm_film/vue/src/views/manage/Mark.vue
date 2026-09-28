@@ -54,5 +54,10 @@ function handleDelBatch() {
 </script>
 
 <style scoped>
-.card { box-shadow: 0 1px 4px rgba(0,21,41,.08); border-radius: 4px; padding: 10px; background-color: #fff; }
+.card {
+  padding: var(--space-12);
+  border-radius: var(--el-border-radius-base);
+  background-color: var(--el-bg-color);
+  box-shadow: var(--el-box-shadow-lighter);
+}
 </style>

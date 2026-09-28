@@ -55,13 +55,13 @@
             class="manage-menu"
         >
           <el-menu-item index="/manage/home">
-            <el-icon><HomeFilled /></el-icon>
+            <el-icon><House /></el-icon>
             <span>系统首页</span>
           </el-menu-item>
 
           <el-sub-menu index="1">
             <template #title>
-              <el-icon><UserFilled /></el-icon>
+              <el-icon><User /></el-icon>
               <span>用户管理</span>
             </template>
             <el-menu-item index="/manage/admin">
@@ -96,7 +96,7 @@
               <span>电影区域</span>
             </el-menu-item>
             <el-menu-item index="/manage/film">
-              <el-icon><VideoCameraFilled /></el-icon>
+              <el-icon><VideoCamera /></el-icon>
               <span>电影信息</span>
             </el-menu-item>
             <el-menu-item index="/manage/video">
@@ -104,7 +104,7 @@
               <span>电影预告视频</span>
             </el-menu-item>
             <el-menu-item index="/manage/actor">
-              <el-icon><UserFilled /></el-icon>
+              <el-icon><User /></el-icon>
               <span>演职人员</span>
             </el-menu-item>
             <el-menu-item index="/manage/room">
@@ -158,7 +158,7 @@ import {
   CreditCard,
   Document,
   Grid,
-  HomeFilled,
+  House,
   Location,
   Lock,
   OfficeBuilding,
@@ -167,8 +167,7 @@ import {
   SwitchButton as Logout,
   Tickets,
   User,
-  UserFilled,
-  VideoCameraFilled,
+  VideoCamera,
   VideoPlay,
 } from '@element-plus/icons-vue'
 import { useAuth } from '@/composables/useAuth'

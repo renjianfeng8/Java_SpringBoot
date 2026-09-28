@@ -217,7 +217,7 @@ load()
 .item_active {
   border: none;
   background-color: var(--el-color-primary);
-  color: #ffffff;
+  color: var(--color-on-accent);
 }
 
 .film-grid {

@@ -115,5 +115,10 @@ function handleDelBatch() {
 
 <style scoped>
 .small-video { width: 100%; height: 100%; object-fit: cover; cursor: pointer; }
-.card { box-shadow: 0 1px 4px rgba(0,21,41,.08); border-radius: 4px; padding: 10px; background-color: #fff; }
+.card {
+  padding: var(--space-12);
+  border-radius: var(--el-border-radius-base);
+  background-color: var(--el-bg-color);
+  box-shadow: var(--el-box-shadow-lighter);
+}
 </style>

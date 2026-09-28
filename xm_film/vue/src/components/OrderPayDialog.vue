@@ -350,14 +350,14 @@ const cancelOrder = async () => {
 .pay-button--primary {
   border: none;
   background: var(--el-color-primary);
-  color: #ffffff;
+  color: var(--color-on-accent);
   cursor: pointer;
 }
 
 .pay-button--disabled {
   border: none;
   background: var(--el-text-color-disabled);
-  color: #ffffff;
+  color: var(--color-on-accent);
   cursor: not-allowed;
 }
 </style>
