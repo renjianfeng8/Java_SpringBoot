@@ -1,0 +1,67 @@
+/* 登录 / 注册页共用的外壳样式
+ * 由 Login.vue 与 Register.vue 各自 @use 进 <style scoped>，因此仍带组件作用域，
+ * 不会外泄到其它页面。两页的外壳与背景完全一致，集中一份避免双份维护。
+ *
+ * 卡片宽度只在这里出现一次（.auth-card 的 max-width），卡片内部一律 100% 跟随父级；
+ * 容器也不裁切溢出：视口变矮时整页滚动，而不是把卡片切掉且无法滚动（§7.2）。 */
+
+.auth-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  /* min-height 而非 height：内容高于视口时容器跟着长高，配合整页滚动，
+     不会出现"绝对居中 + 裁切"那类顶部不可达的情况 */
+  min-height: 100vh;
+  padding: var(--space-24);
+  background-image: url('@/assets/imgs/bg_login.jpg');
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+}
+
+/* 图片上的半透明面板，见 tokens.scss 的 --surface-glass */
+.auth-card {
+  width: 100%;
+  max-width: 380px;
+  padding: var(--space-40);
+  border-radius: var(--el-border-radius-base);
+  background-color: var(--surface-glass);
+  box-shadow: var(--el-box-shadow-light);
+}
+
+.auth-title {
+  margin-bottom: var(--space-20);
+  font-size: var(--fs-xl);
+  font-weight: var(--fw-bold);
+  text-align: center;
+  color: var(--el-color-primary);
+}
+
+/* el-input 默认铺满，el-select 不会，需显式撑开 */
+.auth-field {
+  width: 100%;
+}
+
+.auth-actions {
+  margin-bottom: var(--space-16);
+}
+
+.auth-submit {
+  width: 100%;
+}
+
+.auth-hint {
+  text-align: right;
+}
+
+/* 文字型链接：默认中性灰 → hover 主色，两端都达 AA（§3.3）；时长取微交互档（§8.3） */
+.auth-hint__link {
+  color: var(--el-text-color-regular);
+  text-decoration: none;
+  transition: color 100ms ease-out;
+}
+
+.auth-hint__link:hover {
+  color: var(--el-color-primary);
+}
