@@ -50,7 +50,7 @@
                   </el-tag>
               </el-descriptions-item>
               <el-descriptions-item label="电影评分">
-                <el-rate v-model="props.row.score" disabled show-score text-color="#ff9900" score-template="{value} 分"/>
+                <el-rate v-model="props.row.score" disabled show-score text-color="var(--color-rating-text)" score-template="{value} 分"/>
               </el-descriptions-item>
             </el-descriptions>
           </template>
@@ -83,7 +83,7 @@
         </el-table-column>
         <el-table-column label="操作">
           <template #default="scope">
-            <el-button class="row-action" link :icon="Edit" @click="openEdit(scope.row)" type="primary"></el-button>
+            <el-button class="row-action" link :icon="Edit" aria-label="编辑" @click="openEdit(scope.row)" type="primary"></el-button>
             <el-button class="row-action" link :icon="Delete" @click="() => handleDel(scope.row.id)" type="danger"></el-button>
           </template>
         </el-table-column>

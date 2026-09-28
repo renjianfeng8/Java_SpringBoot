@@ -55,7 +55,7 @@
             class="manage-menu"
         >
           <el-menu-item index="/back/home">
-            <el-icon><HomeFilled /></el-icon>
+            <el-icon><House /></el-icon>
             <span>系统首页</span>
           </el-menu-item>
 
@@ -65,7 +65,7 @@
               <span>信息管理</span>
             </template>
             <el-menu-item index="/back/film">
-              <el-icon><VideoCameraFilled /></el-icon>
+              <el-icon><VideoCamera /></el-icon>
               <span>电影信息</span>
             </el-menu-item>
             <el-menu-item index="/back/room">
@@ -85,7 +85,7 @@
           <!-- 新增：个人中心板块 -->
           <el-sub-menu index="2">
             <template #title>
-              <el-icon><UserFilled /></el-icon>
+              <el-icon><User /></el-icon>
               <span>个人中心</span>
             </template>
             <el-menu-item index="/back/person">
@@ -121,13 +121,12 @@ import {
   CaretBottom,
   CreditCard,
   Document,
-  HomeFilled,
+  House,
   Lock,
   SwitchButton as Logout,
   Tickets,
   User,
-  UserFilled,
-  VideoCameraFilled,
+  VideoCamera,
 } from '@element-plus/icons-vue'
 import { useAuth } from '@/composables/useAuth'
 

@@ -69,7 +69,7 @@
           <template #default="scope">
             <el-button v-if="scope.row.status !== CINEMA_STATUS.APPROVED" link type="success"
                        @click="approve(scope.row)">审核通过</el-button>
-            <el-button class="row-action" link :icon="Edit" @click="openEdit(scope.row)" type="primary"></el-button>
+            <el-button class="row-action" link :icon="Edit" aria-label="编辑" @click="openEdit(scope.row)" type="primary"></el-button>
             <el-button class="row-action" link :icon="Delete" @click="() => handleDel(scope.row.id)" type="danger"></el-button>
           </template>
         </el-table-column>

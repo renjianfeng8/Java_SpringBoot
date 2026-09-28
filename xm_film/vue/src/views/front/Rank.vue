@@ -252,17 +252,17 @@ loadFilmMarkTop();
 
 .rank-item__badge--top1 {
   background-color: var(--color-rank-1);
-  color: #ffffff;
+  color: var(--color-on-accent);
 }
 
 .rank-item__badge--top2 {
   background-color: var(--color-rank-2);
-  color: #ffffff;
+  color: var(--color-on-accent);
 }
 
 .rank-item__badge--top3 {
   background-color: var(--color-rank-3);
-  color: #ffffff;
+  color: var(--color-on-accent);
 }
 
 .rank-item__badge--plain {

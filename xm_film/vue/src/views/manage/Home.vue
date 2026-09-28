@@ -111,6 +111,10 @@ const handleResize = () => {
   if (typeChart) typeChart.resize();
 };
 
+// ECharts 用 canvas 渲染，不解析 CSS 变量，只能在运行期把令牌值读出来（规范 §3.1）
+const cssVar = (name: string, fallback = '') =>
+  getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback;
+
 // 页面核心数据
 const data = reactive({
   cinemaList: [] as Array<{ status: string }>,
@@ -120,12 +124,11 @@ const data = reactive({
 
 // 影院状态统计数据
 const cinemaStatusData = computed(() => {
+  // 后端 CinemaStatus 只有「未审核 / 已审核」（见 constants 的 CINEMA_STATUS），
+  // 原先列的「审核中 / 已驳回 / 已下架」在系统里不存在，恒为 0
   const statusMap: Record<string, number> = {
     '已审核': 0,
-    '未审核': 0,
-    '审核中': 0,
-    '已驳回': 0,
-    '已下架': 0
+    '未审核': 0
   };
 
   // 遍历影院数据统计状态
@@ -219,14 +222,11 @@ const initCinemaStatusChart = () => {
   }
 
   const chart = echarts.init(cinemaStatusChart.value);
-  // 状态颜色映射
+  // 状态配色取自令牌（§2.5 功能色），不再自成一表
   const statusColorMap: Record<string, string> = {
-    '已审核': '#16e416',
-    '未审核': '#ff9800',
-    '审核中': '#186bea',
-    '已驳回': '#e84b4b',
-    '已下架': '#e1e62b',
-    '其他': '#9c27b0'
+    '已审核': cssVar('--el-color-success'),
+    '未审核': cssVar('--el-color-warning'),
+    '其他': cssVar('--el-text-color-secondary')
   };
 
   // 构建饼图数据
@@ -235,7 +235,7 @@ const initCinemaStatusChart = () => {
         name: label,
         value: cinemaStatusData.value.values[index],
         itemStyle: {
-          color: statusColorMap[label] || '#999'
+          color: statusColorMap[label] || cssVar('--el-text-color-secondary')
         }
       }))
       .filter(item => item.value > 0);
@@ -257,8 +257,8 @@ const initCinemaStatusChart = () => {
         radius: ['40%', '70%'],
         avoidLabelOverlap: false,
         itemStyle: {
-          borderRadius: 10,
-          borderColor: '#fff',
+          borderRadius: 4,
+          borderColor: cssVar('--el-bg-color'),
           borderWidth: 2
         },
         label: { show: false, position: 'center' },
@@ -317,10 +317,10 @@ const initFilmTypeChart = () => {
         type: 'bar',
         barWidth: '60%',
         data: filmTypeData.value.values,
-        itemStyle: { borderRadius: 6 }
+        itemStyle: { borderRadius: 4 }
       }
     ],
-    color: ['#c8517a']
+    color: [cssVar('--el-color-primary')]
   };
   chart.setOption(option, true);
 };
@@ -386,39 +386,39 @@ onUnmounted(() => {
 
 <style scoped>
 .card {
-  box-shadow: 0 1px 4px rgba(0, 21, 41, 0.08);
-  border-radius: 4px;
-  padding: 10px;
-  background-color: #fff;
+  padding: var(--space-12);
+  border-radius: var(--el-border-radius-base);
+  background-color: var(--el-bg-color);
+  box-shadow: var(--el-box-shadow-lighter);
 }
 
 .mb-2 {
-  margin-bottom: 8px;
+  margin-bottom: var(--space-8);
 }
 
 .home-container {
-  padding: 20px;
   min-height: 100vh;
+  padding: var(--space-20);
 }
 
 .section-title {
-  font-size: 18px;
-  font-weight: 600;
-  color: #2c3e50;
+  font-size: var(--fs-lg);
+  font-weight: var(--fw-bold);
+  color: var(--el-text-color-primary);
 }
 
 .chart-card {
-  background: #fff;
-  border-radius: 4px;
-  padding: 20px;
-  box-shadow: 0 1px 4px rgba(0, 21, 41, 0.08);
   height: 400px;
+  padding: var(--space-20);
+  border-radius: var(--el-border-radius-base);
+  background: var(--el-bg-color);
+  box-shadow: var(--el-box-shadow-lighter);
 }
 
 .chart-title {
-  font-size: 16px;
-  margin-bottom: 15px;
-  color: #333;
+  margin-bottom: var(--space-16);
+  font-size: var(--fs-md);
+  color: var(--el-text-color-primary);
 }
 
 .chart-content {
@@ -429,41 +429,43 @@ onUnmounted(() => {
 .section-title-wrapper {
   display: flex;
   align-items: center;
-  margin-bottom: 20px;
+  margin-bottom: var(--space-20);
 }
 
+/* 标题前的竖条：装饰图形，用品牌色（后台默认蓝） */
 .title-tag {
   width: 4px;
   height: 20px;
-  background: #c8517a;
-  margin-right: 10px;
-  border-radius: 2px;
+  margin-right: var(--space-12);
+  border-radius: var(--el-border-radius-small);
+  background: var(--color-brand);
 }
 
 .function-card {
-  border-radius: 4px;
-  border: none;
-  box-shadow: 0 1px 4px rgba(0, 21, 41, 0.08);
-  transition: all 0.3s ease;
-  cursor: pointer;
   height: 100%;
+  border: none;
+  border-radius: var(--el-border-radius-base);
+  box-shadow: var(--el-box-shadow-lighter);
+  transition: box-shadow 200ms ease-in-out;
+  cursor: pointer;
 }
 
 .card-content {
-  padding: 30px 0;
+  padding: var(--space-32) 0;
   text-align: center;
 }
 
 .card-title {
-  font-size: 18px;
-  color: #2c3e50;
-  font-weight: 600;
-  margin-bottom: 8px;
+  margin-bottom: var(--space-8);
+  font-size: var(--fs-lg);
+  font-weight: var(--fw-bold);
+  color: var(--el-text-color-primary);
 }
 
+/* 14px 正文须达 4.5:1；--el-text-color-secondary 只有 3.08:1 */
 .card-desc {
-  font-size: 14px;
-  color: #888;
-  line-height: 1.5;
+  font-size: var(--fs-base);
+  line-height: var(--lh-base);
+  color: var(--el-text-color-regular);
 }
 </style>

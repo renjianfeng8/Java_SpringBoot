@@ -472,17 +472,17 @@ loadFilmMarkTop();
 
 .rank-badge--top1 {
   background-color: var(--color-rank-1);
-  color: #ffffff;
+  color: var(--color-on-accent);
 }
 
 .rank-badge--top2 {
   background-color: var(--color-rank-2);
-  color: #ffffff;
+  color: var(--color-on-accent);
 }
 
 .rank-badge--top3 {
   background-color: var(--color-rank-3);
-  color: #ffffff;
+  color: var(--color-on-accent);
 }
 
 .rank-badge--plain {
@@ -557,7 +557,7 @@ loadFilmMarkTop();
   display: flex;
   flex-direction: column;
   align-items: center;
-  color: #ffffff;
+  color: var(--color-on-accent);
   font-weight: var(--fw-bold);
   line-height: var(--lh-loose);
 }

@@ -115,25 +115,26 @@ onMounted(() => {
 
 /* 欢迎提示栏 */
 .welcome-card {
-  background: #fff;
-  border-radius: 8px;
-  padding: 12px 20px;
-  margin-bottom: 15px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+  padding: var(--space-12) var(--space-20);
+  margin-bottom: var(--space-16);
+  border-radius: var(--el-border-radius-base);
+  background: var(--el-bg-color);
+  box-shadow: var(--el-box-shadow-lighter);
 }
 
 .welcome-card span {
-  font-size: 16px;
-  color: #333;
-  font-weight: 500;
+  font-size: var(--fs-md);
+  color: var(--el-text-color-primary);
+  /* 中文文本按 §2.3 只能用 400 / 700 */
+  font-weight: var(--fw-bold);
 }
 
 /* 列表卡片 */
 .list-card {
-  background: #fff;
-  border-radius: 8px;
-  padding: 20px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+  padding: var(--space-20);
+  border-radius: var(--el-border-radius-base);
+  background: var(--el-bg-color);
+  box-shadow: var(--el-box-shadow-lighter);
 }
 
 /* 列表头部（标题+总数） */
@@ -141,21 +142,21 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 15px;
-  padding-bottom: 10px;
-  border-bottom: 1px solid #f0f0f0;
+  margin-bottom: var(--space-16);
+  padding-bottom: var(--space-12);
+  border-bottom: 1px solid var(--el-border-color-lighter);
 }
 
 .list-header h2 {
-  font-size: 20px;
-  color: #2c3e50;
   margin: 0;
-  font-weight: 600;
+  font-size: var(--fs-xl);
+  color: var(--el-text-color-primary);
+  font-weight: var(--fw-bold);
 }
 
 .total-count {
-  font-size: 14px;
-  color: #606266;
+  font-size: var(--fs-base);
+  color: var(--el-text-color-regular);
 }
 
 /* 表格内容省略（最多显示2行） */
@@ -163,8 +164,8 @@ onMounted(() => {
   display: -webkit-box;
   -webkit-box-orient: vertical;
   overflow: hidden;
-  line-height: 1.6;
-  color: #606266;
+  line-height: var(--lh-base);
+  color: var(--el-text-color-regular);
 }
 
 

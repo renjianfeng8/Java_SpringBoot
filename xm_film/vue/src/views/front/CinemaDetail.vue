@@ -869,7 +869,7 @@ watch([() => route.params.id, () => route.query.filmId], ([newCinemaId, newFilmI
   border: none;
   border-radius: var(--el-border-radius-base);
   background-color: var(--el-color-primary);
-  color: #ffffff;
+  color: var(--color-on-accent);
   font-size: var(--fs-xs);
   cursor: pointer;
   transition: background-color 100ms ease-out;

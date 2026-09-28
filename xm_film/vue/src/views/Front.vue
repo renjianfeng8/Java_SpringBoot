@@ -285,7 +285,7 @@ const updateActivePath = (path) => {
   font-size: var(--fs-md);        /* 16px，与 1920 原观感一致 */
   line-height: 1.2;
   padding: 8px 12px;
-  transition: color 0.3s, transform 0.3s;
+  transition: color 100ms ease-out, transform 200ms ease-in-out;
   position: relative;
 }
 
@@ -308,7 +308,7 @@ const updateActivePath = (path) => {
   width: 100%;
   height: 2px;
   background-color: var(--el-color-primary);
-  border-radius: 1px;
+  border-radius: var(--el-border-radius-small);
 }
 
 /* 右组：搜索 + 用户区；唯一的泄压阀（flex-shrink: 1） */
@@ -326,7 +326,7 @@ const updateActivePath = (path) => {
 
 .title {
   font-size: var(--fs-md);
-  font-weight: bold;
+  font-weight: var(--fw-bold);
   line-height: 1.2;
   margin: 0;                      /* 抵消 h1 默认外边距，避免在 60px 栏内撑高错位 */
   white-space: nowrap;            /* 标题禁止折行 */
@@ -354,7 +354,7 @@ const updateActivePath = (path) => {
   min-width: 0;
   cursor: pointer;
   padding: 8px 12px;
-  border-radius: 4px;
+  border-radius: var(--el-border-radius-base);
 }
 
 .user-info:hover {
@@ -365,7 +365,7 @@ const updateActivePath = (path) => {
   height: 32px;
   width: 32px;
   flex: 0 0 auto;
-  border-radius: 50%;
+  border-radius: var(--el-border-radius-circle);
   object-fit: cover;
 }
 
@@ -471,7 +471,7 @@ const updateActivePath = (path) => {
   text-decoration: none;
   font-size: var(--fs-base);
   white-space: nowrap;
-  transition: color 0.3s;
+  transition: color 100ms ease-out;
 }
 .header-link:hover {
   color: var(--el-color-primary);

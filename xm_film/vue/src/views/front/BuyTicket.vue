@@ -750,7 +750,7 @@ const confirmBooking = async () => {
   border: none;
   border-radius: var(--el-border-radius-base);
   background: var(--el-color-primary);
-  color: #ffffff;
+  color: var(--color-on-accent);
   font-size: var(--fs-base);
   cursor: pointer;
 }
