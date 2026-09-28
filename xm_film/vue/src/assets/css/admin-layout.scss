@@ -70,7 +70,7 @@
 
 .username {
   font-size: var(--fs-base);
-  color: var(--el-text-color-secondary);
+  color: var(--el-text-color-regular);
   /* 用户名可能为中文，按 §2.3 只能 400 / 700（500 会触发伪粗体） */
   font-weight: var(--fw-regular);
 }
@@ -104,7 +104,7 @@
   text-align: center;
   padding: var(--space-12);
   font-size: var(--fs-xs);
-  color: var(--el-text-color-secondary);
+  color: var(--el-text-color-regular);
   background: var(--el-fill-color-light);
   border-top: 1px solid var(--el-border-color-lighter);
 }

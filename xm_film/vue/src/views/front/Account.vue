@@ -242,7 +242,7 @@ onMounted(loadAll);
 .balance-tip {
   margin-top: var(--space-12);
   font-size: var(--fs-sm);
-  color: var(--el-text-color-secondary);
+  color: var(--el-text-color-regular);
 }
 
 .section {
@@ -277,7 +277,7 @@ onMounted(loadAll);
 
 .muted {
   font-size: var(--fs-sm);
-  color: var(--el-text-color-secondary);
+  color: var(--el-text-color-regular);
 }
 
 /* 流水金额承载文字，用达 AA 的成功 / 危险色（规范 §3.3） */

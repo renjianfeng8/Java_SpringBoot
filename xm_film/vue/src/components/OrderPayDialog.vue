@@ -304,7 +304,7 @@ const cancelOrder = async () => {
 .pay-countdown {
   margin: var(--space-16) 0;
   font-size: var(--fs-base);
-  color: var(--el-text-color-secondary);
+  color: var(--el-text-color-regular);
   text-align: center;
 }
 

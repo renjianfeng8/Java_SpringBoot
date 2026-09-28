@@ -648,7 +648,7 @@ const confirmBooking = async () => {
 /* ---------- 加载 / 错误占位 ---------- */
 .seat-hint {
   padding: var(--space-64) 0;
-  color: var(--el-text-color-secondary);
+  color: var(--el-text-color-regular);
   text-align: center;
 }
 
@@ -716,7 +716,7 @@ const confirmBooking = async () => {
 
 .selected-seats__empty {
   font-size: var(--fs-base);
-  color: var(--el-text-color-secondary);
+  color: var(--el-text-color-regular);
 }
 
 .selected-seats__list {
@@ -725,7 +725,6 @@ const confirmBooking = async () => {
   gap: var(--space-8);
 }
 
-.selected-seats__chip,
 .seat-chip {
   padding: var(--space-4) var(--space-8);
   border-radius: var(--el-border-radius-base);

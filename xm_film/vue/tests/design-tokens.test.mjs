@@ -15,7 +15,10 @@ const REQUIRED_TOKENS = [
   '--space-24', '--space-32', '--space-40', '--space-48', '--space-64',
   '--dark-bg', '--dark-bg-hero', '--dark-text', '--dark-text-secondary',
   '--dark-text-muted', '--dark-text-faint', '--dark-divider',
-  '--color-rating', '--color-rating-text', '--color-tag-promo',
+  '--color-rating', '--color-rating-text',
+  '--color-rank-1', '--color-rank-2', '--color-rank-3',
+  '--color-seat-available', '--color-seat-taken', '--color-seat-selected', '--color-seat-mine',
+  '--color-on-accent', '--dark-bg-video', '--surface-glass', '--overlay-mask',
   '--shadow-edge', '--color-brand',
 ]
 
