@@ -570,7 +570,7 @@
   - 前端新增 `/front/account`（余额 + 档位/自由输入充值 + 单据列表含模拟回调双按钮 + 资金流水），`OrderPayDialog` 改为余额支付并展示余额不足差额与「去充值」入口
 - **验证**: 单测 25 例（`WalletServiceTest` / `RechargeServiceTest` / `FundFlowServiceTest`）+ 端到端 59 断言（`scripts/verify/p4-account-wallet-e2e.py`）+ 并发 11 断言（`scripts/verify/p4-concurrency.py`：余额只够一单时并发支付恰好一单成功、余额为 0.50 且不为负）
 - **相关文件**: `sql/schema.sql`、`sql/migration-20260928-p4-account-wallet.sql`、`service/WalletService.java`、`service/RechargeService.java`、`service/FundFlowService.java`、`controller/RechargeController.java`、`controller/FundFlowController.java`、`controller/AccountController.java`、`service/OrderedService.java`、`mapper/UserMapper.java(+xml)`、`views/front/Account.vue`、`components/OrderPayDialog.vue`
-- **提交记录**: `待提交`
+- **提交记录**: `f97eb3ab`
 - **状态**: 已修复
 
 ---
@@ -583,7 +583,7 @@
 - **解决方案**: 在退票窗口与状态校验全部通过之后调用 `walletService.creditRefund(userId, total, orderId)`，与状态更新同事务 —— 入账成功但状态没改回去（或反之）的情况不会出现；取消未扣款的待支付订单依旧不触碰余额
 - **验证**: `OrderedServiceTest.refundOrderCreditsBalanceWithOrderAmount` / `refundOrderDoesNotCreditWhenDeadlinePassed`（校验必须先于资金动作）；端到端断言余额 `181.50 → 300.00`、座位释放、新增一条 `+118.50` 且关联订单ID 的退票流水
 - **相关文件**: `service/OrderedService.java`、`service/WalletService.java`、`mapper/OrderedMapper.xml`
-- **提交记录**: `待提交`
+- **提交记录**: `f97eb3ab`
 - **状态**: 已修复
 
 ---
@@ -598,7 +598,7 @@
   - 前端三端按钮由 `constants.isOrderDeletable` 同构条件渲染；列表勾选列加 `:selectable`，不可删除的订单连勾选都不允许，批量删除自然带不上它们
 - **验证**: `OrderedServiceTest` 六个用例（待支付/待取票/已取票拒绝，已取消/已退票放行，批删整批拒绝）；端到端断言删除待取票订单被拒且订单仍存在、已退票与已取消订单可删除
 - **相关文件**: `service/OrderedService.java`、`views/front/Orders.vue`、`views/back/Ordered.vue`、`views/manage/Ordered.vue`、`constants/index.js`
-- **提交记录**: `待提交`
+- **提交记录**: `f97eb3ab`
 - **状态**: 已修复
 
 ---
@@ -615,7 +615,7 @@
   - `BuyTicket.vue` 改读 `order.mine`（不再比对 `userId`），并把选座视角的字段映射成支付弹窗需要的订单形态；本地不再保存 `userId`
 - **验证**: `OrderedServiceTest` 三例（他人订单只出 `seat`+`mine:false`、本人订单带齐字段、无令牌用户不得被判成本人）；端到端新增 10 条断言（他人座位可见但 `orderId`/`orders`/`total` 为 null、响应中不含 `userId` 键、本人座位 `mine:true` 且带 `orderId`）—— E2E 共 69 断言全通过
 - **相关文件**: `dto/response/SeatOccupancy.java`、`service/OrderedService.java`、`controller/OrderedController.java`、`views/front/BuyTicket.vue`、`scripts/verify/p4-account-wallet-e2e.py`
-- **提交记录**: `待提交`
+- **提交记录**: `f97eb3ab`
 - **状态**: 已修复
 
 ---
@@ -630,7 +630,7 @@
   - `OrderPayDialog.vue` 倒计时归零改提示"支付时间已到，未支付的订单将自动取消"，并注释说明真正的取消由后端定时任务完成
 - **验证**: 前端 `npm run build` 通过；后端全量单测 154 例全绿（改动未触及后端逻辑）。**两条均为纯前端交互改动，没有浏览器点击验证，仅验证到构建通过与后端接口未回归**
 - **相关文件**: `views/front/BuyTicket.vue`、`components/OrderPayDialog.vue`
-- **提交记录**: `待提交`
+- **提交记录**: `f97eb3ab`
 - **状态**: 已修复
 
 ---
