@@ -1,17 +1,17 @@
 <template>
   <div>
-    <div class="card" style="margin-bottom: 5px">
-      <el-input v-model="searchForm.name" placeholder="请输入影院名称查询" style="width: 300px; margin-right:10px" :prefix-icon="Search"/>
+    <div class="card page-card">
+      <el-input v-model="searchForm.name" placeholder="请输入影院名称查询" class="search-input" :prefix-icon="Search"/>
       <el-button type="primary" @click="onSearch">查 询</el-button>
       <el-button type="warning" @click="onReset">重 置</el-button>
     </div>
 
-    <div class="card" style="margin-bottom: 5px">
+    <div class="card page-card">
       <el-button type="info" @click="openAdd">新 增</el-button>
       <el-button type="danger" @click="handleDelBatch">批量删除</el-button>
     </div>
 
-    <div class="card" style="margin-bottom: 5px">
+    <div class="card page-card">
       <el-table v-loading="loading" stripe :data="dataList" @selection-change="onSelectionChange">
         <el-table-column type="selection" width="50"/>
         <el-table-column type="expand">
@@ -20,7 +20,7 @@
               <el-descriptions-item label="账号">{{ props.row.username }}</el-descriptions-item>
               <el-descriptions-item label="角色">{{ props.row.role }}</el-descriptions-item>
               <el-descriptions-item label="头像">
-                <el-image style="width:36px;height:36px;object-fit:cover;" :src="props.row.avatar"/>
+                <el-image class="cell-thumb" :src="props.row.avatar"/>
               </el-descriptions-item>
               <el-descriptions-item label="电影院名称">{{ props.row.name }}</el-descriptions-item>
               <el-descriptions-item label="手机号">{{ props.row.phone }}</el-descriptions-item>
@@ -30,12 +30,12 @@
               <el-descriptions-item label="身份证号">
                 <el-popover placement="top-start" title="身份证号码" :width="200" trigger="hover" :content="props.row.code">
                   <template #reference>
-                    <div class="line" style="width: 50px">{{ props.row.code }}</div>
+                    <div class="line line--code">{{ props.row.code }}</div>
                   </template>
                 </el-popover>
               </el-descriptions-item>
               <el-descriptions-item label="营业执照">
-                <el-image style="width:36px;height:36px;object-fit:cover;" :src="props.row.certificate"/>
+                <el-image class="cell-thumb" :src="props.row.certificate"/>
               </el-descriptions-item>
               <el-descriptions-item label="审核状态">
                 <el-tag :type="getStatusType(props.row.status)">{{ props.row.status || '未知状态' }}</el-tag>
@@ -46,7 +46,7 @@
         <el-table-column label="账号" prop="username"/>
         <el-table-column label="头像">
           <template #default="scope">
-            <el-image style="margin-top: 5px;width:40px;height:40px;border-radius:50%;object-fit:cover;"
+            <el-image class="cell-avatar"
                       v-if="scope.row.avatar" :src="scope.row.avatar"
                       :preview-src-list="[scope.row.avatar]" preview-teleported/>
           </template>
@@ -67,16 +67,16 @@
         </el-table-column>
         <el-table-column label="操作">
           <template #default="scope">
-            <el-button v-if="scope.row.status !== CINEMA_STATUS.APPROVED" style="font-size: 14px" link type="success"
+            <el-button v-if="scope.row.status !== CINEMA_STATUS.APPROVED" link type="success"
                        @click="approve(scope.row)">审核通过</el-button>
-            <el-button style="font-size: 18px" link :icon="Edit" @click="openEdit(scope.row)" type="primary"></el-button>
-            <el-button style="font-size: 18px" link :icon="Delete" @click="() => handleDel(scope.row.id)" type="danger"></el-button>
+            <el-button class="row-action" link :icon="Edit" @click="openEdit(scope.row)" type="primary"></el-button>
+            <el-button class="row-action" link :icon="Delete" @click="() => handleDel(scope.row.id)" type="danger"></el-button>
           </template>
         </el-table-column>
       </el-table>
     </div>
 
-    <div class="card" style="margin-bottom: 5px">
+    <div class="card page-card">
       <el-pagination
           @size-change="onSizeChange"
           @current-change="onPageChange"
@@ -90,7 +90,7 @@
     </div>
 
     <el-dialog v-model="dialogVisible" title="影院信息" width="500" destroy-on-close>
-      <el-form ref="formRef" :rules="rules" :model="form" style="padding-right: 50px;padding-top: 20px" label-width="85px">
+      <el-form ref="formRef" :rules="rules" :model="form" class="dialog-form" label-width="85px">
         <el-form-item label="账号" prop="username">
           <el-input v-model="form.username" autocomplete="off" placeholder="请输入账号"/>
         </el-form-item>
@@ -125,7 +125,7 @@
         </el-form-item>
         <!-- 新增时状态由后端固定为「未审核」，故仅在编辑时暴露审核状态 -->
         <el-form-item v-if="form.id" label="审核状态" prop="status">
-          <el-select v-model="form.status" placeholder="请选择审核状态" style="width: 100%">
+          <el-select v-model="form.status" placeholder="请选择审核状态" class="field-full">
             <el-option v-for="s in CINEMA_STATUS_OPTIONS" :key="s" :label="s" :value="s" />
           </el-select>
         </el-form-item>

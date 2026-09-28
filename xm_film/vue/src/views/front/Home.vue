@@ -1,36 +1,34 @@
 ﻿<template>
-  <div style="width: 75%; margin: 20px auto; display:flex">
+  <div class="home-page">
 
     <!-- 左侧内容（完善跳转逻辑） -->
-    <div style="flex: 1" >
+    <div class="home-main">
       <!-- 正在热播区域 -->
-      <div style="display: flex; align-items: center">
-        <div style="flex: 1; font-size: 22px; color: #ef4238">正在热播 ({{data.data1.length}}) 部</div>
+      <div class="section-head">
+        <div class="section-head__title">正在热播 ({{data.data1.length}}) 部</div>
         <!-- 「全部」按钮：跳转到电影列表页（展示所有已上映电影） -->
         <div
-            style="width: 60px;text-align: right; color: #ef4238; cursor: pointer;"
+            class="section-head__more"
             @click="goToMovieList('playing')"
         >
           全部 >
         </div>
       </div>
 
-      <div style="margin-top: 20px">
+      <div class="film-grid">
         <el-row :gutter="15">
           <!-- 正在热播电影：海报和购票按钮均跳转详情页 -->
-          <el-col :span="6" v-for="item in data.playingData" :key="item.id" style="margin-bottom: 20px">
+          <el-col :span="6" v-for="item in data.playingData" :key="item.id" class="film-grid__col">
             <!-- 海报点击跳转详情 -->
             <div
-                style="cursor: pointer; margin-bottom: 8px;"
+                class="film-card__poster-link"
                 @click="goToFilmDetail(item.id)"
             >
-              <img :src="item.img" alt="电影海报" style="width: 100%; height: 260px; border-radius: 5px; transition: all 0.3s;">
+              <img :src="item.img" alt="电影海报" class="film-card__poster">
             </div>
             <!-- 购票按钮：跳转到详情页（后续可在详情页跳转选座） -->
             <el-button
-                type="warning"
-                plain
-                style="width: 100%; height: 35px; border-color: #ef4238; color: #ef4238;"
+                class="film-card__buy"
                 @click="goToFilmDetail(item.id)"
             >
               购票
@@ -40,26 +38,26 @@
       </div>
 
       <!-- 即将上映区域 -->
-      <div style="flex: 1; margin-top: 25px">
-        <div style="display: flex; align-items: center">
-          <div  style="flex: 1; font-size: 22px; color: #5b92e6">即将上映 ({{data.data2.length}}) 部</div>
+      <div class="home-main__upcoming">
+        <div class="section-head">
+          <div class="section-head__title section-head__title--upcoming">即将上映 ({{data.data2.length}}) 部</div>
           <!-- 「全部」按钮：跳转到电影列表页（展示所有待上映电影） -->
           <div
-              style="width: 60px;text-align: right; color: #5b92e6; cursor: pointer;"
+              class="section-head__more section-head__more--upcoming"
               @click="goToMovieList('upcoming')"
           >
             全部 >
           </div>
         </div>
 
-        <div style="margin-top: 20px">
+        <div class="film-grid">
           <el-row :gutter="15">
             <!-- 即将上映电影：整卡片点击跳转详情页 -->
-            <el-col :span="6" v-for="item in data.noPlayData" :key="item.id" style="margin-bottom: 20px; cursor: pointer;">
-              <div @click="goToFilmDetail(item.id)" style="transition: all 0.3s;">
-                <img :src="item.img" alt="电影海报" style="width: 100%; height: 260px; border-radius: 5px;">
-                <div style="margin-top: 5px; font-size: 20px;font-weight: bold;font-style: italic">{{item.title}}</div>
-                <div style="margin-top: 5px; font-size: 16px; color: orange">{{item.start}} 上映</div>
+            <el-col :span="6" v-for="item in data.noPlayData" :key="item.id" class="film-grid__col film-grid__col--clickable">
+              <div @click="goToFilmDetail(item.id)" class="film-card__upcoming">
+                <img :src="item.img" alt="电影海报" class="film-card__poster">
+                <div class="film-card__title">{{item.title}}</div>
+                <div class="film-card__time">{{item.start}} 上映</div>
               </div>
             </el-col>
           </el-row>
@@ -68,98 +66,92 @@
     </div>
 
     <!-- 右侧内容（完善票房/评分列表跳转） -->
-    <div style="width: 280px; margin-left: 50px">
+    <div class="home-aside">
       <!-- 1. 总票房Top 10（添加电影标题跳转详情） -->
       <div>
-        <div style="margin: 8px 0; font-size: 22px; color: #ef4238">总票房Top 10</div>
-        <div style="border: 1px solid #ef4238; border-radius: 5px; padding: 10px 5px;">
-          <div v-if="loading.boxOffice" style="padding: 5px 0;">
-            <el-skeleton :rows="10" :columns="3" avatar style="--el-skeleton-avatar-size: 24px;" />
+        <div class="aside-title">总票房Top 10</div>
+        <div class="rank-box">
+          <div v-if="loading.boxOffice" class="rank-box__loading">
+            <el-skeleton :rows="10" :columns="3" avatar class="skeleton--sm" />
           </div>
           <div v-else>
-            <div v-for="(movie, index) in boxOfficeTop10" :key="movie.id" style="display: flex; align-items: center; padding: 8px 5px; transition: background-color 0.2s; cursor: pointer;" @click="goToFilmDetail(movie.id)">
+            <div v-for="(movie, index) in boxOfficeTop10" :key="movie.id" class="rank-row" @click="goToFilmDetail(movie.id)">
               <!-- 排名标识 -->
               <div
-                  style="width: 24px; height: 24px; line-height: 24px; text-align: center; border-radius: 50%; font-weight: bold; font-size: 14px;"
-                  :style="{
-                  backgroundColor: index < 3 ? ['#ff4d4f', '#faad14', '#1890ff'][index] : '#f5f5f5',
-                  color: index < 3 ? '#fff' : '#666'
-                }">
-                {{ index + 1 }}
-              </div>
+                :class="index < 3 ? `rank-badge--top${index + 1}` : 'rank-badge--plain'"
+                class="rank-badge">
+              {{ index + 1 }}
+            </div>
 
-              <div style="flex: 1; margin-left: 10px;">
+              <div class="rank-row__body">
                 <!-- 电影标题点击跳转 -->
-                <div style="font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #333;">{{ movie.title }}</div>
-                <div style="font-size: 12px; color: #666; margin-top: 3px;">
+                <div class="rank-row__title">{{ movie.title }}</div>
+                <div class="rank-row__meta">
                   {{ movie.typeList?.map(t => t.title).join(' / ') || '未知类型' }} | {{ movie.start || '未知时间' }}
                 </div>
               </div>
 
-              <div style="text-align: right; font-weight: bold; color: #ef4238;">{{ formatBoxOffice(movie.boxOffice) }}</div>
+              <div class="rank-row__value">{{ formatBoxOffice(movie.boxOffice) }}</div>
             </div>
           </div>
         </div>
       </div>
 
       <!-- 2. 今日票房（保持不变） -->
-      <div style="display: flex; margin-top: 40px; border-radius: 5px; overflow: hidden; ">
-        <div style="width: 40px; background-color: #ef4238; display: flex; justify-content: center; align-items: center; padding: 10px;">
-          <div style="display: flex; flex-direction: column; align-items: center; color: white; font-weight: bold; line-height: 1.8;">
+      <div class="today-box">
+        <div class="today-box__label">
+          <div class="today-box__label-text">
             <span>今</span><span>日</span><span>票</span><span>房</span>
           </div>
         </div>
-        <div style="flex: 1; background-color: #eee; display: flex; flex-direction: column; justify-content: center; padding: 0 20px;">
-          <div style="display: flex; align-items: center; justify-content: space-between;">
-            <div style="font-size: 28px; font-weight: bold; color: #333;">{{ totalPrice.total }}亿</div>
-            <el-button type="text" style="color: #ef4238;" @click="refreshTodayBoxOffice">
+        <div class="today-box__body">
+          <div class="today-box__row">
+            <div class="today-box__value">{{ totalPrice.total }}亿</div>
+            <el-button type="text" class="today-box__refresh" @click="refreshTodayBoxOffice">
               <el-icon><Refresh /></el-icon>
-              <span style="margin-left: 3px">刷新</span>
+              <span class="today-box__refresh-text">刷新</span>
             </el-button>
           </div>
-          <div style="font-size: 12px; color: #666; margin-top: 8px;">北京时间 : {{ updateTime }}</div>
+          <div class="today-box__time">北京时间 : {{ updateTime }}</div>
         </div>
       </div>
 
       <!-- 3. 评分Top 5（添加电影标题/海报跳转详情，星级改为分数） -->
-      <div style="margin-top: 40px">
-        <div style="display: flex; align-items: center">
-          <div style="flex: 1; font-size: 22px; color:#ef4238">评分Top 5</div>
+      <div class="home-aside__section">
+        <div class="section-head">
+          <div class="section-head__title">评分Top 5</div>
           <!-- 「查看完整榜单」跳转排行榜页 -->
           <div
-              style="width: 100px; text-align: right; color: #ef4238; cursor: pointer;"
+              class="section-head__more section-head__more--wide"
               @click="goToRankPage()"
           >
             查看完整榜单>
           </div>
         </div>
-        <div style="border: 1px solid #ef4238; border-radius: 5px; margin-top: 20px; padding: 10px 5px;">
-          <div v-if="loading.mark" style="padding: 5px 0;">
-            <el-skeleton :rows="5" :columns="3" avatar style="--el-skeleton-avatar-size: 80px;" />
+        <div class="rank-box rank-box--spaced">
+          <div v-if="loading.mark" class="rank-box__loading">
+            <el-skeleton :rows="5" :columns="3" avatar class="skeleton--lg" />
           </div>
           <div v-else>
-            <div v-for="(movie, index) in ratingTop5" :key="movie.id" style="display: flex; align-items: center; padding: 10px 5px; border-bottom: 1px dashed #c5c1c1; transition: background-color 0.2s; cursor: pointer;" @click="goToFilmDetail(movie.id)">
+            <div v-for="(movie, index) in ratingTop5" :key="movie.id" class="rank-row rank-row--divided" @click="goToFilmDetail(movie.id)">
               <!-- 排名标识 -->
               <div
-                  style="width: 24px; height: 24px; line-height: 24px; text-align: center; border-radius: 50%; font-weight: bold; font-size: 14px;"
-                  :style="{
-                  backgroundColor: index < 3 ? ['#ff4d4f', '#faad14', '#1890ff'][index] : '#f5f5f5',
-                  color: index < 3 ? '#fff' : '#666'
-                }">
-                {{ index + 1 }}
-              </div>
+                :class="index < 3 ? `rank-badge--top${index + 1}` : 'rank-badge--plain'"
+                class="rank-badge">
+              {{ index + 1 }}
+            </div>
 
               <!-- 海报点击跳转 -->
-              <div style="width: 60px; margin-left: 10px;">
-                <img :src="movie.img" alt="电影海报" style="width: 100%; height: 80px; border-radius: 3px; object-fit: cover;">
+              <div class="rank-row__poster">
+                <img :src="movie.img" alt="电影海报" class="rank-row__img">
               </div>
 
-              <div style="flex: 1; margin-left: 10px;">
+              <div class="rank-row__body">
                 <!-- 电影标题点击跳转 -->
-                <div style="font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #333;">{{ movie.title }}</div>
-                <div style="font-size: 12px; color: #666; margin-top: 3px;">{{ movie.typeList?.map(t => t.title).join(' / ') || '未知类型' }}</div>
+                <div class="rank-row__title">{{ movie.title }}</div>
+                <div class="rank-row__meta">{{ movie.typeList?.map(t => t.title).join(' / ') || '未知类型' }}</div>
                 <!-- 评分：移除el-rate星级，改为分数显示 -->
-                <div style="font-size: 14px; color: orange; font-weight: 500; margin-top: 3px;">
+                <div class="rank-row__score">
                   {{ movie.score || 0 }} 分
                 </div>
               </div>
@@ -308,3 +300,300 @@ load();
 loadFilmBoxOfficeTop();
 loadFilmMarkTop();
 </script>
+
+<style scoped>
+.home-page {
+  display: flex;
+  width: 75%;
+  max-width: 1200px;
+  margin: var(--space-20) auto;
+}
+
+.home-main {
+  flex: 1;
+}
+
+.home-main__upcoming {
+  flex: 1;
+  margin-top: var(--space-24);
+}
+
+/* 区块标题行 */
+.section-head {
+  display: flex;
+  align-items: center;
+}
+
+.section-head__title {
+  flex: 1;
+  font-size: var(--fs-xl);
+  color: var(--el-color-primary);
+}
+
+.section-head__title--upcoming {
+  color: var(--el-color-primary);
+}
+
+.section-head__more {
+  width: 60px;
+  color: var(--el-color-primary);
+  text-align: right;
+  cursor: pointer;
+}
+
+.section-head__more--wide {
+  width: 100px;
+}
+
+/* 电影网格 */
+.film-grid {
+  margin-top: var(--space-20);
+}
+
+.film-grid__col {
+  margin-bottom: var(--space-20);
+}
+
+.film-grid__col--clickable {
+  cursor: pointer;
+}
+
+.film-card__poster-link {
+  margin-bottom: var(--space-8);
+  cursor: pointer;
+}
+
+.film-card__poster {
+  width: 100%;
+  height: 260px;
+  border-radius: var(--el-border-radius-base);
+  object-fit: cover;
+  transition: transform 200ms ease-in-out;
+}
+
+.film-card__poster:hover {
+  transform: scale(1.02);
+}
+
+.film-card__buy {
+  width: 100%;
+  height: 35px;
+  border-color: var(--el-color-primary);
+  color: var(--el-color-primary);
+}
+
+.film-card__upcoming {
+  transition: box-shadow 200ms ease-in-out;
+}
+
+.film-card__upcoming:hover {
+  box-shadow: var(--el-box-shadow-lighter);
+}
+
+.film-card__title {
+  margin-top: var(--space-4);
+  font-size: var(--fs-xl);
+  font-weight: var(--fw-bold);
+  font-style: italic;
+}
+
+/* 上映时间承载文字，用白底评分文字色（4.68:1） */
+.film-card__time {
+  margin-top: var(--space-4);
+  font-size: var(--fs-md);
+  color: var(--color-rating-text);
+}
+
+/* ---------- 右侧栏 ---------- */
+.home-aside {
+  width: 280px;
+  margin-left: var(--space-48);
+}
+
+.home-aside__section {
+  margin-top: var(--space-40);
+}
+
+.aside-title {
+  margin: var(--space-8) 0;
+  font-size: var(--fs-xl);
+  color: var(--el-color-primary);
+}
+
+.rank-box {
+  padding: var(--space-12) var(--space-4);
+  border: 1px solid var(--el-color-primary);
+  border-radius: var(--el-border-radius-base);
+}
+
+.rank-box--spaced {
+  margin-top: var(--space-20);
+}
+
+.rank-box__loading {
+  padding: var(--space-4) 0;
+}
+
+.skeleton--sm {
+  --el-skeleton-avatar-size: 24px;
+}
+
+.skeleton--lg {
+  --el-skeleton-avatar-size: 80px;
+}
+
+.rank-row {
+  display: flex;
+  align-items: center;
+  padding: var(--space-8) var(--space-4);
+  cursor: pointer;
+  transition: background-color 200ms ease-in-out;
+}
+
+.rank-row:hover {
+  background-color: var(--el-fill-color-light);
+}
+
+.rank-row--divided {
+  padding: var(--space-12) var(--space-4);
+  border-bottom: 1px dashed var(--el-border-color);
+}
+
+.rank-badge {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--el-border-radius-circle);
+  font-size: var(--fs-base);
+  font-weight: var(--fw-bold);
+  line-height: 24px;
+  text-align: center;
+}
+
+.rank-badge--top1 {
+  background-color: var(--color-rank-1);
+  color: #ffffff;
+}
+
+.rank-badge--top2 {
+  background-color: var(--color-rank-2);
+  color: #ffffff;
+}
+
+.rank-badge--top3 {
+  background-color: var(--color-rank-3);
+  color: #ffffff;
+}
+
+.rank-badge--plain {
+  background-color: var(--el-fill-color-light);
+  color: var(--el-text-color-regular);
+}
+
+.rank-row__body {
+  flex: 1;
+  margin-left: var(--space-12);
+}
+
+.rank-row__title {
+  font-weight: var(--fw-bold);
+  color: var(--el-text-color-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rank-row__meta {
+  margin-top: var(--space-4);
+  font-size: var(--fs-xs);
+  color: var(--el-text-color-regular);
+}
+
+.rank-row__value {
+  color: var(--el-color-primary);
+  font-weight: var(--fw-bold);
+  text-align: right;
+}
+
+.rank-row__poster {
+  flex-shrink: 0;
+  width: 60px;
+  margin-left: var(--space-12);
+}
+
+.rank-row__img {
+  width: 100%;
+  height: 80px;
+  border-radius: var(--el-border-radius-base);
+  object-fit: cover;
+}
+
+/* 评分承载文字，用白底评分文字色（4.68:1） */
+.rank-row__score {
+  margin-top: var(--space-4);
+  font-size: var(--fs-base);
+  font-weight: var(--fw-medium);
+  color: var(--color-rating-text);
+}
+
+/* ---------- 今日票房 ---------- */
+.today-box {
+  display: flex;
+  margin-top: var(--space-40);
+  border-radius: var(--el-border-radius-base);
+  overflow: hidden;
+}
+
+.today-box__label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  padding: var(--space-12);
+  background-color: var(--el-color-primary);
+}
+
+.today-box__label-text {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  color: #ffffff;
+  font-weight: var(--fw-bold);
+  line-height: var(--lh-loose);
+}
+
+.today-box__body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  justify-content: center;
+  padding: 0 var(--space-20);
+  background-color: var(--el-fill-color-dark);
+}
+
+.today-box__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.today-box__value {
+  font-size: var(--fs-3xl);
+  font-weight: var(--fw-bold);
+  color: var(--el-text-color-primary);
+}
+
+.today-box__refresh {
+  color: var(--el-color-primary);
+}
+
+.today-box__refresh-text {
+  margin-left: var(--space-4);
+}
+
+.today-box__time {
+  margin-top: var(--space-8);
+  font-size: var(--fs-xs);
+  color: var(--el-text-color-regular);
+}
+</style>

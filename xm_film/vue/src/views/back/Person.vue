@@ -1,9 +1,9 @@
 ﻿<template>
 
-  <div style="display: flex; justify-content: center; min-height: 50vh; padding: 20px;">
-    <div class="card" style="width: 50%; max-width: 500px; padding: 40px 20px">
+  <div class="profile-wrapper">
+    <div class="card profile-card">
 
-      <el-form ref="formRef" :rules="data.rules" :model="data.form" style="padding-right: 50px;padding-top: 20px" label-width="80px">
+      <el-form ref="formRef" :rules="data.rules" :model="data.form" class="dialog-form" label-width="80px">
 
         <el-form-item label="用户名" prop="username">
           <el-input disabled v-model="data.form.username" autocomplete="off" placeholder="请输入用户名"/>
@@ -24,8 +24,8 @@
           <el-input type="textarea" :rows="3" v-model="data.form.description" autocomplete="off" placeholder="请输入影院介绍"/>
         </el-form-item>
 
-        <div style="text-align: center">
-          <el-button @click="updateUser" type="primary" style="padding: 20px 30px" >更新影院信息</el-button>
+        <div class="form-actions">
+          <el-button @click="updateUser" type="primary" class="submit-button" >更新影院信息</el-button>
         </div>
       </el-form>
 

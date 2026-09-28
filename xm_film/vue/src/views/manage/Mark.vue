@@ -1,33 +1,33 @@
 <template>
   <div>
-    <div class="card" style="margin-bottom: 5px">
-      <el-input v-model="searchForm.filmName" placeholder="请输入电影名称查询" style="width: 300px; margin-right:10px" :prefix-icon="Search" />
+    <div class="card page-card">
+      <el-input v-model="searchForm.filmName" placeholder="请输入电影名称查询" class="search-input" :prefix-icon="Search" />
       <el-button type="primary" @click="onSearch">查 询</el-button>
       <el-button type="warning" @click="onReset">重 置</el-button>
     </div>
-    <div class="card" style="margin-bottom: 5px">
+    <div class="card page-card">
       <el-button type="danger" @click="handleDelBatch">批量删除</el-button>
     </div>
-    <div class="card" style="margin-bottom: 5px">
+    <div class="card page-card">
       <el-table v-loading="loading" stripe :data="dataList" @selection-change="onSelectionChange">
         <el-table-column type="selection" width="55" />
         <el-table-column label="用户名称" prop="userName" />
         <el-table-column label="电影名称" prop="filmName" show-overflow-tooltip />
         <el-table-column label="电影图片" prop="filmImg">
           <template #default="scope">
-            <el-image style="margin-top:7px;width:36px;height:36px;border-radius:10%;object-fit:cover" v-if="scope.row.filmImg" :src="scope.row.filmImg" :preview-src-list="[scope.row.filmImg]" preview-teleported />
+            <el-image class="cell-thumb" v-if="scope.row.filmImg" :src="scope.row.filmImg" :preview-src-list="[scope.row.filmImg]" preview-teleported />
           </template>
         </el-table-column>
         <el-table-column label="用户评分" prop="score" width="90" />
         <el-table-column label="用户评语" prop="mark" show-overflow-tooltip />
         <el-table-column label="操作">
           <template #default="scope">
-            <el-button style="font-size: 18px" link :icon="Delete" @click="() => handleDel(scope.row.id)" type="danger" />
+            <el-button class="row-action" link :icon="Delete" @click="() => handleDel(scope.row.id)" type="danger" />
           </template>
         </el-table-column>
       </el-table>
     </div>
-    <div class="card" style="margin-bottom: 5px">
+    <div class="card page-card">
       <el-pagination @size-change="onSizeChange" @current-change="onPageChange" v-model:current-page="pageNum" v-model:page-size="pageSize" :page-sizes="[5, 10, 15, 20]" background layout="total, sizes, prev, pager, next, jumper" :total="total" />
     </div>
   </div>

@@ -1,17 +1,17 @@
 ﻿<template>
   <div>
-    <div class="card" style="margin-bottom: 5px">
-      <el-input v-model="data.name" placeholder="请输入影厅名称" style="width: 300px; margin-right:10px" :prefix-icon="Search"/>
+    <div class="card page-card">
+      <el-input v-model="data.name" placeholder="请输入影厅名称" class="search-input" :prefix-icon="Search"/>
       <el-button type="primary" @click="load">查 询</el-button>
       <el-button type="warning" @click="reset">重 置</el-button>
     </div>
 
-    <div class="card" style="margin-bottom: 5px">
+    <div class="card page-card">
       <el-button type="info" @click="handleAdd">新 增</el-button>
       <el-button type="danger" @click="delBatch">批量删除</el-button>
     </div>
 
-    <div class="card" style="margin-bottom: 5px">
+    <div class="card page-card">
       <el-table
           stripe
           :data="data.tableData"
@@ -25,14 +25,14 @@
         </el-table-column>
         <el-table-column label="操作">
           <template #default="scope">
-            <el-button style="font-size: 18px" link :icon="Edit" @click="handleUpdate(scope.row)" type="primary" />
-            <el-button style="font-size: 18px" link :icon="Delete" @click="() => del(scope.row.id)" type="danger"/>
+            <el-button class="row-action" link :icon="Edit" @click="handleUpdate(scope.row)" type="primary" />
+            <el-button class="row-action" link :icon="Delete" @click="() => del(scope.row.id)" type="danger"/>
           </template>
         </el-table-column>
       </el-table>
     </div>
 
-    <div class="card" style="margin-bottom: 5px">
+    <div class="card page-card">
       <el-pagination
           @size-change="load"
           @current-change="load"
@@ -46,7 +46,7 @@
     </div>
 
     <el-dialog v-model="data.formVisible" title="影厅房间信息" width="500" destroy-on-close>
-      <el-form ref="formRef" :rules="data.rules" :model="data.form" style="padding-right: 50px;padding-top: 20px" label-width="85px">
+      <el-form ref="formRef" :rules="data.rules" :model="data.form" class="dialog-form" label-width="85px">
         <el-form-item label="影院名称">
           <el-input :model-value="cinemaName" disabled/>
         </el-form-item>
@@ -54,10 +54,10 @@
           <el-input v-model="data.form.name" autocomplete="off" placeholder="请输入影厅名称"/>
         </el-form-item>
         <el-form-item label="座位行数" prop="seatRows">
-          <el-input-number v-model="data.form.seatRows" :min="1" :max="50" style="width: 100%;"/>
+          <el-input-number v-model="data.form.seatRows" :min="1" :max="50" class="field-full"/>
         </el-form-item>
         <el-form-item label="座位列数" prop="seatCols">
-          <el-input-number v-model="data.form.seatCols" :min="1" :max="50" style="width: 100%;"/>
+          <el-input-number v-model="data.form.seatCols" :min="1" :max="50" class="field-full"/>
         </el-form-item>
       </el-form>
       <template #footer>

@@ -1,22 +1,22 @@
 ﻿<template>
-  <div style="width: 85%; margin: 20px auto;">
+  <div class="page-wide">
     <div>
-      <div class="card" style="margin-bottom: 5px">
-        <el-input v-model="data.orders" placeholder="请输入订单号" style="width: 300px; margin-right:10px" :prefix-icon="Search"/>
-        <el-select v-model="data.status" placeholder="请选择订单状态" style="width: 300px; margin-right:10px">
+      <div class="card page-card">
+        <el-input v-model="data.orders" placeholder="请输入订单号" class="search-input" :prefix-icon="Search"/>
+        <el-select v-model="data.status" placeholder="请选择订单状态" class="search-input">
           <el-option v-for="status in ORDER_STATUS_OPTIONS" :key="status" :label="status" :value="status" />
         </el-select>
         <el-button type="primary" @click="load">查 询</el-button>
         <el-button type="warning" @click="reset">重 置</el-button>
       </div>
 
-      <div class="card" style="margin-bottom: 5px">
+      <div class="card page-card">
         <el-table stripe :data="data.tableData">
           <el-table-column type="expand">
             <template #default="props">
               <el-descriptions title="订单信息" :column="4" border>
                 <el-descriptions-item label="电影图片">
-                  <el-image style="width:36px;height:36px;object-fit:cover;"
+                  <el-image class="cell-thumb"
                             :src="props.row.img"/>
                 </el-descriptions-item>
                 <el-descriptions-item label="订单号">{{props.row.orders}}</el-descriptions-item>
@@ -52,8 +52,7 @@
           <el-table-column label="电影名称" prop="filmName" show-overflow-tooltip />
           <el-table-column label="电影图片" prop="img">
             <template #default="scope">
-              <el-image style="margin-top: 7px; width:36px;height:36px;border-radius:10%;object-fit:cover;
-                      align-items:center;"
+              <el-image class="cell-thumb cell-thumb--spaced"
                         v-if="scope.row.img"
                         :src="scope.row.img"
                         :preview-src-list="[scope.row.img]"
@@ -79,24 +78,24 @@
           </el-table-column>
           <el-table-column label="操作">
             <template #default="scope">
-              <el-button v-if="scope.row.status === '待支付'" style="font-size: 14px" link type="danger"
+              <el-button v-if="scope.row.status === '待支付'" link type="danger"
                          @click="() => continuePay(scope.row)">继续支付</el-button>
-              <el-button v-if="scope.row.status === '待支付'" style="font-size: 14px" link type="warning" @click="() => cancelOrder(scope.row.id)">取消</el-button>
-              <el-button v-if="scope.row.status === '待取票'" style="font-size: 14px" link type="warning"
+              <el-button v-if="scope.row.status === '待支付'" link type="warning" @click="() => cancelOrder(scope.row.id)">取消</el-button>
+              <el-button v-if="scope.row.status === '待取票'" link type="warning"
                          @click="() => refundOrder(scope.row)">退票</el-button>
-              <el-button v-if="scope.row.status === '已取票'" style="font-size: 14px" link type="primary"
+              <el-button v-if="scope.row.status === '已取票'" link type="primary"
                          @click="openReview(scope.row)">
                 {{ markOf(scope.row.filmId) ? '修改评价' : '去评价' }}
               </el-button>
               <!-- 只有终态废单可删除；已成交订单必须走退票，与后端删除守卫同构 -->
-              <el-button v-if="isOrderDeletable(scope.row.status)" style="font-size: 18px" link :icon="Delete"
+              <el-button v-if="isOrderDeletable(scope.row.status)" class="row-action" link :icon="Delete"
                          @click="() => del(scope.row.id)" type="danger"></el-button>
             </template>
           </el-table-column>
         </el-table>
       </div>
 
-      <div class="card" style="margin-bottom: 5px">
+      <div class="card page-card">
         <el-pagination
             @size-change="load"
             @current-change="load"
@@ -121,7 +120,7 @@
       </el-form-item>
       <el-form-item label="评分">
         <el-input-number v-model="reviewForm.score" :min="0" :max="10" :step="0.1" :precision="1"
-                         style="width: 100%"/>
+                         class="field-full"/>
       </el-form-item>
       <el-form-item label="评语">
         <el-input v-model="reviewForm.mark" type="textarea" :rows="3" maxlength="255" show-word-limit

@@ -1,21 +1,21 @@
 <template>
   <div>
-    <div class="card" style="margin-bottom: 5px">
-      <el-input v-model="searchForm.name" placeholder="请输入姓名查询" style="width: 300px; margin-right:10px" :prefix-icon="Search" />
+    <div class="card page-card">
+      <el-input v-model="searchForm.name" placeholder="请输入姓名查询" class="search-input" :prefix-icon="Search" />
       <el-button type="primary" @click="onSearch">查 询</el-button>
       <el-button type="warning" @click="onReset">重 置</el-button>
     </div>
-    <div class="card" style="margin-bottom: 5px">
+    <div class="card page-card">
       <el-button type="info" @click="openAdd">新 增</el-button>
       <el-button type="danger" @click="handleDelBatch">批量删除</el-button>
     </div>
-    <div class="card" style="margin-bottom: 5px">
+    <div class="card page-card">
       <el-table v-loading="loading" stripe :data="dataList" @selection-change="onSelectionChange">
         <el-table-column type="selection" width="55" />
         <el-table-column label="账号" prop="username" />
         <el-table-column label="头像" prop="avatar">
           <template #default="scope">
-            <el-image style="width:40px;height:40px;border-radius:50%;object-fit:cover;margin-top:5px" v-if="scope.row.avatar" :src="scope.row.avatar" :preview-src-list="[scope.row.avatar]" preview-teleported />
+            <el-image class="cell-avatar" v-if="scope.row.avatar" :src="scope.row.avatar" :preview-src-list="[scope.row.avatar]" preview-teleported />
           </template>
         </el-table-column>
         <el-table-column label="姓名" prop="name" />
@@ -28,17 +28,17 @@
         </el-table-column>
         <el-table-column label="操作">
           <template #default="scope">
-            <el-button style="font-size: 18px" link :icon="Edit" @click="openEdit(scope.row)" type="primary" />
-            <el-button style="font-size: 18px" link :icon="Delete" @click="handleDel(scope.row.id)" type="danger" />
+            <el-button class="row-action" link :icon="Edit" @click="openEdit(scope.row)" type="primary" />
+            <el-button class="row-action" link :icon="Delete" @click="handleDel(scope.row.id)" type="danger" />
           </template>
         </el-table-column>
       </el-table>
     </div>
-    <div class="card" style="margin-bottom: 5px">
+    <div class="card page-card">
       <el-pagination @size-change="onSizeChange" @current-change="onPageChange" v-model:current-page="pageNum" v-model:page-size="pageSize" :page-sizes="[5, 10, 15, 20]" background layout="total, sizes, prev, pager, next, jumper" :total="total" />
     </div>
     <el-dialog v-model="dialogVisible" title="管理员信息" width="500" destroy-on-close>
-      <el-form ref="formRef" :rules="rules" :model="form" style="padding-right:50px;padding-top:20px" label-width="80px">
+      <el-form ref="formRef" :rules="rules" :model="form" class="dialog-form" label-width="80px">
         <el-form-item label="账号" prop="username">
           <el-input v-model="form.username" autocomplete="off" placeholder="请输入账号" />
         </el-form-item>

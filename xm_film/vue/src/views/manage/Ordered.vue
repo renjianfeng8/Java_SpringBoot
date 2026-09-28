@@ -1,19 +1,19 @@
 <template>
   <div>
-    <div class="card" style="margin-bottom: 5px">
-      <el-input v-model="searchForm.orders" placeholder="请输入订单号" style="width: 300px; margin-right:10px" :prefix-icon="Search"/>
-      <el-select v-model="searchForm.status" placeholder="请选择订单状态" style="width: 300px; margin-right:10px">
+    <div class="card page-card">
+      <el-input v-model="searchForm.orders" placeholder="请输入订单号" class="search-input" :prefix-icon="Search"/>
+      <el-select v-model="searchForm.status" placeholder="请选择订单状态" class="search-input">
         <el-option v-for="status in ORDER_STATUS_OPTIONS" :key="status" :label="status" :value="status" />
       </el-select>
       <el-button type="primary" @click="onSearch">查 询</el-button>
       <el-button type="warning" @click="onReset">重 置</el-button>
     </div>
 
-    <div class="card" style="margin-bottom: 5px">
+    <div class="card page-card">
       <el-button type="danger" @click="handleDelBatch">批量删除</el-button>
     </div>
 
-    <div class="card" style="margin-bottom: 5px">
+    <div class="card page-card">
       <el-table v-loading="loading" stripe :data="dataList" @selection-change="onSelectionChange">
         <!-- 不可删除的订单（待支付/待取票/已取票）连勾选都不允许，批量删除自然不会带上它们 -->
         <el-table-column type="selection" width="55" :selectable="(row) => isOrderDeletable(row.status)"/>
@@ -21,7 +21,7 @@
           <template #default="props">
             <el-descriptions title="订单信息" :column="4" border>
               <el-descriptions-item label="电影图片">
-                <el-image style="width:36px;height:36px;object-fit:cover;" :src="props.row.img"/>
+                <el-image class="cell-thumb" :src="props.row.img"/>
               </el-descriptions-item>
               <el-descriptions-item label="订单号">{{props.row.orders}}</el-descriptions-item>
               <el-descriptions-item label="用户名称">{{props.row.userName}}</el-descriptions-item>
@@ -56,7 +56,7 @@
         <el-table-column label="电影名称" prop="filmName" show-overflow-tooltip />
         <el-table-column label="电影图片" prop="img">
           <template #default="scope">
-            <el-image style="margin-top: 7px; width:36px;height:36px;border-radius:10%;object-fit:cover;align-items:center;"
+            <el-image class="cell-thumb"
                       v-if="scope.row.img"
                       :src="scope.row.img"
                       :preview-src-list="[scope.row.img]"
@@ -82,17 +82,17 @@
         </el-table-column>
         <el-table-column label="操作">
           <template #default="scope">
-            <el-button v-if="scope.row.status === '待取票'" style="font-size: 14px" link type="primary"
+            <el-button v-if="scope.row.status === '待取票'" link type="primary"
                        @click="() => pickupOrder(scope.row)">取票</el-button>
             <!-- 只有终态废单可删除，与后端删除守卫同构 -->
-            <el-button v-if="isOrderDeletable(scope.row.status)" style="font-size: 18px" link :icon="Delete"
+            <el-button v-if="isOrderDeletable(scope.row.status)" class="row-action" link :icon="Delete"
                        @click="() => handleDel(scope.row.id)" type="danger"></el-button>
           </template>
         </el-table-column>
       </el-table>
     </div>
 
-    <div class="card" style="margin-bottom: 5px">
+    <div class="card page-card">
       <el-pagination
           @size-change="onSizeChange"
           @current-change="onPageChange"

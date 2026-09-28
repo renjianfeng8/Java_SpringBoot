@@ -119,7 +119,7 @@
           </div>
           <div class="footer-column contact-column">
             <h3 class="footer-title">版权信息</h3>
-            <div style="margin-right: 8px;color: #aaa; font-size: 14px; line-height: 1.8;">
+            <div class="footer-copyright">
               <p class="contact-item">© 2024-2026 电影购票网站</p>
               <p class="contact-item">个人学习项目 保留所有权利</p>
               <p class="contact-item">本系统仅用于技术学习与交流</p>
@@ -129,9 +129,9 @@
         </div>
       </div>
       <div class="footer-bottom">
-        <div style="color: #888; font-size: 13px; text-align: center; width: 100%;">
+        <div class="footer-disclaimer">
           <p>本系统为 <strong>个人学习项目</strong>，所有展示数据（包括但不限于电影信息、票房数据、影院信息、订单记录）均为 <strong>模拟数据</strong>，不反映真实市场情况。</p>
-          <p style="margin-top: 4px;">严禁将本系统用于任何商业用途。使用本系统即表示您已了解并同意上述条款。</p>
+          <p class="footer-disclaimer__note">严禁将本系统用于任何商业用途。使用本系统即表示您已了解并同意上述条款。</p>
         </div>
       </div>
     </footer>
@@ -240,7 +240,7 @@ const updateActivePath = (path) => {
   gap: var(--group-gap);          /* 三组之间弹性留白 */
   height: var(--header-height);
   padding: 0 var(--header-padding-x);
-  background: white;
+  background: var(--el-bg-color);
   box-shadow: var(--shadow-edge);
   /* 最小宽度保护：低于该阈值不再继续压缩，改为整页横向滚动。
      刻意不用 overflow: hidden —— 裁切会让按钮/输入框不可见不可点 */
@@ -280,7 +280,7 @@ const updateActivePath = (path) => {
 .nav-item {
   flex: 0 0 auto;                 /* 导航项不参与压缩 */
   white-space: nowrap;            /* 菜单文字禁止换行，杜绝折行堆叠 */
-  color: #1b191a;
+  color: var(--el-text-color-primary);
   text-decoration: none;
   font-size: var(--fs-md);        /* 16px，与 1920 原观感一致 */
   line-height: 1.2;
@@ -358,7 +358,7 @@ const updateActivePath = (path) => {
 }
 
 .user-info:hover {
-  background-color: #f5f7fa;
+  background-color: var(--el-fill-color-light);
 }
 
 .avatar {
@@ -379,20 +379,20 @@ const updateActivePath = (path) => {
 }
 
 .front-footer {
-  background-color: #1a1a1a;
-  color: #fff;
+  background-color: var(--dark-bg);
+  color: var(--dark-text);
   padding: 0;
-  margin-top: 60px;
+  margin-top: var(--space-64);
 }
 
 .footer-main {
-  border-bottom: 1px solid #333;
-  padding: 20px 0 10px;
-  background-color: #1a1a1a;
+  border-bottom: 1px solid var(--dark-divider);
+  padding: var(--space-20) 0 var(--space-12);
+  background-color: var(--dark-bg);
 }
 
 .footer-wrapper {
-  color: #aaa;
+  color: var(--dark-text-muted);
   max-width: 950px;
   margin: 0 auto;
   display: flex;
@@ -400,16 +400,16 @@ const updateActivePath = (path) => {
 
 .footer-column {
   flex: 1;
-  margin-bottom: 15px;
+  margin-bottom: var(--space-16);
 }
 
 .footer-title {
-  font-size: 15px;
+  font-size: var(--fs-md);
   font-weight: var(--fw-bold);
-  margin-bottom: 10px;
+  margin-bottom: var(--space-12);
   position: relative;
-  padding-bottom: 10px;
-  color: var(--el-color-primary);
+  padding-bottom: var(--space-12);
+  color: var(--color-brand);
 }
 
 .footer-title::after {
@@ -419,7 +419,7 @@ const updateActivePath = (path) => {
   bottom: 0;
   width: 30px;
   height: 2px;
-  background-color: var(--el-color-primary);
+  background-color: var(--color-brand);
 }
 
 .footer-links {
@@ -428,15 +428,15 @@ const updateActivePath = (path) => {
 }
 
 .footer-links li {
-  margin-bottom: 8px;
-  font-size: 13px;
-  color: #999;
+  margin-bottom: var(--space-8);
+  font-size: var(--fs-sm);
+  color: var(--dark-text-muted);
   cursor: default;
-  line-height: 1.6;
+  line-height: var(--lh-base);
 }
 
 .footer-links li:hover {
-  color: var(--el-color-primary);
+  color: var(--color-brand);
 }
 
 .contact-column {
@@ -447,17 +447,17 @@ const updateActivePath = (path) => {
 .contact-item {
   display: flex;
   align-items: center;
-  margin-bottom: 6px;
-  font-size: 13px;
-  color: #999;
+  margin-bottom: var(--space-8);
+  font-size: var(--fs-sm);
+  color: var(--dark-text-muted);
 }
 
 .footer-bottom {
   max-width: 1000px;
   margin: 0 auto;
-  padding: 15px;
-  font-size: 12px;
-  color: #666;
+  padding: var(--space-16);
+  font-size: var(--fs-xs);
+  color: var(--dark-text-faint);
 }
 /* 未登录：登录 / 注册（间距由 gap 统一，替代原来的 margin） */
 .auth-links {
@@ -467,7 +467,7 @@ const updateActivePath = (path) => {
   flex: 0 0 auto;
 }
 .header-link {
-  color: #333;
+  color: var(--el-text-color-primary);
   text-decoration: none;
   font-size: var(--fs-base);
   white-space: nowrap;
@@ -477,7 +477,7 @@ const updateActivePath = (path) => {
   color: var(--el-color-primary);
 }
 .header-divider {
-  color: #ccc;
+  color: var(--el-text-color-disabled);
 }
 .admin-btn {
   flex: 0 0 auto;

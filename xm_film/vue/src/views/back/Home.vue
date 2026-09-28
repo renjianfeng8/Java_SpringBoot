@@ -11,7 +11,7 @@
         </div>
 
         <!-- 表格展示 -->
-        <el-table stripe :data="data.tableData" border style="width: 100%" empty-text="暂无匹配的公告数据">
+        <el-table stripe :data="data.tableData" border class="field-full" empty-text="暂无匹配的公告数据">
           <el-table-column label="序号" type="index" width="60" align="center" />
           <el-table-column label="公告名称" prop="title" width="220" />
           <el-table-column label="公告内容" prop="content">

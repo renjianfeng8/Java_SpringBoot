@@ -1,84 +1,72 @@
 <template>
   <!-- 整个页面统一外层盒子 -->
-  <div style="width: 100%; padding: 20px 0; background-color: #f9f9f9;">
-    <div style="width: 70%; margin: 0 auto; background-color: white; padding: 30px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+  <div class="buy-page">
+    <div class="buy-panel">
       <!-- 标题：居中加粗放大 -->
-      <div style="text-align: center; font-size: 26px; font-weight: bold; margin-bottom: 25px; color: #333; border-bottom: 1px solid #eee; padding-bottom: 15px;">
+      <div class="buy-title">
         座位选择
       </div>
 
       <!-- 主体布局：左右分栏 -->
-      <div style="display: flex; gap: 25px;">
+      <div class="buy-layout">
         <!-- 左侧：座位选择区 -->
-        <div style="flex: 3;">
+        <div class="buy-main">
 
-          <!-- 座位状态图例（优化版） -->
-          <div style="margin-bottom: 20px; border-radius: 4px; padding: 12px;">
-            <!-- 图例内容（横向均匀分布） -->
-            <div style="display: flex;  gap: 40px; ">
-              <!-- 已售座位 -->
-              <div style="display: flex; align-items: center; gap: 8px;">
-                <div style="width: 22px; height: 22px; background: #fd4444;border-radius: 5px;"></div>
-                <div style="font-size: 14px; color: #666;">已售座位</div>
+          <!-- 座位状态图例 -->
+          <div class="seat-legend">
+            <div class="seat-legend__row">
+              <div class="seat-legend__item">
+                <div class="seat-swatch seat-swatch--taken"></div>
+                <div class="seat-legend__label">已售座位</div>
               </div>
-              <!-- 可选座位 -->
-              <div style="display: flex; align-items: center; gap: 8px;">
-                <div style="width: 22px; height: 22px; background: #4CAF50; border-radius: 5px;"></div>
-                <div style="font-size: 14px; color: #666;">可选座位</div>
+              <div class="seat-legend__item">
+                <div class="seat-swatch seat-swatch--available"></div>
+                <div class="seat-legend__label">可选座位</div>
               </div>
-              <!-- 已选座位 -->
-              <div style="display: flex; align-items: center; gap: 8px;">
-                <div style="width: 22px; height: 22px; background: #2196F3;  border-radius: 5px;"></div>
-                <div style="font-size: 14px; color: #666;">已选座位</div>
+              <div class="seat-legend__item">
+                <div class="seat-swatch seat-swatch--selected"></div>
+                <div class="seat-legend__label">已选座位</div>
               </div>
               <!-- 本人未支付锁座：只有存在未支付订单时才出现 -->
-              <div v-if="myPendingOrders.length > 0" style="display: flex; align-items: center; gap: 8px;">
-                <div style="width: 22px; height: 22px; background: #FF9800; border-radius: 5px;"></div>
-                <div style="font-size: 14px; color: #666;">我的未支付</div>
+              <div v-if="myPendingOrders.length > 0" class="seat-legend__item">
+                <div class="seat-swatch seat-swatch--mine"></div>
+                <div class="seat-legend__label">我的未支付</div>
               </div>
             </div>
           </div>
 
-          <!-- 大荧幕（仅保留加粗灰色杠） -->
-          <div style="width: 80%; height: 8px; background: #999; margin: 0 auto 35px; border-radius: 4px;"></div>
+          <!-- 大荧幕 -->
+          <div class="seat-screen"></div>
 
           <!-- 座位加载中/错误占位 -->
-          <div v-if="loading" style="text-align: center; padding: 60px 0; color: #999;">
-            <i class="el-icon-loading" style="font-size: 20px; animation: rotating 2s linear infinite;"></i>
-            <div style="margin-top: 8px;">加载座位中...</div>
+          <div v-if="loading" class="seat-hint">
+            <el-icon class="seat-hint__icon seat-hint__icon--spin"><Loading /></el-icon>
+            <div class="seat-hint__text">加载座位中...</div>
           </div>
-          <div v-else-if="seatError" style="text-align: center; padding: 60px 0; color: #ef4238;">
-            <i class="el-icon-error" style="font-size: 20px; margin-bottom: 8px;"></i>
+          <div v-else-if="seatError" class="seat-hint seat-hint--error">
+            <el-icon class="seat-hint__icon"><CircleCloseFilled /></el-icon>
             <div>{{ seatError }}</div>
-            <el-button style="margin-top: 16px;" type="primary" @click="router.push('/front/cinema')">
+            <el-button class="seat-hint__action" type="primary" @click="router.push('/front/cinema')">
               返回影院列表
             </el-button>
           </div>
 
           <!-- 座位矩阵：行列数取自所属影厅的 seat_rows / seat_cols 配置 -->
-          <div v-else style="display: flex; flex-direction: column; align-items: center; gap: 10px;  ">
-            <div v-for="row in seatRows" :key="'row' + row" style="display: flex; gap: 10px;">
+          <div v-else class="seat-map">
+            <div v-for="row in seatRows" :key="'row' + row" class="seat-map__row">
               <div v-for="col in seatCols" :key="`seat-${row}-${col}`"
-                   :style="{
-                     width: '22px',
-                     height: '22px',
-                     backgroundColor: getSeatColor(row, col),
-                     cursor: isSeatAvailable(row, col) ? 'pointer' : 'not-allowed'}"
-                   @click="selectSeat(row, col)"
+                   :class="[getSeatClass(row, col), isSeatAvailable(row, col) ? 'seat-item--clickable' : 'seat-item--locked']"
                    class="seat-item"
+                   @click="selectSeat(row, col)"
               ></div>
             </div>
           </div>
 
           <!-- 本人未支付锁座：可直接继续支付或取消释放，不必重新选座 -->
-          <div v-if="myPendingOrders.length > 0"
-               style="margin-top: 20px; padding: 12px; border: 1px solid #ffe0b2;
-                      background: #fff8e1; border-radius: 5px;">
-            <div v-for="pending in myPendingOrders" :key="pending.id"
-                 style="display: flex; align-items: center; justify-content: space-between;
-                        font-size: 14px; color: #8d6e63;">
+          <div v-if="myPendingOrders.length > 0" class="pending-box">
+            <div v-for="pending in myPendingOrders" :key="pending.id" class="pending-box__row">
               <span>未支付订单 {{ pending.orders }}（{{ pending.seat }}）</span>
-              <span style="white-space: nowrap;">
+              <span class="pending-box__actions">
                 <el-button link type="warning" @click="continuePay(pending)">继续支付</el-button>
                 <el-button link type="danger" @click="cancelPendingOrder(pending)">取消锁座</el-button>
               </span>
@@ -86,25 +74,24 @@
           </div>
 
           <!-- 已选座位 -->
-          <div style="margin-top: 25px; padding: 10px; border-radius: 5px;">
-            <div style="display: flex;">
-              <div style="width: 50px;font-size: 15px;">座位:</div>
-              <div style="flex: 1;">
-                <div v-if="selectedSeats.length === 0" style="color: #999; font-size: 14px;">未选择座位</div>
-                <div v-else style="display: flex; flex-wrap: wrap; gap: 8px;">
-                   <span v-for="seat in selectedSeats" :key="seat" style="background: #e3f2fd;padding: 3px 8px;border-radius: 5px;"> {{ seat }}
-                     <span @click="removeSeat(seat)" style="margin-left: 5px;color: #f44336;">×</span>
+          <div class="selected-seats">
+            <div class="selected-seats__row">
+              <div class="selected-seats__label">座位:</div>
+              <div class="selected-seats__body">
+                <div v-if="selectedSeats.length === 0" class="selected-seats__empty">未选择座位</div>
+                <div v-else class="selected-seats__list">
+                   <span v-for="seat in selectedSeats" :key="seat" class="seat-chip"> {{ seat }}
+                     <span class="seat-chip__remove" @click="removeSeat(seat)">×</span>
                    </span>
                 </div>
               </div>
             </div>
           </div>
 
-          <!-- 确认购票按钮：canSubmit 为 false 时同时挡住"无座位/未登录/加载中/提交中" -->
-          <div style="margin-top: 20px; text-align: center;">
-            <button style="background: #ef4238; color: #fff; border: none; padding: 8px 30px; border-radius: 4px; cursor: pointer; font-size: 14px;"
+          <!-- 确认购票按钮：disabled 时同时挡住"无座位/未登录/加载中/提交中" -->
+          <div class="submit-row">
+            <button class="submit-button"
                     :disabled="!canSubmit"
-                    :style="{ opacity: canSubmit ? 1 : 0.6 }"
                     @click="confirmBooking"
             >
               {{ submitting ? '提交中…' : `确认购票（${selectedSeats.length}张）` }}
@@ -113,44 +100,43 @@
         </div>
 
         <!-- 右侧：电影信息区 -->
-        <div style="flex: 1; padding: 15px; border-radius: 4px; background-color: #fafafa;">
+        <div class="film-aside">
           <!-- 电影海报 -->
-          <div style="margin-bottom: 10px;">
-            <img :src="filmInfo.img " alt="电影海报"
-                 style="width: 180px; height: 230px;">
+          <div class="film-aside__poster-wrap">
+            <img :src="filmInfo.img " alt="电影海报" class="film-aside__poster">
           </div>
 
-          <hr style="border: none; border-top: 1px solid #eee; margin: 15px 0;">
+          <hr class="divider">
 
           <!-- 场次信息 -->
-          <div style="margin-bottom: 15px;">
-            <div style="font-weight: bold; margin-bottom: 8px; color: #333;">场次信息</div>
-            <div style="display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 14px;">
-              <span style="color: #666;">影院：</span>
-              <span style="color: #333;">{{ cinemaInfo.name || '未知' }}</span>
+          <div class="info-block">
+            <div class="info-block__title">场次信息</div>
+            <div class="info-row">
+              <span class="info-row__label">影院：</span>
+              <span class="info-row__value">{{ cinemaInfo.name || '未知' }}</span>
             </div>
-            <div style="display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 14px;">
-              <span style="color: #666;">时间：</span>
-              <span style="color: #333;">{{ formatShowTime(showInfo.start) }}</span>
+            <div class="info-row">
+              <span class="info-row__label">时间：</span>
+              <span class="info-row__value">{{ formatShowTime(showInfo.start) }}</span>
             </div>
-            <div style="display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 14px;">
-              <span style="color: #666;">票价：</span>
-              <span style="color: #ef4238; font-weight: bold;">¥{{ showInfo.price || 0 }}/张</span>
+            <div class="info-row">
+              <span class="info-row__label">票价：</span>
+              <span class="info-row__price">¥{{ showInfo.price || 0 }}/张</span>
             </div>
           </div>
 
-          <hr style="border: none; border-top: 1px solid #eee; margin: 15px 0;">
+          <hr class="divider">
 
           <!-- 订单汇总 -->
-          <div style="padding: 10px; background: #f5f5f5; border-radius: 4px;">
-            <div style="font-weight: bold; margin-bottom: 8px; color: #333;">订单汇总</div>
-            <div style="display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 14px;">
-              <span style="color: #666;">座位数：</span>
-              <span style="color: #333;">{{ selectedSeats.length }} 张</span>
+          <div class="total-box">
+            <div class="info-block__title">订单汇总</div>
+            <div class="info-row">
+              <span class="info-row__label">座位数：</span>
+              <span class="info-row__value">{{ selectedSeats.length }} 张</span>
             </div>
-            <div style="display: flex; justify-content: space-between; margin-top: 10px; font-size: 16px; font-weight: bold; padding-top: 10px; border-top: 1px solid #eee;">
-              <span style="color: #333;">总价：</span>
-              <span style="color: #ef4238;">¥{{ calculateTotalPrice() }}</span>
+            <div class="total-box__row">
+              <span class="total-box__label">总价：</span>
+              <span class="total-box__value">¥{{ calculateTotalPrice() }}</span>
             </div>
           </div>
         </div>
@@ -171,6 +157,7 @@
 <script setup>
 import { computed, ref, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { CircleCloseFilled, Loading } from '@element-plus/icons-vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import request from "@/utils/request.js";
 import { API_PATHS, ORDER_API, apiById } from '@/constants';
@@ -420,16 +407,17 @@ const fetchBaseInfo = () => {
 };
 
 // 座位操作工具函数
-const getSeatColor = (row, col) => {
+// 座位状态 → 语义类名；色值统一由 scoped 样式经令牌给出（规范 §3.1）
+const getSeatClass = (row, col) => {
   const r = row - 1;
   const c = col - 1;
-  if (!seats.value[r] || seats.value[r][c] === undefined) return '#f5f5f5';
+  if (!seats.value[r] || seats.value[r][c] === undefined) return 'seat-item--empty';
   switch (seats.value[r][c]) {
-    case 0: return '#4CAF50'; // 可选（绿色）
-    case 1: return '#f30656';    // 他人占用（红色）
-    case 2: return '#2196F3'; // 已选（蓝色）
-    case 3: return '#FF9800'; // 本人未支付锁座（橙色）
-    default: return '#f5f5f5';
+    case 0: return 'seat-item--available'; // 可选
+    case 1: return 'seat-item--taken';     // 他人占用
+    case 2: return 'seat-item--selected';  // 已选
+    case 3: return 'seat-item--mine';      // 本人未支付锁座
+    default: return 'seat-item--empty';
   }
 };
 
@@ -517,9 +505,337 @@ const confirmBooking = async () => {
 </script>
 
 <style scoped>
+.buy-page {
+  width: 100%;
+  padding: var(--space-20) 0;
+  background-color: var(--el-fill-color-lighter);
+}
+
+.buy-panel {
+  width: 70%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: var(--space-32);
+  border-radius: var(--el-border-radius-base);
+  background-color: var(--el-bg-color);
+  box-shadow: var(--el-box-shadow-lighter);
+}
+
+.buy-title {
+  margin-bottom: var(--space-24);
+  padding-bottom: var(--space-16);
+  border-bottom: 1px solid var(--el-border-color-lighter);
+  font-size: var(--fs-3xl);
+  font-weight: var(--fw-bold);
+  color: var(--el-text-color-primary);
+  text-align: center;
+}
+
+.buy-layout {
+  display: flex;
+  gap: var(--space-24);
+}
+
+.buy-main {
+  flex: 3;
+}
+
+/* ---------- 座位图例 ---------- */
+.seat-legend {
+  margin-bottom: var(--space-20);
+  padding: var(--space-12);
+  border-radius: var(--el-border-radius-base);
+}
+
+.seat-legend__row {
+  display: flex;
+  gap: var(--space-40);
+}
+
+.seat-legend__item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+}
+
+.seat-swatch {
+  width: 22px;
+  height: 22px;
+  border-radius: var(--el-border-radius-base);
+}
+
+/* 图例色与座位实际用色同源，避免"图例说红、座位画粉" */
+.seat-swatch--taken {
+  background: var(--color-seat-taken);
+}
+
+.seat-swatch--available {
+  background: var(--color-seat-available);
+}
+
+.seat-swatch--selected {
+  background: var(--color-seat-selected);
+}
+
+.seat-swatch--mine {
+  background: var(--color-seat-mine);
+}
+
+.seat-legend__label {
+  font-size: var(--fs-base);
+  color: var(--el-text-color-regular);
+}
+
+.seat-screen {
+  width: 80%;
+  height: 8px;
+  margin: 0 auto var(--space-32);
+  border-radius: var(--el-border-radius-base);
+  background: var(--el-text-color-secondary);
+}
+
+/* ---------- 座位矩阵 ---------- */
+.seat-map {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-12);
+}
+
+.seat-map__row {
+  display: flex;
+  gap: var(--space-12);
+}
+
+.seat-item {
+  width: 22px;
+  height: 22px;
+}
+
+.seat-item--clickable {
+  cursor: pointer;
+}
+
+.seat-item--locked {
+  cursor: not-allowed;
+}
+
+.seat-item--available {
+  background-color: var(--color-seat-available);
+}
+
+.seat-item--taken {
+  background-color: var(--color-seat-taken);
+}
+
+.seat-item--selected {
+  background-color: var(--color-seat-selected);
+}
+
+.seat-item--mine {
+  background-color: var(--color-seat-mine);
+}
+
+.seat-item--empty {
+  background-color: var(--el-fill-color);
+}
+
 /* 座位悬停效果 */
 .seat-item:hover {
   transform: scale(1.2);
+}
+
+/* ---------- 加载 / 错误占位 ---------- */
+.seat-hint {
+  padding: var(--space-64) 0;
+  color: var(--el-text-color-secondary);
+  text-align: center;
+}
+
+.seat-hint--error {
+  color: var(--el-color-danger);
+}
+
+.seat-hint__icon {
+  font-size: var(--fs-xl);
+  margin-bottom: var(--space-8);
+}
+
+.seat-hint__icon--spin {
+  animation: rotating 2s linear infinite;
+}
+
+.seat-hint__text {
+  margin-top: var(--space-8);
+}
+
+.seat-hint__action {
+  margin-top: var(--space-16);
+}
+
+/* ---------- 本人未支付锁座 ---------- */
+.pending-box {
+  margin-top: var(--space-20);
+  padding: var(--space-12);
+  border: 1px solid var(--el-color-warning-light-8);
+  border-radius: var(--el-border-radius-base);
+  background: var(--el-color-warning-light-9);
+}
+
+.pending-box__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: var(--fs-base);
+  color: var(--el-color-warning);
+}
+
+.pending-box__actions {
+  white-space: nowrap;
+}
+
+/* ---------- 已选座位 ---------- */
+.selected-seats {
+  margin-top: var(--space-24);
+  padding: var(--space-12);
+  border-radius: var(--el-border-radius-base);
+}
+
+.selected-seats__row {
+  display: flex;
+}
+
+.selected-seats__label {
+  width: 50px;
+  font-size: var(--fs-md);
+}
+
+.selected-seats__body {
+  flex: 1;
+}
+
+.selected-seats__empty {
+  font-size: var(--fs-base);
+  color: var(--el-text-color-secondary);
+}
+
+.selected-seats__list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-8);
+}
+
+.selected-seats__chip,
+.seat-chip {
+  padding: var(--space-4) var(--space-8);
+  border-radius: var(--el-border-radius-base);
+  background: var(--el-color-primary-light-9);
+}
+
+.seat-chip__remove {
+  margin-left: var(--space-4);
+  color: var(--el-color-danger);
+  cursor: pointer;
+}
+
+/* ---------- 提交 ---------- */
+.submit-row {
+  margin-top: var(--space-20);
+  text-align: center;
+}
+
+/* 主按钮底承载白字，须达 AA（白字压 #BF352D 为 5.58:1） */
+.submit-button {
+  padding: var(--space-8) var(--space-32);
+  border: none;
+  border-radius: var(--el-border-radius-base);
+  background: var(--el-color-primary);
+  color: #ffffff;
+  font-size: var(--fs-base);
+  cursor: pointer;
+}
+
+.submit-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ---------- 右侧电影信息 ---------- */
+.film-aside {
+  flex: 1;
+  padding: var(--space-16);
+  border-radius: var(--el-border-radius-base);
+  background-color: var(--el-fill-color-lighter);
+}
+
+.film-aside__poster-wrap {
+  margin-bottom: var(--space-12);
+}
+
+.film-aside__poster {
+  width: 180px;
+  height: 230px;
+  object-fit: cover;
+}
+
+.divider {
+  margin: var(--space-16) 0;
+  border: none;
+  border-top: 1px solid var(--el-border-color-lighter);
+}
+
+.info-block {
+  margin-bottom: var(--space-16);
+}
+
+.info-block__title {
+  margin-bottom: var(--space-8);
+  font-weight: var(--fw-bold);
+  color: var(--el-text-color-primary);
+}
+
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: var(--space-8);
+  font-size: var(--fs-base);
+}
+
+.info-row__label {
+  color: var(--el-text-color-regular);
+}
+
+.info-row__value {
+  color: var(--el-text-color-primary);
+}
+
+.info-row__price {
+  font-weight: var(--fw-bold);
+  color: var(--el-color-primary);
+}
+
+.total-box {
+  padding: var(--space-12);
+  border-radius: var(--el-border-radius-base);
+  background: var(--el-fill-color-light);
+}
+
+.total-box__row {
+  display: flex;
+  justify-content: space-between;
+  margin-top: var(--space-12);
+  padding-top: var(--space-12);
+  border-top: 1px solid var(--el-border-color-lighter);
+  font-size: var(--fs-md);
+  font-weight: var(--fw-bold);
+}
+
+.total-box__label {
+  color: var(--el-text-color-primary);
+}
+
+.total-box__value {
+  color: var(--el-color-primary);
 }
 
 /* 加载动画（兼容Element Plus） */

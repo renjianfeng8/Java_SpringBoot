@@ -19,8 +19,8 @@
         <el-table-column label="发布时间" prop="time" />
         <el-table-column label="操作">
           <template #default="scope">
-            <el-button style="font-size: 18px" link :icon="Edit" @click="openEdit(scope.row)" type="primary" />
-            <el-button style="font-size: 18px" link :icon="Delete" @click="handleDel(scope.row.id)" type="danger" />
+            <el-button class="row-action" link :icon="Edit" @click="openEdit(scope.row)" type="primary" />
+            <el-button class="row-action" link :icon="Delete" @click="handleDel(scope.row.id)" type="danger" />
           </template>
         </el-table-column>
       </el-table>

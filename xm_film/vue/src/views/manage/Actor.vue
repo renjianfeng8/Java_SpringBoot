@@ -1,23 +1,23 @@
 <template>
   <div>
-    <div class="card" style="margin-bottom: 5px">
-      <el-input v-model="searchForm.actorName" placeholder="请输入演员名称查询" style="width: 300px; margin-right:10px" :prefix-icon="Search" />
+    <div class="card page-card">
+      <el-input v-model="searchForm.actorName" placeholder="请输入演员名称查询" class="search-input" :prefix-icon="Search" />
       <el-button type="primary" @click="onSearch">查 询</el-button>
       <el-button type="warning" @click="onReset">重 置</el-button>
     </div>
 
-    <div class="card" style="margin-bottom: 5px">
+    <div class="card page-card">
       <el-button type="info" @click="openAdd">新 增</el-button>
       <el-button type="danger" @click="handleDelBatch">批量删除</el-button>
     </div>
 
-    <div class="card" style="margin-bottom: 5px">
+    <div class="card page-card">
       <el-table v-loading="loading" stripe :data="dataList" @selection-change="onSelectionChange" empty-text="暂无数据">
         <el-table-column type="selection" width="55" />
         <el-table-column label="电影名称" prop="title" />
         <el-table-column label="电影图片" prop="img" >
           <template #default="scope">
-            <el-image style="width:40px;height:40px;border-radius:5%;object-fit:cover;margin-top: 5px"
+            <el-image class="cell-avatar"
                       v-if="scope.row.img" :src="scope.row.img"
                       :preview-src-list="[scope.row.img]" preview-teleported />
           </template>
@@ -26,7 +26,7 @@
         <el-table-column label="饰演角色" prop="figure" />
         <el-table-column label="演员照片" prop="picture" >
           <template #default="scope">
-            <el-image style="width:40px;height:40px;border-radius:5%;object-fit:cover;margin-top: 5px"
+            <el-image class="cell-avatar"
                       v-if="scope.row.picture" :src="scope.row.picture"
                       :preview-src-list="[scope.row.picture]" preview-teleported />
           </template>
@@ -38,14 +38,14 @@
         </el-table-column>
         <el-table-column label="操作">
           <template #default="scope">
-            <el-button style="font-size: 18px" link :icon="Edit" @click="openEdit(scope.row)" type="primary" />
-            <el-button style="font-size: 18px" link :icon="Delete" @click="() => handleDel(scope.row.id)" type="danger" />
+            <el-button class="row-action" link :icon="Edit" @click="openEdit(scope.row)" type="primary" />
+            <el-button class="row-action" link :icon="Delete" @click="() => handleDel(scope.row.id)" type="danger" />
           </template>
         </el-table-column>
       </el-table>
     </div>
 
-    <div class="card" style="margin-bottom: 5px">
+    <div class="card page-card">
       <el-pagination
           @size-change="onSizeChange"
           @current-change="onPageChange"
@@ -59,7 +59,7 @@
     </div>
 
     <el-dialog v-model="dialogVisible" title="演职人员信息" width="500" destroy-on-close>
-      <el-form ref="formRef" :rules="rules" :model="form" style="padding-right: 50px;padding-top: 20px" label-width="80px">
+      <el-form ref="formRef" :rules="rules" :model="form" class="dialog-form" label-width="80px">
         <el-form-item label="电影名称" prop="title">
           <el-input v-model="form.title" autocomplete="off" placeholder="请输入电影名称" />
         </el-form-item>

@@ -1,54 +1,49 @@
 <template>
-  <div style="width: 55%; margin: 20px auto;">
+  <div class="page-narrow">
     <!-- 影院列表 -->
-    <div style="padding: 15px;">
+    <div class="cinema-list">
       <!-- 循环渲染每个影院 -->
-      <div v-for="(cinema, index) in data.filmData" :key="index"
-           style="border: 1px solid #e0e0e0; border-radius: 5px; padding: 15px; margin-bottom: 15px;display: flex;">
+      <div v-for="(cinema, index) in data.filmData" :key="index" class="cinema-card">
         <!-- 左侧图片 -->
-        <div style="width: 200px; flex-shrink: 0;">
-          <img :src="cinema.avatar " alt="影院图片" style="width: 100%; height: 140px; border-radius: 5px">
+        <div class="cinema-card__poster">
+          <img :src="cinema.avatar " alt="影院图片" class="cinema-card__img">
         </div>
         <!-- 右侧信息区域 -->
-        <div style="flex: 1; margin-left: 15px">
+        <div class="cinema-card__info">
           <!-- 影院名称 -->
-          <div style="font-size: 18px; font-weight: bold; color: #333;">{{ cinema.name }}</div>
+          <div class="cinema-card__name">{{ cinema.name }}</div>
 
-          <!-- 影院服务标签（4个标签，不同颜色） -->
-          <div style="margin-top: 10px; display: flex; gap: 8px; flex-wrap: wrap;">
-            <!-- 退票无忧：红色系 -->
-            <div style="padding: 3px 10px; border-radius: 12px; font-size: 12px; color: #fff; background-color: #ef4238;">
+          <!-- 影院服务标签：用功能色，白字压其上均达 AA（规范 §2.5） -->
+          <div class="cinema-card__tags">
+            <div class="service-tag service-tag--refund">
               退票无忧
             </div>
-            <!-- 儿童优惠：橙色系 -->
-            <div style="padding: 3px 10px; border-radius: 12px; font-size: 12px; color: #fff; background-color: #fa8c16;">
+            <div class="service-tag service-tag--promo">
               儿童优惠
             </div>
-            <!-- WiFi覆盖：蓝色系 -->
-            <div style="padding: 3px 10px; border-radius: 12px; font-size: 12px; color: #fff; background-color: #1890ff;">
+            <div class="service-tag service-tag--wifi">
               WiFi覆盖
             </div>
-            <!-- 免费停车：绿色系 -->
-            <div style="padding: 3px 10px; border-radius: 12px; font-size: 12px; color: #fff; background-color: #52c41a;">
+            <div class="service-tag service-tag--parking">
               免费停车
             </div>
           </div>
 
           <!-- 详细信息 -->
-          <div style="margin-bottom: 15px; color: #666;">
+          <div class="cinema-card__detail">
 
-            <div style="margin: 8px 0; display: flex; align-items: center;">
-              <div style="margin-right: 8px; color: #ef4238;">电话:</div>
+            <div class="cinema-card__detail-row">
+              <div class="cinema-card__detail-label">电话:</div>
               <div>{{ cinema.phone }}</div>
             </div>
 
-            <div style="margin: 8px 0; display: flex; align-items: center;">
-              <div style="margin-right: 8px; color: #ef4238;">邮箱:</div>
+            <div class="cinema-card__detail-row">
+              <div class="cinema-card__detail-label">邮箱:</div>
               <div>{{ cinema.email }}</div>
             </div>
 
-            <div style="margin: 8px 0; display: flex; align-items: center;">
-              <div style="margin-right: 8px; color: #ef4238;">地址:</div>
+            <div class="cinema-card__detail-row">
+              <div class="cinema-card__detail-label">地址:</div>
               <div>{{ cinema.address }}</div>
             </div>
           </div>
@@ -59,7 +54,7 @@
     </div>
 
     <!-- 分页组件 -->
-    <div style="margin: 5px;padding: 5px" v-if="data.total">
+    <div class="cinema-list__pagination" v-if="data.total">
       <el-pagination
           @size-change="handleSizeChange"
           @current-change="handleCurrentChange"
@@ -124,3 +119,92 @@ const handleCurrentChange = (newPage) => {
 // 初始加载数据
 load()
 </script>
+
+<style scoped>
+.cinema-list {
+  padding: var(--space-16);
+}
+
+.cinema-card {
+  display: flex;
+  margin-bottom: var(--space-16);
+  padding: var(--space-16);
+  border: 1px solid var(--el-border-color);
+  border-radius: var(--el-border-radius-base);
+}
+
+.cinema-card__poster {
+  flex-shrink: 0;
+  width: 200px;
+}
+
+.cinema-card__img {
+  width: 100%;
+  height: 140px;
+  border-radius: var(--el-border-radius-base);
+  object-fit: cover;
+}
+
+.cinema-card__info {
+  flex: 1;
+  margin-left: var(--space-16);
+}
+
+.cinema-card__name {
+  font-size: var(--fs-lg);
+  font-weight: var(--fw-bold);
+  color: var(--el-text-color-primary);
+}
+
+.cinema-card__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-8);
+  margin-top: var(--space-12);
+}
+
+.service-tag {
+  padding: var(--space-4) var(--space-12);
+  border-radius: var(--el-border-radius-base);
+  font-size: var(--fs-xs);
+  color: #ffffff;
+}
+
+.service-tag--refund {
+  background-color: var(--el-color-primary);
+}
+
+.service-tag--promo {
+  background-color: var(--el-color-warning);
+}
+
+.service-tag--wifi {
+  background-color: var(--el-color-info);
+}
+
+.service-tag--parking {
+  background-color: var(--el-color-success);
+}
+
+.cinema-card__detail {
+  margin-bottom: var(--space-16);
+  color: var(--el-text-color-regular);
+}
+
+.cinema-card__detail-row {
+  display: flex;
+  align-items: center;
+  margin: var(--space-8) 0;
+}
+
+/* 标签文字承载内容，用主色（5.58:1）而非品牌红（3.81:1） */
+.cinema-card__detail-label {
+  margin-right: var(--space-8);
+  color: var(--el-color-primary);
+}
+
+.cinema-list__pagination {
+  margin: var(--space-4);
+  padding: var(--space-4);
+}
+</style>

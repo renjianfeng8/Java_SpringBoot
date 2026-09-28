@@ -12,82 +12,65 @@
                     @paid="..." @cancelled="..." @timeout="..." />
 -->
 <template>
-  <div v-if="modelValue"
-       style="position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-              background: rgba(0,0,0,0.5); display: flex; align-items: center;
-              justify-content: center; z-index: 1000;">
-    <div style="background: white; border-radius: 8px; padding: 30px; width: 400px;
-                box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
-      <div style="font-size: 20px; font-weight: bold; text-align: center; margin-bottom: 20px;">
+  <div v-if="modelValue" class="pay-mask">
+    <div class="pay-dialog">
+      <div class="pay-dialog__title">
         确认支付
       </div>
-      <div style="margin-bottom: 15px;">
-        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-          <span style="color: #666;">订单编号：</span>
+      <div class="pay-dialog__body">
+        <div class="pay-row">
+          <span class="pay-row__label">订单编号：</span>
           <span>{{ order?.orders }}</span>
         </div>
-        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-          <span style="color: #666;">座位：</span>
+        <div class="pay-row">
+          <span class="pay-row__label">座位：</span>
           <span>{{ order?.seat }}</span>
         </div>
-        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;
-                    font-size: 18px; font-weight: bold;">
-          <span style="color: #333;">应付金额：</span>
-          <span style="color: #ef4238;">¥{{ money(payable) }}</span>
+        <div class="pay-row pay-row--amount">
+          <span class="pay-row__label">应付金额：</span>
+          <span class="pay-amount">¥{{ money(payable) }}</span>
         </div>
-        <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 14px;">
-          <span style="color: #666;">账户余额：</span>
-          <span :style="{ color: insufficient ? '#ef4238' : '#333', fontWeight: 'bold' }">
+        <div class="pay-row pay-row--small">
+          <span class="pay-row__label">账户余额：</span>
+          <span :class="insufficient ? 'pay-balance--low' : 'pay-balance'" class="pay-balance--strong">
             {{ balance === null ? '加载中…' : `¥${money(balance)}` }}
           </span>
         </div>
-        <div v-if="!insufficient && balance !== null"
-             style="display: flex; justify-content: space-between; font-size: 14px;">
-          <span style="color: #666;">支付后余额：</span>
-          <span style="color: #333;">¥{{ money(afterPay) }}</span>
+        <div v-if="!insufficient && balance !== null" class="pay-row pay-row--small">
+          <span class="pay-row__label">支付后余额：</span>
+          <span class="pay-value">¥{{ money(afterPay) }}</span>
         </div>
 
-        <div v-if="insufficient"
-             style="margin: 12px 0; padding: 8px 10px; background: #fef0f0;
-                    color: #f56c6c; border-radius: 4px; font-size: 13px;">
+        <div v-if="insufficient" class="pay-warning">
           余额不足，还差 ¥{{ money(payable - balance) }}，请先充值后再支付。
         </div>
 
-        <div v-if="countdown > 0"
-             style="text-align: center; margin: 15px 0; font-size: 14px; color: #999;">
+        <div v-if="countdown > 0" class="pay-countdown">
           剩余支付时间：
-          <span :style="{ color: countdown <= 30 ? '#ef4238' : '#333',
-                          fontWeight: 'bold', fontSize: '18px' }">
+          <span :class="countdown <= 30 ? 'countdown--urgent' : 'countdown--normal'">
             {{ formatCountdown(countdown) }}
           </span>
         </div>
-        <div v-else style="text-align: center; margin: 15px 0; color: #ef4238; font-weight: bold;">
+        <div v-else class="pay-timeout">
           支付已超时
         </div>
       </div>
-      <div style="display: flex; gap: 15px; justify-content: center;">
+      <div class="pay-dialog__actions">
         <button @click="cancelOrder"
                 :disabled="submitting"
-                style="padding: 8px 25px; border: 1px solid #ddd; border-radius: 4px;
-                       background: white; cursor: pointer; font-size: 14px;">
+                class="pay-button pay-button--cancel">
           取消订单
         </button>
         <button v-if="insufficient"
                 @click="goRecharge"
                 :disabled="submitting"
-                style="padding: 8px 25px; border: none; border-radius: 4px;
-                       background: #ef4238; color: white; cursor: pointer; font-size: 14px;">
+                class="pay-button pay-button--primary">
           去充值
         </button>
         <button v-else @click="submitPayment"
                 :disabled="countdown <= 0 || submitting || balance === null"
-                :style="{
-                  padding: '8px 25px', border: 'none', borderRadius: '4px',
-                  background: (countdown > 0 && balance !== null) ? '#ef4238' : '#ccc',
-                  color: 'white',
-                  cursor: (countdown > 0 && balance !== null) ? 'pointer' : 'not-allowed',
-                  fontSize: '14px'
-                }">
+                :class="(countdown > 0 && balance !== null) ? 'pay-button--primary' : 'pay-button--disabled'"
+                class="pay-button">
           余额支付
         </button>
       </div>
@@ -238,3 +221,143 @@ const cancelOrder = async () => {
   }
 };
 </script>
+
+<style scoped>
+.pay-mask {
+  position: fixed;
+  top: 0;
+  left: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  background: var(--overlay-mask);
+  z-index: var(--el-index-popper);
+}
+
+.pay-dialog {
+  width: 400px;
+  padding: var(--space-32);
+  border-radius: var(--el-border-radius-base);
+  background: var(--el-bg-color);
+  box-shadow: var(--el-box-shadow-light);
+}
+
+.pay-dialog__title {
+  margin-bottom: var(--space-20);
+  font-size: var(--fs-xl);
+  font-weight: var(--fw-bold);
+  text-align: center;
+}
+
+.pay-dialog__body {
+  margin-bottom: var(--space-16);
+}
+
+.pay-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: var(--space-8);
+}
+
+.pay-row--amount {
+  font-size: var(--fs-lg);
+  font-weight: var(--fw-bold);
+}
+
+.pay-row--small {
+  font-size: var(--fs-base);
+}
+
+.pay-row__label {
+  color: var(--el-text-color-regular);
+}
+
+/* 金额与余额承载文字，用达 AA 的令牌 */
+.pay-amount {
+  color: var(--el-color-primary);
+}
+
+.pay-balance,
+.pay-value {
+  color: var(--el-text-color-primary);
+}
+
+.pay-balance--strong {
+  font-weight: var(--fw-bold);
+}
+
+.pay-balance--low {
+  color: var(--el-color-danger);
+}
+
+.pay-warning {
+  margin: var(--space-12) 0;
+  padding: var(--space-8) var(--space-12);
+  border-radius: var(--el-border-radius-base);
+  background: var(--el-color-danger-light-9);
+  color: var(--el-color-danger);
+  font-size: var(--fs-sm);
+}
+
+.pay-countdown {
+  margin: var(--space-16) 0;
+  font-size: var(--fs-base);
+  color: var(--el-text-color-secondary);
+  text-align: center;
+}
+
+.countdown--normal {
+  font-size: var(--fs-lg);
+  font-weight: var(--fw-bold);
+  color: var(--el-text-color-primary);
+}
+
+.countdown--urgent {
+  font-size: var(--fs-lg);
+  font-weight: var(--fw-bold);
+  color: var(--el-color-danger);
+}
+
+.pay-timeout {
+  margin: var(--space-16) 0;
+  color: var(--el-color-danger);
+  font-weight: var(--fw-bold);
+  text-align: center;
+}
+
+.pay-dialog__actions {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-16);
+}
+
+.pay-button {
+  padding: var(--space-8) var(--space-24);
+  border-radius: var(--el-border-radius-base);
+  font-size: var(--fs-base);
+}
+
+.pay-button--cancel {
+  border: 1px solid var(--el-border-color);
+  background: var(--el-bg-color);
+  color: var(--el-text-color-primary);
+  cursor: pointer;
+}
+
+/* 主按钮底承载白字，须达 AA（白字压 #BF352D 为 5.58:1） */
+.pay-button--primary {
+  border: none;
+  background: var(--el-color-primary);
+  color: #ffffff;
+  cursor: pointer;
+}
+
+.pay-button--disabled {
+  border: none;
+  background: var(--el-text-color-disabled);
+  color: #ffffff;
+  cursor: not-allowed;
+}
+</style>
