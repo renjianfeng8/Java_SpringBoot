@@ -38,7 +38,8 @@ CREATE TABLE `user` (
     `role`     VARCHAR(20)  DEFAULT 'USER'              COMMENT '角色',
     `avatar`   VARCHAR(500)                             COMMENT '头像URL',
     `phone`    VARCHAR(20)                              COMMENT '手机号',
-    `email`    VARCHAR(100)                             COMMENT '邮箱'
+    `email`    VARCHAR(100)                             COMMENT '邮箱',
+    `balance`  DECIMAL(10,2) NOT NULL DEFAULT 0.00       COMMENT '账户余额（元，资金唯一可信来源）'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='用户表';
 
 -- ---------------------------
@@ -190,6 +191,7 @@ CREATE TABLE `ordered` (
     `room_id`     INT           NOT NULL                   COMMENT '放映厅ID',
     `appointment` VARCHAR(100)                             COMMENT '预约场次信息',
     `total`       DECIMAL(10,2) DEFAULT 0.00               COMMENT '订单总金额（元）',
+    `unit_price`  DECIMAL(10,2) NULL DEFAULT NULL          COMMENT '单价快照（元，下单时取自场次票价）',
     `number`      INT           DEFAULT 1                  COMMENT '购票数量',
     `status`      VARCHAR(20)   DEFAULT '待取票'           COMMENT '订单状态（待支付/待取票/已取票/已取消/已退票）',
     `start`       DATETIME                                 COMMENT '放映时间',
@@ -256,5 +258,48 @@ CREATE TABLE `video` (
     `preview` VARCHAR(500)                            COMMENT '视频预览URL',
     `start`   DATE                                    COMMENT '上映日期'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='视频/预告片表';
+
+-- ---------------------------
+-- 15. 充值单据表 (recharge_order)
+-- ---------------------------
+-- 充值走「先建单据（处理中）→ 支付网关异步回调 → 已完成/已失败」，
+-- 提交单据不改变余额，只有回调成功才入账。演示环境由前端按钮触发回调，
+-- 正式环境为第三方支付平台的回调入口，接口形态一致。
+DROP TABLE IF EXISTS `recharge_order`;
+CREATE TABLE `recharge_order` (
+    `id`          INT           AUTO_INCREMENT PRIMARY KEY COMMENT '充值单据ID',
+    `recharge_no` VARCHAR(50)   NOT NULL                   COMMENT '充值单号',
+    `user_id`     INT           NOT NULL                   COMMENT '充值用户ID',
+    `amount`      DECIMAL(10,2) NOT NULL                   COMMENT '充值金额（元）',
+    `status`      VARCHAR(20)   NOT NULL DEFAULT '处理中'   COMMENT '单据状态（处理中/已完成/已失败）',
+    `create_time` DATETIME      DEFAULT CURRENT_TIMESTAMP  COMMENT '申请时间',
+    `finish_time` DATETIME      NULL DEFAULT NULL          COMMENT '完成时间（回调处理时间）',
+    `remark`      VARCHAR(255)                             COMMENT '备注（失败原因等）',
+    UNIQUE KEY uk_recharge_no (recharge_no),
+    INDEX idx_recharge_user_id (user_id),
+    INDEX idx_recharge_status (status),
+    FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='充值单据表';
+
+-- ---------------------------
+-- 16. 资金流水表 (fund_flow)
+-- ---------------------------
+-- 每一笔余额变动（充值入账/购票扣款/退票退款）都留一条流水，记录变动前余额、
+-- 变动后余额、业务来源与关联业务单据ID。只增不改不删，不提供更新/删除入口。
+-- related_id 指向 recharge_order.id 或 ordered.id，跨表二选一故不建外键。
+DROP TABLE IF EXISTS `fund_flow`;
+CREATE TABLE `fund_flow` (
+    `id`             INT           AUTO_INCREMENT PRIMARY KEY COMMENT '流水ID',
+    `user_id`        INT           NOT NULL                   COMMENT '用户ID',
+    `source`         VARCHAR(20)   NOT NULL                   COMMENT '业务来源（充值/购票/退票）',
+    `change_amount`  DECIMAL(10,2) NOT NULL                   COMMENT '变动金额（正为入账，负为出账）',
+    `balance_before` DECIMAL(10,2) NOT NULL                   COMMENT '变动前余额（元）',
+    `balance_after`  DECIMAL(10,2) NOT NULL                   COMMENT '变动后余额（元）',
+    `related_id`     INT                                      COMMENT '关联业务单据ID（充值单ID 或 订单ID）',
+    `create_time`    DATETIME      DEFAULT CURRENT_TIMESTAMP  COMMENT '发生时间',
+    INDEX idx_flow_user_id (user_id),
+    INDEX idx_flow_source (source),
+    FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='资金流水表（只增不改不删）';
 
 SET FOREIGN_KEY_CHECKS = 1;

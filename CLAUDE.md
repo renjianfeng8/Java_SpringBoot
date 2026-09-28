@@ -38,7 +38,10 @@ project_02/
 ├── LICENSE                            # 许可证
 ├── Bug.md                             # Bug 修复记录（修复前先查阅）
 ├── scripts/                           # 通用脚本
-│   └── start-dev.bat                  # 一键启动
+│   ├── start-dev.bat                  # 一键启动
+│   └── verify/                        # 隔离环境验证脚本（备用端口 + 临时库，不碰开发库）
+│       ├── p4-account-wallet-e2e.py   # 账户-充值-订单闭环端到端验证（69 断言，可反复运行）
+│       └── p4-concurrency.py          # 余额扣减并发正确性验证（11 断言，可反复运行）
 ├── xm_film/                           # 项目主目录
 │   ├── springboot/                    # 后端（Spring Boot）
 │   │   ├── pom.xml                    # Maven 依赖配置
@@ -49,22 +52,23 @@ project_02/
 │   │       │   │   ├── BaseMapper.java         # MyBatis 通用 Mapper 接口
 │   │       │   │   ├── BaseService.java        # 通用 CRUD Service 基类
 │   │       │   │   ├── BaseController.java     # 通用 CRUD Controller 基类
+│   │       │   │   ├── AuthContext.java        # 取当前请求的 role / userId（拦截器写入的属性）
 │   │       │   │   ├── CorsConfig.java         # CORS 跨域
 │   │       │   │   ├── FileUtil.java           # 文件上传工具（含 MIME 白名单）
 │   │       │   │   ├── JwtUtils.java           # JWT 令牌工具（JJWT 新版 API）
 │   │       │   │   ├── Result.java             # 统一响应封装
-│   │       │   │   └── enums/                  # 词表枚举（RoleEnum / OrderStatus / RecordStatus / PayResult / CinemaStatus）
+│   │       │   │   └── enums/                  # 词表枚举（RoleEnum / OrderStatus / RecordStatus / PayResult / CinemaStatus / RechargeStatus / FundSource）
 │   │       │   ├── common/config/
 │   │       │   │   ├── AuthInterceptor.java    # JWT 认证拦截器
 │   │       │   │   └── WebMvcConfig.java       # Web MVC 配置
-│   │       │   ├── controller/                 # 控制器层（14个）
-│   │       │   ├── entity/                     # 实体类（14个）
-│   │       │   ├── mapper/                     # MyBatis Mapper（14个）
-│   │       │   ├── service/                    # 业务逻辑层（14个）
+│   │       │   ├── controller/                 # 控制器层（19个）
+│   │       │   ├── entity/                     # 实体类（16个）
+│   │       │   ├── mapper/                     # MyBatis Mapper（15个）
+│   │       │   ├── service/                    # 业务逻辑层（16个）
 │   │       │   └── exception/                  # 异常处理
 │   │       └── resources/
 │   │           ├── application.yml             # 应用配置
-│   │           └── mapper/                     # MyBatis XML 映射（14个）
+│   │           └── mapper/                     # MyBatis XML 映射（15个）
 │   ├── vue/                            # 前端（Vue 3）
 │   │   ├── index.html                  # HTML 入口
 │   │   ├── vite.config.js              # Vite 配置（含 AutoImport / Components 插件）
@@ -101,7 +105,7 @@ project_02/
 │   │   │   └── assets/                 # 静态资源（css / imgs）
 │   ├── sql/                           # 数据库初始化脚本
 │   │   ├── README.md                  # 数据库说明
-│   │   ├── schema.sql                 # 14张表建表语句
+│   │   ├── schema.sql                 # 16张表建表语句
 │   │   ├── data.sql                   # 初始数据
 │   │   ├── init.sql                   # 一键初始化入口
 │   │   └── migration-*.sql            # 增量迁移（已有库执行，幂等）
@@ -120,7 +124,8 @@ project_02/
 - **影院管理** — 影院注册审核（未审核既不可登录也不对外展示，管理端提供「审核通过」入口）、信息维护、影厅管理
 - **排片管理** — 创建放映场次（关联影片、影厅、时间、票价）；校验时间晚于当前、票价大于 0、同影厅时段不重叠
 - **在线选座** — 座位规模由影厅配置（`room.seat_rows` / `seat_cols`，默认 8×8）驱动的可视化选座图、选定下单；本人未支付锁座可继续支付或释放
-- **订单系统** — 购票下单、订单状态流转（待支付 → 待取票 → 已取票；待支付可取消或超时自动取消；待取票可退票 → 已退票）、支付与退款资金凭证留痕
+- **订单系统** — 购票下单、订单状态流转（待支付 → 待取票 → 已取票；待支付可取消或超时自动取消；待取票可退票 → 已退票）、支付与退款资金凭证留痕；订单留存**单价快照**（`ordered.unit_price`），场次改价不影响历史订单
+- **账户与资金** — 用户账户余额（`user.balance`）、充值单据（处理中 → 已完成/已失败）、资金流水账本（充值/购票/退票三类来源，记录变动前后余额与关联单据ID）。**购票为余额支付**：支付时校验余额并原子扣减，余额不足则订单保持待支付、座位继续锁定；退票时金额退回余额。不接第三方支付渠道，充值由「提交单据 + 模拟支付回调」两步完成
 - **评价系统** — 已取票用户在订单页对影片评分 + 评语（一人一片一条，可修改）；评价均分回写 `film.score` 并驱动评分榜；影片详情页公开展示评价列表
 - **排行榜** — 票房榜 Top10、评分榜 Top5（按 `film.score`，即该片评价均分）
 - **搜索筛选** — 按影片名称、类型、年份、地区多维筛选
@@ -183,11 +188,24 @@ project_02/
 | 路径 | 方法 | 说明 | 允许角色 |
 |------|------|------|----------|
 | `/api/v1/orders/create` | POST | 下单（校验场次可售、座位在影厅范围内且未被占用） | USER |
-| `/api/v1/orders/seats` | GET | 查询某场次占用中的座位（含本人待支付锁座） | 登录用户 |
+| `/api/v1/orders/seats` | GET | 查询某场次占用中的座位（`{seat, mine}` 投影；仅本人订单附带 orderId/金额/倒计时） | 登录用户 |
 | `/api/v1/orders/{id}/pay` | PUT | 支付待支付订单；超时则取消并返回 409 | 订单归属方 |
 | `/api/v1/orders/{id}/cancel` | PUT | 取消待支付订单 | 订单归属方 |
 | `/api/v1/orders/{id}/pickup` | PUT | 取票（待取票 → 已取票） | ADMIN / CINEMA |
 | `/api/v1/orders/{id}/refund` | PUT | 退票（待取票 → 已退票，需放映前 60 分钟以上） | 订单归属方 |
+
+### 账户与资金接口（`/api/v1/account/**` · `/api/v1/recharges/**` · `/api/v1/fund-flows/**`）
+
+| 路径 | 方法 | 说明 | 允许角色 |
+|------|------|------|----------|
+| `/api/v1/account/summary` | GET | 当前登录用户的账户余额（`userId` 取自 JWT） | USER |
+| `/api/v1/recharges` | POST | 提交充值申请：生成「处理中」单据，**余额不变** | USER |
+| `/api/v1/recharges/page` | GET | 充值单据分页（USER 只看自己的，ADMIN 看全部） | USER / ADMIN |
+| `/api/v1/recharges/{id}/callback` | POST | 模拟支付网关回调（仅「处理中」可流转，重复回调被拒） | 单据归属方 / ADMIN |
+| `/api/v1/fund-flows/page` | GET | 资金流水分页（USER 只看自己的，ADMIN 看全部） | USER / ADMIN |
+
+> 充值单据与资金流水都**不继承** `BaseController` / `BaseService`：单据是资金凭证、账本只增不改，不存在通用更新与删除，因此不暴露 PUT/DELETE 端点。
+> 余额不挂在 `User` 实体上，`/api/v1/users` 是 `SELECT *` 的通用查询，挂上去等于把任何人的余额公开；余额只经 `/account/summary` 按 JWT 返回本人。
 
 ## 页面清单
 
@@ -197,13 +215,13 @@ home, admin, user, cinema, type, area, film, actor, notice, room, record, ordere
 ### 影院后台 (`/back/*`) — 7个页面
 home, film, room, record, ordered, person, password
 
-### 用户前台 (`/front/*`) — 12个页面（公开浏览模式）
+### 用户前台 (`/front/*`) — 13个页面（公开浏览模式）
 系统支持公开访问，无需登录即可浏览电影、影院、排行榜等公开内容。根路径 `/` 自动重定向到 `/front/home`。
 
 | 访问模式 | 路由 | 说明 |
 |----------|------|------|
 | 公开访问（无需登录） | home, movie, filmDetail/:id, cinema, cinemaDetail/:id, filmCinema/:id, rank, search | 浏览类页面，无需认证 |
-| 需登录（USER） | buyTicket, orders, person, password | 操作类页面，未登录时弹框提示跳转登录 |
+| 需登录（USER） | buyTicket, orders, account, person, password | 操作类页面，未登录时弹框提示跳转登录 |
 
 访问受保护页面时，系统弹出确认框 → 跳转 `/login?redirect=<原路径>` → 登录成功后自动回跳。登录页根据角色（USER/CINEMA/ADMIN）分别跳转 `/front/home`、`/back/home`、`/manage/home`。
 
@@ -226,6 +244,10 @@ USE `xm-film`;
 SOURCE xm_film/sql/schema.sql;
 SOURCE xm_film/sql/data.sql;
 ```
+
+> **已有数据库请勿重跑 `schema.sql`/`data.sql`**，改用增量迁移并按文件名日期顺序执行。
+> 账户余额/充值单据/资金流水/订单单价需要 `migration-20260928-p4-account-wallet.sql`，
+> 未执行该脚本时账户页与余额支付会报表不存在。
 
 ### 2. 启动后端
 ```bash
@@ -270,7 +292,7 @@ npm run dev
 3. **文件存储**：当前为本地存储，建议生产环境迁移至 OSS（阿里云/S3）
 4. **日志配置**：✅ 已切换为 SLF4J + Logback，`logback-spring.xml` 按 mapper 包级别控制 SQL 日志（可通过 `MYBATIS_LOG_LEVEL` 环境变量调整）
 5. **API 文档**：✅ 已集成 SpringDoc OpenAPI —— `SwaggerConfig` 定义 OpenAPI Bean 与全局 Bearer 鉴权方案，控制器标注 `@Tag`/`@Operation`，规范端点 `/v3/api-docs`，UI 页面 `static/swagger-ui.html`（swagger-ui 资源走 CDN，离线环境需改用 `springdoc-openapi-starter-webmvc-ui` 本地内嵌）
-6. **单元测试**：✅ 已覆盖 10 个测试类 / 114 个用例 —— Service 层 CRUD 与权限（Admin/User/Cinema/Film/Ordered/Mark）、订单状态机（支付超时/退票窗口/座位边界与单笔上限）、评价规则（评分区间/一人一片去重/均分回写/归属不可转移）、影院审核与可见性下推、订单座位并发冲突、AuthInterceptor 访问边界（含令牌失效与匿名放行）、全局异常处理；`mvn test` 可复现
+6. **单元测试**：✅ 已覆盖 13 个测试类 / 154 个用例 —— Service 层 CRUD 与权限（Admin/User/Cinema/Film/Ordered/Mark）、订单状态机（支付超时/退票窗口/座位边界与单笔上限）、评价规则（评分区间/一人一片去重/均分回写/归属不可转移）、影院审核与可见性下推、订单座位并发冲突、AuthInterceptor 访问边界（含令牌失效与匿名放行）、全局异常处理；**账户资金**（余额足额/不足扣减、退款入账、金额非正拒绝、流水前后余额与关联单据）、**充值单据状态机**（提交不改余额、回调成功/失败、重复回调被拒、金额上限、跨用户回调被拒）、**订单删除守卫**按状态拒绝；`mvn test` 可复现
 7. **前端构建**：生产构建后建议接入 CDN 分发静态资源
 8. **CI/CD**：✅ 已配置 GitHub Actions 流水线（后端编译 → 前端构建）
 9. **错误边界**：前端可引入 Vue ErrorBoundary 机制处理渲染异常
@@ -324,6 +346,7 @@ npm run dev
 - `/api/v1/records` 在 `AuthInterceptor.PUBLIC_READ_PREFIXES` 内（匿名 GET 放行），因为公开的影院详情页需要拉取场次列表。
 - 订单状态机只有一条合法路径：`待支付 → 待取票 → 已取票`，旁支为 `待支付 →（取消/超时）已取消` 与 `待取票 →（退票）已退票`。`OrderedService.updateScoped` 拒绝通用 PUT，状态只能经 `payOrder`/`cancelOrder`/`pickupOrder`/`refundOrder` 迁移。前端 `ORDER_STATUS_MAP` 是状态色的唯一来源，筛选下拉由 `ORDER_STATUS_OPTIONS` 从同一 map 派生，避免筛选项与状态脱节。
 - 占用座位的判定只有一个出处：`OrderedMapper.countSeatInUse` / `selectActiveByRecordId`，状态集合为 `NOT IN ('已取消','已退票')`，且待支付订单仅在 `pending_timeout_at > NOW()` 时锁座。**新增任何"释放座位"的状态时，两处查询必须同步**，否则座位永远锁死。
+- `/api/v1/orders/seats` 对外返回的是投影 `SeatOccupancy`（`seat` + 后端按 JWT 算出的 `mine`），只有本人订单才带 `orderId`/`orders`/`total`/`pendingTimeoutAt`。**不要把 `Ordered` 实体直接回给这个端点** —— 那等于把该场次所有订单的订单号、`user_id`、金额发给任意登录用户（见 Bug.md BUG-040）。归属判定必须在后端做，前端只读 `mine`，不得再拿 `userId` 自己比对。
 - 支付超时不用异常表达：`OrderedService.payOrder` 返回 `PayResult.TIMEOUT_CANCELLED`，由控制器翻译为 409。原因是该方法带 `rollbackFor = Exception.class`，"先取消再抛异常"会把取消一起回滚，订单停在待支付（另见 Bug.md BUG-035）。
 - 金额字段必须是包装类型：`ordered.total` 为 `Double` 而非 `double`。`updateById` 用 `<if test="total != null">` 守卫，原始类型永远非 null，会让支付/取票/取消等局部更新把金额写成 0.00（另见 Bug.md BUG-034）。
 - 选座图的座位来源是 `record.roomSeatRows` / `roomSeatCols`（`RecordMapper` 从 `room` 表 JOIN 出来），而不是写死的 8×8，也不是让用户端去读 `/api/v1/rooms`（USER 无权访问影厅接口）。后端座位合法性校验同样按影厅边界，单笔订单座位数上限 6（`OrderedService.MAX_SEATS_PER_ORDER`）。
@@ -333,6 +356,13 @@ npm run dev
 - `WebMvcConfig.excludePathPatterns` 是**角色盲区**：被排除的路径不执行 `AuthInterceptor`，request 上没有 `role`/`userId`，控制器里的角色判断会静默失效（BUG-036 即由此而来）。公开访问统一交给 `PUBLIC_READ_PREFIXES`，**不要往排除表里加路径**。
 - 令牌失效时公开只读资源仍按匿名放行（`AuthInterceptor.isAnonymousRead`）。否则游客带着过期令牌浏览公开页会被判 401，而前端 `request.js` 的 401 处理会跳登录页 —— 公开内容就变成了事实上的必须登录。
 - `Film.boxOffice` 已由原始 `double` 改为 `Double`，与 `ordered.total` 同因同治（`film.box_office` 有 `DEFAULT 0.0`，新增影片不受影响）。凡是被 `<if test="X != null">` 守卫的字段一律用包装类型。
+- 账户余额的唯一可信来源是 `user.balance`；`fund_flow` 是只增的审计副本。**任何改余额的代码只能走 `WalletService`**（`creditRecharge` / `debitPurchase` / `creditRefund`），它统一做「行锁读余额 → 校验/变更 → 写一条流水」，因此不会出现"改了余额没记账"或"扣款成功但订单没出票"。
+- 余额扣减是 `SELECT balance ... FOR UPDATE` 行锁 + `UPDATE ... WHERE balance >= ?` 条件更新双保险。**不要绕过 `WalletService` 直接用 `UserMapper.addBalance` 写业务代码** —— 那样会跳过流水与校验，余额与账本必然对不上（并发验证见 `scripts/verify/p4-concurrency.py`）。
+- 金额字段一律 `BigDecimal`（`user.balance` / `recharge_order.amount` / `fund_flow.change_amount` 等），前端展示经 `Number(...).toFixed(2)`。`ordered.total`/`unit_price` 仍是 `Double`/`BigDecimal`，历史原因不同，新增资金字段不要再用 `double`。
+- 充值单据状态机只有三个状态、两条边：`处理中 → 已完成`（回调成功，入账）、`处理中 → 已失败`（回调失败，余额不变）。**终态不可再流转**，重复回调返回业务冲突——这是幂等的唯一实现，新增任何充值入口都必须复用 `RechargeService.handleCallback`。
+- 订单物理删除只允许终态废单（`已取消` / `已退票`），白名单在 `OrderedService.DELETABLE_STATUSES`，前端三端按钮由 `constants.isOrderDeletable` 同构渲染。**这是"删订单当免费退票用"的后门**：退票能回款而删除不能，一旦放开已支付订单的删除，资金账就永远对不平。
+- 演示账号 `zhangsan` 预置 100 元余额（`data.sql` 与 `migration-20260928-p4-account-wallet.sql` 保持一致）。余额不足的演示路径由"连买几张高价票"自然触发，不需要额外的穷账号。
+- `excludePathPatterns` 是角色盲区（BUG-036），账户/充值/流水端点**都在拦截器覆盖范围内**：`/api/v1/recharges`、`/api/v1/fund-flows`、`/api/v1/account` 均未加入 `PUBLIC_READ_PREFIXES`，因此未登录一律 401 而不是匿名放行。
 
 ## Git 提交历史
 

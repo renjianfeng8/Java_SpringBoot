@@ -100,14 +100,14 @@
             </div>
           </div>
 
-          <!-- 确认购票按钮 -->
+          <!-- 确认购票按钮：canSubmit 为 false 时同时挡住"无座位/未登录/加载中/提交中" -->
           <div style="margin-top: 20px; text-align: center;">
             <button style="background: #ef4238; color: #fff; border: none; padding: 8px 30px; border-radius: 4px; cursor: pointer; font-size: 14px;"
-                    :disabled="selectedSeats.length === 0 || loading || !isLogin"
-                    :style="{ opacity: (selectedSeats.length === 0 || loading || !isLogin) ? 0.6 : 1 }"
+                    :disabled="!canSubmit"
+                    :style="{ opacity: canSubmit ? 1 : 0.6 }"
                     @click="confirmBooking"
             >
-              确认购票（{{ selectedSeats.length }}张）
+              {{ submitting ? '提交中…' : `确认购票（${selectedSeats.length}张）` }}
             </button>
           </div>
         </div>
@@ -169,7 +169,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { computed, ref, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import request from "@/utils/request.js";
@@ -180,7 +180,6 @@ import OrderPayDialog from '@/components/OrderPayDialog.vue';
 // 1. Read the current signed-in user from shared auth storage.
 const userInfo = ref(null); // 存储登录用户完整信息
 const isLogin = ref(false); // 是否登录标记
-const userId = ref(0); // 用户ID（后端Ordered实体需要）
 
 // 初始化并监听登录状态（页面刷新或登录状态变化时自动更新）
 const initUserInfo = () => {
@@ -191,7 +190,6 @@ const initUserInfo = () => {
       // 校验用户信息合法性（需包含id和role字段，与登录接口返回一致）
       if (parsedUser.id && parsedUser.role) {
         userInfo.value = parsedUser;
-        userId.value = Number(parsedUser.id);
         isLogin.value = true;
         // 仅允许USER角色购票（与登录后跳转逻辑一致）
         if (parsedUser.role !== 'USER') {
@@ -231,6 +229,12 @@ const myPendingOrders = ref([]); // 本人待支付订单，可继续支付或�
 // 支付弹窗状态：倒计时与支付/取消逻辑由 OrderPayDialog 承担
 const paymentDialogVisible = ref(false);
 const currentOrder = ref(null);
+
+// 下单在途标记：没有它时双击会发出两次 POST，第二个必然被"座位已售"拒绝
+const submitting = ref(false);
+const canSubmit = computed(() =>
+    selectedSeats.value.length > 0 && !loading.value && isLogin.value && !submitting.value
+);
 
 // 支付成功后订单已进入待取票，跳转订单列表查看
 const onPaid = () => {
@@ -338,10 +342,18 @@ const initSeats = () => {
       const seatMatrix = emptyMatrix();
       const myOrders = [];
       (res.data || []).forEach(order => {
-        const mine = Number(order.userId) === userId.value;
-        const myPending = mine && order.status === '待支付';
+        // 归属由后端按 JWT 判定，响应里不再有 userId / 他人订单明细
+        const myPending = order.mine && order.status === '待支付';
         if (myPending) {
-          myOrders.push(order);
+          // 支付弹窗读的是订单形态的对象，这里把选座视角的字段映射过去
+          myOrders.push({
+            id: order.orderId,
+            orders: order.orders,
+            seat: order.seat,
+            status: order.status,
+            total: order.total,
+            pendingTimeoutAt: order.pendingTimeoutAt
+          });
         }
         // 已被前一张订单标记的座位不覆盖，避免多订单重叠时着色抖动
         (order.seat || '').split(',').forEach(rawSeat => {
@@ -478,11 +490,13 @@ const calculateTotalPrice = () => {
 
 // 确认购票（使用 DTO 端点处理参数校验）
 const confirmBooking = async () => {
+  if (submitting.value) return;
   if (selectedSeats.value.length === 0) {
     ElMessage.warning('请先选择座位');
     return;
   }
 
+  submitting.value = true;
   try {
     const res = await request.post(ORDER_API.CREATE, {
       recordId: Number(recordId),
@@ -496,6 +510,8 @@ const confirmBooking = async () => {
     }
   } catch (error) {
     // request.js has already shown the backend message.
+  } finally {
+    submitting.value = false;
   }
 };
 </script>

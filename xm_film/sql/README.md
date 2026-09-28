@@ -4,12 +4,13 @@
 
 ```
 sql/
-├── schema.sql                               # 数据库表结构（14 张表的 CREATE TABLE 语句）
+├── schema.sql                               # 数据库表结构（16 张表的 CREATE TABLE 语句）
 ├── data.sql                                 # 初始数据（所有表的 INSERT 语句）
 ├── init.sql                                 # 一键初始化脚本（整合 schema + data）
 ├── migration-20260927-delete-guard.sql      # 增量迁移（删除守卫 + 上映关系派生）
 ├── migration-20260927-p2-seat-payment.sql   # 增量迁移（座位容量 + 订单资金凭证）
-└── migration-20260928-p3-review-score-cinema-audit.sql  # 增量迁移（评价数值评分 + 影院审核词表）
+├── migration-20260928-p3-review-score-cinema-audit.sql  # 增量迁移（评价数值评分 + 影院审核词表）
+└── migration-20260928-p4-account-wallet.sql # 增量迁移（账户余额 + 充值单据 + 资金流水 + 订单单价）
 ```
 
 ## 使用方式
@@ -42,12 +43,12 @@ SOURCE data.sql;
 - 字符集：`utf8mb4` + `utf8mb4_unicode_ci`
 - 引擎：`InnoDB`
 
-## 表清单（14 张）
+## 表清单（16 张）
 
 | # | 表名 | 说明 |
 |---|------|------|
 | 1 | admin | 管理员表 |
-| 2 | user | 用户表 |
+| 2 | user | 用户表（`balance` 是账户余额，资金唯一可信来源；演示账号 zhangsan 预置 100 元） |
 | 3 | cinema | 影院表（`status` 只有 `未审核`/`已审核`，未审核不可登录且不对外展示） |
 | 4 | area | 区域/产地表 |
 | 5 | type | 电影类型表 |
@@ -56,13 +57,16 @@ SOURCE data.sql;
 | 8 | actor | 演员表 |
 | 9 | room | 放映厅表 |
 | 10 | record | 放映记录（排片）表，`film_id` 非空 |
-| 11 | ordered | 订单表 |
+| 11 | ordered | 订单表（`unit_price` 是下单时的单价快照） |
 | 12 | mark | 评价表（`score` 是影片评分的唯一数值来源，`mark` 只存评语；一人一片一条） |
 | 13 | notice | 通知公告表 |
 | 14 | video | 视频/预告片表 |
+| 15 | recharge_order | 充值单据表（处理中/已完成/已失败；提交单据不改余额，仅回调成功入账） |
+| 16 | fund_flow | 资金流水表（充值/购票/退票三类来源，记录变动前后余额与关联单据ID；只增不改不删） |
 
 > 影院"上映哪些影片"由 `record` 派生（`EXISTS` 子查询），没有独立的影院-影片关联表。
-> `record` 与 `ordered` 的外键、`room.cinema_id` 均为 `ON DELETE RESTRICT`。
+> `record` 与 `ordered` 的外键、`room.cinema_id`、`recharge_order.user_id`、`fund_flow.user_id` 均为 `ON DELETE RESTRICT`。
+> `fund_flow.related_id` 指向 `recharge_order.id` 或 `ordered.id`（跨表二选一），故不建外键。
 
 ## 增量迁移（已有数据库）
 
@@ -72,6 +76,7 @@ SOURCE data.sql;
 mysql -u root -p --default-character-set=utf8mb4 xm-film < migration-20260927-delete-guard.sql
 mysql -u root -p --default-character-set=utf8mb4 xm-film < migration-20260927-p2-seat-payment.sql
 mysql -u root -p --default-character-set=utf8mb4 xm-film < migration-20260928-p3-review-score-cinema-audit.sql
+mysql -u root -p --default-character-set=utf8mb4 xm-film < migration-20260928-p4-account-wallet.sql
 ```
 
 `migration-20260927-delete-guard.sql` 内容（幂等，可重复执行）：

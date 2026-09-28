@@ -119,6 +119,8 @@
             <if test="roomId != null">room_id,</if>
             <if test="appointment != null">appointment,</if>
             <if test="total != null">total,</if>
+            <!-- 单价是下单时的快照，只在 insert 写入，updateById 刻意不含它 -->
+            <if test="unitPrice != null">unit_price,</if>
             <if test="number != null">number,</if>
             <if test="status != null">status,</if>
             <if test="start != null">start,</if>
@@ -141,6 +143,7 @@
             <if test="roomId != null">#{roomId},</if>
             <if test="appointment != null">#{appointment},</if>
             <if test="total != null">#{total},</if>
+            <if test="unitPrice != null">#{unitPrice},</if>
             <if test="number != null">#{number},</if>
             <if test="status != null">#{status},</if>
             <if test="start != null">#{start},</if>

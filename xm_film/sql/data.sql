@@ -14,10 +14,12 @@ INSERT INTO `admin` (`id`, `username`, `password`, `role`, `name`, `avatar`, `ph
 -- ---------------------------
 -- 2. user — 用户数据
 -- ---------------------------
-INSERT INTO `user` (`id`, `username`, `password`, `name`, `role`, `avatar`, `phone`, `email`) VALUES
-(6, 'zhangsan', 'user123', '张三', 'USER', '/files/770d8a2f-6940-4bd2-9250-9d283365b4b8.jpg', '18800009999', 'zhangsan@xm.com'),
-(7, 'wangwu', 'user123', '王五', 'USER', '/files/d95314a7-b2fb-4040-8741-99909d26c58d.jpg', '15677778888', 'wangwu@xm.com'),
-(8, 'lisi', '123', '李四', 'USER', '/files/2dd39a8a-3ef0-4a37-a6fc-42c618dd7f15.jpg', '18855556666', 'lisi@xm.com');
+-- balance: 演示账号预置少量余额。zhangsan 拿 100 元，单张普通票即可跑通顺畅通；
+--          连买几张高价票即触发「余额不足 → 充值 → 回订单继续支付」分支。
+INSERT INTO `user` (`id`, `username`, `password`, `name`, `role`, `avatar`, `phone`, `email`, `balance`) VALUES
+(6, 'zhangsan', 'user123', '张三', 'USER', '/files/770d8a2f-6940-4bd2-9250-9d283365b4b8.jpg', '18800009999', 'zhangsan@xm.com', 100.00),
+(7, 'wangwu', 'user123', '王五', 'USER', '/files/d95314a7-b2fb-4040-8741-99909d26c58d.jpg', '15677778888', 'wangwu@xm.com', 0.00),
+(8, 'lisi', '123', '李四', 'USER', '/files/2dd39a8a-3ef0-4a37-a6fc-42c618dd7f15.jpg', '18855556666', 'lisi@xm.com', 0.00);
 
 -- ---------------------------
 -- 3. area — 区域/产地数据

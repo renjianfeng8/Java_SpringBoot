@@ -32,6 +32,13 @@
           >
             购票记录
           </router-link>
+          <router-link
+              to="/front/account"
+              class="nav-item"
+              :class="{ 'active': activePath === '/front/account' }"
+          >
+            我的账户
+          </router-link>
         </nav>
       </div>
 
@@ -65,6 +72,7 @@
             <template #dropdown>
               <el-dropdown-menu>
                 <el-dropdown-item @click="router.push('/front/person')">个人中心</el-dropdown-item>
+                <el-dropdown-item @click="router.push('/front/account')">我的账户</el-dropdown-item>
                 <el-dropdown-item @click="router.push('/front/password')">修改密码</el-dropdown-item>
                 <el-dropdown-item @click="logout">退出登录</el-dropdown-item>
               </el-dropdown-menu>
@@ -96,7 +104,7 @@
             <ul class="footer-links">
               <li>本系统仅展示功能演示</li>
               <li>不提供真实购票服务</li>
-              <li>不涉及任何资金交易</li>
+              <li>余额充值为模拟数据</li>
               <li>使用风险由用户自行承担</li>
             </ul>
           </div>
@@ -199,6 +207,8 @@ const updateActivePath = (path) => {
     activePath.value = '/front/rank'
   } else if (path.startsWith('/front/orders')) {
     activePath.value = '/front/orders'
+  } else if (path.startsWith('/front/account')) {
+    activePath.value = '/front/account'
   } else if (path.startsWith('/front/search')) {
     activePath.value = '/front/movie'
   } else if (path.startsWith('/front')) {
