@@ -192,3 +192,63 @@ test('后台两端不再各自维护一份外壳样式', async () => {
     assert.doesNotMatch(shell, /\.manage-container\s*\{/, `${name} 仍内联外壳样式`)
   }
 })
+
+test('登录 / 注册共用一份认证页外壳样式（§7.2）', async () => {
+  const [login, register, shared] = await Promise.all([
+    read('src/views/Login.vue'),
+    read('src/views/Register.vue'),
+    read('src/assets/css/auth-layout.scss'),
+  ])
+  assert.match(shared, /\.auth-container\s*\{/, 'auth-layout.scss 缺少 .auth-container')
+  assert.match(shared, /\.auth-card\s*\{/, 'auth-layout.scss 缺少 .auth-card')
+  for (const [name, page] of [['Login.vue', login], ['Register.vue', register]]) {
+    assert.match(page, /@use\s+['"]@\/assets\/css\/auth-layout['"]/, `${name} 未引用共用认证页样式`)
+    assert.doesNotMatch(page, /\.auth-(container|card)\s*\{/, `${name} 仍内联认证页外壳样式`)
+  }
+})
+
+test('认证页卡片宽度单一来源，容器不裁切（§7.2）', async () => {
+  const shared = await read('src/assets/css/auth-layout.scss')
+
+  // 卡片宽度只能由 .auth-card 的 max-width 决定；内部控件一律 100% 跟随父级
+  assert.match(shared, /max-width:\s*380px/, 'auth-layout.scss 未定义卡片宽度来源')
+  assert.doesNotMatch(
+    shared,
+    /overflow:\s*hidden/,
+    '认证页容器用 overflow: hidden 裁切内容，矮视口下无法滚动',
+  )
+
+  for (const file of ['src/views/Login.vue', 'src/views/Register.vue']) {
+    const source = await read(file)
+    // 负向后行断言排除 max-width / min-width
+    assert.doesNotMatch(
+      source,
+      /(?<!-)\bwidth:\s*\d+px/,
+      `${file} 在卡片内部写死了宽度，应交给 .auth-card 的 max-width 决定`,
+    )
+  }
+})
+
+test('认证页表单具备可访问名称、错误图标与回车提交（§8.2 / §六）', async () => {
+  for (const file of ['src/views/Login.vue', 'src/views/Register.vue']) {
+    const source = await read(file)
+
+    // 前缀图标必须绑定组件：字符串写法不会被解析（图标集未全局注册）
+    assert.doesNotMatch(
+      source,
+      /(?<!:)prefix-icon="/,
+      `${file} 仍用字符串 prefix-icon，图标不会渲染，应改为 :prefix-icon="User"`,
+    )
+
+    assert.match(source, /label-position="top"/, `${file} 未使用顶部可见标签（§8.2）`)
+    assert.match(source, /status-icon/, `${file} 未开启 status-icon，错误反馈缺图标（§六）`)
+    assert.match(source, /@keyup\.enter=/, `${file} 未支持回车提交（§8.2）`)
+
+    const items = [...source.matchAll(/<el-form-item\b([^>]*)>/g)].map((m) => m[1])
+    assert.ok(items.length >= 3, `${file} 表单项数量异常：${items.length}`)
+    for (const attrs of items) {
+      assert.match(attrs, /\slabel="[^"]+"/, `${file} 存在无可见 label 的表单项：${attrs.trim()}`)
+      assert.match(attrs, /\sprop="[^"]+"/, `${file} 存在无 prop 的表单项：${attrs.trim()}`)
+    }
+  }
+})

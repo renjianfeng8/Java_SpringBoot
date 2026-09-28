@@ -106,6 +106,7 @@ project_02/
 │   │   │   └── assets/                 # 静态资源（css / imgs）
 │   │   │       └── css/                # tokens.scss 设计令牌 · index.scss EP 主题覆写
 │   │   │                               # global.css 全局重置 · admin-layout.scss 后台外壳
+│   │   │                               # auth-layout.scss 认证页外壳（登录/注册共用）
 │   │   │                               # admin-pages.scss / front-pages.scss 列表页共用骨架
 │   ├── sql/                           # 数据库初始化脚本
 │   │   ├── README.md                  # 数据库说明
@@ -368,6 +369,8 @@ npm run dev
 - 订单物理删除只允许终态废单（`已取消` / `已退票`），白名单在 `OrderedService.DELETABLE_STATUSES`，前端三端按钮由 `constants.isOrderDeletable` 同构渲染。**这是"删订单当免费退票用"的后门**：退票能回款而删除不能，一旦放开已支付订单的删除，资金账就永远对不平。
 - 演示账号 `zhangsan` 预置 100 元余额（`data.sql` 与 `migration-20260928-p4-account-wallet.sql` 保持一致）。余额不足的演示路径由"连买几张高价票"自然触发，不需要额外的穷账号。
 - `excludePathPatterns` 是角色盲区（BUG-036），账户/充值/流水端点**都在拦截器覆盖范围内**：`/api/v1/recharges`、`/api/v1/fund-flows`、`/api/v1/account` 均未加入 `PUBLIC_READ_PREFIXES`，因此未登录一律 401 而不是匿名放行。
+- 登录 / 注册页共用一套外壳 `assets/css/auth-layout.scss`（两页各自 `@use` 进 `scoped` 块，与 `admin-layout.scss` 同构）。**卡片宽度只有 `.auth-card` 的 `max-width` 一个来源，卡片内部一律 `width: 100%`** —— 曾因内层写死 `380px` 而父级内容宽仅 192px，导致标题折行、表单溢出 188px（BUG-042）。容器用 `min-height: 100vh` + flex 居中，**不要**改回 `height: 100vh` + `overflow: hidden` + 绝对定位（矮视口会裁掉卡片且无法滚动）。口径见规范 §7.2，回归守卫在 `tests/design-tokens.test.mjs`。
+- 认证页表单的固定形态：`label-position="top"` + `status-icon` + 可见 `label` + 文本输入框 `@keyup.enter`（`el-form` 上 `@submit.prevent` 兜底）+ 图标一律组件绑定 `:prefix-icon="User"`（字符串写法不会解析，`main.js` 未全局注册图标集，BUG-043）。登录角色默认 `USER`，**不要**改回 `ADMIN`（BUG-044）。
 
 ## Git 提交历史
 
