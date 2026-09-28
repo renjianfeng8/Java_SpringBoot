@@ -50,12 +50,12 @@
           </template>
         </el-input>
 
-        <!-- 未登录：显示登录/注册 -->
-        <template v-if="!isLoggedIn">
+        <!-- 未登录：显示登录/注册（包一层 flex 容器，用 gap 统一「·」两侧留白，替代原来的 margin） -->
+        <div v-if="!isLoggedIn" class="auth-links">
           <router-link to="/login" class="header-link">登录</router-link>
           <span class="header-divider">·</span>
           <router-link to="/register" class="header-link">注册</router-link>
-        </template>
+        </div>
 
         <!-- 已登录：显示用户信息 -->
         <template v-else>
@@ -220,39 +220,80 @@ const updateActivePath = (path) => {
 </script>
 
 <style scoped>
+/* ============================================================
+ * 顶部导航栏（Header）—— Flex 弹性自适应
+ * 收缩优先级：左组(不缩) > 导航项(不缩、不换行) > 右组(可缩，搜索框是唯一泄压阀)
+ * ============================================================ */
 .front-header {
+  /* Type Scale 字体标尺：浏览器根字号 16px 的固定倍数阶梯，禁止零散 px 字号
+   * --fs-2xs 16×0.75 | --fs-sm 16×0.875 | --fs-md 16×1 | --fs-lg 16×1.125 | --fs-xl 16×1.25
+   * 令牌声明在组件根节点上，随级联向下继承，不污染其它页面 */
+  --fs-2xs: 0.75rem;
+  --fs-sm: 0.875rem;
+  --fs-md: 1rem;
+  --fs-lg: 1.125rem;
+  --fs-xl: 1.25rem;
+
+  /* 尺寸与间距令牌：间距统一走 gap，不再逐个硬写 margin */
+  --header-height: 60px;
+  --header-padding-x: 20px;
+  --group-gap: 16px;
+  --nav-gap: 25px;
+  --search-width: 200px;
+  --header-min-width: 1120px;     /* 临界阈值：低于此宽度停止压缩，改为整页横向滚动 */
+
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 60px;
-  padding: 0 20px;
+  gap: var(--group-gap);          /* 三组之间弹性留白 */
+  height: var(--header-height);
+  padding: 0 var(--header-padding-x);
   background: white;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+  /* 最小宽度保护：低于该阈值不再继续压缩，改为整页横向滚动。
+     刻意不用 overflow: hidden —— 裁切会让按钮/输入框不可见不可点 */
+  min-width: var(--header-min-width);
+  box-sizing: border-box;
 }
 
-.front-header > div {
+/* 三组容器公共布局（原 `.front-header > div` 改为显式类名，避免误伤新增子元素） */
+.front-header-left,
+.front-header-center,
+.front-header-right {
   display: flex;
   align-items: center;
+  min-width: 0;
 }
 
+/* 左组：Logo + 标题，永不压缩 */
+.front-header-left {
+  flex: 0 0 auto;
+  gap: 10px;
+}
+
+/* 中组：导航，吸收富余空间；min-width:0 允许自身收缩而不撑破父容器 */
 .front-header-center {
-  flex: 1;
-  max-width: 500px;
+  flex: 1 1 auto;
+  min-width: 0;
   justify-content: center;
 }
 
 .main-nav {
   display: flex;
-  gap: 25px;
-  padding: 15px 20px;
+  align-items: center;
+  gap: var(--nav-gap);
+  padding: 0;                     /* 去掉原 15px 纵向内边距，垂直居中交给 align-items */
 }
 
 .nav-item {
+  flex: 0 0 auto;                 /* 导航项不参与压缩 */
+  white-space: nowrap;            /* 菜单文字禁止换行，杜绝折行堆叠 */
   color: #1b191a;
   text-decoration: none;
-  font-size: 16px;
+  font-size: var(--fs-md);        /* 16px，与 1920 原观感一致 */
+  line-height: 1.2;
   padding: 8px 12px;
-  transition: all 0.3s;
+  transition: color 0.3s, transform 0.3s;
   position: relative;
 }
 
@@ -278,28 +319,47 @@ const updateActivePath = (path) => {
   border-radius: 1px;
 }
 
+/* 右组：搜索 + 用户区；唯一的泄压阀（flex-shrink: 1） */
 .front-header-right {
+  flex: 0 1 auto;
+  min-width: 0;
   gap: 15px;
-  max-width: 500px;
 }
 
 .logo {
   height: 30px;
-  margin-right: 10px;
+  flex: 0 0 auto;
+  display: block;
 }
 
 .title {
-  font-size: 16px;
+  font-size: var(--fs-md);
+  font-weight: bold;
+  line-height: 1.2;
+  margin: 0;                      /* 抵消 h1 默认外边距，避免在 60px 栏内撑高错位 */
+  white-space: nowrap;            /* 标题禁止折行 */
 }
 
 .search-input {
-  width: 200px;
+  /* 定宽改为弹性基准：空间充足时 200px（与原来一致），不足时优先收窄搜索框 */
+  flex-grow: 0;
+  flex-shrink: 1;
+  flex-basis: var(--search-width);
+  min-width: 150px;
   height: 34px;
+}
+
+/* Element Plus 输入框内部同样要放开收缩限制，否则外层缩了内层仍撑破 */
+.search-input :deep(.el-input__wrapper) {
+  min-width: 0;
 }
 
 .user-info {
   display: flex;
   align-items: center;
+  gap: 8px;
+  flex: 0 1 auto;
+  min-width: 0;
   cursor: pointer;
   padding: 8px 12px;
   border-radius: 4px;
@@ -312,14 +372,18 @@ const updateActivePath = (path) => {
 .avatar {
   height: 32px;
   width: 32px;
+  flex: 0 0 auto;
   border-radius: 50%;
-  margin-right: 8px;
   object-fit: cover;
 }
 
 .username {
-  font-size: 14px;
-  margin-right: 4px;
+  font-size: var(--fs-sm);
+  /* 超长用户名截断，避免撑爆右组引发元素互挤 */
+  max-width: 6em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .front-footer {
@@ -403,20 +467,49 @@ const updateActivePath = (path) => {
   font-size: 12px;
   color: #666;
 }
+/* 未登录：登录 / 注册（间距由 gap 统一，替代原来的 margin） */
+.auth-links {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+}
 .header-link {
   color: #333;
   text-decoration: none;
-  font-size: 14px;
+  font-size: var(--fs-sm);
+  white-space: nowrap;
   transition: color 0.3s;
 }
 .header-link:hover {
   color: #409eff;
 }
 .header-divider {
-  margin: 0 6px;
   color: #ccc;
 }
 .admin-btn {
-  margin-right: 12px;
+  flex: 0 0 auto;
+}
+
+/* ---------- 窄屏逐级收窄间距与搜索框基准宽，给导航让出空间 ----------
+   媒体查询按视口宽度匹配：窗口 <1120px 时头部元素仍保持 1120px 宽，
+   但内部走最紧的一档规则，因此不会溢出也不会互相挤压 */
+@media (max-width: 1400px) {
+  .front-header {
+    --nav-gap: 14px;
+    --search-width: 185px;   /* 留够「请输入电影名称」占位符完整显示 */
+  }
+}
+
+@media (max-width: 1200px) {
+  .front-header {
+    --nav-gap: 8px;
+    --group-gap: 12px;
+    --search-width: 185px;   /* 同上：保住占位符可读，压缩空间从导航间距里出 */
+  }
+
+  .nav-item {
+    padding: 8px 8px;
+  }
 }
 </style>
