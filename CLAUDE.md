@@ -37,6 +37,7 @@ project_02/
 ├── CLAUDE.md                          # 项目文档（本文件）
 ├── LICENSE                            # 许可证
 ├── Bug.md                             # Bug 修复记录（修复前先查阅）
+├── 标准前端视觉与交互设计规范.md        # 前端视觉与交互设计规范（新增页面前先查阅）
 ├── scripts/                           # 通用脚本
 │   ├── start-dev.bat                  # 一键启动
 │   └── verify/                        # 隔离环境验证脚本（备用端口 + 临时库，不碰开发库）
@@ -103,6 +104,8 @@ project_02/
 │   │   │   │   ├── back/               # 7个影院端页面
 │   │   │   │   └── manage/             # 16个管理端页面
 │   │   │   └── assets/                 # 静态资源（css / imgs）
+│   │   │       └── css/                # tokens.scss 设计令牌 · index.scss EP 主题覆写
+│   │   │                               # global.css 全局重置 · admin-layout.scss 后台外壳
 │   ├── sql/                           # 数据库初始化脚本
 │   │   ├── README.md                  # 数据库说明
 │   │   ├── schema.sql                 # 16张表建表语句
@@ -329,6 +332,7 @@ npm run dev
 - [README.md](README.md) — 项目说明、快速启动、部署方式
 - [Bug 修复记录](Bug.md) — 已修复 Bug 的根因与解决方案，遇到相似问题优先查阅
 - [数据库说明](xm_film/sql/README.md) — 数据库表设计与初始化指引
+- [前端设计规范](标准前端视觉与交互设计规范.md) — 三端视觉与交互标准（令牌表、色板分端机制、附录 B 现状偏差清单）
 
 ## Current Architecture Notes
 
