@@ -586,6 +586,9 @@ const confirmBooking = async () => {
   color: var(--el-text-color-regular);
 }
 
+/* 大荧幕灰条：这里刻意用文字色令牌当填充。
+ * EP 的 --el-fill-* 全是最浅档（#f0f2f5~#e6e8eb），换上会让荧幕条几乎不可见；
+ * 本项目也没有"中间灰填充"令牌。这是唯一一处这样的用法。 */
 .seat-screen {
   width: 80%;
   height: 8px;

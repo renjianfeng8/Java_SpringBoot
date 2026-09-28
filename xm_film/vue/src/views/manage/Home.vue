@@ -8,14 +8,16 @@
         <el-col :span="12">
           <div class="chart-card">
             <div class="chart-title">影院状态分布</div>
-            <div ref="cinemaStatusChart" class="chart-content"></div>
+            <div v-if="hasCinemaStatus" ref="cinemaStatusChart" class="chart-content"></div>
+            <div v-else class="chart-empty">暂无影院数据</div>
           </div>
         </el-col>
         <!-- 电影类型占比柱状图 -->
         <el-col :span="12">
           <div class="chart-card">
             <div class="chart-title">电影类型占比</div>
-            <div ref="filmTypeChart" class="chart-content"></div>
+            <div v-if="hasFilmType" ref="filmTypeChart" class="chart-content"></div>
+            <div v-else class="chart-empty">暂无电影数据</div>
           </div>
         </el-col>
       </el-row>
@@ -135,22 +137,12 @@ const cinemaStatusData = computed(() => {
   data.cinemaList.forEach((cinema) => {
     if (!cinema.status) return;
 
-    // 状态转换：已审批 → 未审核
-    let status = cinema.status === '已审批' ? '未审核' : cinema.status;
-
-    if (statusMap.hasOwnProperty(status)) {
-      statusMap[status]++;
+    if (statusMap.hasOwnProperty(cinema.status)) {
+      statusMap[cinema.status]++;
     } else {
       statusMap['其他'] = (statusMap['其他'] || 0) + 1;
     }
   });
-
-  // 兜底：如果所有状态都是0，添加默认数据避免图表空白
-  const hasData = Object.values(statusMap).some(v => v > 0);
-  if (!hasData) {
-    statusMap['已审核'] = 1;
-    statusMap['未审核'] = 1;
-  }
 
   return {
     labels: Object.keys(statusMap),
@@ -198,18 +190,16 @@ const filmTypeData = computed(() => {
     });
   });
 
-  // 兜底：如果没有统计到任何类型，添加默认数据
-  if (Object.keys(typeMap).length === 0) {
-    typeMap['剧情'] = 5;
-    typeMap['动作'] = 3;
-    typeMap['爱情'] = 2;
-  }
-
   return {
     labels: Object.keys(typeMap),
     values: Object.values(typeMap)
   };
 });
+
+// 图表是否有真实数据。无数据时渲染「暂无数据」占位，不再用假数据填充 ——
+// 画一张有数据的图会让人以为系统里真有那些影院 / 电影。
+const hasCinemaStatus = computed(() => cinemaStatusData.value.values.some((value) => value > 0));
+const hasFilmType = computed(() => filmTypeData.value.values.some((value) => value > 0));
 
 // 初始化影院状态饼图
 const initCinemaStatusChart = () => {
@@ -424,6 +414,15 @@ onUnmounted(() => {
 .chart-content {
   width: 100%;
   height: calc(100% - 40px);
+}
+
+/* 无真实数据时的占位（不再用假数据把图表填满） */
+.chart-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: calc(100% - 40px);
+  color: var(--el-text-color-regular);
 }
 
 .section-title-wrapper {

@@ -354,10 +354,11 @@ const cancelOrder = async () => {
   cursor: pointer;
 }
 
+/* 禁用态：背景该用填充色令牌，不是文字色令牌（文字色是给文字用的） */
 .pay-button--disabled {
   border: none;
-  background: var(--el-text-color-disabled);
-  color: var(--color-on-accent);
+  background: var(--el-fill-color-darker);
+  color: var(--el-text-color-secondary);
   cursor: not-allowed;
 }
 </style>
