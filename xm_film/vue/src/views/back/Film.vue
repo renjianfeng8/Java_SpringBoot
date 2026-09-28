@@ -1,19 +1,19 @@
 ﻿<template>
   <div>
-    <div class="card" style="margin-bottom: 5px">
-      <el-input v-model="data.title" placeholder="请输入电影名称查询" style="width: 300px; margin-right:10px" :prefix-icon="Search"/>
+    <div class="card page-card">
+      <el-input v-model="data.title" placeholder="请输入电影名称查询" class="search-input" :prefix-icon="Search"/>
       <el-button type="primary" @click="load">查 询</el-button>
       <el-button type="warning" @click="reset">重 置</el-button>
     </div>
 
-    <div class="card" style="margin-bottom: 5px">
+    <div class="card page-card">
       <el-table stripe :data="data.tableData">
         <el-table-column type="expand">
           <template #default="props">
 
             <el-descriptions title="电影信息" :column="4" border>
               <el-descriptions-item label="电影封面">
-                <el-image style="width:36px;height:36px;object-fit:cover;"
+                <el-image class="cell-thumb"
                           :src="props.row.img"/>
               </el-descriptions-item>
               <el-descriptions-item label="电影名称">{{props.row.title}}</el-descriptions-item>
@@ -21,21 +21,21 @@
               <el-descriptions-item label="上映日期">{{props.row.start}}</el-descriptions-item>
               <el-descriptions-item label="电影时长">{{props.row.time}}分钟</el-descriptions-item>
               <el-descriptions-item label="电影类型">
-                <el-tag v-for="item in props.row.typeList" style="margin-right: 5px; margin-bottom: 5px" type="info">{{item.title}}</el-tag>
+                <el-tag v-for="item in props.row.typeList" class="tag-gap" type="info">{{item.title}}</el-tag>
               </el-descriptions-item>
               <el-descriptions-item label="电影语言">{{props.row.language}}</el-descriptions-item>
               <el-descriptions-item label="电影分辨率">{{props.row.resolution}}</el-descriptions-item>
               <el-descriptions-item label="电影简介">
                 <el-popover placement="top-start" title="电影简介" :width="200" trigger="hover" :content="props.row.content">
                   <template #reference>
-                    <div class="line" style="width: 80px">{{props.row.content}}</div>
+                    <div class="line line--content">{{props.row.content}}</div>
                   </template>
                 </el-popover>
               </el-descriptions-item>
               <el-descriptions-item label="制作公司">
                 <el-popover placement="top-start" title="制作公司" :width="200" trigger="hover" :content="props.row.employee">
                   <template #reference>
-                    <div class="line" style="width: 100px">{{props.row.employee}}</div>
+                    <div class="line line--employee">{{props.row.employee}}</div>
                   </template>
                 </el-popover>
               </el-descriptions-item>
@@ -56,8 +56,7 @@
         <el-table-column label="英文名称" prop="english" show-overflow-tooltip />
         <el-table-column label="封面" prop="img">
           <template #default="scope">
-            <el-image style="margin-top: 7px; width:36px;height:36px;border-radius:10%;object-fit:cover;
-                      align-items:center;"
+            <el-image class="cell-thumb"
                       v-if="scope.row.img"
                       :src="scope.row.img"
                       :preview-src-list="[scope.row.img]"
@@ -68,7 +67,7 @@
         <el-table-column label="电影时长" prop="time" />
         <el-table-column label="电影类型" prop="typeList" width="180">
           <template v-slot="scope">
-            <el-tag v-for="item in scope.row.typeList" style="margin-right: 5px; margin-bottom: 5px" type="info">{{item.title}}</el-tag>
+            <el-tag v-for="item in scope.row.typeList" class="tag-gap" type="info">{{item.title}}</el-tag>
           </template>
         </el-table-column>
         <el-table-column label="语言" prop="language" />
@@ -84,7 +83,7 @@
       </el-table>
     </div>
 
-    <div class="card" style="margin-bottom: 5px">
+    <div class="card page-card">
       <el-pagination
           @size-change="load"
           @current-change="load"

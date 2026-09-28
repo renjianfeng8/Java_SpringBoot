@@ -2,7 +2,7 @@
   <div class="home-container">
     <!-- ECharts 数据可视化分析区域 -->
     <div class="card mb-2">
-      <div class="section-title" style="margin-bottom: 12px">数据可视化分析</div>
+      <div class="section-title section-title--spaced">数据可视化分析</div>
       <el-row :gutter="24">
         <!-- 影院状态分布饼图 -->
         <el-col :span="12">

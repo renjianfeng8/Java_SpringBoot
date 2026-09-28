@@ -1,9 +1,9 @@
 ﻿<template>
   <div>
-    <div class="card" style="margin-bottom: 5px">
-      <el-input v-model="data.title"  placeholder="请输入电影名称查询" style="width: 300px; margin-right:10px" :prefix-icon="Search"/>
-      <el-input  v-model="data.start"  placeholder="按放映日期查询 (YYYY-MM-DD)" style="width: 300px; margin-right:10px" :prefix-icon="Search"/>
-      <el-select v-model="data.status" placeholder="请选择放映状态" style="width: 300px; margin-right:10px">
+    <div class="card page-card">
+      <el-input v-model="data.title"  placeholder="请输入电影名称查询" class="search-input" :prefix-icon="Search"/>
+      <el-input  v-model="data.start"  placeholder="按放映日期查询 (YYYY-MM-DD)" class="search-input" :prefix-icon="Search"/>
+      <el-select v-model="data.status" placeholder="请选择放映状态" class="search-input">
         <el-option label="正常" value="正常" />
         <el-option label="停售" value="停售" />
       </el-select>
@@ -11,12 +11,12 @@
       <el-button type="warning" @click="reset">重 置</el-button>
     </div>
 
-    <div class="card" style="margin-bottom: 5px">
+    <div class="card page-card">
       <el-button type="info" @click="handleAdd">新 增</el-button>
       <el-button type="danger" @click="delBatch">批量删除</el-button>
     </div>
 
-    <div class="card" style="margin-bottom: 5px">
+    <div class="card page-card">
       <el-table stripe :data="data.tableData" @selection-change="handleSelectionChange">
         <el-table-column type="selection" width="55"/>
         <el-table-column label="影院名称" prop="cinemaName"/>
@@ -33,14 +33,14 @@
         </el-table-column>
         <el-table-column label="操作">
           <template #default="scope">
-            <el-button style="font-size: 18px" link :icon="Edit" @click="handleUpdate(scope.row)" type="primary" />
-            <el-button style="font-size: 18px" link :icon="Delete" @click="() => del(scope.row.id)" type="danger"></el-button>
+            <el-button class="row-action" link :icon="Edit" @click="handleUpdate(scope.row)" type="primary" />
+            <el-button class="row-action" link :icon="Delete" @click="() => del(scope.row.id)" type="danger"></el-button>
           </template>
         </el-table-column>
       </el-table>
     </div>
 
-    <div class="card" style="  margin-bottom: 5px">
+    <div class="card page-card">
       <el-pagination
           @size-change="load"
           @current-change="load"
@@ -54,7 +54,7 @@
     </div>
 
     <el-dialog v-model="data.formVisible" title="放映记录" width="500" destroy-on-close>
-      <el-form ref="formRef" :rules="data.rules" :model="data.form" style="padding-right: 50px;padding-top: 20px" label-width="85px">
+      <el-form ref="formRef" :rules="data.rules" :model="data.form" class="dialog-form" label-width="85px">
         <el-form-item label="影院名称">
           <el-input :model-value="cinemaName" disabled/>
         </el-form-item>
@@ -78,7 +78,7 @@
               placeholder="选择放映时间"
               format="YYYY-MM-DD HH:mm"
               value-format="YYYY-MM-DD HH:mm"
-              style="width: 100%;"
+              class="field-full"
           />
         </el-form-item>
         <el-form-item label="电影票价" prop="price">

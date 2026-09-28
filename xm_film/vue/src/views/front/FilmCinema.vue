@@ -1,40 +1,38 @@
-﻿<template>
-  <div style="width: 100%; margin: 0 auto;">
+<template>
+  <div class="film-cinema">
     <!-- 1. 加载状态提示 -->
-    <div v-if="loading" style="padding: 50px; text-align: center; color: #666;">
+    <div v-if="loading" class="page-hint page-hint--loading">
       正在加载电影及影院信息...
     </div>
 
     <!-- 2. 错误提示 -->
-    <div v-else-if="errorMsg" style="padding: 20px; color: #ef4238; text-align: center;">
+    <div v-else-if="errorMsg" class="page-hint page-hint--error">
       {{ errorMsg }}
     </div>
 
     <!-- 3. 核心内容：电影完整信息 + 目标影院列表 -->
     <div v-else>
       <!-- 3.1 电影详情头部（完整信息展示） -->
-      <div style="background-color: #41036a;">
-        <div style="display: flex; width: 60%; margin: 0 auto; align-items: flex-start;">
+      <div class="film-hero">
+        <div class="film-hero__inner">
           <!-- 电影海报 -->
-          <div style="margin-top: 5px;">
-            <img :src="film.img " alt="电影海报" style="width: 250px; height: 300px;">
+          <div class="film-hero__poster">
+            <img :src="film.img " alt="电影海报" class="film-hero__img">
           </div>
 
           <!-- 电影基本信息 -->
-          <div style="color: white; margin-left: 25px; margin-top: 15px; flex: 2;">
-            <div style="font-size: 26px; font-weight: bold">{{ film.title || '未知电影' }}</div>
-            <div style="margin: 8px 0; font-size: 14px;">{{ film.english || '无英文标题' }}</div>
-            <div style="margin: 8px 0; font-size: 14px;">{{ film.types.join(' / ') || '未知类型' }}</div>
-            <div style="margin: 8px 0; font-size: 14px;">
+          <div class="film-hero__info">
+            <div class="film-hero__title">{{ film.title || '未知电影' }}</div>
+            <div class="film-hero__meta">{{ film.english || '无英文标题' }}</div>
+            <div class="film-hero__meta">{{ film.types.join(' / ') || '未知类型' }}</div>
+            <div class="film-hero__meta">
               {{ film.area || '未知地区' }} / {{ film.time || '未知时长' }} / {{ film.language || '未知语言' }}
             </div>
-            <div style="margin: 8px 0; font-size: 14px;">
+            <div class="film-hero__meta">
               上映时间：{{ film.start || '未知' }} / 格式：{{ film.resolution || '未知' }}
             </div>
             <el-button
-                type="warning"
-                plain
-                style="width: 70%; height: 45px; font-size: 18px; margin-top: 20px; border-color: #ef4238; color: #ef4238;"
+                class="film-hero__action"
                 @click="goToFilmDetail(film.id)"
             >
               查看更多电影详情
@@ -42,100 +40,95 @@
           </div>
 
           <!-- 评分和票房（突出展示） -->
-          <div style="flex: 1; color: white; text-align: center; display: flex; flex-direction: column; justify-content: center; margin-top: 20px;">
-            <div style="margin-bottom: 30px;">
-              <div style="font-size: 16px; opacity: 0.8;">影片口碑</div>
-              <div style="font-size: 36px; margin: 10px 0; font-weight: bold;">{{ film.score || 0 }}分</div>
+          <div class="film-hero__stats">
+            <div class="film-hero__stat">
+              <div class="film-hero__stat-label">影片口碑</div>
+              <div class="film-hero__stat-value">{{ film.score || 0 }}分</div>
             </div>
             <div>
-              <div style="font-size: 16px; opacity: 0.8;">累计票房</div>
-              <div style="font-size: 36px; margin: 10px 0; font-weight: bold;">{{ formatBoxOffice(film.boxOffice) }}</div>
+              <div class="film-hero__stat-label">累计票房</div>
+              <div class="film-hero__stat-value">{{ formatBoxOffice(film.boxOffice) }}</div>
             </div>
           </div>
         </div>
       </div>
 
       <!-- 3.2 核心：当前电影上映影院列表（与后端筛选逻辑对齐） -->
-      <div style="padding: 30px 0; background-color: #fafafa;">
-        <div style="width: 60%; margin: 0 auto; background-color: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+      <div class="cinemas-section">
+        <div class="cinemas-panel">
           <!-- 影院列表标题（明确关联当前电影） -->
-          <h3 style="font-size: 18px; color: #333; border-left: 4px solid #ef4238; padding-left: 10px; margin-bottom: 20px;">
+          <h3 class="cinemas-panel__title">
             【{{ film.title || '当前电影' }}】上映影院列表
           </h3>
 
           <!-- 影院列表内容 -->
           <div>
             <!-- 无影院数据提示（优化文案） -->
-            <div v-if="cinemaData.filmData.length === 0" style="text-align: center; padding: 50px; color: #999; border: 1px dashed #eee; border-radius: 8px;">
-              <div style="font-size: 16px; margin-bottom: 10px;">暂无该电影的上映影院信息</div>
-              <div style="font-size: 14px; opacity: 0.7;">可能该电影尚未排片或暂无合作影院</div>
+            <div v-if="cinemaData.filmData.length === 0" class="empty-hint">
+              <div class="empty-hint__title">暂无该电影的上映影院信息</div>
+              <div class="empty-hint__desc">可能该电影尚未排片或暂无合作影院</div>
             </div>
 
             <!-- 循环渲染影院卡片（优化布局和交互） -->
-            <!-- 核心修改：外层flex增加align-items: stretch，让子容器高度一致 -->
-            <div v-for="(cinema, index) in cinemaData.filmData" :key="index"
-                 style="border: 1px solid #e0e0e0; border-radius: 8px; padding: 15px; margin-bottom: 15px; display: flex; align-items: stretch; transition: all 0.3s ease; gap: 15px;"
-                 class="cinema-card">
-              <!-- 1. 图片容器（固定高度，保持原样式） -->
-              <div style="width: 180px; flex-shrink: 0; height: 145px; display: flex; align-items: center; justify-content: center; overflow: hidden;">
-                <img :src="cinema.avatar" alt="影院图片"
-                     style="width: 100%; height: 100%; object-fit: cover; border-radius: 5px;"
-                >
+            <div v-for="(cinema, index) in cinemaData.filmData" :key="index" class="cinema-card">
+              <!-- 1. 图片容器 -->
+              <div class="cinema-card__poster">
+                <img :src="cinema.avatar" alt="影院图片" class="cinema-card__img">
               </div>
 
-              <!-- 2. 信息容器（占据中间宽度，保持原内容） -->
-              <div style="flex: 1; min-height: 120px; display: flex; flex-direction: column; justify-content: space-between;">
+              <!-- 2. 信息容器 -->
+              <div class="cinema-card__info">
                 <!-- 影院名称 -->
-                <div style="display: flex; align-items: center; justify-content: space-between;">
-                  <div style="font-size: 18px; font-weight: bold; color: #333;">{{ cinema.name || '未知影院' }}</div>
+                <div class="cinema-card__name-row">
+                  <div class="cinema-card__name">{{ cinema.name || '未知影院' }}</div>
                 </div>
 
-                <!-- 影院服务标签（优化间距） -->
-                <div style="margin: 8px 0; display: flex; gap: 8px; flex-wrap: wrap;">
-                  <div style="padding: 2px 8px; border-radius: 12px; font-size: 12px; color: #fff; background-color: #ef4238;">退票无忧</div>
-                  <div style="padding: 2px 8px; border-radius: 12px; font-size: 12px; color: #fff; background-color: #fa8c16;">儿童优惠</div>
-                  <div style="padding: 2px 8px; border-radius: 12px; font-size: 12px; color: #fff; background-color: #1890ff;">WiFi覆盖</div>
-                  <div style="padding: 2px 8px; border-radius: 12px; font-size: 12px; color: #fff; background-color: #52c41a;">免费停车</div>
+                <!-- 影院服务标签：用功能色，白字压其上均达 AA（规范 §2.5） -->
+                <div class="cinema-card__tags">
+                  <div class="service-tag service-tag--refund">退票无忧</div>
+                  <div class="service-tag service-tag--promo">儿童优惠</div>
+                  <div class="service-tag service-tag--wifi">WiFi覆盖</div>
+                  <div class="service-tag service-tag--parking">免费停车</div>
                 </div>
 
-                <!-- 影院详细信息（优化排版，紧凑布局） -->
-                <div style="color: #666; font-size: 14px; display: flex; flex-direction: column; gap: 4px; margin-top: 4px; flex: 1;">
+                <!-- 影院详细信息 -->
+                <div class="cinema-card__detail">
                   <!-- 电话 -->
-                  <div style="display: flex; align-items: center;">
-                    <span style="color: #ef4238; margin-right: 6px; min-width: 50px;">电话：</span>
+                  <div class="cinema-card__detail-row">
+                    <span class="cinema-card__detail-label">电话：</span>
                     <span>{{ cinema.phone || '暂无' }}</span>
                   </div>
 
                   <!-- 邮箱 -->
-                  <div style="display: flex; align-items: center;">
-                    <span style="color: #ef4238; margin-right: 6px; min-width: 50px;">邮箱：</span>
+                  <div class="cinema-card__detail-row">
+                    <span class="cinema-card__detail-label">邮箱：</span>
                     <span>{{ cinema.email || '暂无' }}</span>
                   </div>
 
                   <!-- 地址（控制单行显示，避免高度过高） -->
-                  <div style="display: flex; align-items: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-                    <span style="color: #ef4238; margin-right: 6px; min-width: 50px;">地址：</span>
-                    <span style="flex: 1; word-break: break-all;">{{ cinema.address || '暂无' }}</span>
+                  <div class="cinema-card__detail-row cinema-card__detail-row--ellipsis">
+                    <span class="cinema-card__detail-label">地址：</span>
+                    <span class="cinema-card__detail-value">{{ cinema.address || '暂无' }}</span>
                   </div>
                 </div>
               </div>
 
-              <!-- 3. 购票按钮容器（新增！固定在最右侧，与图片/信息区域垂直对齐） -->
-              <div style="flex-shrink: 0; width: 120px; display: flex; align-items: center; justify-content: center;">
+              <!-- 3. 购票按钮容器 -->
+              <div class="cinema-card__action">
                 <el-button
                     type="primary"
                     size="default"
-                @click="goCinemaDetail(cinema.id, film.id)"
-                style="width: 100%; height: 40px; font-size: 16px;"
+                    class="cinema-card__buy"
+                    @click="goCinemaDetail(cinema.id, film.id)"
                 >
-                立即购票
+                  立即购票
                 </el-button>
               </div>
             </div>
           </div>
 
           <!-- 分页组件（确保与后端参数同步） -->
-          <div style="margin-top: 20px; text-align: right;" v-if="cinemaData.total > 0">
+          <div class="cinemas-panel__pagination" v-if="cinemaData.total > 0">
             <el-pagination
                 @size-change="handleSizeChange"
                 @current-change="handleCurrentChange"
@@ -326,5 +319,276 @@ onMounted(() => {
 </script>
 
 <style scoped>
+.film-cinema {
+  width: 100%;
+  margin: 0 auto;
+}
 
+/* 加载 / 错误提示 */
+.page-hint {
+  text-align: center;
+  color: var(--el-text-color-regular);
+}
+
+.page-hint--loading {
+  padding: var(--space-48);
+}
+
+.page-hint--error {
+  padding: var(--space-20);
+  color: var(--el-color-danger);
+}
+
+/* ---------- 3.1 电影详情头部（深色表面，规范 §2.7） ---------- */
+.film-hero {
+  background-color: var(--dark-bg-hero);
+}
+
+.film-hero__inner {
+  display: flex;
+  align-items: flex-start;
+  width: 60%;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.film-hero__poster {
+  margin-top: var(--space-4);
+}
+
+.film-hero__img {
+  width: 250px;
+  height: 300px;
+  object-fit: cover;
+}
+
+.film-hero__info {
+  flex: 2;
+  margin-top: var(--space-16);
+  margin-left: var(--space-24);
+  color: var(--dark-text);
+}
+
+.film-hero__title {
+  font-size: var(--fs-3xl);
+  font-weight: var(--fw-bold);
+}
+
+.film-hero__meta {
+  margin: var(--space-8) 0;
+  font-size: var(--fs-base);
+}
+
+/* 深底上的 CTA：实底主色 + 白字（白字压 #BF352D 为 5.58:1） */
+.film-hero__action {
+  width: 70%;
+  height: 45px;
+  margin-top: var(--space-20);
+  border: none;
+  background-color: var(--el-color-primary);
+  color: #ffffff;
+  font-size: var(--fs-lg);
+}
+
+.film-hero__stats {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  justify-content: center;
+  margin-top: var(--space-20);
+  color: var(--dark-text);
+  text-align: center;
+}
+
+.film-hero__stat {
+  margin-bottom: var(--space-32);
+}
+
+.film-hero__stat-label {
+  font-size: var(--fs-md);
+  opacity: 0.8;
+}
+
+.film-hero__stat-value {
+  margin: var(--space-12) 0;
+  font-size: var(--fs-5xl);
+  font-weight: var(--fw-bold);
+}
+
+/* ---------- 3.2 上映影院列表 ---------- */
+.cinemas-section {
+  padding: var(--space-32) 0;
+  background-color: var(--el-fill-color-lighter);
+}
+
+.cinemas-panel {
+  width: 60%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: var(--space-20);
+  border-radius: var(--el-border-radius-base);
+  background-color: var(--el-bg-color);
+  box-shadow: var(--el-box-shadow-lighter);
+}
+
+.cinemas-panel__title {
+  margin: 0 0 var(--space-20);
+  padding-left: var(--space-12);
+  border-left: 4px solid var(--color-brand);
+  font-size: var(--fs-lg);
+  font-weight: var(--fw-bold);
+  color: var(--el-text-color-primary);
+}
+
+.empty-hint {
+  padding: var(--space-48);
+  border: 1px dashed var(--el-border-color-lighter);
+  border-radius: var(--el-border-radius-base);
+  text-align: center;
+  color: var(--el-text-color-secondary);
+}
+
+.empty-hint__title {
+  margin-bottom: var(--space-12);
+  font-size: var(--fs-md);
+}
+
+.empty-hint__desc {
+  font-size: var(--fs-base);
+  opacity: 0.7;
+}
+
+.cinema-card {
+  display: flex;
+  align-items: stretch;
+  gap: var(--space-16);
+  margin-bottom: var(--space-16);
+  padding: var(--space-16);
+  border: 1px solid var(--el-border-color);
+  border-radius: var(--el-border-radius-base);
+  transition: box-shadow 200ms ease-in-out;
+}
+
+.cinema-card:hover {
+  box-shadow: var(--el-box-shadow-lighter);
+}
+
+.cinema-card__poster {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 180px;
+  height: 145px;
+  overflow: hidden;
+}
+
+.cinema-card__img {
+  width: 100%;
+  height: 100%;
+  border-radius: var(--el-border-radius-base);
+  object-fit: cover;
+}
+
+.cinema-card__info {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 120px;
+}
+
+.cinema-card__name-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.cinema-card__name {
+  font-size: var(--fs-lg);
+  font-weight: var(--fw-bold);
+  color: var(--el-text-color-primary);
+}
+
+.cinema-card__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-8);
+  margin: var(--space-8) 0;
+}
+
+.service-tag {
+  padding: var(--space-4) var(--space-8);
+  border-radius: var(--el-border-radius-base);
+  font-size: var(--fs-xs);
+  color: #ffffff;
+}
+
+.service-tag--refund {
+  background-color: var(--el-color-primary);
+}
+
+.service-tag--promo {
+  background-color: var(--el-color-warning);
+}
+
+.service-tag--wifi {
+  background-color: var(--el-color-info);
+}
+
+.service-tag--parking {
+  background-color: var(--el-color-success);
+}
+
+.cinema-card__detail {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--space-4);
+  margin-top: var(--space-4);
+  font-size: var(--fs-base);
+  color: var(--el-text-color-regular);
+}
+
+.cinema-card__detail-row {
+  display: flex;
+  align-items: center;
+}
+
+.cinema-card__detail-row--ellipsis {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 标签文字承载内容，用主色（5.58:1）而非品牌红（3.81:1） */
+.cinema-card__detail-label {
+  min-width: 50px;
+  margin-right: var(--space-8);
+  color: var(--el-color-primary);
+}
+
+.cinema-card__detail-value {
+  flex: 1;
+  word-break: break-all;
+}
+
+.cinema-card__action {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 120px;
+}
+
+.cinema-card__buy {
+  width: 100%;
+  height: 40px;
+  font-size: var(--fs-md);
+}
+
+.cinemas-panel__pagination {
+  margin-top: var(--space-20);
+  text-align: right;
+}
 </style>

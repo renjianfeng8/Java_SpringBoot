@@ -1,10 +1,10 @@
 <template>
-  <div style="display: flex; justify-content: center; min-height: 50vh; padding: 40px;">
+  <div class="password-wrapper">
 
-    <div class="card" style="width: 50%; max-width: 500px; padding: 40px 25px">
-      <div style="font-size: 16px;font-weight: 550;margin: 5px">修改密码</div>
+    <div class="card password-card">
+      <div class="password-title">修改密码</div>
 
-      <el-form ref="formRef" :rules="data.rules" :model="data.form" style="padding-right: 50px;padding-top: 30px" label-width="100px">
+      <el-form ref="formRef" :rules="data.rules" :model="data.form" class="password-form" label-width="100px">
         <el-form-item label="原密码" prop="password">
           <el-input show-password v-model="data.form.password" autocomplete="off" placeholder="请输入原密码"/>
         </el-form-item>
@@ -14,8 +14,8 @@
         <el-form-item label="确认新密码" prop="confirmPassword" required>
           <el-input show-password v-model="data.form.confirmPassword" autocomplete="off" placeholder="请再次确认新密码"/>
         </el-form-item>
-        <div style="text-align: center">
-          <el-button @click="updatePassword" type="primary" style="padding: 20px 30px" >立即修改</el-button>
+        <div class="password-actions">
+          <el-button @click="updatePassword" type="primary" class="password-submit">立即修改</el-button>
         </div>
       </el-form>
 
@@ -82,3 +82,40 @@ const updatePassword = () => {
 }
 
 </script>
+
+<style scoped>
+.password-wrapper {
+  display: flex;
+  justify-content: center;
+  min-height: 50vh;
+  padding: var(--space-40);
+}
+
+.password-card {
+  width: 50%;
+  max-width: 500px;
+  padding: var(--space-40) var(--space-24);
+  border-radius: var(--el-border-radius-base);
+  background-color: var(--el-bg-color);
+  box-shadow: var(--el-box-shadow-lighter);
+}
+
+.password-title {
+  margin: var(--space-4);
+  font-size: var(--fs-md);
+  font-weight: var(--fw-bold);
+}
+
+.password-form {
+  padding-top: var(--space-32);
+  padding-right: var(--space-48);
+}
+
+.password-actions {
+  text-align: center;
+}
+
+.password-submit {
+  padding: var(--space-20) var(--space-32);
+}
+</style>

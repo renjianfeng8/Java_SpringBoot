@@ -1,8 +1,8 @@
 ﻿<template>
-  <div style="display: flex; justify-content: center; min-height: 50vh; padding: 20px;">
-    <div class="card" style="width: 50%; max-width: 500px; padding: 40px 20px">
+  <div class="profile-wrapper">
+    <div class="card profile-card">
 
-      <el-form ref="formRef" :rules="data.rules" :model="data.form" style="padding-right: 50px;padding-top: 20px" label-width="100px">
+      <el-form ref="formRef" :rules="data.rules" :model="data.form" class="dialog-form" label-width="100px">
         <el-form-item label="原密码" prop="password">
           <el-input show-password v-model="data.form.password" autocomplete="off" placeholder="请输入原密码"/>
         </el-form-item>
@@ -12,8 +12,8 @@
         <el-form-item label="确认新密码" prop="confirmPassword" required>
           <el-input show-password v-model="data.form.confirmPassword" autocomplete="off" placeholder="请再次确认新密码"/>
         </el-form-item>
-        <div style="text-align: center">
-          <el-button @click="updatePassword" type="primary" style="padding: 20px 30px" >立即修改</el-button>
+        <div class="form-actions">
+          <el-button @click="updatePassword" type="primary" class="submit-button" >立即修改</el-button>
         </div>
       </el-form>
 

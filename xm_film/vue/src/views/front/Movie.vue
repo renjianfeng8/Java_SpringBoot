@@ -1,11 +1,11 @@
-﻿<template>
-  <div style="width: 55%; margin:20px auto ">
+<template>
+  <div class="page-narrow">
 
-    <div style="border: 1px solid #ccc; padding: 20px 30px; border-radius: 5px">
+    <div class="filter-panel">
 
-      <div style="display: flex; align-items: center; border-bottom: 1px solid #eee; padding: 15px 0">
-        <div style="width: 60px; font-size: 16px">类型 :</div>
-        <div style="flex: 1">
+      <div class="filter-row">
+        <div class="filter-label">类型 :</div>
+        <div class="filter-options">
           <el-row :gutter="10">
             <el-col :span="3">
               <div class="item_style" :class="{'item_active' : !data.typeFlag}" @click="changeTypeFlag(null)">全部</div>
@@ -17,9 +17,9 @@
         </div>
       </div>
 
-      <div style="display: flex; align-items: center; border-bottom: 1px solid #eee; padding: 15px 0">
-        <div style="width: 60px; font-size: 16px">年代 :</div>
-        <div style="flex: 1">
+      <div class="filter-row">
+        <div class="filter-label">年代 :</div>
+        <div class="filter-options">
           <el-row :gutter="10">
             <el-col :span="3">
               <div class="item_style" :class="{'item_active' : !data.yearFlag}" @click="changeYearFlag(null)">全部</div>
@@ -31,9 +31,9 @@
         </div>
       </div>
 
-      <div style="display: flex; align-items: center; padding: 15px 0">
-        <div style="width: 60px; font-size: 16px">区域 :</div>
-        <div style="flex: 1">
+      <div class="filter-row filter-row--last">
+        <div class="filter-label">区域 :</div>
+        <div class="filter-options">
           <el-row :gutter="10">
             <el-col :span="3">
               <div class="item_style" :class="{'item_active' : !data.areaFlag}" @click="changeAreaFlag(null)">全部</div>
@@ -48,31 +48,31 @@
     </div>
 
 
-    <div style="margin-top: 20px">
+    <div class="film-grid">
       <el-row :gutter="12">
-        <el-col :span="6" v-for="item in data.filmData" style="margin-bottom: 25px;">
+        <el-col :span="6" class="film-grid__col" v-for="item in data.filmData">
           <!-- 核心修改：添加点击事件跳转详情页 -->
           <img
               :src="item.img"
               alt=""
-              style="width: 100%; height: 240px; border-radius: 5px; cursor: pointer"
+              class="film-card__poster"
               @click="goToFilmDetail(item.id)"
           >
-          <div style="margin-top: 5px; font-size: 16px;font-weight: bold;font-style: italic">{{item.title}}</div>
+          <div class="film-card__title">{{item.title}}</div>
 
-          <div style="margin-top: 5px;display: flex; align-items: center">
-            <div style="flex: 1">
+          <div class="film-card__meta">
+            <div class="film-card__status">
               <el-tag :type="getStatusType(item.status)">
                 {{ item.status }}
               </el-tag>
             </div>
-            <div style="width: 80px; color: orange; font-size: 20px; text-align: right;">{{ item.score }} 分</div>
+            <div class="film-card__score">{{ item.score }} 分</div>
           </div>
         </el-col>
       </el-row>
     </div>
 
-    <div style="margin: 5px" v-if="data.total">
+    <div class="film-grid__pagination" v-if="data.total">
       <el-pagination
           @size-change="handleSizeChange"
           @current-change="handleCurrentChange"
@@ -205,19 +205,63 @@ load()
 
 <style scoped>
 .item_style {
-  border: 1px solid #ccc;
-  padding: 5px;
-  margin: 5px;
-  border-radius: 5px;
+  padding: var(--space-4);
+  margin: var(--space-4);
+  border: 1px solid var(--el-border-color-darker);
+  border-radius: var(--el-border-radius-base);
   text-align: center;
   cursor: pointer;
 }
 
+/* 选中态承载文字，用主色（白字 5.58:1，达 AA） */
 .item_active {
-  background-color: #ef4238;
-  color: white;
   border: none;
+  background-color: var(--el-color-primary);
+  color: #ffffff;
+}
+
+.film-grid {
+  margin-top: var(--space-20);
+}
+
+.film-grid__col {
+  margin-bottom: var(--space-24);
+}
+
+.film-grid__pagination {
+  margin: var(--space-4);
+}
+
+.film-card__poster {
+  width: 100%;
+  height: 240px;
+  border-radius: var(--el-border-radius-base);
+  object-fit: cover;
+  cursor: pointer;
+}
+
+.film-card__title {
+  margin-top: var(--space-4);
+  font-size: var(--fs-md);
+  font-weight: var(--fw-bold);
+  font-style: italic;
+}
+
+.film-card__meta {
+  display: flex;
+  align-items: center;
+  margin-top: var(--space-4);
+}
+
+.film-card__status {
+  flex: 1;
+}
+
+/* 评分承载文字，用白底评分文字色（4.68:1） */
+.film-card__score {
+  width: 80px;
+  font-size: var(--fs-xl);
+  color: var(--color-rating-text);
+  text-align: right;
 }
 </style>
-
-

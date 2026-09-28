@@ -1,43 +1,41 @@
 ﻿<template>
-  <div style="width: 100%; margin: 0 auto;">
+  <div class="film-detail">
     <!-- 1. 加载状态提示 -->
-    <div v-if="loading" style="padding: 50px; text-align: center; color: #666;">
+    <div v-if="loading" class="page-hint page-hint--loading">
       正在加载电影详情...
     </div>
 
     <!-- 2. 错误提示 -->
-    <div v-else-if="errorMsg" style="padding: 20px; color: #ef4238; text-align: center;">
+    <div v-else-if="errorMsg" class="page-hint page-hint--error">
       <div>{{ errorMsg }}</div>
-      <el-button style="margin-top: 16px;" type="primary" @click="goBackToList">返回影片列表</el-button>
+      <el-button class="page-hint__action" type="primary" @click="goBackToList">返回影片列表</el-button>
     </div>
 
     <!-- 3. 电影内容区域 -->
     <div v-else>
       <!-- 3.1 电影头部信息区域 -->
-      <div style="background-color: #41036a;">
-        <div style="display: flex; width: 60%; margin: 0 auto;">
+      <div class="film-hero">
+        <div class="film-hero__inner">
           <!-- 电影海报 -->
           <div>
-            <img :src="film.img" alt="电影海报" style="width: 250px; height: 300px; object-fit: cover;">
+            <img :src="film.img" alt="电影海报" class="film-hero__img">
           </div>
 
           <!-- 电影基本信息 -->
-          <div style="color: white; margin-left: 20px; margin-top: 15px; flex: 2;">
-            <div style="font-size: 24px; font-weight: bold">{{ film.title || '未知电影' }}</div>
-            <div style="margin: 5px 0">{{ film.english || '无英文标题' }}</div>
-            <div style="margin: 5px 0">{{ film.types.join(' / ') || '未知类型' }}</div>
-            <div style="margin: 5px 0">{{ film.area || '未知地区' }} / {{ film.time || '未知时长' }}</div>
-            <div style="margin: 5px 0">{{ film.language || '未知语言' }} / {{ film.resolution || '未知格式' }}</div>
-            <div style="margin: 5px 0">{{ film.start || '未知上映时间' }} 开始上映</div>
+          <div class="film-hero__info">
+            <div class="film-hero__title">{{ film.title || '未知电影' }}</div>
+            <div class="film-hero__meta">{{ film.english || '无英文标题' }}</div>
+            <div class="film-hero__meta">{{ film.types.join(' / ') || '未知类型' }}</div>
+            <div class="film-hero__meta">{{ film.area || '未知地区' }} / {{ film.time || '未知时长' }}</div>
+            <div class="film-hero__meta">{{ film.language || '未知语言' }} / {{ film.resolution || '未知格式' }}</div>
+            <div class="film-hero__meta">{{ film.start || '未知上映时间' }} 开始上映</div>
             <!-- 新增：显示单个演员的基础信息（从film.actorInfo获取） -->
-            <div style="margin: 5px 0" v-if="film.actorInfo">
+            <div class="film-hero__meta" v-if="film.actorInfo">
               主演：{{ film.actorInfo.split(':')[1] || '未知演员' }}
             </div>
 
             <el-button
-                type="warning"
-                plain
-                style="width: 70%; height: 45px; font-size: 18px; margin-top: 20px; border-color: #ef4238; color: #ef4238;"
+                class="film-hero__action"
                 :disabled="film.status !== '已上映'"
                 @click="goToFilmCinema(film.id)"
             >
@@ -46,39 +44,39 @@
           </div>
 
           <!-- 评分和票房 -->
-          <div style="flex: 1; color: white; text-align: center; display: flex; flex-direction: column; justify-content: center;">
+          <div class="film-hero__stats">
             <div>
               <div>影片口碑</div>
-              <div style="font-size: 28px; margin: 10px 0">{{ film.score || 0 }}分</div>
+              <div class="film-hero__stat-value">{{ film.score || 0 }}分</div>
             </div>
-            <div style="margin-top: 30px;">
+            <div class="film-hero__stat-spacer">
               <div>累计票房</div>
-              <div style="font-size: 28px; margin: 10px 0">{{ formatBoxOffice(film.boxOffice) }}</div>
+              <div class="film-hero__stat-value">{{ formatBoxOffice(film.boxOffice) }}</div>
             </div>
           </div>
         </div>
       </div>
 
       <!-- 3.2 电影详细信息区域 -->
-      <div style="min-height: 400px; padding: 30px 0; background-color: #fafafa;">
-        <div style="width: 60%; display: flex; margin: 0 auto; background-color: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+      <div class="detail-section">
+        <div class="detail-panel">
           <!-- 左侧信息区 -->
-          <div style="flex: 2;">
-            <h3 style="font-size: 18px; color: #333; border-left: 4px solid #ef4238; padding-left: 10px;">剧情简介</h3>
-            <p style="margin-top: 15px; line-height: 1.8; color: #333; white-space: pre-line; text-indent: 2em;">
+          <div class="detail-panel__main">
+            <h3 class="section-title">剧情简介</h3>
+            <p class="section-text section-text--indent">
               {{ film.intro || '暂无剧情简介' }}
             </p>
 
             <!-- 演职人员区域（核心修改：适配单个actorId+多角色区分） -->
-            <h3 style="font-size: 18px; color: #333; border-left: 4px solid #ef4238; padding-left: 10px; margin-top: 30px;">演职人员</h3>
-            <div v-if="loadingCast" style="margin-top: 15px; color: #666; padding: 20px; text-align: center;">
+            <h3 class="section-title section-title--spaced">演职人员</h3>
+            <div v-if="loadingCast" class="cast-hint">
               正在加载演职人员信息...
             </div>
-            <div v-else-if="castError" style="margin-top: 15px; color: #ef4238; padding: 20px; text-align: center;">
+            <div v-else-if="castError" class="cast-hint cast-hint--error">
               {{ castError }}
             </div>
             <!-- 演职人员列表展示（按角色分类，圆形头像+名字布局） -->
-            <div v-else style="margin-top: 15px;">
+            <div v-else class="cast-body">
               <!-- 导演组 -->
               <div class="cast-group" v-if="directorList.length > 0">
                 <div class="cast-card-container"> <!-- 卡片容器：横向排列 -->
@@ -97,7 +95,7 @@
               </div>
 
               <!-- 主演组 -->
-              <div class="cast-group" style="margin-top: 20px;" v-if="actorList.length > 0">
+              <div class="cast-group cast-group--spaced" v-if="actorList.length > 0">
 
                 <div class="cast-card-container">
                   <div v-for="(actor, idx) in actorList" :key="actor.id" class="cast-card">
@@ -113,7 +111,7 @@
               </div>
 
               <!-- 编剧组 -->
-              <div class="cast-group" style="margin-top: 20px;" v-if="screenwriterList.length > 0">
+              <div class="cast-group cast-group--spaced" v-if="screenwriterList.length > 0">
 
                 <div class="cast-card-container">
                   <div v-for="(writer, idx) in screenwriterList" :key="writer.id" class="cast-card">
@@ -129,7 +127,7 @@
               </div>
 
               <!-- 二级演员组 -->
-              <div class="cast-group" style="margin-top: 20px;" v-if="supportActorList.length > 0">
+              <div class="cast-group cast-group--spaced" v-if="supportActorList.length > 0">
 
                 <div class="cast-card-container">
                   <div v-for="(actor, idx) in supportActorList" :key="actor.id" class="cast-card">
@@ -146,29 +144,29 @@
 
               <!-- 无演职人员兜底 -->
               <div v-if="!directorList.length && !actorList.length && !screenwriterList.length && !supportActorList.length"
-                   style="margin-top: 15px; color: #666; padding: 10px;">
+                   class="cast-empty">
                 暂无演职人员信息
               </div>
             </div>
 
-            <h3 style="font-size: 18px; color: #333; border-left: 4px solid #ef4238; padding-left: 10px; margin-top: 30px;">出品信息</h3>
-            <p style="margin-top: 15px; line-height: 1.8; color: #333; white-space: pre-line;">
+            <h3 class="section-title section-title--spaced">出品信息</h3>
+            <p class="section-text">
               {{ film.production || '暂无出品方介绍' }}
             </p>
           </div>
 
           <!-- 右侧视频区 -->
-          <div style="flex: 1; margin-left: 40px;">
-            <h3 style="font-size: 18px; color: #333; border-left: 4px solid #ef4238; padding-left: 10px;">预告视频</h3>
+          <div class="detail-panel__aside">
+            <h3 class="section-title">预告视频</h3>
             <!-- 关键修改：用video标签替代div，实现视频播放 -->
-            <div style="margin-top: 15px; border-radius: 4px; overflow: hidden;">
+            <div class="video-frame">
               <!-- 有视频URL时显示播放器 -->
-              <video v-if="film.video" :src="film.video" controls style="width: 100%; height: 200px; object-fit: cover; background-color: #000;">
+              <video v-if="film.video" :src="film.video" controls class="video-player">
                 <track kind="captions" src="/subtitles/trailer-zh.vtt" srclang="zh" label="中文字幕" />
                 您的浏览器不支持HTML5视频播放，请升级浏览器。
               </video>
               <!-- 无视频URL时显示提示 -->
-              <div v-else style="line-height: 1.8; color: #333; background-color: #f5f5f5; height: 200px; display: flex; align-items: center; justify-content: center; border-radius: 4px;">
+              <div v-else class="video-placeholder">
                 暂无预告视频
               </div>
             </div>
@@ -177,20 +175,20 @@
       </div>
 
       <!-- 3.3 用户评价区域（数据来自 /api/v1/marks，匿名可读） -->
-      <div style="width: 60%; margin: 30px auto 0;">
-        <h3 style="font-size: 18px; color: #333; border-left: 4px solid #ef4238; padding-left: 10px;">
+      <div class="marks-section">
+        <h3 class="section-title">
           用户评价
-          <span style="font-size: 14px; color: #999; font-weight: normal;">（{{ marks.length }} 条）</span>
+          <span class="section-title__count">（{{ marks.length }} 条）</span>
         </h3>
-        <div v-if="loadingMarks" style="padding: 20px; color: #999;">正在加载评价...</div>
-        <div v-else-if="!marks.length" style="padding: 20px; color: #999;">暂无评价，购票取票后可以发表第一条</div>
-        <div v-else style="margin-top: 15px;">
-          <div v-for="item in marks" :key="item.id" style="padding: 12px 0; border-bottom: 1px solid #f0f0f0;">
-            <div style="display: flex; align-items: center; justify-content: space-between;">
-              <span style="color: #333; font-weight: bold;">{{ item.userName || '匿名用户' }}</span>
-              <span style="color: #ff9900; font-weight: bold;">{{ item.score }} 分</span>
+        <div v-if="loadingMarks" class="marks-hint">正在加载评价...</div>
+        <div v-else-if="!marks.length" class="marks-hint">暂无评价，购票取票后可以发表第一条</div>
+        <div v-else class="marks-list">
+          <div v-for="item in marks" :key="item.id" class="mark-item">
+            <div class="mark-item__head">
+              <span class="mark-item__user">{{ item.userName || '匿名用户' }}</span>
+              <span class="mark-item__score">{{ item.score }} 分</span>
             </div>
-            <div v-if="item.mark" style="margin-top: 6px; color: #666; line-height: 1.6;">{{ item.mark }}</div>
+            <div v-if="item.mark" class="mark-item__text">{{ item.mark }}</div>
           </div>
         </div>
       </div>
@@ -413,18 +411,254 @@ onMounted(() => {
 </script>
 
 <style scoped>
+.film-detail {
+  width: 100%;
+  margin: 0 auto;
+}
+
+/* 加载 / 错误提示 */
+.page-hint {
+  text-align: center;
+  color: var(--el-text-color-regular);
+}
+
+.page-hint--loading {
+  padding: var(--space-48);
+}
+
+.page-hint--error {
+  padding: var(--space-20);
+  color: var(--el-color-danger);
+}
+
+.page-hint__action {
+  margin-top: var(--space-16);
+}
+
+/* ---------- 3.1 电影头部（深色表面，规范 §2.7） ---------- */
+.film-hero {
+  background-color: var(--dark-bg-hero);
+}
+
+.film-hero__inner {
+  display: flex;
+  width: 60%;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.film-hero__img {
+  width: 250px;
+  height: 300px;
+  object-fit: cover;
+}
+
+.film-hero__info {
+  flex: 2;
+  margin-top: var(--space-16);
+  margin-left: var(--space-20);
+  color: var(--dark-text);
+}
+
+.film-hero__title {
+  font-size: var(--fs-2xl);
+  font-weight: var(--fw-bold);
+}
+
+.film-hero__meta {
+  margin: var(--space-4) 0;
+}
+
+/* 深底上的 CTA：实底主色 + 白字（白字压 #BF352D 为 5.58:1） */
+.film-hero__action {
+  width: 70%;
+  height: 45px;
+  margin-top: var(--space-20);
+  border: none;
+  background-color: var(--el-color-primary);
+  color: #ffffff;
+  font-size: var(--fs-lg);
+}
+
+.film-hero__stats {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  justify-content: center;
+  color: var(--dark-text);
+  text-align: center;
+}
+
+.film-hero__stat-value {
+  margin: var(--space-12) 0;
+  font-size: var(--fs-3xl);
+}
+
+.film-hero__stat-spacer {
+  margin-top: var(--space-32);
+}
+
+/* ---------- 3.2 详细信息 ---------- */
+.detail-section {
+  min-height: 400px;
+  padding: var(--space-32) 0;
+  background-color: var(--el-fill-color-lighter);
+}
+
+.detail-panel {
+  display: flex;
+  width: 60%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: var(--space-20);
+  border-radius: var(--el-border-radius-base);
+  background-color: var(--el-bg-color);
+  box-shadow: var(--el-box-shadow-lighter);
+}
+
+.detail-panel__main {
+  flex: 2;
+}
+
+.detail-panel__aside {
+  flex: 1;
+  margin-left: var(--space-40);
+}
+
+/* 区块标题：左侧品牌红竖条（装饰，非文字） */
+.section-title {
+  margin: 0;
+  padding-left: var(--space-12);
+  border-left: 4px solid var(--color-brand);
+  font-size: var(--fs-lg);
+  font-weight: var(--fw-bold);
+  color: var(--el-text-color-primary);
+}
+
+.section-title--spaced {
+  margin-top: var(--space-32);
+}
+
+.section-title__count {
+  font-size: var(--fs-base);
+  font-weight: var(--fw-regular);
+  color: var(--el-text-color-secondary);
+}
+
+.section-text {
+  margin: var(--space-16) 0 0;
+  color: var(--el-text-color-primary);
+  line-height: var(--lh-loose);
+  white-space: pre-line;
+}
+
+.section-text--indent {
+  text-indent: 2em;
+}
+
+.cast-hint {
+  margin-top: var(--space-16);
+  padding: var(--space-20);
+  color: var(--el-text-color-regular);
+  text-align: center;
+}
+
+.cast-hint--error {
+  color: var(--el-color-danger);
+}
+
+.cast-body {
+  margin-top: var(--space-16);
+}
+
+.cast-empty {
+  margin-top: var(--space-16);
+  padding: var(--space-12);
+  color: var(--el-text-color-regular);
+}
+
+.video-frame {
+  margin-top: var(--space-16);
+  border-radius: var(--el-border-radius-base);
+  overflow: hidden;
+}
+
+.video-player {
+  width: 100%;
+  height: 200px;
+  object-fit: cover;
+  background-color: #000000;
+}
+
+.video-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 200px;
+  border-radius: var(--el-border-radius-base);
+  background-color: var(--el-fill-color-light);
+  color: var(--el-text-color-primary);
+  line-height: var(--lh-loose);
+}
+
+/* ---------- 3.3 用户评价 ---------- */
+.marks-section {
+  width: 60%;
+  max-width: 1200px;
+  margin: var(--space-32) auto 0;
+}
+
+.marks-hint {
+  padding: var(--space-20);
+  color: var(--el-text-color-secondary);
+}
+
+.marks-list {
+  margin-top: var(--space-16);
+}
+
+.mark-item {
+  padding: var(--space-12) 0;
+  border-bottom: 1px solid var(--el-fill-color-dark);
+}
+
+.mark-item__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.mark-item__user {
+  font-weight: var(--fw-bold);
+  color: var(--el-text-color-primary);
+}
+
+/* 评分承载文字，用白底评分文字色（4.68:1） */
+.mark-item__score {
+  font-weight: var(--fw-bold);
+  color: var(--color-rating-text);
+}
+
+.mark-item__text {
+  margin-top: var(--space-8);
+  color: var(--el-text-color-regular);
+  line-height: var(--lh-base);
+}
 
 /* 演职人员样式：圆形头像+卡片布局 */
 .cast-group {
-  margin-bottom: 15px;
+  margin-bottom: var(--space-16);
 }
 
+.cast-group--spaced {
+  margin-top: var(--space-20);
+}
 
 /* 演职人员卡片容器：横向排列，自动换行 */
 .cast-card-container {
   display: inline-flex;
   flex-wrap: wrap;
-  gap: 16px; /* 卡片之间的间距 */
+  gap: var(--space-16);
   vertical-align: top;
 }
 
@@ -432,45 +666,41 @@ onMounted(() => {
 .cast-card {
   display: flex;
   flex-direction: column;
-  align-items: center; /* 水平居中 */
-  width: 80px; /* 卡片宽度（与头像直径一致） */
+  align-items: center;
+  width: 80px;
 }
 
 /* 圆形头像容器 */
 .cast-avatar {
   width: 60px;
   height: 60px;
-  border-radius: 50%;
-  overflow: hidden; /* 隐藏图片超出圆形的部分 */
-  margin-bottom: 5px;
+  margin-bottom: var(--space-4);
+  border-radius: var(--el-border-radius-circle);
+  overflow: hidden;
 }
 
 /* 头像图片：填充容器且不变形 */
 .avatar-img {
   width: 100%;
   height: 100%;
-  object-fit: cover; /* 保持图片比例，填充容器 */
+  object-fit: cover;
 }
 
-/* 卡片文字区域（名字+角色） */
 .cast-info {
-  text-align: center; /* 文字居中 */
+  text-align: center;
 }
 
-/* 演职人员名字 */
 .cast-name {
-  font-size: 14px;
-  white-space: nowrap; /* 名字不换行 */
-  width: 100%; /* 限制宽度，避免名字过长 */
+  width: 100%;
+  font-size: var(--fs-base);
+  white-space: nowrap;
 }
 
-/* 演职人员角色（如“主演”） */
 .cast-role {
-  font-size: 14px;
-  color: #100d0f;
-  font-weight: bold;
-  margin-bottom: 2px;
-
+  margin-bottom: var(--space-4);
+  font-size: var(--fs-base);
+  font-weight: var(--fw-bold);
+  color: var(--el-text-color-primary);
 }
 </style>
 

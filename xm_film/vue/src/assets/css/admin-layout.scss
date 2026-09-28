@@ -81,6 +81,11 @@
   overflow: hidden;
 }
 
+/* 侧栏菜单去掉 EP 默认的右边框（原本靠内联 style 设置） */
+.manage-menu {
+  border: none;
+}
+
 .manage-main-left {
   width: 175px;
   transition: width 0.3s;

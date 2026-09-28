@@ -39,7 +39,7 @@
                          :max="50000"
                          :precision="2"
                          :step="10"
-                         style="width: 180px" />
+                         class="amount-input" />
         <el-button type="primary" :loading="submitting" @click="submitRecharge">
           提交充值申请
         </el-button>
@@ -83,7 +83,7 @@
         <el-table-column label="业务来源" prop="source" width="100" />
         <el-table-column label="变动金额" width="120">
           <template #default="scope">
-            <span :style="{ color: Number(scope.row.changeAmount) >= 0 ? '#67c23a' : '#f56c6c' }">
+            <span :class="Number(scope.row.changeAmount) >= 0 ? 'flow-amount--in' : 'flow-amount--out'">
               {{ Number(scope.row.changeAmount) >= 0 ? '+' : '' }}{{ money(scope.row.changeAmount) }}
             </span>
           </template>
@@ -211,12 +211,13 @@ onMounted(loadAll);
 <style scoped>
 .account-page {
   width: 85%;
-  margin: 20px auto;
+  max-width: 1200px;
+  margin: var(--space-20) auto;
 }
 
 .balance-card {
-  margin-bottom: 12px;
-  border-radius: 8px;
+  margin-bottom: var(--space-12);
+  border-radius: var(--el-border-radius-base);
 }
 
 .balance-row {
@@ -226,51 +227,65 @@ onMounted(loadAll);
 }
 
 .balance-label {
-  font-size: 14px;
-  color: #666;
+  font-size: var(--fs-base);
+  color: var(--el-text-color-regular);
 }
 
+/* 32px 属大文本，可用品牌红（规范 §2.4：品牌红仅限 ≥24px 与非文字） */
 .balance-value {
-  font-size: 32px;
-  font-weight: bold;
-  color: #ef4238;
-  margin-top: 4px;
+  margin-top: var(--space-4);
+  font-size: var(--fs-4xl);
+  font-weight: var(--fw-bold);
+  color: var(--color-brand);
 }
 
 .balance-tip {
-  margin-top: 10px;
-  font-size: 13px;
-  color: #999;
+  margin-top: var(--space-12);
+  font-size: var(--fs-sm);
+  color: var(--el-text-color-secondary);
 }
 
 .section {
-  margin-bottom: 12px;
-  border-radius: 8px;
+  margin-bottom: var(--space-12);
+  border-radius: var(--el-border-radius-base);
 }
 
 .section-title {
-  font-weight: bold;
+  font-weight: var(--fw-bold);
 }
 
 .tier-row {
   display: flex;
-  gap: 12px;
-  margin-bottom: 16px;
+  gap: var(--space-12);
+  margin-bottom: var(--space-16);
 }
 
 .amount-row {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--space-12);
+}
+
+.amount-input {
+  width: 180px;
 }
 
 .amount-label {
-  font-size: 14px;
-  color: #666;
+  font-size: var(--fs-base);
+  color: var(--el-text-color-regular);
 }
 
 .muted {
-  color: #999;
-  font-size: 13px;
+  font-size: var(--fs-sm);
+  color: var(--el-text-color-secondary);
+}
+
+/* 流水金额承载文字，用达 AA 的成功 / 危险色（规范 §3.3） */
+.flow-amount--in {
+  color: var(--el-color-success);
+}
+
+.flow-amount--out {
+  color: var(--el-color-danger);
 }
 </style>

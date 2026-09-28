@@ -1,45 +1,45 @@
 <template>
   <div>
-    <div class="card" style="margin-bottom: 5px">
-      <el-input v-model="searchForm.title" placeholder="请输入电影名称查询" style="width: 300px; margin-right:10px" :prefix-icon="Search"/>
+    <div class="card page-card">
+      <el-input v-model="searchForm.title" placeholder="请输入电影名称查询" class="search-input" :prefix-icon="Search"/>
       <el-button type="primary" @click="onSearch">查 询</el-button>
       <el-button type="warning" @click="onReset">重 置</el-button>
     </div>
 
-    <div class="card" style="margin-bottom: 5px">
+    <div class="card page-card">
       <el-button type="info" @click="openAdd">新 增</el-button>
       <el-button type="danger" @click="handleDelBatch">批量删除</el-button>
     </div>
 
-    <div class="card" style="margin-bottom: 5px">
+    <div class="card page-card">
       <el-table v-loading="loading" stripe :data="dataList" @selection-change="onSelectionChange">
         <el-table-column type="selection" width="55"/>
         <el-table-column type="expand">
           <template #default="props">
             <el-descriptions title="电影信息" :column="4" border>
               <el-descriptions-item label="电影封面">
-                <el-image style="width:36px;height:36px;object-fit:cover;" :src="props.row.img"/>
+                <el-image class="cell-thumb" :src="props.row.img"/>
               </el-descriptions-item>
               <el-descriptions-item label="电影名称">{{props.row.title}}</el-descriptions-item>
               <el-descriptions-item label="英文名称">{{props.row.english}}</el-descriptions-item>
               <el-descriptions-item label="上映日期">{{props.row.start}}</el-descriptions-item>
               <el-descriptions-item label="电影时长">{{props.row.time}}分钟</el-descriptions-item>
               <el-descriptions-item label="电影类型">
-                <el-tag v-for="item in props.row.typeList" style="margin-right: 5px; margin-bottom: 5px" :type="getTypeTagType(item)">{{ item.title }}</el-tag>
+                <el-tag v-for="item in props.row.typeList" class="tag-gap" :type="getTypeTagType(item)">{{ item.title }}</el-tag>
               </el-descriptions-item>
               <el-descriptions-item label="电影语言">{{props.row.language}}</el-descriptions-item>
               <el-descriptions-item label="电影分辨率">{{props.row.resolution}}</el-descriptions-item>
               <el-descriptions-item label="电影简介">
                 <el-popover placement="top-start" title="电影简介" :width="200" trigger="hover" :content="props.row.content">
                   <template #reference>
-                    <div class="line" style="width: 80px">{{props.row.content}}</div>
+                    <div class="line line--content">{{props.row.content}}</div>
                   </template>
                 </el-popover>
               </el-descriptions-item>
               <el-descriptions-item label="制作公司">
                 <el-popover placement="top-start" title="制作公司" :width="200" trigger="hover" :content="props.row.employee">
                   <template #reference>
-                    <div class="line" style="width: 100px">{{props.row.employee}}</div>
+                    <div class="line line--employee">{{props.row.employee}}</div>
                   </template>
                 </el-popover>
               </el-descriptions-item>
@@ -59,7 +59,7 @@
         <el-table-column label="英文名称" prop="english" show-overflow-tooltip />
         <el-table-column label="封面" prop="img">
           <template #default="scope">
-            <el-image style="margin-top: 7px; width:36px;height:36px;border-radius:10%;object-fit:cover;align-items:center;"
+            <el-image class="cell-thumb"
                       v-if="scope.row.img" :src="scope.row.img"
                       :preview-src-list="[scope.row.img]" preview-teleported/>
           </template>
@@ -68,7 +68,7 @@
         <el-table-column label="电影时长" prop="time" />
         <el-table-column label="电影类型" prop="typeList" width="180">
           <template v-slot="scope">
-            <el-tag v-for="item in scope.row.typeList" style="margin-right: 5px; margin-bottom: 5px" :type="getTypeTagType(item)">{{ item.title }}</el-tag>
+            <el-tag v-for="item in scope.row.typeList" class="tag-gap" :type="getTypeTagType(item)">{{ item.title }}</el-tag>
           </template>
         </el-table-column>
         <el-table-column label="语言" prop="language" />
@@ -83,14 +83,14 @@
         </el-table-column>
         <el-table-column label="操作">
           <template #default="scope">
-            <el-button style="font-size: 18px" link :icon="Edit" @click="openEdit(scope.row)" type="primary"></el-button>
-            <el-button style="font-size: 18px" link :icon="Delete" @click="() => handleDel(scope.row.id)" type="danger"></el-button>
+            <el-button class="row-action" link :icon="Edit" @click="openEdit(scope.row)" type="primary"></el-button>
+            <el-button class="row-action" link :icon="Delete" @click="() => handleDel(scope.row.id)" type="danger"></el-button>
           </template>
         </el-table-column>
       </el-table>
     </div>
 
-    <div class="card" style="margin-bottom: 5px">
+    <div class="card page-card">
       <el-pagination
           @size-change="onSizeChange"
           @current-change="onPageChange"
@@ -104,7 +104,7 @@
     </div>
 
     <el-dialog v-model="dialogVisible" title="电影信息" width="500" destroy-on-close>
-      <el-form ref="formRef" :rules="rules" :model="form" style="padding-right: 50px;padding-top: 20px" label-width="85px">
+      <el-form ref="formRef" :rules="rules" :model="form" class="dialog-form" label-width="85px">
         <el-form-item label="电影名称" prop="title">
           <el-input v-model="form.title" autocomplete="off" placeholder="请输入电影名称"/>
         </el-form-item>
@@ -121,15 +121,15 @@
           <el-date-picker v-model="form.start" type="date" value-format="YYYY-MM-DD"></el-date-picker>
         </el-form-item>
         <el-form-item label="电影时长" prop="time">
-          <el-input-number v-model="form.time" :min="1" style="width: 220px"/>
+          <el-input-number v-model="form.time" :min="1" class="field-md"/>
         </el-form-item>
         <el-form-item label="电影类型" prop="typeIds">
-          <el-select v-model="form.typeIds" multiple placeholder="请选择电影类型" style="width: 350px" @change="handleTypeChange">
+          <el-select v-model="form.typeIds" multiple placeholder="请选择电影类型" class="field-lg" @change="handleTypeChange">
             <el-option v-for="item in typeData" :key="item.id" :label="item.title" :value="item.id" />
           </el-select>
         </el-form-item>
         <el-form-item label="电影语言" prop="language">
-          <el-select v-model="form.language" placeholder="请选择电影语言" style="width: 350px">
+          <el-select v-model="form.language" placeholder="请选择电影语言" class="field-lg">
             <el-option label="普通话" value="普通话" />
             <el-option label="英语" value="英语" />
             <el-option label="港语" value="港语" />
@@ -140,7 +140,7 @@
           </el-select>
         </el-form-item>
         <el-form-item label="分辨率" prop="resolution">
-          <el-select v-model="form.resolution" placeholder="请选择分辨率" style="width: 350px">
+          <el-select v-model="form.resolution" placeholder="请选择分辨率" class="field-lg">
             <el-option label="标准版" value="标准版" />
             <el-option label="2DIMAX" value="2DIMAX" />
             <el-option label="3DIMAX" value="3DIMAX" />
@@ -153,7 +153,7 @@
           <el-input v-model="form.employee" autocomplete="off" placeholder="请输入制作公司"/>
         </el-form-item>
         <el-form-item label="电影区域" prop="areaId">
-          <el-select v-model="form.areaId" placeholder="请选择制作区域" style="width: 350px">
+          <el-select v-model="form.areaId" placeholder="请选择制作区域" class="field-lg">
             <el-option v-for="item in areaData" :key="item.id" :label="item.title" :value="item.id" />
           </el-select>
         </el-form-item>

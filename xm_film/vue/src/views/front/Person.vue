@@ -1,9 +1,9 @@
 <template>
   <div class="front-person-container">
-    <div style="display: flex; justify-content: center; min-height: 50vh; padding: 40px;">
-      <div class="card" style="width: 50%; max-width: 500px; padding: 40px 20px">
-        <div style="font-size: 16px;font-weight: 550;margin: 5px">个人中心</div>
-        <el-form ref="formRef" :rules="rules" :model="formData" style="padding-right: 50px; padding-top: 20px" label-width="80px">
+    <div class="person-wrapper">
+      <div class="card person-card">
+        <div class="person-title">个人中心</div>
+        <el-form ref="formRef" :rules="rules" :model="formData" class="person-form" label-width="80px">
           <el-form-item label="用户名" prop="username">
             <el-input disabled v-model="formData.username" autocomplete="off" placeholder="请输入用户名" />
           </el-form-item>
@@ -20,8 +20,8 @@
             <el-input v-model="formData.email" autocomplete="off" placeholder="请输入邮箱" />
           </el-form-item>
 
-          <div style="text-align: center">
-            <el-button @click="updateUser" type="primary" style="padding: 20px 30px">更新个人信息</el-button>
+          <div class="person-actions">
+            <el-button @click="updateUser" type="primary" class="person-submit">更新个人信息</el-button>
           </div>
         </el-form>
       </div>
@@ -91,12 +91,41 @@ const updateUser = () => {
 <style scoped>
 .front-person-container {
   min-height: 100vh;
-  background-color: #f5f7fa;
+  background-color: var(--el-fill-color-light);
 }
 
-.card {
-  background-color: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+.person-wrapper {
+  display: flex;
+  justify-content: center;
+  min-height: 50vh;
+  padding: var(--space-40);
+}
+
+.person-card {
+  width: 50%;
+  max-width: 500px;
+  padding: var(--space-40) var(--space-20);
+  border-radius: var(--el-border-radius-base);
+  background-color: var(--el-bg-color);
+  box-shadow: var(--el-box-shadow-lighter);
+}
+
+.person-title {
+  margin: var(--space-4);
+  font-size: var(--fs-md);
+  font-weight: var(--fw-bold);
+}
+
+.person-form {
+  padding-top: var(--space-20);
+  padding-right: var(--space-48);
+}
+
+.person-actions {
+  text-align: center;
+}
+
+.person-submit {
+  padding: var(--space-20) var(--space-32);
 }
 </style>

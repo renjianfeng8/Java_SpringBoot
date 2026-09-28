@@ -52,7 +52,7 @@
             :default-openeds="openedMenuKeys"
             router
             unique-opened
-            style="border: none"
+            class="manage-menu"
         >
           <el-menu-item index="/back/home">
             <el-icon><HomeFilled /></el-icon>
