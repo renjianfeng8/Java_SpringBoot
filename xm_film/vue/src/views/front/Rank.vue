@@ -300,7 +300,7 @@ loadFilmMarkTop();
   margin-left: var(--space-4);
   font-size: var(--fs-xs);
   font-weight: var(--fw-regular);
-  color: var(--el-text-color-secondary);
+  color: var(--el-text-color-regular);
 }
 
 .rank-item__meta {

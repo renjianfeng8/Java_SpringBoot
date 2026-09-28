@@ -445,7 +445,7 @@ onMounted(() => {
   border: 1px dashed var(--el-border-color-lighter);
   border-radius: var(--el-border-radius-base);
   text-align: center;
-  color: var(--el-text-color-secondary);
+  color: var(--el-text-color-regular);
 }
 
 .empty-hint__title {

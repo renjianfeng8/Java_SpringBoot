@@ -674,7 +674,7 @@ watch([() => route.params.id, () => route.query.filmId], ([newCinemaId, newFilmI
   border: 1px dashed var(--el-border-color-lighter);
   border-radius: var(--el-border-radius-base);
   text-align: center;
-  color: var(--el-text-color-secondary);
+  color: var(--el-text-color-regular);
 }
 
 .empty-hint__title {
@@ -784,7 +784,7 @@ watch([() => route.params.id, () => route.query.filmId], ([newCinemaId, newFilmI
   border: 1px dashed var(--el-border-color-lighter);
   border-radius: var(--el-border-radius-base);
   text-align: center;
-  color: var(--el-text-color-secondary);
+  color: var(--el-text-color-regular);
 }
 
 .record-placeholder__icon {
@@ -886,7 +886,7 @@ watch([() => route.params.id, () => route.query.filmId], ([newCinemaId, newFilmI
 }
 
 .record-status__hint {
-  color: var(--el-text-color-secondary);
+  color: var(--el-text-color-regular);
   font-size: var(--fs-xs);
 }
 

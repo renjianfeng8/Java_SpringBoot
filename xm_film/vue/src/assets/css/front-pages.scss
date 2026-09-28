@@ -77,13 +77,4 @@
   .filter-options {
     flex: 1;
   }
-
-  /* 影院卡片上的营销标签（如"儿童优惠"） */
-  .promo-tag {
-    padding: var(--space-4) var(--space-12);
-    border-radius: var(--el-border-radius-base);
-    font-size: var(--fs-xs);
-    color: var(--color-on-accent);
-    background-color: var(--color-tag-promo);
-  }
 }

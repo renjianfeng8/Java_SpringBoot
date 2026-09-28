@@ -542,7 +542,7 @@ onMounted(() => {
 .section-title__count {
   font-size: var(--fs-base);
   font-weight: var(--fw-regular);
-  color: var(--el-text-color-secondary);
+  color: var(--el-text-color-regular);
 }
 
 .section-text {
@@ -610,7 +610,7 @@ onMounted(() => {
 
 .marks-hint {
   padding: var(--space-20);
-  color: var(--el-text-color-secondary);
+  color: var(--el-text-color-regular);
 }
 
 .marks-list {
