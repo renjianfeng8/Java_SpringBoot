@@ -106,6 +106,7 @@ project_02/
 │   │   │   └── assets/                 # 静态资源（css / imgs）
 │   │   │       └── css/                # tokens.scss 设计令牌 · index.scss EP 主题覆写
 │   │   │                               # global.css 全局重置 · admin-layout.scss 后台外壳
+│   │   │                               # admin-pages.scss / front-pages.scss 列表页共用骨架
 │   ├── sql/                           # 数据库初始化脚本
 │   │   ├── README.md                  # 数据库说明
 │   │   ├── schema.sql                 # 16张表建表语句
