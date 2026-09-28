@@ -105,7 +105,7 @@
         <RouterView />
       </div>
     </div>
-    <div class="back-footer">
+    <div class="admin-footer">
       <p>个人学习项目 · 所有数据均为模拟数据 · 严禁商业用途</p>
     </div>
   </div>
@@ -159,106 +159,6 @@ const logout = () => {
 }
 </script>
 
-<style scoped>
-/* 样式部分保持不变 */
-.manage-container {
-  width: 100%;
-  min-height: 100vh;
-  background-color: #f5f7fa;
-  display: flex;
-  flex-direction: column;
-}
-
-.manage-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  height: 50px;
-  padding: 0 5px;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
-  z-index: 10;
-}
-
-.manage-header-left {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-}
-
-.logo {
-  height: 25px;
-  width: auto;
-}
-
-.title {
-  font-size: 15px;
-  margin: 0;
-  font-weight: 700;
-}
-
-.manage-header-center {
-  flex: 1;
-  padding: 0 20px;
-  text-align: center;
-}
-
-.manage-header-right {
-  display: flex;
-  align-items: center;
-}
-
-.user-info {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  cursor: pointer;
-}
-
-.avatar {
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  object-fit: cover;
-  border: 1px solid gray;
-  transition: all 0.3s;
-}
-
-.avatar:hover {
-  transform: scale(1.2);
-}
-
-.username {
-  font-size: 15px;
-  color: gray;
-  font-weight: 500;
-}
-
-.manage-main {
-  display: flex;
-  flex: 1;
-  overflow: hidden;
-}
-
-.manage-main-left {
-  width: 175px;
-  transition: width 0.3s;
-  border-right: 1px solid #ebeef5;
-}
-
-.manage-content {
-  flex: 1;
-  overflow-y: auto;
-  background-color: #ffffff;
-  padding: 15px;
-  min-height: calc(100vh - 160px);
-}
-
-.back-footer {
-  text-align: center;
-  padding: 10px;
-  font-size: 12px;
-  color: #999;
-  background: #f5f7fa;
-  border-top: 1px solid #eee;
-}
+<style scoped lang="scss">
+@use '@/assets/css/admin-layout' as *;
 </style>

@@ -1,13 +1,38 @@
+/* 全局重置 + 基础元素样式
+ * 令牌定义在 tokens.scss（:root）；本文件只消费令牌，不定义令牌。 */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
 body {
-    margin: 0;
-    padding: 0;
-    font-size: 14px;
-    color: #333;
+  margin: 0;
+  padding: 0;
+  /* 复用 EP 已产出的字体栈，让自定义元素的文字与 EP 组件文字同源 */
+  font-family: var(--el-font-family);
+  font-size: var(--fs-base);
+  line-height: var(--lh-base);
+  color: var(--el-text-color-primary);
+  background-color: var(--el-bg-color-page);
 }
 
 .card {
-    background-color: white;
-    padding: 5px;
-    border-radius: 5px;
-    box-shadow: 0 0 8px rgb(0,0,0,.12);
+  background-color: var(--el-bg-color);
+  padding: var(--space-8);
+  border-radius: var(--el-border-radius-base);
+  box-shadow: var(--el-box-shadow-lighter);
+}
+
+/* §8.2 尊重系统「减少动态效果」设置 */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
