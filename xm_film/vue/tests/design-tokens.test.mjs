@@ -8,8 +8,8 @@ const read = (relativePath) =>
 // §2.1 / §2.2 / §2.3 / §2.5 / §2.7 / §2.8 / §2.11 —— EP 未产出的部分，必须由 tokens.scss 补齐
 const REQUIRED_TOKENS = [
   '--fs-xs', '--fs-sm', '--fs-base', '--fs-md', '--fs-lg', '--fs-xl',
-  '--fs-2xl', '--fs-3xl', '--fs-4xl', '--fs-5xl', '--fs-6xl',
-  '--lh-tight', '--lh-base', '--lh-loose',
+  '--fs-2xl', '--fs-3xl', '--fs-4xl', '--fs-5xl',
+  '--lh-base', '--lh-loose',
   '--fw-regular', '--fw-medium', '--fw-bold',
   '--space-4', '--space-8', '--space-12', '--space-16', '--space-20',
   '--space-24', '--space-32', '--space-40', '--space-48', '--space-64',

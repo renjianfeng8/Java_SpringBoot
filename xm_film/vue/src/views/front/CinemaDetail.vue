@@ -54,7 +54,7 @@
             <div class="cinema-hero__services">
               <!-- 退票无忧 -->
               <div class="service-card">
-                <div class="service-card__title service-card__title--gold">
+                <div class="service-card__title service-card__title--refund">
                   <el-icon class="service-card__icon"><RefreshLeft /></el-icon>
                   退票无忧
                 </div>
@@ -65,7 +65,7 @@
 
               <!-- 儿童优惠 -->
               <div class="service-card">
-                <div class="service-card__title service-card__title--mint">
+                <div class="service-card__title service-card__title--promo">
                   <el-icon class="service-card__icon"><User /></el-icon>
                   儿童优惠
                 </div>
@@ -76,7 +76,7 @@
 
               <!-- WiFi覆盖 -->
               <div class="service-card">
-                <div class="service-card__title service-card__title--cyan">
+                <div class="service-card__title service-card__title--wifi">
                   <el-icon class="service-card__icon"><Connection /></el-icon>
                   WiFi覆盖
                 </div>
@@ -87,7 +87,7 @@
 
               <!-- 免费停车 -->
               <div class="service-card">
-                <div class="service-card__title service-card__title--amber">
+                <div class="service-card__title service-card__title--parking">
                   <el-icon class="service-card__icon"><Van /></el-icon>
                   免费停车
                 </div>
@@ -609,33 +609,38 @@ watch([() => route.params.id, () => route.query.filmId], ([newCinemaId, newFilmI
   background-color: rgba(255, 255, 255, 0.1);
 }
 
+/* 服务标签：与影院列表页（front/Cinema.vue）同一套功能色。
+ * 统一用「功能色作底 + 白字」—— 该组合在浅底与深底上都达 AA，
+ * 两页因此可以共用一组配色，不再各写一套。 */
 .service-card__title {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  margin-bottom: var(--space-4);
+  margin-bottom: var(--space-8);
+  padding: var(--space-4) var(--space-12);
+  border-radius: var(--el-border-radius-base);
+  font-size: var(--fs-xs);
   font-weight: var(--fw-bold);
+  color: var(--color-on-accent);
 }
 
-/* 装饰图标强调色：仅深底使用（对比度 8.45~11.28:1，规范 §2.8） */
-.service-card__title--gold {
-  color: var(--color-accent-gold);
+.service-card__title--refund {
+  background-color: var(--el-color-primary);
 }
 
-.service-card__title--mint {
-  color: var(--color-accent-mint);
+.service-card__title--promo {
+  background-color: var(--el-color-warning);
 }
 
-.service-card__title--cyan {
-  color: var(--color-accent-cyan);
+.service-card__title--wifi {
+  background-color: var(--el-color-info);
 }
 
-.service-card__title--amber {
-  color: var(--color-accent-amber);
+.service-card__title--parking {
+  background-color: var(--el-color-success);
 }
 
 .service-card__icon {
   margin-right: var(--space-8);
-  font-size: var(--fs-base);
 }
 
 .service-card__desc {

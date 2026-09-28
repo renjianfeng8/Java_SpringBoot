@@ -53,7 +53,7 @@
         <!-- 未登录：显示登录/注册（包一层 flex 容器，用 gap 统一「·」两侧留白，替代原来的 margin） -->
         <div v-if="!isLoggedIn" class="auth-links">
           <router-link to="/login" class="header-link">登录</router-link>
-          <span class="header-divider">·</span>
+          <span class="header-divider" aria-hidden="true">·</span>
           <router-link to="/register" class="header-link">注册</router-link>
         </div>
 
@@ -294,13 +294,15 @@ const updateActivePath = (path) => {
   transform: translateY(-2px);
 }
 
-/* 激活状态的样式 */
-.active {
-  color: var(--el-color-primary) !important;
+/* 激活态：写成 .nav-item.active 这个复合选择器，特异性与 .nav-item:hover 相同
+ * （都是 0-2-0），而它在本文件里位置更靠后，因此自然胜出 —— 不需要 !important。
+ * 单写 .active（0-1-0）会被 .nav-item:hover 压掉，这才是原代码加 !important 的原因。 */
+.nav-item.active {
+  color: var(--el-color-primary);
   font-weight: var(--fw-bold);
 }
 
-.active::after {
+.nav-item.active::after {
   content: '';
   position: absolute;
   left: 0;
@@ -476,8 +478,11 @@ const updateActivePath = (path) => {
 .header-link:hover {
   color: var(--el-color-primary);
 }
+/* 登录 / 注册之间的分隔点：纯装饰，不承载信息。
+ * 已加 aria-hidden 使其成为真正的"非文字装饰"，从而适用 §8.1 的装饰豁免；
+ * 原用 --el-text-color-disabled 属语义误用（该元素并未禁用）。 */
 .header-divider {
-  color: var(--el-text-color-disabled);
+  color: var(--el-text-color-placeholder);
 }
 .admin-btn {
   flex: 0 0 auto;
