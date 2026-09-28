@@ -8,6 +8,7 @@
     "build": "vite build",
     "test:bundle": "node --test tests/build-optimization.test.mjs",
     "test:tokens": "node --test tests/design-tokens.test.mjs",
+    "test:inline": "node --test tests/inline-style-ratchet.test.mjs",
     "preview": "vite preview"
   },
   "dependencies": {
