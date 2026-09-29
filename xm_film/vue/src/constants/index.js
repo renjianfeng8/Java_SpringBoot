@@ -22,9 +22,17 @@ export const API_PATHS = {
   YEARS: '/api/v1/auth/years',
 }
 
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:9090'
-// Same-origin deploy (VITE_API_BASE_URL=/): use relative path → Nginx proxies /api/ → backend
-// Cross-origin dev (default localhost:9090): use absolute URL
+/**
+ * API 基础路径：`/` = 同源（生产经 Nginx 反代 /api/ 到后端），其余为后端绝对地址。
+ * 开发环境由 `.env.development` 给出 http://localhost:9090 —— vite dev server 只代理 /files，不代理 /api。
+ *
+ * 回退值必须是 `/`：`.env` 不入库（见 Bug.md BUG-023），全新克隆与 CI 构建拿不到该变量，
+ * 若回退成 http://localhost:9090，上传与文件地址会指向使用者本机。
+ * 本变量是全仓唯一读取点，`utils/request.js` 也从这里取。
+ */
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/'
+
+/** 文件上传端点（el-upload 的 action）：同源走相对路径，跨域开发走绝对地址 */
 export const FILE_UPLOAD_URL = API_BASE_URL === '/'
   ? API_PATHS.FILES
   : `${API_BASE_URL}${API_PATHS.FILES}`
