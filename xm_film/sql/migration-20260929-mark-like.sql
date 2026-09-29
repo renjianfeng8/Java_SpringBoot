@@ -8,10 +8,13 @@
 --     取消赞 → 删除该行
 --     赞数   → COUNT(*) 实时聚合
 --
---   赞数**刻意不落冗余计数列**：唯一键 (mark_id, user_id) 同时承担"一人一赞"与
+--   赞数**刻意不落冗余计数列**：主键 (mark_id, user_id) 同时承担"一人一赞"与
 --   "可取消"两件事，是赞数的唯一权威来源。冗余计数列会引入第二处真相 —— 取消赞、
 --   评价被删、并发点赞任意一处漏同步，计数就永久偏离，且无法自证对错。
 --   这与 fund_flow 只增行、user.balance 为唯一余额来源是同一思路。
+--
+--   纯关系表用复合主键、不留代理 id（与 film_type 同构）：既然没有任何代码按 id 取
+--   点赞行，代理键只会多出一个没人用的 PRIMARY 索引。
 --
 --   两个外键都是 ON DELETE CASCADE：
 --     * 评价被删 → 其点赞关系随之消失（点赞依附于评价，无评价即无意义）
@@ -27,10 +30,9 @@
 -- ============================================================
 
 CREATE TABLE IF NOT EXISTS `mark_like` (
-    `id`      INT AUTO_INCREMENT PRIMARY KEY COMMENT '主键',
-    `mark_id` INT NOT NULL                   COMMENT '被点赞的评价ID',
-    `user_id` INT NOT NULL                   COMMENT '点赞人ID',
-    UNIQUE KEY uk_mark_like_mark_user (mark_id, user_id),
+    `mark_id` INT NOT NULL COMMENT '被点赞的评价ID',
+    `user_id` INT NOT NULL COMMENT '点赞人ID',
+    PRIMARY KEY (mark_id, user_id),
     INDEX idx_mark_like_user_id (user_id),
     FOREIGN KEY (mark_id) REFERENCES mark(id) ON DELETE CASCADE,
     FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE CASCADE

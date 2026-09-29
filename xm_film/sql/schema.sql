@@ -237,14 +237,14 @@ CREATE TABLE `mark` (
     FOREIGN KEY (film_id) REFERENCES film(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='评分表';
 
--- 评价点赞关系。赞数不落冗余计数列：唯一键 (mark_id, user_id) 就是"一人一赞"与"可取消"
+-- 评价点赞关系。赞数不落冗余计数列：主键 (mark_id, user_id) 就是"一人一赞"与"可取消"
 -- 的唯一权威，赞数由 COUNT(*) 聚合（与 fund_flow 只增行、user.balance 为唯一余额来源同一思路）。
+-- 纯关系表用复合主键、不留代理 id：与 film_type 同构，且没有任何代码按 id 取点赞行。
 DROP TABLE IF EXISTS `mark_like`;
 CREATE TABLE `mark_like` (
-    `id`      INT AUTO_INCREMENT PRIMARY KEY COMMENT '主键',
-    `mark_id` INT NOT NULL                   COMMENT '被点赞的评价ID',
-    `user_id` INT NOT NULL                   COMMENT '点赞人ID',
-    UNIQUE KEY uk_mark_like_mark_user (mark_id, user_id),
+    `mark_id` INT NOT NULL COMMENT '被点赞的评价ID',
+    `user_id` INT NOT NULL COMMENT '点赞人ID',
+    PRIMARY KEY (mark_id, user_id),
     INDEX idx_mark_like_user_id (user_id),
     FOREIGN KEY (mark_id) REFERENCES mark(id) ON DELETE CASCADE,
     FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE CASCADE
