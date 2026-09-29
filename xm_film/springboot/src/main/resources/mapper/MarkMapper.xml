@@ -40,6 +40,35 @@
         SELECT COUNT(*) FROM mark WHERE user_id = #{userId} AND film_id = #{filmId}
     </select>
 
+    <!-- 评价的项目投影：赞数用相关子查询聚合（mark_like 的主键前缀 (mark_id) 已覆盖），
+         liked / mine 都由 SQL 按访问者算好下发 —— 前端不做归属比对（见 BUG-040）。
+         mine 用 CASE 而非直接选 m.user_id，作者 id 因此不出现在投影里。 -->
+    <sql id="markViewColumns">
+        m.id AS id,
+        u.name AS userName,
+        u.avatar AS avatar,
+        m.score AS score,
+        m.mark AS mark,
+        (SELECT COUNT(*) FROM mark_like ml WHERE ml.mark_id = m.id) AS likeCount,
+        EXISTS (SELECT 1 FROM mark_like ml2 WHERE ml2.mark_id = m.id AND ml2.user_id = #{viewerId}) AS liked,
+        CASE WHEN #{viewerId} IS NOT NULL AND m.user_id = #{viewerId} THEN 1 ELSE 0 END AS mine
+    </sql>
+
+    <select id="selectFilmMarks" resultType="com.example.springboot.dto.response.MarkView">
+        SELECT <include refid="markViewColumns"/>
+        FROM mark m
+        LEFT JOIN user u ON m.user_id = u.id
+        WHERE m.film_id = #{filmId}
+        ORDER BY likeCount DESC, m.id DESC
+    </select>
+
+    <select id="selectFilmMarkOfUser" resultType="com.example.springboot.dto.response.MarkView">
+        SELECT <include refid="markViewColumns"/>
+        FROM mark m
+        LEFT JOIN user u ON m.user_id = u.id
+        WHERE m.film_id = #{filmId} AND m.user_id = #{viewerId}
+    </select>
+
     <!-- 插入操作 -->
     <insert id="insert" parameterType="com.example.springboot.entity.Mark"
             useGeneratedKeys="true" keyProperty="id">

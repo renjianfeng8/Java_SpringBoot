@@ -3,6 +3,7 @@ package com.example.springboot.controller;
 import com.example.springboot.common.BaseController;
 import com.example.springboot.common.Result;
 import com.example.springboot.common.enums.ErrorCode;
+import com.example.springboot.dto.request.MarkLikeRequest;
 import com.example.springboot.entity.Mark;
 import com.example.springboot.exception.CustomException;
 import com.example.springboot.service.MarkService;
@@ -31,7 +32,7 @@ public class MarkController extends BaseController<Mark> {
     @Override
     @PostMapping
     public Result add(@RequestBody Mark mark) {
-        requireUser();
+        requireUser("发表评价");
         mark.setId(null);
         mark.setUserId(currentUserId());
         markService.add(mark);
@@ -69,6 +70,25 @@ public class MarkController extends BaseController<Mark> {
         return Result.success();
     }
 
+    @Operation(summary = "按影片查询评价", description = "公开只读；liked/mine 由后端按 JWT 计算，匿名恒 false")
+    @GetMapping("/by-film")
+    public Result listByFilm(@RequestParam Integer filmId,
+                             @RequestParam(defaultValue = "1") Integer pageNum,
+                             @RequestParam(defaultValue = "10") Integer pageSize) {
+        return Result.success(markService.listByFilm(filmId, currentUserId(), currentRole(), pageNum, pageSize));
+    }
+
+    @Operation(summary = "点赞/取消点赞", description = "仅 USER；liked 为显式意图，重复调用幂等")
+    @PutMapping("/{id}/like")
+    public Result like(@PathVariable Integer id, @RequestBody MarkLikeRequest body) {
+        requireUser("点赞");
+        if (body == null || body.getLiked() == null) {
+            // 不把"参数缺失"默认成"取消点赞" —— 那会让一个拼错的请求静默取消掉用户的赞
+            throw new CustomException(ErrorCode.PARAM_INVALID, "缺少 liked 参数");
+        }
+        return Result.success(markService.setLike(id, currentUserId(), body.getLiked()));
+    }
+
     /** ADMIN 可管理全部评价；其余角色只能操作自己的评价 */
     private void ensureOwnership(Integer markId) {
         if (isAdmin()) {
@@ -87,10 +107,10 @@ public class MarkController extends BaseController<Mark> {
         }
     }
 
-    /** 评价的 user_id 外键指向 user 表，影院/管理员账号的 id 不是用户 id，故只允许 USER 发表 */
-    private void requireUser() {
+    /** 评价的 user_id 外键指向 user 表，影院/管理员账号的 id 不是用户 id，故只允许 USER 发表 / 点赞 */
+    private void requireUser(String action) {
         if (!"USER".equals(currentRole())) {
-            throw new CustomException(ErrorCode.FORBIDDEN, "仅用户可发表评价");
+            throw new CustomException(ErrorCode.FORBIDDEN, "仅用户可" + action);
         }
     }
 
