@@ -4,38 +4,16 @@
 
 ## 技术栈
 
-### 后端
-| 技术 | 版本 | 用途 |
-|------|------|------|
-| Spring Boot | 3.3.13 | 应用框架 |
-| Java | 17 | 运行环境 |
-| MyBatis | 3.0.4 | ORM 持久层 |
-| MySQL | 8.0 | 数据库 |
-| PageHelper | 1.4.6 | 分页插件 |
-| JJWT | 0.11.5 | JWT 令牌认证 |
-| Spring Security Crypto | - | BCrypt 密码加密 |
-| Jackson | 2.17.3 | JSON 序列化（随 starter-web 传递引入） |
-| SpringDoc OpenAPI | 2.8.17 | API 文档（OpenAPI 规范 + UI 页面） |
-| Lombok | - | 代码简化 |
-
-### 前端
-| 技术 | 版本 | 用途 |
-|------|------|------|
-| Vue | 3.5.13 | 前端框架 |
-| Vite | 6.2.4 | 构建工具 |
-| Element Plus | 2.9.11 | UI 组件库 |
-| Vue Router | 4.5.0 | 路由管理 |
-| Axios | 1.9.0 | HTTP 请求 |
-| ECharts | 6.0.0 | 数据可视化 |
-| wangEditor | 5.x | 富文本编辑器 |
+技术栈与版本号的唯一落点是 [README.md · 技术栈](README.md#技术栈) —— 本文件不再重复一份，避免两处版本号各自漂移。
 
 ## 目录结构
 
 ```
 project_02/
-├── README.md                          # 项目说明
-├── CLAUDE.md                          # 项目文档（本文件）
-├── LICENSE                            # 许可证
+├── README.md                          # 项目说明（对外门面：功能、技术栈、快速启动、部署）
+├── CONTRIBUTING.md                    # 提交规范 · 分支实践 · 文档归属表
+├── CLAUDE.md                          # 工程契约（本文件）：架构 · 目录 · 接口/页面清单 · 不变量 · 守则
+├── LICENSE                            # 许可证（MIT）
 ├── Bug.md                             # Bug 修复记录（修复前先查阅）
 ├── 标准前端视觉与交互设计规范.md        # 前端视觉与交互设计规范（新增页面前先查阅）
 ├── 前端规范待办.md                     # 规范未落地条目与整改进度（规范正文不记进度）
@@ -64,7 +42,10 @@ project_02/
 │   │       │   ├── service/                    # 业务逻辑层（17个）
 │   │       │   └── exception/                  # 异常处理
 │   │       └── resources/
-│   │           ├── application.yml             # 应用配置
+│   │           ├── application.yml             # 开发环境配置
+│   │           ├── application-prod.yml        # 生产环境配置（禁用 Swagger、密钥必填）
+│   │           ├── logback-spring.xml          # 日志配置
+│   │           ├── static/swagger-ui.html      # Swagger UI 页面（资源走 CDN）
 │   │           └── mapper/                     # MyBatis XML 映射（16个）
 │   ├── vue/                            # 前端（Vue 3）
 │   │   ├── index.html                  # HTML 入口
@@ -129,7 +110,7 @@ project_02/
 - **取票与取票大厅** — 支付成功即生成**取票码**（`ordered.pickup_code`，一单一码，`XXXX-XXXX`）；前台「取票大厅」模拟影院自助机，凭码核销出票（待取票 → 已取票）。该核销端点**免登录**（码本身即凭证），有效期到放映结束，用过/退票/取消即失效，均由订单状态派生
 - **账户与资金** — 用户账户余额（`user.balance`）、充值单据（处理中 → 已完成/已失败）、资金流水账本（充值/购票/退票三类来源，记录变动前后余额与关联单据ID）。**购票为余额支付**：支付时校验余额并原子扣减，余额不足则订单保持待支付、座位继续锁定；退票时金额退回余额。不接第三方支付渠道，充值由「提交单据 + 模拟支付回调」两步完成
 - **评价系统** — **已取票**用户在影评页对影片评分 + 评语（一人一片一条，可修改）；评价均分回写 `film.score` 并驱动评分榜；影片详情页与影评页公开展示评价列表。**点赞**：登录用户可为任一评价点赞 / 取消（一人对一条评价一赞，`mark_like` 关系表的行即唯一权威，赞数按 `COUNT(*)` 实时聚合，不落计数列），列表按赞数降序排列（热评即其头部）
-- **排行榜** — 票房榜 Top10（按 `ordered` 实时聚合的累计售票收入）、评分榜 Top5（按 `film.score`，即该片评价均分）；前台首页另展示「今日票房」（今天支付的售票收入合计，匿名可读）
+- **排行榜** — 票房榜 Top10（按 `ordered` 实时聚合的累计售票收入）、评分榜 Top5（按评价均分 `film.score`，**无评价的影片不上榜**）；前台首页另展示「今日票房」（今天支付的售票收入合计，匿名可读）
 - **搜索筛选** — 按影片名称、类型、年份、地区多维筛选
 - **文件上传** — 图片/视频上传，支持本地存储（MIME 白名单校验）
 
@@ -242,29 +223,17 @@ home, film, room, record, ordered, person, password
 
 ## 快速启动命令
 
-### 环境要求
-- JDK 17+、Maven 3.6+、MySQL 8.0+、Node.js 18+、npm 9+
+> 环境要求、完整步骤与环境变量清单的唯一落点是 [README.md · 快速启动](README.md#快速启动)。此处只保留最小可运行命令。
 
 ### 1. 初始化数据库
 ```bash
 cd xm_film/sql
 mysql --default-character-set=utf8mb4 -u root -p < init.sql
 ```
-或手动执行：
-```sql
-CREATE DATABASE `xm-film` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-USE `xm-film`;
-SOURCE xm_film/sql/schema.sql;
-SOURCE xm_film/sql/data.sql;
-```
 
-> **`init.sql` 是唯一的初始化路径**（建库 + `schema.sql` + `data.sql`）：`schema.sql` 已含全部 17 张表
-> 与所有列（包括 `ordered.pickup_code`、`mark_like`、`room.seat_rows/seat_cols`、钱包三表），
-> 不存在需要补执行的脚本。此前为「已有库」维护的 `sql/migration-*.sql` 已于 2026-09-29 整体移除
-> （历史脚本可取回：`git log --all -- xm_film/sql/migration-*.sql`）。
-> **已存在的库请重建**，不要试图增量升级：`DROP DATABASE \`xm-film\`;` 后重跑 `init.sql` 即可 ——
-> 旧库里的场次/订单/评价/点赞本就只能经真实业务接口产生，没有需要保住的手工数据。
-> 存量库里的演示场次/订单/评价不要手工 `INSERT` 补 —— 手写交易数据（单号、单价快照、支付凭证、余额扣减、资金流水）任意一处对不上就是可被查出的假数据，只能经真实业务接口重新产生（前台下单 → 支付 → 取票 → 评价）。
+> `init.sql` 是唯一的初始化路径（建库 + `schema.sql` + `data.sql`），**已存在的库请重建而非增量升级**；
+> `record` / `ordered` / `mark` / `mark_like` 的行只能经真实业务接口产生，不要手工 `INSERT` 补。
+> 完整口径见 [数据库说明](xm_film/sql/README.md)。
 
 ### 2. 启动后端
 ```bash
@@ -283,42 +252,26 @@ npm run dev
 前端默认运行在 `http://localhost:5173`
 
 ### 默认账号
-| 角色 | 用户名 | 密码 | 说明 |
-|------|--------|------|------|
-| ADMIN | 999 | 999 | 系统管理员 |
-| CINEMA | asks | cinema123 | 影院管理员 |
-| USER | zhangsan | user123 | 普通用户 |
+
+三个演示账号由 `data.sql` 初始化，见 [README.md · 测试账号](README.md#测试账号)。
 
 ## 配置说明
 
-后端配置位于 `xm_film/springboot/src/main/resources/application.yml`：
-- 服务端口：9090
-- 数据库：`jdbc:mysql://localhost:3306/xm-film`
-- JWT 密钥：`xm-film-secret-key-2024-springboot-vue3-jwt-auth`（支持环境变量 `JWT_SECRET`）
-- JWT 过期：24 小时（86400000ms，支持环境变量 `JWT_EXPIRE`）
-- 文件上传：`D:/project/picture`（支持环境变量 `FILE_UPLOAD_DIR`）
-- 文件大小限制：50MB
-- DB 密码：支持环境变量 `DB_PASSWORD`（默认 `123456`）
-- DB 库名：支持环境变量 `DB_NAME`（默认 `xm-film`，便于用临时库做验证而不影响开发库）
-- MyBatis 日志：SLF4J + Logback，支持环境变量 `MYBATIS_LOG_IMPL`（默认 `Slf4jImpl`）和 `MYBATIS_LOG_LEVEL`（默认 `DEBUG`）
+配置项、默认值与全部环境变量（`DB_*` / `JWT_*` / `FILE_*` / `CORS_ALLOWED_ORIGINS` / `MYBATIS_LOG_*`）见 [README.md · 配置说明](README.md#配置说明) —— 本文件不再重复一份，避免两处默认值各自漂移。
 
-## 项目优化建议（当前状态）
+## 已知改进空间
 
-1. **密码安全性**：✅ 已通过环境变量注入解决（`${DB_PASSWORD:123456}`）
-2. **JWT 密钥**：✅ 已通过环境变量注入解决（`${JWT_SECRET:...}`）
-3. **文件存储**：当前为本地存储，建议生产环境迁移至 OSS（阿里云/S3）
-4. **日志配置**：✅ 已切换为 SLF4J + Logback，`logback-spring.xml` 按 mapper 包级别控制 SQL 日志（可通过 `MYBATIS_LOG_LEVEL` 环境变量调整）
-5. **API 文档**：✅ 已集成 SpringDoc OpenAPI —— `SwaggerConfig` 定义 OpenAPI Bean 与全局 Bearer 鉴权方案，控制器标注 `@Tag`/`@Operation`，规范端点 `/v3/api-docs`，UI 页面 `static/swagger-ui.html`（swagger-ui 资源走 CDN，离线环境需改用 `springdoc-openapi-starter-webmvc-ui` 本地内嵌）
-6. **单元测试**：✅ 已覆盖 14 个测试类 / 193 个用例 —— Service 层 CRUD 与权限（Admin/User/Cinema/Film/Ordered/Mark）、订单状态机（支付超时/退票窗口/座位边界与单笔上限）、评价规则（评分区间/一人一片去重/均分回写/归属不可转移/**未取票不得评价**）、影院审核与可见性下推、订单座位并发冲突、AuthInterceptor 访问边界（含令牌失效与匿名放行、**匿名写白名单的三处收窄**）、全局异常处理；**账户资金**（余额足额/不足扣减、退款入账、金额非正拒绝、流水前后余额与关联单据）、**充值单据状态机**（提交不改余额、回调成功/失败、重复回调被拒、金额上限、跨用户回调被拒）、**订单删除守卫**按状态拒绝、**取票码核销**（一次性/退票作废/过场作废/未支付拒绝/并发抢核销/输入归一化）、**点赞**（重复点赞幂等与回读权威状态、取消点赞、点赞授权边界、`MarkView` **投影不含 `userId`** 的序列化断言、`reviewable` 口径与本人评价可见性）；`mvn test` 可复现。**今日票房的 SQL 谓词、取票码/核销的全链路、点赞的 `ORDER BY likeCount DESC` 排序与赞数聚合、以及 `setLike` 的事务隔离级别，Mockito 都测不到**（打桩后测的是桩，不是谓词、不是唯一索引、不是状态条件更新、不是隔离级别），这几块必须另在「备用端口 + 临时库」上打真实库验证，单测覆盖不到它们
-7. **前端构建**：生产构建后建议接入 CDN 分发静态资源
-8. **CI/CD**：✅ 已配置 GitHub Actions 流水线（后端编译 → 前端构建）
-9. **错误边界**：前端可引入 Vue ErrorBoundary 机制处理渲染异常
-10. **权限校验**：✅ 已实现前端路由守卫 + 后端 AuthInterceptor 双重角色校验
+当前架构下仍可改进的两处（已落地项不再罗列，历史见 `git log` 与 [Bug.md](Bug.md)）：
+
+1. **文件存储** —— 现为本地磁盘（`FILE_UPLOAD_DIR`），生产环境建议迁移至对象存储（OSS / S3）。
+2. **前端静态资源分发** —— 生产构建后建议接入 CDN。
+
+> API 文档的静态资源走 CDN（`static/swagger-ui.html`）；**离线环境**需改用 `springdoc-openapi-starter-webmvc-ui` 本地内嵌。
 
 ## 开发守则
 
 ### 文档链完整性
-所有架构级变更必须维护完整的文档链：**CLAUDE.md/README.md → 代码 → 数据库** 三者一致。当修改代码时，同步检查并更新所有链上文档。
+所有架构级变更必须维护完整的文档链：**README.md/CLAUDE.md → 代码 → 数据库** 三者一致。改代码时按 [CONTRIBUTING.md · 文档归属](CONTRIBUTING.md#三文档归属一处事实一处归属) 找到对应落点同步更新，**不要**在第二个文档里再抄一份。
 
 ### 修改流程（防批量修复陷阱）
 
@@ -329,21 +282,12 @@ npm run dev
 5. **文档同步** — 代码变更完成后检查 CLAUDE.md / README.md / Bug.md 是否需要同步更新
 
 ### 提交规范
-本仓库遵循 [Conventional Commits](https://www.conventionalcommits.org/) 规范：
-`<type>: <description>`
-
-| 类型 | 说明 |
-|------|------|
-| `feat` | 新功能 |
-| `fix` | 修复 |
-| `docs` | 文档 |
-| `test` | 测试 |
-| `refactor` | 重构 |
-| `chore` | 构建/工具 |
+提交信息规范、分支实践与**文档归属表**统一见 [CONTRIBUTING.md](CONTRIBUTING.md) —— 本文件不再重复。
 
 ## 相关文档
 
-- [README.md](README.md) — 项目说明、快速启动、部署方式
+- [README.md](README.md) — 功能、技术栈、快速启动、配置、部署（对外门面）
+- [CONTRIBUTING.md](CONTRIBUTING.md) — 提交信息规范、分支实践、**文档归属表**
 - [Bug 修复记录](Bug.md) — 已修复 Bug 的根因与解决方案，遇到相似问题优先查阅
 - [数据库说明](xm_film/sql/README.md) — 数据库表设计与初始化指引
 - [前端设计规范](标准前端视觉与交互设计规范.md) — 三端视觉与交互标准（设计原则、令牌表、色板分端机制、组件与可访问性条款）
@@ -379,7 +323,8 @@ npm run dev
 - 金额字段必须是包装类型：`ordered.total` 为 `Double` 而非 `double`。`updateById` 用 `<if test="total != null">` 守卫，原始类型永远非 null，会让支付/取票/取消等局部更新把金额写成 0.00（另见 Bug.md BUG-034）。
 - 选座图的座位来源是 `record.roomSeatRows` / `roomSeatCols`（`RecordMapper` 从 `room` 表 JOIN 出来），而不是写死的 8×8，也不是让用户端去读 `/api/v1/rooms`（USER 无权访问影厅接口）。后端座位合法性校验同样按影厅边界，单笔订单座位数上限 6（`OrderedService.MAX_SEATS_PER_ORDER`）。
 - 影厅的 `title`（影院名称）由后端按所属影院记录派生，前端不再手填；`back/Room.vue` 的影院名是只读展示。影厅 `seat_rows`/`seat_cols` 合法区间为 1~50，由 `RoomController.validateSeatLayout` 兜底。
-- 影片评分只有一个数值来源：`mark.score`（`DECIMAL(3,1)`，0~10）。`film.score` 是派生缓存，由 `MarkService` 在评价增删改后经 `FilmMapper.recalculateScore` 回写；无评价时保留基线分、**不归零**（`data.sql` 已不再预置评价，种子影片的 `score` 就是它的基线分本身）。评价唯一性由 `MarkMapper.countByUserAndFilm` 保证（一人一片一条），评价人只认 JWT 里的 `userId`。前端「去评价」入口在 `front/Orders.vue`（仅 `已取票` 订单，点击跳影评页），`front/FilmDetail.vue` 展示热评（该赞序前 3 条）、完整列表在 `front/FilmMarks.vue`。
+- 影片评分只有一个数值来源：`mark.score`（`DECIMAL(3,1)`，0~10）。`film.score` 是**纯派生列**，唯一写者是 `MarkService` → `FilmMapper.recalculateScore`（评价增删改后回写该片均分）；**无评价时为 NULL**（AVG 空集即 NULL，`schema.sql` 里该列也刻意不给 DEFAULT），前端一律渲染「暂无评分」。因此它**不接受客户端入参**：`FilmMapper.xml` 的 insert/updateById 刻意不写 score —— `FilmController` 继承 `BaseController` 的通用 `POST/PUT /api/v1/films` 直收整实体，留着那个 `<if>` 分支等于任何人能手写一个评分。`data.sql` 里 17 部影片的 `score` 全是 NULL（原先是人工填死的编造值，见下一条）。评价唯一性由 `MarkMapper.countByUserAndFilm` 保证（一人一片一条），评价人只认 JWT 里的 `userId`。前端「去评价」入口在 `front/Orders.vue`（仅 `已取票` 订单，点击跳影评页），`front/FilmDetail.vue` 展示热评（该赞序前 3 条）、完整列表在 `front/FilmMarks.vue`。
+- 评分榜（`selectMarkTop`）**只含真正有评价的影片**：SQL 里带 `EXISTS (SELECT 1 FROM mark ...)` 谓词，与票房榜的 `WHERE rev.revenue > 0`（无售票不上榜）同构 —— 这是刻意的第二层保险，不能靠"无评价时 score 恰好为 NULL"这条不变量独自承担（种子曾预置编造分数，于是 `mark` 0 行时榜单照样有数据）。`film.score` 的"0.0 分"与"暂无评分"是两回事：`0.0` 是合法的真实评分，只有 NULL 才代表没人评过，前端 `utils/format.js` 的 `formatScore` 因此**只判 null/undefined**（与把 0 当缺失值的 `formatBoxOffice` 正好相反，两者不可混用）。
 - 影院审核状态词表 `CinemaStatus` 只有 `未审核`/`已审核`（与 `schema.sql` 默认值、`data.sql` 种子一致）。`CinemaService.login` 拒绝未审核影院；公开列表经 `CinemaMapper.selectByFilmId` 的 `approvedOnly` 过滤，该标记由 `CinemaController` 按 `!isAdmin()` 传入 —— 管理员必须看得到未审核的，否则无法审核（见 Bug.md BUG-036）。
 - `WebMvcConfig.excludePathPatterns` 是**角色盲区**：被排除的路径不执行 `AuthInterceptor`，request 上没有 `role`/`userId`，控制器里的角色判断会静默失效（BUG-036 即由此而来）。公开访问统一交给 `PUBLIC_READ_PREFIXES`，**不要往排除表里加路径**。
 - 令牌失效时公开只读资源仍按匿名放行（`AuthInterceptor.isAnonymousRead`）。否则游客带着过期令牌浏览公开页会被判 401，而前端 `request.js` 的 401 处理会跳登录页 —— 公开内容就变成了事实上的必须登录。
@@ -402,37 +347,3 @@ npm run dev
 - `MarkService.setLike` 必须 `@Transactional(isolation = Isolation.READ_COMMITTED)`。MySQL 默认的 REPEATABLE READ 下，本事务的读快照在第一条一致读（`requireExisting`）就已固定；`insertIfAbsent` 撞上另一个**尚未提交**的同键事务会阻塞到对方提交之后才返回，此后再用一致读 `COUNT`，读到的仍是那个早于对方提交的旧快照 —— 库里已有该行，回读却报 `liked=false` / `likeCount=0`，与"返回写库后的权威状态"正好相反（真库复现：5 个并发响应里 4 个报 `liked=false`，见 Bug.md BUG-051）。**不要改用锁定读 `FOR UPDATE`**：那会锁住该评价行，把同一部片子上所有人的点赞串行化。
 - `insertIfAbsent` 用 `ON DUPLICATE KEY UPDATE mark_id = mark_id`，**不用 `INSERT IGNORE`**：`INSERT IGNORE` 把**所有**错误一并降级为警告，外键违规（`mark_id` 指向的评价已被删）同样只返回 `ROW_COUNT()=0`，与"已赞过"字节级相同，使二者不可区分；`ON DUPLICATE KEY` 只吸收重复键冲突，真实的外键错误照常抛 1452。端点是**构造上幂等**的：`liked` 是显式意图（非服务端 toggle）叠加主键去重；响应回读权威状态而非信任受影响行数，因为重复插入同样报 0 行。
 - 点赞**没有新增任何拦截器放行规则**：`/api/v1/marks` 早已在 `PUBLIC_READ_PREFIXES` 内（评价列表本就匿名可读），`PUT /{id}/like` 的 `USER` 限制落在 `MarkController.requireUser`，不是 `excludePathPatterns` 那类角色盲区（BUG-036）。
-
-## Git 提交历史
-
-### 约定式提交规范
-本仓库遵循 [Conventional Commits](https://www.conventionalcommits.org/) 规范：
-`<type>: <description>`
-
-| 类型 | 说明 |
-|------|------|
-| `feat` | 新功能 |
-| `fix` | 修复 |
-| `docs` | 文档 |
-| `test` | 测试 |
-| `refactor` | 重构 |
-| `chore` | 构建/工具 |
-
-### 最近提交
-```
-89d94a93 docs: 同步更新 .md 文档中的数据库路径引用 (BUG-002/006)
-
-9525efa4 refactor: 数据库脚本重构 — 目录规范化 + schema/data 分离 (BUG-002)
-
-- 移除 数据库/ 中文目录，新建 xm_film/sql/（schema.sql + data.sql + init.sql）
-- 新增完整 CREATE TABLE 定义（14 张表，含字段类型/注释/默认值）
-- 配置 spring.sql.init 自动初始化支持
-- 更新 CLAUDE.md 目录树和初始化指引
-
-28646785 feat: 全栈自动化工程化构建 — CI/CLAUDE.md/E2E测试/启动脚本
-
-- 新增 CLAUDE.md 完整项目文档
-- 新增 GitHub Actions CI 配置
-- 新增 Playwright 全量 E2E 测试（53 用例，100% 通过）
-- 新增 start-dev.bat / run-e2e-tests.bat 一键启动脚本
-- 新增 scripts/scan-project.sh 全栈项目扫描脚本（2026-09-27 清理时移除）
