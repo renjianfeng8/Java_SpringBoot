@@ -6,7 +6,7 @@
 <mapper namespace="com.example.springboot.mapper.MarkLikeMapper">
 
     <!--
-      唯一键 (mark_id, user_id) 让"已赞过"成为无副作用的写入：重复插入被降级为 ON DUPLICATE KEY UPDATE
+      主键 (mark_id, user_id) 让"已赞过"成为无副作用的写入：重复插入被降级为 ON DUPLICATE KEY UPDATE
       的空更新，不需要捕获重复键异常，也就不存在"异常抛出后事务处于何种状态"的问题。
 
       与 INSERT IGNORE 的关键区别：后者把**所有**错误一并降级成警告，外键违规（mark_id 指向的评价
