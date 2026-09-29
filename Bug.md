@@ -827,6 +827,20 @@
 
 ---
 
+### BUG-052: 影评页入口写成具名路由，点击即「页面渲染异常」
+
+- **日期**: 2026-09-29
+- **Bug 描述**: 影片详情页「查看全部 N 条评价」与购票记录「去评价 / 修改评价」两处入口，点击后落到 ErrorBoundary 的「页面渲染异常 / 组件加载时发生了意外错误，请尝试刷新」，控制台报 `No match for {"name":"filmMarks","params":{"id":"22"}}`。影评页本身是好的（直接访问 `/front/filmMarks/26` 正常渲染），坏的是跳转。由用户在浏览器目视时发现。
+- **根因分析**: 两处写的是 `router.push({ name: 'filmMarks', params: { id } })`，而**本仓库的路由一律没有 `name`** —— `router/index.js` 里只有 `meta.name`，那是页面标题文案（'影评' / '电影详情'），不是路由名；全仓 30 余条路由没有一条声明过 `name`。具名路由解析不到时 Vue Router 4 抛 `No match for ...`，冒到渲染层就成了兜底错误页。仓库既有导航全部走 path（`Movie.vue` 的 `` `/front/filmDetail/${filmId}` ``、`FilmCinema.vue` / `Home.vue` 的 `{ path }`），本次是唯一一处具名写法。**源头在设计方案里就写了 `{ name: 'filmMarks', params: { id } }`**，实现与复核都照着抄，没有人核对过这个 name 是否存在 —— 这是"照着规格实现"在规格本身出错时的失效模式。
+- **解决方案**: 两处改为按 path 跳转 `` router.push(`/front/filmMarks/${filmId}`) ``，与仓库既有写法一致；并在该函数上留一行注释点明"本仓库路由没有 name"，避免下一个人再写具名。
+- **验证**: 改后 `FilmDetail.vue` / `Orders.vue` 在 dev server 下仍正常编译（HTTP 200）；跳转本身由用户在浏览器点验 —— 渲染层只有真的点一下才算验过。
+- **为什么四道自动化都没拦住**: `npm run build`、`test:tokens` / `test:inline` / `test:bundle`、dev server 的模块编译，验证的都只是"**能编译**"，没有一道验证"**路由名能解析**"；193 个后端用例与 74 个真库断言又都在服务端，看不见前端路由表。**编译类检查替代不了"真的点一下"** —— 这与 BUG-049 同属"构建产物核对过了、但没人用眼睛看"的一类。
+- **相关文件**: `xm_film/vue/src/views/front/FilmDetail.vue`、`xm_film/vue/src/views/front/Orders.vue`
+- **提交记录**: `72988a6c`
+- **状态**: 已修复
+
+---
+
 ## 预防清单
 
 1. **数据库初始化**: 新环境部署时务必执行 `xm_film/sql/init.sql`（或依次执行 `schema.sql` + `data.sql`）
@@ -892,3 +906,4 @@
 60. **表格操作列必须显式定宽，多按钮格用 flex + gap 排**: `el-table` 给未指定 `width` 的列按 `minWidth || 80` 起算、再均分富余空间，列多的表操作列只会分到 ~80px；两个文字按钮（`继续支付 + 取消` 需 104px）必然折行，而 EP 的按钮间距是 `.el-button + .el-button{margin-left:12px}` —— **折行不改变它**，第二个按钮被右推 12px，两行就左右错开。操作列一律写 `width`，多按钮格套 `.row-actions`（`front-pages.scss`：flex + gap，已把该 margin 中和为 0）。加宽所需的像素尽量从"内容本就不需要 80px"的列上让出（展开列、2 字表头的列），别让表格最小总宽上涨 —— 否则窄视口会凭空多出横向滚动条（见 BUG-049）
 61. **"能访问这一行"不等于"能做这个动作"**: `ADMIN` 靠 `ensureOrderAccess` 的早退拿到**任意订单**的访问权（管理数据本该如此），但 `pickupOrder` 把它顺带翻译成了操作权，于是变成"一键把任意用户的票记为已取"。判断这类权限先问一句"这个动作记录的是谁的物理事实、谁能如实断言" —— 取票只有放映该场次的影院能断言，所以只放行 `CINEMA`。再叠加"不记录操作人"和"目标状态是终态无出口"，这种能力连纠错价值都没有，只剩伪造。**权限判断一律写白名单**（`if (!"CINEMA".equals(role))`），denylist 会在新增角色时静默扩权（见 BUG-050）
 62. **"回读权威状态"只在读是"当前读"时才权威**: REPEATABLE READ 下同一事务的一致读共享一条**在第一条读时固定**的快照；若中间有一次写入撞上并发事务的提交而阻塞（如 `INSERT ... ON DUPLICATE KEY` 撞同键的未提交事务），阻塞结束后的一致读**看不到**那条刚提交的写 —— 于是"库里有、回读说没有"。凡"写后回读"的语义要求读到最新状态，必须显式把该方法降到 `READ_COMMITTED`，或改用锁定读（后者以串行化为代价）。兄弟先例：`WalletService` 的 `SELECT ... FOR UPDATE` 是**当前读**，天然免疫（见 BUG-051）
+63. **本仓库的路由没有 `name`，导航一律走 `path`**: `router/index.js` 里每条的 `meta.name` 是**标题文案**（'影评' / '电影详情'），不是路由名 —— 全仓没有一条路由声明过 `name`。所以 `router.push({ name: 'xxx' })` 必然在运行时抛 `No match for {"name":"xxx",...}`，冒到渲染层就是「页面渲染异常」。这个错**编译、构建、三个守卫测试、dev server 的模块编译全都查不出来**，只有真的点一下才炸 —— 验证"路由能解析"属于必须跑起来的那一类。新增页面时照抄邻座写法（`Movie.vue` 的 `` `/front/filmDetail/${id}` `` 或 `{ path }`）；真要用具名路由，先把 `name` 加进路由表并全仓统一（见 BUG-052）
