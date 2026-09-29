@@ -38,11 +38,13 @@ project_02/
 ├── LICENSE                            # 许可证
 ├── Bug.md                             # Bug 修复记录（修复前先查阅）
 ├── 标准前端视觉与交互设计规范.md        # 前端视觉与交互设计规范（新增页面前先查阅）
+├── 前端规范待办.md                     # 规范未落地条目与整改进度（规范正文不记进度）
 ├── scripts/                           # 通用脚本
 │   ├── start-dev.bat                  # 一键启动
+│   ├── seed-demo-data.py              # 演示数据生成（走真实接口；默认计划模式，--apply 才写库）
 │   └── verify/                        # 隔离环境验证脚本（备用端口 + 临时库，不碰开发库）
-│       ├── p4-account-wallet-e2e.py   # 账户-充值-订单闭环端到端验证（69 断言，可反复运行）
-│       └── p4-concurrency.py          # 余额扣减并发正确性验证（11 断言，可反复运行）
+│       ├── p4-account-wallet-e2e.py   # 账户-充值-订单闭环端到端验证（70 断言，可反复运行）
+│       └── p4-concurrency.py          # 余额扣减并发正确性验证（12 断言，可反复运行）
 ├── xm_film/                           # 项目主目录
 │   ├── springboot/                    # 后端（Spring Boot）
 │   │   ├── pom.xml                    # Maven 依赖配置
@@ -62,10 +64,10 @@ project_02/
 │   │       │   ├── common/config/
 │   │       │   │   ├── AuthInterceptor.java    # JWT 认证拦截器
 │   │       │   │   └── WebMvcConfig.java       # Web MVC 配置
-│   │       │   ├── controller/                 # 控制器层（19个）
+│   │       │   ├── controller/                 # 控制器层（20个）
 │   │       │   ├── entity/                     # 实体类（16个）
 │   │       │   ├── mapper/                     # MyBatis Mapper（15个）
-│   │       │   ├── service/                    # 业务逻辑层（16个）
+│   │       │   ├── service/                    # 业务逻辑层（17个）
 │   │       │   └── exception/                  # 异常处理
 │   │       └── resources/
 │   │           ├── application.yml             # 应用配置
@@ -94,7 +96,7 @@ project_02/
 │   │   │   ├── utils/                  # 工具层
 │   │   │   │   ├── request.js          # Axios 封装（拦截器 + 统一错误提示）
 │   │   │   │   ├── authStorage.js      # 登录态本地存储
-│   │   │   │   └── format.js           # 票房格式化（DB 万元 → 万/亿）
+│   │   │   │   └── format.js           # 票房格式化（后端聚合的累计售票收入，单位元）
 │   │   │   ├── views/                  # 页面视图
 │   │   │   │   ├── Login.vue / Register.vue / 404.vue
 │   │   │   │   ├── Front.vue           # 用户前台布局
@@ -111,7 +113,8 @@ project_02/
 │   ├── sql/                           # 数据库初始化脚本
 │   │   ├── README.md                  # 数据库说明
 │   │   ├── schema.sql                 # 16张表建表语句
-│   │   ├── data.sql                   # 初始数据
+│   │   ├── data.sql                   # 基础种子（管理员/用户/影院/影厅/影片/词表；
+│   │   │                              #   不含场次/订单/评价 —— 这三类由真实接口产生）
 │   │   ├── init.sql                   # 一键初始化入口
 │   │   └── migration-*.sql            # 增量迁移（已有库执行，幂等）
 
@@ -132,7 +135,7 @@ project_02/
 - **订单系统** — 购票下单、订单状态流转（待支付 → 待取票 → 已取票；待支付可取消或超时自动取消；待取票可退票 → 已退票）、支付与退款资金凭证留痕；订单留存**单价快照**（`ordered.unit_price`），场次改价不影响历史订单
 - **账户与资金** — 用户账户余额（`user.balance`）、充值单据（处理中 → 已完成/已失败）、资金流水账本（充值/购票/退票三类来源，记录变动前后余额与关联单据ID）。**购票为余额支付**：支付时校验余额并原子扣减，余额不足则订单保持待支付、座位继续锁定；退票时金额退回余额。不接第三方支付渠道，充值由「提交单据 + 模拟支付回调」两步完成
 - **评价系统** — 已取票用户在订单页对影片评分 + 评语（一人一片一条，可修改）；评价均分回写 `film.score` 并驱动评分榜；影片详情页公开展示评价列表
-- **排行榜** — 票房榜 Top10、评分榜 Top5（按 `film.score`，即该片评价均分）
+- **排行榜** — 票房榜 Top10（按 `ordered` 实时聚合的累计售票收入）、评分榜 Top5（按 `film.score`，即该片评价均分）
 - **搜索筛选** — 按影片名称、类型、年份、地区多维筛选
 - **文件上传** — 图片/视频上传，支持本地存储（MIME 白名单校验）
 
@@ -180,11 +183,12 @@ project_02/
 ### 业务接口
 | 路径 | 方法 | 说明 |
 |------|------|------|
-| `/api/v1/films/box-office/top` | GET | 票房排行榜 Top10 |
+| `/api/v1/films/box-office/top` | GET | 票房排行榜 Top10（按 `ordered` 实时聚合，只统计已支付；无售票的影片不上榜） |
 | `/api/v1/films/mark/top` | GET | 评分排行榜 Top5 |
 | `/api/v1/films/search` | GET | 按标题搜索电影 |
 | `/api/v1/films/by-cinema` | GET | 按影院查询电影 |
 | `/api/v1/cinemas/page` | GET | 影院分页（支持按电影筛选）；匿名/非管理员只返回 `已审核` 影院，管理员返回全部（否则后台审核列表查不到待审核影院） |
+| `/api/v1/statistics/overview` | GET | 后台可视化大盘（影院状态分布 + 影片类型分布，数据库实时聚合；仅 ADMIN） |
 | `/api/v1/files/upload` | POST | 文件上传（图片/视频） |
 
 ### 订单状态机接口（`/api/v1/orders/**`）
@@ -253,6 +257,8 @@ SOURCE xm_film/sql/data.sql;
 > **已有数据库请勿重跑 `schema.sql`/`data.sql`**，改用增量迁移并按文件名日期顺序执行。
 > 账户余额/充值单据/资金流水/订单单价需要 `migration-20260928-p4-account-wallet.sql`，
 > 未执行该脚本时账户页与余额支付会报表不存在。
+> 废弃 `film.box_office` 静态票房需要 `migration-20260929-deprecate-box-office.sql`；
+> 存量库里的演示场次/订单/评价请用 `scripts/seed-demo-data.py` 清理与重建（按演示账号边界删除，不靠猜 id）。
 
 ### 2. 启动后端
 ```bash
@@ -334,7 +340,8 @@ npm run dev
 - [README.md](README.md) — 项目说明、快速启动、部署方式
 - [Bug 修复记录](Bug.md) — 已修复 Bug 的根因与解决方案，遇到相似问题优先查阅
 - [数据库说明](xm_film/sql/README.md) — 数据库表设计与初始化指引
-- [前端设计规范](标准前端视觉与交互设计规范.md) — 三端视觉与交互标准（令牌表、色板分端机制、附录 B 现状偏差清单）
+- [前端设计规范](标准前端视觉与交互设计规范.md) — 三端视觉与交互标准（设计原则、令牌表、色板分端机制、组件与可访问性条款）
+- [前端规范待办](前端规范待办.md) — 尚未落地的规范条目与整改进度（规范正文不记录进度）
 
 ## Current Architecture Notes
 
@@ -343,7 +350,7 @@ npm run dev
 - `AuthInterceptor` enforces role boundaries for admin-only resources and write operations on protected resources.
 - Database relations now use explicit keys for the main booking path: `room.cinema_id`, `record.film_id`, and `ordered.record_id`; `xm_film/sql` is the single source of truth for both schema and seed data.
 - Film type/area display reads backend-resolved fields only: `areaName` (SQL `LEFT JOIN area`) and `typeList` (filled by `FilmService.fillFilmTypes` from `film_type`). `Film` has no `types` field — do not reintroduce frontend type/area dictionaries.
-- Box office formatting is centralized in `xm_film/vue/src/utils/format.js`; `film.box_office` is stored in **万元** (see `xm_film/sql/schema.sql`), so it renders 万 below 1 亿 and 亿 at or above it.
+- 票房口径只有一个来源：后端按 `ordered` 实时聚合的「本系统累计售票收入」（`FilmMapper.xml` 的 `filmRevenueJoin`，只统计 `待取票/已取票`），单位是**元**，前端 `utils/format.js` 只做格式化。`film.box_office` 静态列已废弃、恒为 0（`migration-20260929-deprecate-box-office.sql` 清零存量值并改列注释）。**`filmRevenueJoin` 的状态集合与 `OrderedMapper` 的占座判定同源**，新增改变"是否已支付"的状态时两处必须同步。
 - Status tag colors are centralized in `xm_film/vue/src/constants/index.js` (`FILM_STATUS_MAP`/`getFilmStatusType`, `ORDER_STATUS_MAP`/`getOrderStatusType`, `RECORD_STATUS_MAP`/`getRecordStatusType`, `CINEMA_STATUS_MAP`/`getCinemaStatusType`); views import them instead of re-declaring the switch.
 - 影院"上映哪些影片"由排片 `record` 派生（`FilmMapper.selectByCinema` / `CinemaMapper.selectByFilmId` 用 `EXISTS` 子查询）。**不存在影院-影片关联表**（原 `cinema_film` 已删除）——新建排片后前台立即可见，不要再引入第二张关联表。`record.film_id` 为 `NOT NULL`。
 - 场次可购票性由 `start` 与 `status` 共同决定，唯一权威实现在 `RecordService.isPurchasable`（`start` 晚于当前 且 `status != 停售`）；`OrderedService.insertOrder` 复用该规则做下单拦截，前端 `CinemaDetail.vue` 的 `recordState()`/`canBuy()` 与之同构。`未开始/放映中/已结束` 是派生状态，不落库；`record.status` 只保留 `正常/停售` 一个人工开关。
@@ -357,19 +364,22 @@ npm run dev
 - 金额字段必须是包装类型：`ordered.total` 为 `Double` 而非 `double`。`updateById` 用 `<if test="total != null">` 守卫，原始类型永远非 null，会让支付/取票/取消等局部更新把金额写成 0.00（另见 Bug.md BUG-034）。
 - 选座图的座位来源是 `record.roomSeatRows` / `roomSeatCols`（`RecordMapper` 从 `room` 表 JOIN 出来），而不是写死的 8×8，也不是让用户端去读 `/api/v1/rooms`（USER 无权访问影厅接口）。后端座位合法性校验同样按影厅边界，单笔订单座位数上限 6（`OrderedService.MAX_SEATS_PER_ORDER`）。
 - 影厅的 `title`（影院名称）由后端按所属影院记录派生，前端不再手填；`back/Room.vue` 的影院名是只读展示。影厅 `seat_rows`/`seat_cols` 合法区间为 1~50，由 `RoomController.validateSeatLayout` 兜底。
-- 影片评分只有一个数值来源：`mark.score`（`DECIMAL(3,1)`，0~10）。`film.score` 是派生缓存，由 `MarkService` 在评价增删改后经 `FilmMapper.recalculateScore` 回写；无评价时保留基线分、**不归零**（种子数据用同一条 `EXISTS` 守卫的 SQL 规则，保证新库与增量库一致）。评价唯一性由 `MarkMapper.countByUserAndFilm` 保证（一人一片一条），评价人只认 JWT 里的 `userId`。前端「去评价」入口在 `front/Orders.vue`（仅 `已取票` 订单），`front/FilmDetail.vue` 展示评价列表。
+- 影片评分只有一个数值来源：`mark.score`（`DECIMAL(3,1)`，0~10）。`film.score` 是派生缓存，由 `MarkService` 在评价增删改后经 `FilmMapper.recalculateScore` 回写；无评价时保留基线分、**不归零**（`data.sql` 已不再预置评价，种子影片的 `score` 就是它的基线分本身；老库由 `migration-20260928-p3` 的同一条 `EXISTS` 守卫规则收敛）。评价唯一性由 `MarkMapper.countByUserAndFilm` 保证（一人一片一条），评价人只认 JWT 里的 `userId`。前端「去评价」入口在 `front/Orders.vue`（仅 `已取票` 订单），`front/FilmDetail.vue` 展示评价列表。
 - 影院审核状态词表 `CinemaStatus` 只有 `未审核`/`已审核`（与 `schema.sql` 默认值、`data.sql` 种子一致）。`CinemaService.login` 拒绝未审核影院；公开列表经 `CinemaMapper.selectByFilmId` 的 `approvedOnly` 过滤，该标记由 `CinemaController` 按 `!isAdmin()` 传入 —— 管理员必须看得到未审核的，否则无法审核（见 Bug.md BUG-036）。
 - `WebMvcConfig.excludePathPatterns` 是**角色盲区**：被排除的路径不执行 `AuthInterceptor`，request 上没有 `role`/`userId`，控制器里的角色判断会静默失效（BUG-036 即由此而来）。公开访问统一交给 `PUBLIC_READ_PREFIXES`，**不要往排除表里加路径**。
 - 令牌失效时公开只读资源仍按匿名放行（`AuthInterceptor.isAnonymousRead`）。否则游客带着过期令牌浏览公开页会被判 401，而前端 `request.js` 的 401 处理会跳登录页 —— 公开内容就变成了事实上的必须登录。
-- `Film.boxOffice` 已由原始 `double` 改为 `Double`，与 `ordered.total` 同因同治（`film.box_office` 有 `DEFAULT 0.0`，新增影片不受影响）。凡是被 `<if test="X != null">` 守卫的字段一律用包装类型。
+- `Film.boxOffice` 已由原始 `double` 改为 `Double`，与 `ordered.total` 同因同治（`film.box_office` 有 `DEFAULT 0.0`，新增影片不受影响）。凡是被 `<if test="X != null">` 守卫的字段一律用包装类型。查询时该字段承载上面聚合出来的票房（元），**不再来自 `film.box_office` 列**。
 - 账户余额的唯一可信来源是 `user.balance`；`fund_flow` 是只增的审计副本。**任何改余额的代码只能走 `WalletService`**（`creditRecharge` / `debitPurchase` / `creditRefund`），它统一做「行锁读余额 → 校验/变更 → 写一条流水」，因此不会出现"改了余额没记账"或"扣款成功但订单没出票"。
 - 余额扣减是 `SELECT balance ... FOR UPDATE` 行锁 + `UPDATE ... WHERE balance >= ?` 条件更新双保险。**不要绕过 `WalletService` 直接用 `UserMapper.addBalance` 写业务代码** —— 那样会跳过流水与校验，余额与账本必然对不上（并发验证见 `scripts/verify/p4-concurrency.py`）。
 - 金额字段一律 `BigDecimal`（`user.balance` / `recharge_order.amount` / `fund_flow.change_amount` 等），前端展示经 `Number(...).toFixed(2)`。`ordered.total`/`unit_price` 仍是 `Double`/`BigDecimal`，历史原因不同，新增资金字段不要再用 `double`。
 - 充值单据状态机只有三个状态、两条边：`处理中 → 已完成`（回调成功，入账）、`处理中 → 已失败`（回调失败，余额不变）。**终态不可再流转**，重复回调返回业务冲突——这是幂等的唯一实现，新增任何充值入口都必须复用 `RechargeService.handleCallback`。
 - 订单物理删除只允许终态废单（`已取消` / `已退票`），白名单在 `OrderedService.DELETABLE_STATUSES`，前端三端按钮由 `constants.isOrderDeletable` 同构渲染。**这是"删订单当免费退票用"的后门**：退票能回款而删除不能，一旦放开已支付订单的删除，资金账就永远对不平。
 - 演示账号 `zhangsan` 预置 100 元余额（`data.sql` 与 `migration-20260928-p4-account-wallet.sql` 保持一致）。余额不足的演示路径由"连买几张高价票"自然触发，不需要额外的穷账号。
+- **`data.sql` 不预置交易类数据**：`record`（场次）/ `ordered`（订单）/ `mark`（评价）一律由真实业务接口产生。手写的订单必须同时伪造订单号、单价快照、支付凭证、余额扣减与资金流水 —— 老种子正是如此（`unit_price` 全为 NULL、`fund_flow` 里没有对应购票记录、`zhangsan` 余额未因那条 42 元订单扣减、单号是 12 位纯数字而真实单号是 `yyyyMMdd` + 8 位十六进制），一查就露。**要演示数据请跑 `scripts/seed-demo-data.py`**：默认计划模式（`--apply` 才写库），走真实接口生成 3 条已支付订单 + 3 条真实评价 + 真实充值与流水；幂等可重跑，按"同影厅同影片已有可购票场次就复用"避免排片膨胀，并且只在检测到 v1 种子订单（单号 12 位纯数字）时才清理旧种子排片。
+- 后台大盘统计走 `StatisticsController` / `StatisticsService` → `GET /api/v1/statistics/overview`（仅 ADMIN），由 `CinemaMapper.countGroupByStatus` / `FilmMapper.countGroupByType` 用 `GROUP BY` 实时聚合。**前端不再拉全表自己算**（`manage/Home.vue` 原先为此拉取 films + cinemas + types 三张全表再在 JS 里聚合）。无数据时按规范 §11.2 渲染「暂无数据」占位，不塞编造默认值。
+- 前端空态与异常的文案分工（规范 §11.2）：接口成功但无数据 → 「暂无数据」；请求失败（网络异常 / 超时 / 5xx）→ 「数据加载失败，请稍后重试」。失败提示由 `utils/request.js` 的响应拦截器统一给出，**页面内的 `catch` 只落错误态、不再重复弹提示**，否则同一次失败会弹两次。区分两者是必需的：请求失败时显示「暂无数据」会让用户以为系统里真的没有数据。
 - `excludePathPatterns` 是角色盲区（BUG-036），账户/充值/流水端点**都在拦截器覆盖范围内**：`/api/v1/recharges`、`/api/v1/fund-flows`、`/api/v1/account` 均未加入 `PUBLIC_READ_PREFIXES`，因此未登录一律 401 而不是匿名放行。
-- 登录 / 注册页共用一套外壳 `assets/css/auth-layout.scss`（两页各自 `@use` 进 `scoped` 块，与 `admin-layout.scss` 同构）。**卡片宽度只有 `.auth-card` 的 `max-width` 一个来源，卡片内部一律 `width: 100%`** —— 曾因内层写死 `380px` 而父级内容宽仅 192px，导致标题折行、表单溢出 188px（BUG-042）。容器用 `min-height: 100vh` + flex 居中，**不要**改回 `height: 100vh` + `overflow: hidden` + 绝对定位（矮视口会裁掉卡片且无法滚动）。口径见规范 §7.2，回归守卫在 `tests/design-tokens.test.mjs`。
+- 登录 / 注册页共用一套外壳 `assets/css/auth-layout.scss`（两页各自 `@use` 进 `scoped` 块，与 `admin-layout.scss` 同构）。**卡片宽度只有 `.auth-card` 的 `max-width` 一个来源，卡片内部一律 `width: 100%`** —— 曾因内层写死 `380px` 而父级内容宽仅 192px，导致标题折行、表单溢出 188px（BUG-042）。容器用 `min-height: 100vh` + flex 居中，**不要**改回 `height: 100vh` + `overflow: hidden` + 绝对定位（矮视口会裁掉卡片且无法滚动）。口径见规范 §6.4，回归守卫在 `tests/design-tokens.test.mjs`。
 - 认证页表单的固定形态：`label-position="top"` + `status-icon` + 可见 `label` + 文本输入框 `@keyup.enter`（`el-form` 上 `@submit.prevent` 兜底）+ 图标一律组件绑定 `:prefix-icon="User"`（字符串写法不会解析，`main.js` 未全局注册图标集，BUG-043）。登录角色默认 `USER`，**不要**改回 `ADMIN`（BUG-044）。
 
 ## Git 提交历史

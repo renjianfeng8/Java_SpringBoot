@@ -84,17 +84,6 @@
                   全场免费高速WiFi，观影期间也可顺畅连接
                 </div>
               </div>
-
-              <!-- 免费停车 -->
-              <div class="service-card">
-                <div class="service-card__title service-card__title--parking">
-                  <el-icon class="service-card__icon"><Van /></el-icon>
-                  免费停车
-                </div>
-                <div class="service-card__desc">
-                  停车场位于长江西路辅路乐客来地面停车场和乐客来生活馆地下负二层均免费停车
-                </div>
-              </div>
             </div>
           </div>
         </div>
@@ -236,7 +225,7 @@ import {reactive, ref, watch} from 'vue';
 import {useRoute, useRouter} from 'vue-router';
 import {ElMessage} from 'element-plus';
 import {
-  Clock, Connection, InfoFilled, Loading, Location, Phone, RefreshLeft, StarFilled, User, Van, VideoPlay,
+  Clock, Connection, InfoFilled, Loading, Location, Phone, RefreshLeft, StarFilled, User, VideoPlay,
 } from '@element-plus/icons-vue';
 import request from "@/utils/request.js";
 import { API_PATHS, FILM_API, apiById, apiPage } from '@/constants';
@@ -316,7 +305,7 @@ const recordState = (record, durationMinutes) => {
 
 const canBuy = (record, durationMinutes) => recordState(record, durationMinutes) === '未开始';
 
-// 8. 状态样式：返回语义类名，具体色值由 scoped 样式经令牌给出（规范 §3.3：承载文字须达 AA）
+// 8. 状态样式：返回语义类名，具体色值由 scoped 样式经令牌给出（规范 §3.7：承载文字须达 AA）
 const getStatusClass = (status) => {
   switch (status) {
     case '未开始':
@@ -489,14 +478,18 @@ const goToBuyTicket = (cinemaId, filmId, recordId, roomId) => {
     return;
   }
 
-  // 补充roomId默认值（避免null/0，默认传1=一号厅）
-  const finalRoomId = roomId && roomId > 0 ? roomId : 1;
+  // roomId 缺失时不再静默兜底成"一号厅"——那会跳到不属于该场次的影厅，
+  // 选座页按影厅边界校验座位必然失败，比明确拦住更糟
+  if (!roomId || roomId <= 0) {
+    ElMessage.warning('该场次缺少影厅信息，无法购票');
+    return;
+  }
 
   const query = {
     cinemaId: cinemaId.toString(),
     filmId: filmId.toString(),
     recordId: recordId.toString(),
-    roomId: finalRoomId.toString() // 新增：携带影厅ID
+    roomId: roomId.toString()
   };
 
   router.push({path: '/front/buyTicket', query}).catch(err => {
@@ -514,7 +507,7 @@ watch([() => route.params.id, () => route.query.filmId], ([newCinemaId, newFilmI
 </script>
 
 <style scoped>
-/* 页面容器：详情页内容最大宽度 1200px（规范 §7.1） */
+/* 页面容器：详情页内容最大宽度 1200px（规范 §6.2） */
 .cinema-detail {
   width: 100%;
   margin: 0 auto;
@@ -539,7 +532,7 @@ watch([() => route.params.id, () => route.query.filmId], ([newCinemaId, newFilmI
   margin-top: var(--space-16);
 }
 
-/* ---------- 3.1 影院详情头部（深色表面，见规范 §2.7） ---------- */
+/* ---------- 3.1 影院详情头部（深色表面，见规范 §3.5） ---------- */
 .cinema-hero {
   background-color: var(--dark-bg-hero);
 }
@@ -633,10 +626,6 @@ watch([() => route.params.id, () => route.query.filmId], ([newCinemaId, newFilmI
 
 .service-card__title--wifi {
   background-color: var(--el-color-info);
-}
-
-.service-card__title--parking {
-  background-color: var(--el-color-success);
 }
 
 .service-card__icon {
@@ -755,7 +744,7 @@ watch([() => route.params.id, () => route.query.filmId], ([newCinemaId, newFilmI
   text-overflow: ellipsis;
 }
 
-/* 评分文字：白底须用评分文字色（规范 §2.8） */
+/* 评分文字：白底须用评分文字色（规范 §3.6） */
 .film-base-info__score {
   display: flex;
   align-items: center;
@@ -895,7 +884,7 @@ watch([() => route.params.id, () => route.query.filmId], ([newCinemaId, newFilmI
   font-size: var(--fs-xs);
 }
 
-/* 状态标签：语义类，色值经令牌且承载文字须达 AA（规范 §3.3） */
+/* 状态标签：语义类，色值经令牌且承载文字须达 AA（规范 §3.7） */
 .status-tag {
   display: inline-block;
   padding: var(--space-4) var(--space-8);

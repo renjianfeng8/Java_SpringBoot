@@ -242,6 +242,8 @@ CREATE DATABASE `xm-film` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_
 
 执行项目提供的 `xm_film/sql/init.sql` 一键初始化脚本（或依次执行 `schema.sql` + `data.sql`）。使用 MySQL 客户端导入时请指定 `--default-character-set=utf8mb4`，避免中文默认值和初始数据在不同终端编码下被错误解析。
 
+> `data.sql` 只预置基础数据（管理员 / 演示用户 / 影院 / 影厅 / 影片 / 词表）。**放映场次、购票订单、用户评价不预置** —— 它们由真实业务接口产生；需要演示数据请跑 `scripts/seed-demo-data.py`（默认计划模式，加 `--apply` 才写库）。
+
 ### 2. 启动后端
 
 ```bash
@@ -338,7 +340,7 @@ file:
 - **订单系统** — 购票下单、订单状态流转（含超时取消、取票、退票）与支付/退款凭证留痕；订单留存单价快照，场次改价不影响历史订单
 - **账户与资金** — 用户账户余额、充值单据（处理中/已完成/已失败）、资金流水账本（充值/购票/退票三类来源，记录变动前后余额与关联单据ID）。**购票为余额支付**：支付时校验余额并原子扣减，余额不足则支付失败、订单保持待支付且座位继续锁定；退票时金额退回余额。充值走"提交单据 + 模拟支付回调"两步，提交单据不改余额，回调成功才入账，重复回调被拒
 - **评价系统** — 已取票用户在订单页评价影片（一单一评一人一片），评价均分回写 `film.score` 并驱动评分榜；影片详情页展示评价
-- **排行榜** — 票房榜、评分榜（SQL 级排序）
+- **排行榜** — 票房榜（按订单实时聚合的累计售票收入）、评分榜（按评价均分）
 - **搜索筛选** — 按影片名称、类型、年份、地区多维筛选
 - **文件上传** — 图片/视频上传，支持本地存储
 
@@ -375,11 +377,12 @@ file:
 
 | 路径 | 方法 | 说明 | 认证 |
 |------|------|------|------|
-| `/api/v1/films/box-office/top` | GET | 票房排行榜 Top10 | 否 |
+| `/api/v1/films/box-office/top` | GET | 票房排行榜 Top10（按订单实时聚合，只统计已支付） | 否 |
 | `/api/v1/films/mark/top` | GET | 评分排行榜 Top5 | 否 |
 | `/api/v1/films/search` | GET | 按标题搜索 | 否 |
 | `/api/v1/films/by-cinema` | GET | 按影院查询电影 | Bearer |
 | `/api/v1/cinemas/page` | GET | 影院分页（支持按电影筛选） | 否 |
+| `/api/v1/statistics/overview` | GET | 后台可视化大盘（影院状态分布 + 影片类型分布，实时聚合） | Bearer（ADMIN） |
 | `/api/v1/files/upload` | POST | 文件上传 | Bearer |
 | `/api/v1/account/summary` | GET | 当前登录用户账户余额 | Bearer |
 | `/api/v1/recharges` | POST | 提交充值申请（生成「处理中」单据，余额不变） | Bearer |
@@ -426,6 +429,9 @@ file:
 
 > 影院"上映哪些影片"由 `record`（排片）派生，没有独立的影院-影片关联表；
 > 订单引用的影片/影院/影厅/场次/用户均为 `ON DELETE RESTRICT`，需下架时改状态而不做物理删除。
+
+> `record` / `ordered` / `mark` 三张表**不预置种子数据**：手写的订单必须同时伪造单号、单价快照、支付凭证、余额扣减与资金流水，任意一处对不上就是可被查出的假数据。演示数据请用 `scripts/seed-demo-data.py` 走真实接口生成（幂等可重跑）。
+> `film.box_office` 已废弃（票房改由订单实时聚合），存量库用 `migration-20260929-deprecate-box-office.sql` 清零。
 
 ---
 
@@ -516,11 +522,20 @@ mvn test
 
 ```bash
 # 见脚本头部说明：建临时库 → 用 DB_NAME 指向它并在备用端口起后端 → 跑脚本
-python scripts/verify/p4-account-wallet-e2e.py   # 账户-充值-订单闭环 + 选座接口越权读，69 断言
-python scripts/verify/p4-concurrency.py          # 余额扣减并发正确性，11 断言
+python scripts/verify/p4-account-wallet-e2e.py   # 账户-充值-订单闭环 + 选座接口越权读，70 断言
+python scripts/verify/p4-concurrency.py          # 余额扣减并发正确性，12 断言
 ```
 
-两个脚本都自带状态重置、可反复运行，且**不触碰开发库 `xm-film` 与本机 9090/5173**。
+两个脚本都自带状态重置、可反复运行，且**不触碰开发库 `xm-film` 与本机 9090/5173**。它们会自己准备一个独占场次（种子已不再预置排片）。
+
+### 演示数据生成（走真实接口）
+
+```bash
+python scripts/seed-demo-data.py            # 只看计划，不写库
+python scripts/seed-demo-data.py --apply    # 确认后执行
+```
+
+由 `lisi` / `wangwu` / `zhangsan` 三个账号走**真实接口**各生成一条「已支付并取票」的订单与一条评价（`lisi` / `wangwu` 先经真实充值流程补足余额），账实相符：真实订单号、单价快照、余额扣减、资金流水、`film.score` 回写。默认对着开发库 `xm-film`，可用 `E2E_BASE` / `E2E_DB` 覆盖。
 
 ### 本地复现 CI
 

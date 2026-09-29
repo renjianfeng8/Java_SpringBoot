@@ -644,7 +644,7 @@
   - 抽出 `src/assets/css/auth-layout.scss`，与 `Register.vue` 共用（同 `admin-layout.scss` 的处理方式）：卡片宽度只由 `.auth-card` 的 `max-width: 380px` 决定，**删除**页面里写死的 `width: 380px`
   - 容器改为 `min-height: 100vh` + flex 居中，去掉 `height: 100vh` + `overflow: hidden` + 绝对居中的组合 —— 顺带修掉"视口变矮时卡片被裁掉且无法滚动"
   - 两页共用同一张背景图（按产品要求把注册页换成登录页的图），背景声明也收进共用外壳
-  - 规范新增 §7.2 固化这条口径；`tests/design-tokens.test.mjs` 加终态断言（认证页不得出现写死的 px 宽度、必须 `@use` 共用外壳、共用外壳不得出现 `overflow: hidden`）
+  - 规范新增 §6.4 固化这条口径；`tests/design-tokens.test.mjs` 加终态断言（认证页不得出现写死的 px 宽度、必须 `@use` 共用外壳、共用外壳不得出现 `overflow: hidden`）
 - **验证**: `npm run test:tokens` 13/13、`test:inline` 2/2、`npm run build` 通过；构建产物核对 `Login-*.css` 与 `Register-*.css` 均引用同一份 `bg_login-*.jpg`，注册页旧图 `registerbg.jpg` 已不再打包（无引用）。**页面渲染由用户在本机目视确认通过**
 - **相关文件**: `src/assets/css/auth-layout.scss`（新增）、`src/views/Login.vue`、`src/views/Register.vue`、`tests/design-tokens.test.mjs`
 - **提交记录**: 未提交
@@ -655,16 +655,16 @@
 ### BUG-043: 认证页表单无可访问名称、无错误图标、不支持回车提交，前缀图标不渲染
 
 - **日期**: 2026-09-28
-- **Bug 描述**: 四个同源的表单缺陷：① 所有输入框只有 `placeholder`，没有 `label`，读屏软件读不出字段用途，且一开始输入提示就消失；② 校验只出红框与文案，规范 §六 要求的"错误图标"缺失；③ 回车键不能提交，只能鼠标点按钮；④ 账号 / 密码输入框左侧的 `User` / `Lock` 图标根本不显示，只有一块空白
+- **Bug 描述**: 四个同源的表单缺陷：① 所有输入框只有 `placeholder`，没有 `label`，读屏软件读不出字段用途，且一开始输入提示就消失；② 校验只出红框与文案，规范 §9.3 要求的"错误图标"缺失；③ 回车键不能提交，只能鼠标点按钮；④ 账号 / 密码输入框左侧的 `User` / `Lock` 图标根本不显示，只有一块空白
 - **根因分析**: ①③ 从未实现；② 缺 `status-icon` —— 错误图标由该属性驱动，EP 不会自己加；④ `Login.vue:8,11` 与 `Register.vue:11,19,27` 用的是**字符串**写法 `prefix-icon="User"`，而 `prefix-icon` 接受的是组件，字符串要靠全局注册才能解析 —— 全项目从未 `app.component()` 注册图标集（`main.js` 无该调用），因此解析失败、图标为空。全项目其余 20 多个页面都用绑定写法 `:prefix-icon="Search"`，只有认证两页是字符串，属孤例
 - **解决方案**:
   - `import { User, Lock } from '@element-plus/icons-vue'` + `:prefix-icon="User"`，与其余页面统一
   - `el-form` 加 `label-position="top"` 与 `status-icon`，每个 `el-form-item` 补可见 `label`
   - 文本输入框加 `@keyup.enter`，`el-form` 挂 `@submit.prevent` 兜住原生提交；**只在一处绑定**，避免一次回车发两次请求
   - `role` 的校验触发由 `blur` 改 `change`（下拉框不会触发 blur 那一刻的语义）
-  - 规范 §8.2 新增「表单控件必须有可访问名称」、§六 补 `status-icon` 与回车提交的施工口径；重启的两条列为附录 B 待办（B#34、B#35）
+  - 规范 §10.2 新增「表单控件必须有可访问名称」、§9.3 补 `status-icon` 与回车提交的施工口径；其余表单页的同类整改列入《前端规范待办》T-1
 - **验证**: `npm run test:tokens` 13/13（其中新增断言校验认证页有可见 label、`status-icon`、`@keyup.enter`，且不再出现字符串 `prefix-icon`）；`npm run build` 通过。**回车提交与图标显示由用户在本机目视确认通过**
-- **相关文件**: `src/views/Login.vue`、`src/views/Register.vue`、`标准前端视觉与交互设计规范.md`（§六 / §8.2 / 附录 A）
+- **相关文件**: `src/views/Login.vue`、`src/views/Register.vue`、`标准前端视觉与交互设计规范.md`（§9.3 / §10.2 / 附录 A）
 - **提交记录**: 未提交
 - **状态**: 已修复
 
@@ -687,12 +687,35 @@
 
 - **日期**: 2026-09-28
 - **Bug 描述**: 页面底部的免责声明「本系统为个人学习项目…」几乎看不见 —— 它是浅灰字压在浅蓝插画上
-- **根因分析**: 该段文字用了 `--dark-text-secondary`(#cccccc)，而这是 §2.7 的**深色表面**令牌（设计用于 `#1a1a1a` 一类深底，那里是 10.84:1）。登录页背景是浅色插画（实测约 `#7FB2DC`），#ccc 压其上只有 **1.41:1**。这不是"换个颜色就能修"的问题：同一位置改压深色文字（`--el-text-color-regular` #606266）也只有 **2.71:1** —— 直接往图片上放文字，深浅两头都到不了 4.5:1
+- **根因分析**: 该段文字用了 `--dark-text-secondary`(#cccccc)，而这是 §3.5 的**深色表面**令牌（设计用于 `#1a1a1a` 一类深底，那里是 10.84:1）。登录页背景是浅色插画（实测约 `#7FB2DC`），#ccc 压其上只有 **1.41:1**。这不是"换个颜色就能修"的问题：同一位置改压深色文字（`--el-text-color-regular` #606266）也只有 **2.71:1** —— 直接往图片上放文字，深浅两头都到不了 4.5:1
 - **解决方案**: 经确认该段声明与前台页脚（`Front.vue` 第 133 行有更完整的同名声明）重复，**按产品决定删除**认证两页的该段文字及对应样式，不再往背景图上压文字。共用外壳里的相关样式一并移除，未留下无用类名
 - **验证**: `grep` 确认 `src/` 与 `tests/` 内已无残留引用；`npm run build` 通过
 - **相关文件**: `src/views/Login.vue`、`src/views/Register.vue`、`src/assets/css/auth-layout.scss`
 - **提交记录**: 未提交
 - **状态**: 已修复（按产品决定移除，而非配色补偿）
+
+---
+
+### BUG-046: 种子业务数据账实不符，票房与"今日票房"由虚构数值驱动
+
+- **日期**: 2026-09-29
+- **Bug 描述**: 三处假数据同时存在。① `data.sql` 预置的 12 条订单/51 条评价与资金账本对不上；② 前台首页「今日票房」写死 `1.28亿`，刷新按钮用随机数改数字；③ 票房榜由 `film.box_office` 这个运行时从不重算的静态列驱动
+- **根因分析**: 三条互相独立的来源：
+  1. **手写订单必然要伪造一整条链**。`data.sql:172` 的 `ordered` 列清单**不含 `unit_price`**（单价快照全为 NULL）；`fund_flow` 一条种子都没有 —— 8 条带 `pay_time/pay_amount` 的"已支付"订单在账本里**没有任何对应购票流水**；`zhangsan` 余额 100.00 **未因**他那条 42 元订单扣减；订单号是 `202603058485`（12 位纯数字），而真实单号由 `OrderedService.generateOrderNo` 生成，是 `yyyyMMdd` + 8 位大写十六进制。三项互相印证即可判定为编造
+  2. `front/Home.vue` 的 `totalPrice` 写死 `{total: 1.28, change: 5.3}`；`refreshTodayBoxOffice` 用 `Math.random()` 改这个数字并弹「已更新最新今日票房数据」—— 刷新按钮不请求任何接口，界面谎报数据新鲜度
+  3. `film.box_office` 只由 `data.sql` 写入，`FilmMapper` 之外无任何代码重算它，前端也只读展示、无编辑入口 → 票房榜 100% 由虚构数值驱动。**对比**：`film.score` 是真的 —— 由 `MarkService` 按 `mark.score` 求均分回写
+- **解决方案**:
+  1. `data.sql` 删除 `record`（15 行）/`ordered`（12 行）/`mark`（51 行）三块种子与恒为空操作的均分回写 UPDATE，并把 `film.box_office` 种子值清零；种子只留基础数据（管理员/用户/影院/影厅/影片/词表）
+  2. `migration-20260928-p3` 删除镜像那 51 条评价的第 3 节 —— 否则它成了唯一还会造出假评价的地方
+  3. 票房改为按 `ordered` 实时聚合（`FilmMapper.xml` 的 `filmRevenueJoin`，只统计 `待取票/已取票`），单位由「万元」改为**元**（本系统内的售票收入是几十到几百元量级，按万元渲染会恒显示 0.00万）；`film.box_office` 废弃并由 `migration-20260929-deprecate-box-office.sql` 清零存量值
+  4. 新增只读统计接口 `GET /api/v1/statistics/overview`（仅 ADMIN），后台大盘不再由前端拉 films+cinemas+types 三张全表自己算
+  5. 删除「今日票房」组件与其随机数刷新；补齐「暂无数据 / 数据加载失败，请稍后重试」的空态与异常态
+  6. 新增 `scripts/seed-demo-data.py`：走真实接口生成 3 条已支付并取票的订单 + 3 条真实评价（lisi/wangwu 先经真实充值流程补足余额），并清理演示账号的旧数据
+  7. 顺带修掉 `front/CinemaDetail.vue` 的「免费停车」硬编码卡（含具体地址，且该地址实为丁丁影城的信息，却对每家影院都展示）与 `roomId` 缺失时静默兜底成"一号厅"的跳转
+- **验证**: `mvn test` 154 例全绿；前端 `npm run build` + `test:tokens`/`test:inline`/`test:bundle` 全绿；E2E 70/70、并发 12/12（临时库 `xm_film_verify` + 备用端口 9191）；开发库 `xm-film` 实测落库 3 条真实订单（单号 `20260929B588E9EC` 格式、`unit_price`=场次票价、余额 100→55/60.5/48、购票流水 3 条 + 充值流水 2 条、`film.score` 回写 8.8/9.2/9.0）；`/statistics/overview` 返回 4 影院 + 45 条类型计数，USER 调用被 403 拒绝；票房榜返回 52.0/45.0/39.5 元三行。**未做浏览器渲染验证**（UI 目视由用户自查）
+- **相关文件**: `xm_film/sql/data.sql`、`xm_film/sql/schema.sql`、`xm_film/sql/migration-20260928-p3-review-score-cinema-audit.sql`、`xm_film/sql/migration-20260929-deprecate-box-office.sql`、`FilmMapper.xml`/`FilmMapper.java`、`CinemaMapper.xml`/`CinemaMapper.java`、`StatisticsController.java`/`StatisticsService.java`、`Film.java`、`front/Home.vue`、`front/Movie.vue`、`front/Rank.vue`、`front/CinemaDetail.vue`、`front/Cinema.vue`、`front/FilmCinema.vue`、`manage/Home.vue`、`utils/format.js`、`constants/index.js`、`scripts/seed-demo-data.py`、`scripts/verify/p4-*.py`
+- **提交记录**: 未提交
+- **状态**: 已修复
 
 ---
 
@@ -754,4 +777,6 @@
 54. **表单控件的可访问名称不能只靠 placeholder**: placeholder 一输入即消失，既不构成可访问名称也不是持久提示。用可见 `label`（`label-position="top"`）或 `aria-label`（见 BUG-043）
 55. **回车提交只在输入框上接一次，并挂 `@submit.prevent` 兜底**: 不要指望浏览器隐式提交（多字段表单会放弃它）；也不要同时在输入框与 `<form>` 上各绑一处，否则一次回车发两次请求（见 BUG-043）
 56. **不要把最少人用的角色设为登录页默认值**: 默认 `ADMIN` 会让普通用户忘记切换时鉴权失败甚至误登管理员。默认值取最常见角色（`USER`），让失败模式是"明确报角色不匹配"而不是"进错后台"（见 BUG-044）
-57. **往背景图上放文字必须先解决底衬**: 同一段文字在浅色插画上深浅两头都到不了 4.5:1（`#ccc` 1.41:1、`#606266` 2.71:1）。要么给半透明面板兜底，要么不放文字 —— 换颜色解决不了（见 BUG-045）
+57. **往背景图上放文字必须先解决底衬**: 同一段文字在浅色插画上深浅两头都不到 4.5:1（`#ccc` 1.41:1、`#606266` 2.71:1）。要么给半透明面板兜底，要么不放文字 —— 换颜色解决不了（见 BUG-045）
+58. **手写业务数据迟早露馅，种子只放基础配置**: 订单/评价/场次这类"一整套互相印证"的数据不要用 `INSERT` 预置 —— 单号格式、单价快照、支付凭证、余额扣减、资金流水任意一处对不上就能被查出来。演示数据一律走真实接口生成（见 BUG-046 的 `scripts/seed-demo-data.py`）
+59. **派生指标不要留成静态列**: `film.box_office` 这种"人工填、没人重算"的列，迟早变成没有来源的数字并被当成真实数据展示。要么按业务表实时聚合，要么就让它是空的。**改这类指标时先 grep 一遍有没有任何代码在重算它**（见 BUG-046）

@@ -83,12 +83,11 @@
                   <div class="cinema-card__name">{{ cinema.name || '未知影院' }}</div>
                 </div>
 
-                <!-- 影院服务标签：用功能色，白字压其上均达 AA（规范 §2.5） -->
+                <!-- 影院服务标签：用功能色，白字压其上均达 AA（规范 §3.3） -->
                 <div class="cinema-card__tags">
                   <div class="service-tag service-tag--refund">退票无忧</div>
                   <div class="service-tag service-tag--promo">儿童优惠</div>
                   <div class="service-tag service-tag--wifi">WiFi覆盖</div>
-                  <div class="service-tag service-tag--parking">免费停车</div>
                 </div>
 
                 <!-- 影院详细信息 -->
@@ -339,7 +338,7 @@ onMounted(() => {
   color: var(--el-color-danger);
 }
 
-/* ---------- 3.1 电影详情头部（深色表面，规范 §2.7） ---------- */
+/* ---------- 3.1 电影详情头部（深色表面，规范 §3.5） ---------- */
 .film-hero {
   background-color: var(--dark-bg-hero);
 }
@@ -534,10 +533,6 @@ onMounted(() => {
 
 .service-tag--wifi {
   background-color: var(--el-color-info);
-}
-
-.service-tag--parking {
-  background-color: var(--el-color-success);
 }
 
 .cinema-card__detail {

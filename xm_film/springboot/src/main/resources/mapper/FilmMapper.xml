@@ -5,26 +5,48 @@
 
 <mapper namespace="com.example.springboot.mapper.FilmMapper">
 
+    <!-- 票房 = 本系统内该影片的累计售票收入（元），由 ordered 实时聚合，不再读 film.box_office 静态列。
+         只统计已支付状态（待取票/已取票）；已取消/已退票不计。
+         状态集合与 OrderedMapper 的占座判定同源：新增任何改变"是否已支付"的状态时两处必须同步。 -->
+    <sql id="filmRevenueJoin">
+        LEFT JOIN (
+            SELECT o.film_id, SUM(o.total) AS revenue
+            FROM ordered o
+            WHERE o.status IN ('待取票', '已取票')
+            GROUP BY o.film_id
+        ) rev ON rev.film_id = film.id
+    </sql>
+
+    <!-- film 列清单 + 聚合票房（box_office 列保留但已恒为 0，仅此处别名承载聚合值） -->
+    <sql id="filmColumnsWithRevenue">
+        film.id, film.title, film.english, film.start, film.time,
+        film.language, film.resolution, film.content, film.img, film.employee,
+        film.area_id, film.status, film.score, film.actor_id, film.video,
+        COALESCE(rev.revenue, 0) AS box_office
+    </sql>
+
     <!-- 根据影院ID查询上映电影：影院上映哪些影片由排片(record)派生，新建排片后前台即可见 -->
     <select id="selectByCinema" resultType="com.example.springboot.entity.Film">
         SELECT
-        f.*,
+        <include refid="filmColumnsWithRevenue"/>,
         a.title AS areaName,
         CONCAT(actor.id, ':', actor.actor) as actorInfo
-        FROM film f
-        LEFT JOIN area a ON f.area_id = a.id
-        LEFT JOIN actor ON f.actor_id = actor.id
-        WHERE EXISTS (SELECT 1 FROM record r WHERE r.film_id = f.id AND r.cinema_id = #{cinemaId})
-        <if test="filmId != null">AND f.id = #{filmId}</if>
-        ORDER BY f.id DESC
+        FROM film
+        <include refid="filmRevenueJoin"/>
+        LEFT JOIN area a ON film.area_id = a.id
+        LEFT JOIN actor ON film.actor_id = actor.id
+        WHERE EXISTS (SELECT 1 FROM record r WHERE r.film_id = film.id AND r.cinema_id = #{cinemaId})
+        <if test="filmId != null">AND film.id = #{filmId}</if>
+        ORDER BY film.id DESC
     </select>
 
     <select id="selectById" parameterType="java.lang.Integer" resultType="com.example.springboot.entity.Film">
         SELECT
-            film.*,
+            <include refid="filmColumnsWithRevenue"/>,
             area.title as areaName,
             CONCAT(actor.id, ':', actor.actor) as actorInfo
         FROM film
+                 <include refid="filmRevenueJoin"/>
                  LEFT JOIN area ON film.area_id = area.id
                  LEFT JOIN actor ON film.actor_id = actor.id
         WHERE film.id = #{id}
@@ -32,10 +54,11 @@
 
     <select id="selectAll" resultType="com.example.springboot.entity.Film">
         SELECT
-        film.*,
+        <include refid="filmColumnsWithRevenue"/>,
         area.title as areaName,
         CONCAT(actor.id, ':', actor.actor) as actorInfo
         FROM film
+        <include refid="filmRevenueJoin"/>
         LEFT JOIN area ON film.area_id = area.id
         LEFT JOIN actor ON film.actor_id = actor.id
         <where>
@@ -48,20 +71,39 @@
         ORDER BY id DESC
     </select>
 
+    <!-- 与其它 film 查询共用票房口径：若这里退回 film.box_office，同一部片会出现
+         "搜索结果里票房 0、详情页里是真实值" 的分叉 -->
     <select id="selectByTitle" resultType="com.example.springboot.entity.Film">
-        SELECT * FROM film WHERE title LIKE CONCAT('%', #{title}, '%')
+        SELECT
+            <include refid="filmColumnsWithRevenue"/>
+        FROM film
+        <include refid="filmRevenueJoin"/>
+        WHERE film.title LIKE CONCAT('%', #{title}, '%')
     </select>
 
+    <!-- 票房榜：按聚合出来的累计售票收入倒序。只上榜有实际售票的影片 —— 无订单的影片不占榜位，
+         否则榜单会被一串 0 元占满（旧实现读静态列，无 WHERE，所有影片都会出现在榜尾）。 -->
     <select id="selectBoxOfficeTop" resultType="com.example.springboot.entity.Film">
         SELECT
-            film.*,
+            <include refid="filmColumnsWithRevenue"/>,
             area.title as areaName,
             CONCAT(actor.id, ':', actor.actor) as actorInfo
         FROM film
+        <include refid="filmRevenueJoin"/>
         LEFT JOIN area ON film.area_id = area.id
         LEFT JOIN actor ON film.actor_id = actor.id
-        ORDER BY film.box_office DESC
+        WHERE rev.revenue > 0
+        ORDER BY rev.revenue DESC
         LIMIT #{topNum}
+    </select>
+
+    <!-- 大盘统计：影片类型分布（由 film_type 关联实时计数） -->
+    <select id="countGroupByType" resultType="java.util.Map">
+        SELECT t.title AS name, COUNT(*) AS value
+        FROM film_type ft
+        INNER JOIN type t ON ft.type_id = t.id
+        GROUP BY t.id, t.title
+        ORDER BY value DESC
     </select>
 
     <select id="selectMarkTop" resultType="com.example.springboot.entity.Film">

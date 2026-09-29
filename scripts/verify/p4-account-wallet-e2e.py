@@ -8,6 +8,9 @@ CREATE DATABASE xm_film_verify DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_uni
     mysql -uroot -p --default-character-set=utf8mb4 xm_film_verify < xm_film/sql/schema.sql
     mysql -uroot -p --default-character-set=utf8mb4 xm_film_verify < xm_film/sql/data.sql
 
+    # 注：data.sql 已不再预置放映场次/订单/评价（一律由真实接口产生），
+    # 本脚本启动时会自己准备一个独占场次（单价 39.50），并把余额复位到种子值。
+
     # 2. 用临时库、备用端口起后端（不要动 9090）
     cd xm_film/springboot
     DB_NAME=xm_film_verify java -jar target/springboot-0.0.1-SNAPSHOT.jar --server.port=9191
@@ -30,6 +33,7 @@ import subprocess
 import sys
 import urllib.error
 import urllib.request
+from datetime import datetime, timedelta
 
 sys.stdout.reconfigure(encoding='utf-8')
 
@@ -39,7 +43,7 @@ DB_PASSWORD = os.environ.get('DB_PASSWORD', '123456')
 USER_ID = 6        # 种子用户 zhangsan
 USERNAME = 'zhangsan'
 PASSWORD = 'user123'
-RECORD_ID = 2      # 脚本独占的场次（单价 39.50，影厅 10×12）
+RECORD_ID = None   # 由 ensure_record() 在启动时准备；种子已不再预置排片
 
 results = []
 
@@ -50,6 +54,48 @@ opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
 def sql(statement):
     subprocess.run(['mysql', '--default-character-set=utf8mb4', '-uroot', '-p' + DB_PASSWORD, DB, '-e', statement],
                    capture_output=True, check=True)
+
+
+def query(statement):
+    # 必须显式 encoding='utf-8'：中文 Windows 上 text=True 会按 GBK 解码（locale），
+    # 而库是 utf8mb4 —— 结果含中文时解码线程抛 UnicodeDecodeError，stdout 变成 None。
+    out = subprocess.run(['mysql', '-N', '-B', '--default-character-set=utf8mb4',
+                          '-uroot', '-p' + DB_PASSWORD, DB, '-e', statement],
+                         capture_output=True, text=True, encoding='utf-8', check=True).stdout
+    return [line.split('\t') for line in out.splitlines() if line.strip()]
+
+
+def ensure_record():
+    """准备本脚本独占的场次。种子已不再预置排片，所以由脚本自己建；已存在可复用的就复用。
+
+    断言依赖「单价 39.50」与「≥5 排 × ≥3 列」的座位规模（用到了 1~5 排、1~3 座）。
+    """
+    _, cinema = call('POST', '/api/v1/auth/login',
+                     body={'username': 'asks', 'password': 'cinema123', 'role': 'CINEMA'})
+    cinema_token = (cinema.get('data') or {}).get('token')
+    if not cinema_token:
+        print('  FAIL  影院账号登录失败，无法准备场次: %s' % cinema)
+        sys.exit(2)
+    room = query('SELECT r.id FROM room r WHERE r.seat_rows >= 5 AND r.seat_cols >= 3 '
+                 "AND r.cinema_id = (SELECT id FROM cinema WHERE username = 'asks') ORDER BY r.id LIMIT 1")
+    film = query("SELECT id FROM film WHERE status = '已上映' ORDER BY id LIMIT 1")
+    if not room or not film:
+        print('  FAIL  找不到可用影厅或已上映影片，无法准备场次')
+        sys.exit(2)
+    room_id, film_id = int(room[0][0]), int(film[0][0])
+    existing = query('SELECT id FROM record WHERE room_id = %d AND film_id = %d AND price = 39.5 '
+                     "AND status = '正常' AND start > NOW() ORDER BY id DESC LIMIT 1" % (room_id, film_id))
+    if existing:
+        return int(existing[0][0])
+    start = (datetime.now() + timedelta(days=30)).strftime('%Y-%m-%d 19:30:00')
+    _, res = call('POST', '/api/v1/records', cinema_token,
+                  {'roomId': room_id, 'filmId': film_id, 'start': start, 'price': 39.5})
+    if res.get('code') != '200':
+        print('  FAIL  创建场次失败: %s' % res)
+        sys.exit(2)
+    rows = query("SELECT id FROM record WHERE room_id = %d AND film_id = %d AND start = '%s' "
+                 'ORDER BY id DESC LIMIT 1' % (room_id, film_id, start))
+    return int(rows[0][0])
 
 
 def call(method, path, token=None, body=None):
@@ -98,13 +144,17 @@ def seats_in_use(token, record_id):
     return used
 
 
-print('=== 0. 登录 ===')
+print('=== 0. 登录与场次准备 ===')
 _, login = call('POST', '/api/v1/auth/login',
                 body={'username': USERNAME, 'password': PASSWORD, 'role': 'USER'})
 token = login.get('data', {}).get('token')
 check('登录取得 token', bool(token), login)
 if not token:
     sys.exit(1)
+
+# 种子已不再预置排片：场次由脚本自己准备（已存在则复用，可反复运行）
+RECORD_ID = ensure_record()
+check('演示场次就绪（单价 39.50）', RECORD_ID > 0, RECORD_ID)
 
 # 状态重置：清掉该用户的流水与充值单、该场次的订单，并把余额复位成种子值，
 # 保证脚本可以在同一个临时库上反复运行（断言用的是绝对条数与绝对余额）。

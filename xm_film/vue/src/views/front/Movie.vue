@@ -70,6 +70,8 @@
           </div>
         </el-col>
       </el-row>
+      <div v-if="data.error" class="empty-hint">数据加载失败，请稍后重试</div>
+      <div v-else-if="!data.filmData.length" class="empty-hint">暂无数据</div>
     </div>
 
     <div class="film-grid__pagination" v-if="data.total">
@@ -107,7 +109,8 @@ const data = reactive({
   pageSize: 12,
   total: 0,
   filmData: [],
-  status: null
+  status: null,
+  error: false
 })
 
 // 新增：跳转电影详情页方法
@@ -134,9 +137,15 @@ const load = () => {
     if (res.code === '200') {
       data.filmData = res.data.list
       data.total = res.data.total
+      data.error = false
     } else {
+      data.error = true
       ElMessage.error(res.msg)
     }
+  }).catch(err => {
+    // 网络异常的统一提示由 request.js 的响应拦截器给出，这里只落错误态
+    console.error('电影列表接口请求异常：', err)
+    data.error = true
   })
 }
 
@@ -263,5 +272,13 @@ load()
   font-size: var(--fs-xl);
   color: var(--color-rating-text);
   text-align: right;
+}
+
+/* 无数据 / 加载失败的占位（规范 §608：禁止用假数据填充，无数据渲染「暂无数据」） */
+.empty-hint {
+  padding: var(--space-40) 0;
+  font-size: var(--fs-base);
+  color: var(--el-text-color-regular);
+  text-align: center;
 }
 </style>

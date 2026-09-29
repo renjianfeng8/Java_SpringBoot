@@ -44,6 +44,13 @@
         ORDER BY c.id DESC
     </select>
 
+    <!-- 大盘统计：影院状态分布（由 cinema 实时计数） -->
+    <select id="countGroupByStatus" resultType="java.util.Map">
+        SELECT c.status AS name, COUNT(*) AS value
+        FROM cinema c
+        GROUP BY c.status
+    </select>
+
     <!-- 删除操作 -->
     <delete id="deleteById" parameterType="com.example.springboot.entity.Cinema">
         DELETE FROM cinema WHERE id = #{id}

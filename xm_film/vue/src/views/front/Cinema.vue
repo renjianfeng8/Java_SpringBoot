@@ -13,7 +13,7 @@
           <!-- 影院名称 -->
           <div class="cinema-card__name">{{ cinema.name }}</div>
 
-          <!-- 影院服务标签：用功能色，白字压其上均达 AA（规范 §2.5） -->
+          <!-- 影院服务标签：用功能色，白字压其上均达 AA（规范 §3.3） -->
           <div class="cinema-card__tags">
             <div class="service-tag service-tag--refund">
               退票无忧
@@ -23,9 +23,6 @@
             </div>
             <div class="service-tag service-tag--wifi">
               WiFi覆盖
-            </div>
-            <div class="service-tag service-tag--parking">
-              免费停车
             </div>
           </div>
 
@@ -180,10 +177,6 @@ load()
 
 .service-tag--wifi {
   background-color: var(--el-color-info);
-}
-
-.service-tag--parking {
-  background-color: var(--el-color-success);
 }
 
 .cinema-card__detail {
