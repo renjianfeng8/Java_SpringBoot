@@ -245,7 +245,7 @@ CREATE DATABASE `xm-film` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_
 
 执行项目提供的 `xm_film/sql/init.sql` 一键初始化脚本（或依次执行 `schema.sql` + `data.sql`）。使用 MySQL 客户端导入时请指定 `--default-character-set=utf8mb4`，避免中文默认值和初始数据在不同终端编码下被错误解析。
 
-> `data.sql` 只预置基础数据（管理员 / 演示用户 / 影院 / 影厅 / 影片 / 词表）。**放映场次、购票订单、用户评价不预置** —— 它们由真实业务接口产生；需要演示数据请跑 `scripts/seed-demo-data.py`（默认计划模式，加 `--apply` 才写库）。
+> `data.sql` 只预置基础数据（管理员 / 演示用户 / 影院 / 影厅 / 影片 / 词表）。**放映场次、购票订单、用户评价不预置** —— 它们只能经真实业务接口产生（前台下单 → 支付 → 取票 → 评价），不要用 `INSERT` 手工补：手写交易数据无法自证一致。
 
 ### 2. 启动后端
 
@@ -437,7 +437,7 @@ file:
 > 影院"上映哪些影片"由 `record`（排片）派生，没有独立的影院-影片关联表；
 > 订单引用的影片/影院/影厅/场次/用户均为 `ON DELETE RESTRICT`，需下架时改状态而不做物理删除。
 
-> `record` / `ordered` / `mark` 三张表**不预置种子数据**：手写的订单必须同时伪造单号、单价快照、支付凭证、余额扣减与资金流水，任意一处对不上就是可被查出的假数据。演示数据请用 `scripts/seed-demo-data.py` 走真实接口生成（幂等可重跑）。
+> `record` / `ordered` / `mark` 三张表**不预置种子数据**：手写的订单必须同时伪造单号、单价快照、支付凭证、余额扣减与资金流水，任意一处对不上就是可被查出的假数据。演示数据只能经真实业务接口生成（前台下单 → 支付 → 取票 → 评价），不要手工 `INSERT`。
 > `film.box_office` 已废弃（票房改由订单实时聚合），存量库用 `migration-20260929-deprecate-box-office.sql` 清零。
 > **已有数据库**还需执行 `migration-20260929-mark-like.sql`（新增 `mark_like` 评价点赞表；幂等、只增不删）。未执行时影评页与点赞会报表不存在。
 
@@ -526,27 +526,7 @@ mvn test
 
 覆盖核心 Service（Admin/User/Cinema/Film/Ordered/Mark/Wallet/Recharge/FundFlow）及权限拦截、异常处理、健康检查模块，包括登录认证、密码加密、注册去重、密码修改、批量赋值防护、排行榜查询、类型关联维护、订单状态流转、座位冲突检测、RBAC 权限边界、全局异常处理，以及**账户资金**（余额足额/不足扣减、退款入账、金额非正拒绝、流水前后余额与关联单据）、**充值单据状态机**（提交不改余额、回调成功/失败、重复回调被拒、金额上限、跨用户回调被拒）、**订单删除守卫**（按状态拒绝）、**评价点赞**（显式 `liked` 意图幂等、仅 USER 可点赞、投影不下发 `userId`、`reviewable` 的已取票口径）等业务逻辑。
 
-> **Mockito 打桩后测到的是桩，不是 SQL。** 赞数聚合、`ORDER BY likeCount DESC, id DESC` 的并列裁决、以及事务隔离下"回读是否为最新已提交快照"，这三类单测覆盖不到，只能在真库上验证 —— 见下方 `p5-mark-like.py`。
-
-### 端到端验证（临时库 + 备用端口）
-
-```bash
-# 见脚本头部说明：建临时库 → 用 DB_NAME 指向它并在备用端口起后端 → 跑脚本
-python scripts/verify/p4-account-wallet-e2e.py   # 账户-充值-订单闭环 + 选座接口越权读，70 断言
-python scripts/verify/p4-concurrency.py          # 余额扣减并发正确性，12 断言
-python scripts/verify/p5-mark-like.py            # 点赞主键去重/并发回读/热评排序/匿名投影/CASCADE，74 断言
-```
-
-三个脚本都自带状态重置、可反复运行，且**不触碰开发库 `xm-film` 与本机 9090/5173**。它们会自己准备一个独占场次（种子已不再预置排片）。
-
-### 演示数据生成（走真实接口）
-
-```bash
-python scripts/seed-demo-data.py            # 只看计划，不写库
-python scripts/seed-demo-data.py --apply    # 确认后执行
-```
-
-由 `lisi` / `wangwu` / `zhangsan` 三个账号走**真实接口**各生成一条「已支付并取票」的订单与一条评价（`lisi` / `wangwu` 先经真实充值流程补足余额），账实相符：真实订单号、单价快照、余额扣减、资金流水、`film.score` 回写。默认对着开发库 `xm-film`，可用 `E2E_BASE` / `E2E_DB` 覆盖。
+> **Mockito 打桩后测到的是桩，不是 SQL。** 赞数聚合、`ORDER BY likeCount DESC, id DESC` 的并列裁决、以及事务隔离下"回读是否为最新已提交快照"，这三类单测覆盖不到，只能在真库上验证。
 
 ### 本地复现 CI
 
@@ -579,7 +559,7 @@ MIT License
 - `AuthInterceptor` enforces role boundaries for admin-only resources and write operations on protected resources.
 - Database relations now use explicit keys for the main booking path: `room.cinema_id`, `record.film_id`, and `ordered.record_id`; `xm_film/sql` is the single source of truth for both schema and seed data.
 - `user.balance` is the single source of truth for account funds; `fund_flow` is an append-only audit copy. Every balance mutation must go through `WalletService` (`creditRecharge` / `debitPurchase` / `creditRefund`), which does row-lock read → validate/mutate → write one ledger row inside one transaction. Going around it skips the ledger and the balance check.
-- Balance deduction is `SELECT balance ... FOR UPDATE` plus a conditional `UPDATE ... WHERE balance >= ?`. Both layers exist so a concurrent payment can never overdraw (verified by `scripts/verify/p4-concurrency.py`).
+- Balance deduction is `SELECT balance ... FOR UPDATE` plus a conditional `UPDATE ... WHERE balance >= ?`. Both layers exist so a concurrent payment can never overdraw.
 - Recharge is a two-step flow: submitting an application only creates a `处理中` voucher and does **not** move the balance; only a successful callback flips it to `已完成` and credits the account. Terminal vouchers cannot be re-processed, which is how callback idempotency is implemented — there is no separate idempotency key.
 - Order payment is balance-based: `payOrder` deducts in the same transaction as issuing the ticket, so insufficient balance rolls the whole thing back and leaves the order `待支付` with its seat still locked. Refunds credit the balance back.
 - Order hard delete is limited to terminal waste states (`已取消` / `已退票`) via `OrderedService.DELETABLE_STATUSES`; the front end mirrors this with `constants.isOrderDeletable`. Deleting a paid order would otherwise function as a refund that skips the money movement.
