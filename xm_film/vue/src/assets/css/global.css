@@ -25,7 +25,7 @@ body {
   box-shadow: var(--el-box-shadow-lighter);
 }
 
-/* §8.2 尊重系统「减少动态效果」设置 */
+/* §10.2 尊重系统「减少动态效果」设置 */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

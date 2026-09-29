@@ -147,7 +147,7 @@ onMounted(fetchSearchResults)
   object-fit: cover;
 }
 
-/* 评分叠加在图片上，用装饰金（规范 §2.8：仅深底 / 图片叠加） */
+/* 评分叠加在图片上，用装饰金（规范 §3.6：仅深底 / 图片叠加） */
 .film-card__score {
   position: absolute;
   right: var(--space-4);

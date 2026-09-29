@@ -479,7 +479,7 @@ const updateActivePath = (path) => {
   color: var(--el-color-primary);
 }
 /* 登录 / 注册之间的分隔点：纯装饰，不承载信息。
- * 已加 aria-hidden 使其成为真正的"非文字装饰"，从而适用 §8.1 的装饰豁免；
+ * 已加 aria-hidden 使其成为真正的"非文字装饰"，从而适用 §10.1 的装饰豁免；
  * 原用 --el-text-color-disabled 属语义误用（该元素并未禁用）。 */
 .header-divider {
   color: var(--el-text-color-placeholder);
