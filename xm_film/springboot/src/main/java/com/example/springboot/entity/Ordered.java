@@ -37,6 +37,12 @@ public class Ordered {
     private Double payAmount;
     private String refundTime;
     private Double refundAmount;
+    /**
+     * 取票码（支付成功时生成，一单一码）。可用性派生自 status，本身不带有效/失效标记：
+     * 核销只接受 待取票，因此「用过即废 / 退票作废 / 未付款不出发」都由状态迁移保证。
+     * 有效期到放映结束（start + 片长），同样不落库。
+     */
+    private String pickupCode;
 
     private String userName;
     private String filmName;

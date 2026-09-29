@@ -79,6 +79,17 @@ public class FilmController extends BaseController<Film> {
         return Result.success(filmService.getBoxOfficeTop(film));
     }
 
+    /**
+     * 今日票房，前台首页公开展示，匿名可读 —— 路径落在 /api/v1/films 这个已在
+     * PUBLIC_READ_PREFIXES 内的前缀下，因此不需要为它新增任何放行规则。
+     * 返回 {total, updatedAt}，口径见 OrderedService.todayPaidRevenue。
+     */
+    @Operation(summary = "今日票房", description = "今天支付的售票收入合计（元）与统计时刻；匿名可读")
+    @GetMapping("/box-office/today")
+    public Result todayBoxOffice() {
+        return Result.success(orderedService.todayPaidRevenue());
+    }
+
     @Operation(summary = "评分排行榜 Top5")
     @GetMapping("/mark/top")
     public Result markTop(Film film) {

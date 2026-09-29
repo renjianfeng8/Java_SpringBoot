@@ -7,11 +7,14 @@ import com.example.springboot.common.enums.OrderStatus;
 import com.example.springboot.common.enums.PayResult;
 import com.example.springboot.common.enums.RecordStatus;
 import com.example.springboot.dto.response.SeatOccupancy;
+import com.example.springboot.dto.response.TicketVoucher;
+import com.example.springboot.entity.Cinema;
 import com.example.springboot.entity.Film;
 import com.example.springboot.entity.Ordered;
 import com.example.springboot.entity.Record;
 import com.example.springboot.entity.Room;
 import com.example.springboot.exception.CustomException;
+import com.example.springboot.mapper.CinemaMapper;
 import com.example.springboot.mapper.FilmMapper;
 import com.example.springboot.mapper.OrderedMapper;
 import com.example.springboot.mapper.RecordMapper;
@@ -29,8 +32,10 @@ import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -54,6 +59,15 @@ public class OrderedService extends BaseService<Ordered> {
     /** 退票截止：放映前 60 分钟（与前台词：未取票用户在放映前60分钟可退票） */
     private static final int REFUND_DEADLINE_MINUTES = 60;
 
+    /** 取票码随机段长度（分组显示，不含分隔符） */
+    private static final int PICKUP_CODE_LENGTH = 8;
+
+    /** 取票码分组分隔符，仅用于可读性；存储与展示用同一形态，核销前做归一 */
+    private static final char PICKUP_CODE_GROUP_SEPARATOR = '-';
+
+    /** 取票码生成字母表：剔除 I/L/O/0/1，人工抄写到自助机上最容易看错的几个 */
+    private static final String PICKUP_CODE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+
     /**
      * 只有终态废单可以清理。已成交订单必须走退票流程，
      * 否则「删除订单」会成为绕过退票与资金凭证的后门。
@@ -72,6 +86,9 @@ public class OrderedService extends BaseService<Ordered> {
 
     @Resource
     private RoomMapper roomMapper;
+
+    @Resource
+    private CinemaMapper cinemaMapper;
 
     @Resource
     private WalletService walletService;
@@ -199,6 +216,9 @@ public class OrderedService extends BaseService<Ordered> {
         update.setPendingTimeoutAt(null);
         update.setPayTime(now());
         update.setPayAmount(ordered.getTotal());
+        // 取票码与扣款同一事务生成：不存在"扣了钱没码"或"有码没扣钱"的中间态，
+        // 而未支付的订单也不会有码 —— 取票大厅因此天然拿不到没付款的单。
+        update.setPickupCode(generatePickupCode());
         orderedMapper.updateById(update);
         return PayResult.PAID;
     }
@@ -257,6 +277,90 @@ public class OrderedService extends BaseService<Ordered> {
     }
 
     /**
+     * 取票大厅自助核销：凭取票码出票。**不需要登录** —— 码本身就是授权凭证，
+     * 谁持有码谁就能取这张票，这正是自助机的工作方式（匿名放行的说明见 TicketController）。
+     *
+     * 码不带任何有效/失效标记，可用性完全派生自订单状态：唯一接受的前提是
+     * {@code status = '待取票'}。于是「一单一码」「用过即废」「退票/取消作废」
+     * 「没付款不出发」四条都由这一个前提实现，不存在"新增状态时忘了同步"的空间。
+     *
+     * 与 {@link #pickupOrder} 的关系：两者是同一个状态迁移的两个入口 ——
+     * pickupOrder 是影院柜台的员工操作（仍是 ADMIN/CINEMA 专属），本方法是自助机通路。
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public TicketVoucher redeemByCode(String rawCode) {
+        String code = normalizePickupCode(rawCode);
+        if (code.isEmpty()) {
+            throw new CustomException(ErrorCode.PARAM_INVALID, "取票码无效，请核对后重试");
+        }
+
+        Ordered ordered = orderedMapper.selectByPickupCode(code);
+        if (ordered == null) {
+            throw new CustomException(ErrorCode.NOT_FOUND, "取票码无效，请核对后重试");
+        }
+        // 四种情形分开报，不用一句"取票失败"糊过去 —— 用户需要知道下一步该做什么
+        if (OrderStatus.PICKED_UP.equals(ordered.getStatus())) {
+            throw new CustomException(ErrorCode.BUSINESS_CONFLICT, "该票已取出，请勿重复取票");
+        }
+        if (OrderStatus.REFUNDED.equals(ordered.getStatus())) {
+            throw new CustomException(ErrorCode.BUSINESS_CONFLICT, "该订单已退票，取票码已失效");
+        }
+        if (OrderStatus.CANCELLED.equals(ordered.getStatus())) {
+            throw new CustomException(ErrorCode.BUSINESS_CONFLICT, "该订单已取消，取票码已失效");
+        }
+        if (OrderStatus.PENDING_PAYMENT.equals(ordered.getStatus())) {
+            throw new CustomException(ErrorCode.BUSINESS_CONFLICT, "该订单尚未支付，请先完成支付");
+        }
+        // 正面守卫：走到这里状态只可能是 待取票。这一句不是摆设 —— ordered.status 是没有
+        // 约束的可空 VARCHAR，NULL 或脏值会绕过上面四条具体分支，一直落到下面的条件更新上
+        // 拿到 0 行，被误报成"该票已取出"。
+        if (!OrderStatus.PENDING.equals(ordered.getStatus())) {
+            throw new CustomException(ErrorCode.BUSINESS_CONFLICT, "当前订单状态不可取票，请联系影院");
+        }
+
+        Film film = ordered.getFilmId() == null ? null : filmMapper.selectById(ordered.getFilmId());
+        if (isScreeningOver(ordered, film)) {
+            throw new CustomException(ErrorCode.BUSINESS_CONFLICT, "该场次已结束，取票码已失效");
+        }
+
+        if (orderedMapper.markPickedUpByCode(code) == 0) {
+            // 读状态到改库之间被人抢先核销了同一个码。不靠悲观锁，靠状态条件更新的行数判定。
+            throw new CustomException(ErrorCode.BUSINESS_CONFLICT, "该票已取出，请勿重复取票");
+        }
+        return buildVoucher(ordered, film);
+    }
+
+    /**
+     * 取票码有效期到放映结束：放映开始 + 片长。片长缺失时与排片冲突检测同口径兜底。
+     * 放映时间缺失时不判过期 —— 宁可放行让人工处理，也不把已付款的票锁死。
+     */
+    private boolean isScreeningOver(Ordered ordered, Film film) {
+        LocalDateTime start = RecordService.readStart(ordered.getStart());
+        if (start == null) {
+            return false;
+        }
+        int minutes = film != null && film.getTime() != null && film.getTime() > 0
+                ? film.getTime()
+                : RecordService.DEFAULT_DURATION_MINUTES;
+        return LocalDateTime.now(ZoneId.systemDefault()).isAfter(start.plusMinutes(minutes));
+    }
+
+    /** 组装出票凭条：只带展示字段，订单号/金额/userId 一概不出现在匿名响应里 */
+    private TicketVoucher buildVoucher(Ordered ordered, Film film) {
+        Cinema cinema = ordered.getCinemaId() == null ? null : cinemaMapper.selectById(ordered.getCinemaId());
+        Room room = ordered.getRoomId() == null ? null : roomMapper.selectById(ordered.getRoomId());
+
+        TicketVoucher voucher = new TicketVoucher();
+        voucher.setFilmTitle(film == null ? null : film.getTitle());
+        voucher.setCinemaName(cinema == null ? null : cinema.getName());
+        voucher.setRoomName(room == null ? null : room.getName());
+        voucher.setStart(ordered.getStart());
+        voucher.setSeat(ordered.getSeat());
+        voucher.setNumber(ordered.getNumber());
+        return voucher;
+    }
+
+    /**
      * 选座图视角：只给座位与归属，本人订单附带继续支付所需的字段。
      *
      * 不能直接把 {@code Ordered} 实体发给前端 —— 那等于把该场次所有订单的
@@ -282,6 +386,15 @@ public class OrderedService extends BaseService<Ordered> {
         view.setTotal(ordered.getTotal());
         view.setPendingTimeoutAt(ordered.getPendingTimeoutAt());
         return view;
+    }
+
+    /**
+     * 今日票房：今天支付的售票收入合计（元）+ 统计时刻。
+     * 日期边界与统计时刻都取自数据库时钟，避免"边界按一台钟切、时间戳按另一台钟写"。
+     * 口径与状态集合见 OrderedMapper.selectTodayPaidRevenue 的注释。
+     */
+    public Map<String, Object> todayPaidRevenue() {
+        return orderedMapper.selectTodayPaidRevenue();
     }
 
     public int countByFilmId(Integer filmId) {
@@ -356,6 +469,8 @@ public class OrderedService extends BaseService<Ordered> {
     public void pickupOrder(Integer id, String role, Integer userId) {
         Ordered ordered = orderedMapper.selectByIdForUpdate(id);
         ensureOrderAccess(ordered, role, userId);
+        // 这是影院柜台的员工通路，仍然只对 ADMIN/CINEMA 开放。
+        // 用户的自助通路是 redeemByCode（凭取票码在取票大厅核销），两者共用同一个状态迁移。
         if ("USER".equals(role)) {
             throw new CustomException(ErrorCode.FORBIDDEN, "用户无权执行取票操作");
         }
@@ -464,5 +579,47 @@ public class OrderedService extends BaseService<Ordered> {
         String date = LocalDate.now(ZoneId.systemDefault()).format(DateTimeFormatter.BASIC_ISO_DATE);
         String suffix = UUID.randomUUID().toString().replace("-", "").substring(0, 8).toUpperCase();
         return date + suffix;
+    }
+
+    /**
+     * 取票码：4-4 分组的 8 位随机码，形如 {@code 8F3A-2C71}。
+     * 字母表剔除 I/L/O/0/1 —— 人工从手机抄到自助机上时这几个最容易看错。
+     * 空间 31^8 ≈ 8.5e11，不做碰撞重试：payOrder 里扣款与出票同一事务，
+     * 唯一键冲突会让事务进入 rollback-only，同一事务内根本无法重试；
+     * 真要重试就得把扣款拆成独立事务，风险远大于收益。pickup_code 上的唯一索引是兜底。
+     */
+    private String generatePickupCode() {
+        StringBuilder sb = new StringBuilder(PICKUP_CODE_LENGTH + 1);
+        for (int i = 0; i < PICKUP_CODE_LENGTH; i++) {
+            if (i == PICKUP_CODE_LENGTH / 2) {
+                sb.append(PICKUP_CODE_GROUP_SEPARATOR);
+            }
+            sb.append(PICKUP_CODE_ALPHABET.charAt(
+                    ThreadLocalRandom.current().nextInt(PICKUP_CODE_ALPHABET.length())));
+        }
+        return sb.toString();
+    }
+
+    /**
+     * 把用户输入的取票码归一成库里的存储形态 {@code XXXX-XXXX}，因此粘贴带不带横杠、
+     * 带不带空格、大小写混写都能核销。归一后是精确等值查询，pickup_code 的唯一索引照常命中
+     * —— 若改成 {@code WHERE REPLACE(pickup_code,'-','') = ?}，列上套函数会让索引失效。
+     *
+     * 字符集刻意放宽到 [A-Z0-9]：生成用的字母表更窄（去混淆），但
+     * migration-20260929-pickup-code.sql 给存量待取票订单补的是十六进制码，里面含 0/1，
+     * 收窄校验会把存量订单挡在门外。只对"生成"收窄，对"输入"放宽。
+     * 长度不符即判为无效，返回空串由调用方统一报「取票码无效」。
+     */
+    private static String normalizePickupCode(String raw) {
+        if (raw == null) {
+            return "";
+        }
+        String compact = raw.replaceAll("[^A-Za-z0-9]", "").toUpperCase();
+        if (compact.length() != PICKUP_CODE_LENGTH) {
+            return "";
+        }
+        return compact.substring(0, PICKUP_CODE_LENGTH / 2)
+                + PICKUP_CODE_GROUP_SEPARATOR
+                + compact.substring(PICKUP_CODE_LENGTH / 2);
     }
 }

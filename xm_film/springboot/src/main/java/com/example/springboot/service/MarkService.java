@@ -7,6 +7,7 @@ import com.example.springboot.entity.Mark;
 import com.example.springboot.exception.CustomException;
 import com.example.springboot.mapper.FilmMapper;
 import com.example.springboot.mapper.MarkMapper;
+import com.example.springboot.mapper.OrderedMapper;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,6 +30,9 @@ public class MarkService extends BaseService<Mark> {
     @Resource
     private FilmMapper filmMapper;
 
+    @Resource
+    private OrderedMapper orderedMapper;
+
     @Override
     protected BaseMapper<Mark> mapper() {
         return markMapper;
@@ -45,6 +49,15 @@ public class MarkService extends BaseService<Mark> {
         }
         validateScore(mark.getScore());
         validateComment(mark.getMark());
+        // 评价资格是这个功能的语义前提（"看过的才能评"），此前只有前端按钮在守：
+        // front/Orders.vue 仅对 已取票 订单渲染「去评价」，而服务端不校验订单 ——
+        // 直接 POST /api/v1/marks 能给任何没买过票的影片打分。此处补上服务端门禁。
+        // 已取票是终态（退票与删除都进不来），因此这个资格一旦成立不会被推翻，
+        // 修改评价时无需重复校验。
+        if (orderedMapper.countPickedUpByUserAndFilm(mark.getUserId(), mark.getFilmId()) == 0) {
+            throw new CustomException(ErrorCode.BUSINESS_CONFLICT,
+                    "请先取票后再评价：只能评价自己已取票场次对应的影片");
+        }
         if (markMapper.countByUserAndFilm(mark.getUserId(), mark.getFilmId()) > 0) {
             throw new CustomException(ErrorCode.BUSINESS_CONFLICT, "您已评价过该影片，可直接修改原有评价");
         }

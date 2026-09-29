@@ -719,6 +719,59 @@
 
 ---
 
+### BUG-047: 前台首页「今日票房」以真实数据源重新引入（修订 BUG-046 第 5 条的处置）
+
+- **日期**: 2026-09-29
+- **问题描述**: BUG-046 第 5 条把「今日票房」组件连同它的随机数刷新一起删掉了。删除是对当时那份假实现的正确处置，但组件本身是首页要有的功能 —— 于是需求重新提出：首页要有今日票房，且数据必须真实。
+- **根因分析**: 重新引入的难点不在组件，而在**这个数没有任何现成来源**：
+  1. 唯一的聚合票房口径 `FilmMapper.xml` 的 `filmRevenueJoin` 只按影片累计，**没有日期维度**，取不出「今天」
+  2. `/api/v1/statistics/overview` 是 ADMIN 专属，首页是公开页（游客可访问），用了就是把游客踹去登录页
+  3. 订单相关端点全在 `AuthInterceptor` 覆盖范围内、未登录一律 401（`/api/v1/orders/**` 不在 `PUBLIC_READ_PREFIXES` 里）
+  4. 所以「从用户接口获取」必然意味着新增一个匿名可读端点
+- **口径决策（两处都是有实际后果的分歧，不是形式选择）**:
+  1. **按 `pay_time`（收款日）取日，不按 `ordered.start`（放映日）**。行业里「今日票房」通常指当日场次的票房，但本系统是**提前购票**：种子脚本把三个演示场次排在今天 +5/+6/+7 天（`scripts/seed-demo-data.py` 的 `SLOT_OFFSET_DAYS`），按放映日聚合会让这个指标长期恒为 0，失去展示价值。按收款日则它天然是累计票房的一个日期切片，必然 ≤ 累计票房，与首页已有的「总票房Top 10」同源可比。
+  2. **空集上的 0 渲染成 `0.00元`，不是「暂无数据」**。「今天还没卖出票」本身就是数据，空集 SUM 是 0 而非缺失。为此新增 `formatYuan` 而没有复用 `formatBoxOffice` —— 后者把 0 当缺失值返回「暂无数据」（票房榜靠 `rev.revenue > 0` 过滤，所以它从来看不到 0，不能改它）。
+- **解决方案**:
+  1. `OrderedMapper.selectTodayPaidRevenue()`：单条 SQL 同时算出金额与统计时刻，**日期边界与时间戳同出一个库时钟**（`CURDATE()` + `NOW()`），不会出现"边界按 23:59 切、时间戳按另一台钟写"的分叉；`status IN ('待取票','已取票')` 与 `filmRevenueJoin` 同源并注释互相指认
+  2. 端点挂在 `GET /api/v1/films/box-office/today` —— `/api/v1/films` 本来就在 `PUBLIC_READ_PREFIXES` 内，**因此没有为它新增任何放行规则**，也没有碰 `excludePathPatterns`（那是角色盲区，见 BUG-036）；与同类的 `/box-office/top` 毗邻
+  3. 返回 `Map` 的别名刻意写 camelCase：`map-underscore-to-camel-case` **只转换 bean 属性、不转换 Map 的 key**，写 `updated_at` 出去就是 snake_case，与全站 camelCase 不一致
+  4. 前端 `utils/format.js` 新增 `formatYuan`；`front/Home.vue` 卡片挂在 `.home-aside` 最上方，刷新按钮这次**真的重新请求**（BUG-046 的病灶正是刷新按钮不请求任何接口却弹「已更新最新今日票房数据」）；失败只落错误态不弹提示（网络类提示由 `request.js` 统一给，规范 §11.2）
+  5. **色条用 `--el-color-primary`（#BF352D）而非 `--color-brand`（#ef4238）**：色条上压的是白字，`#ef4238` + 白字只有 3.81:1 不达 AA。规范 §3.2 正是为此把品牌色拆成"承文字 / 不承文字"两枚令牌，BUG-046 删掉的那版用的是 `#ef4238` + 白字，属违规
+- **验证**: `mvn test` 155/155（新增 1 例，钉住服务层只转发、不改写金额）；前端 `npm run build` + `test:tokens`/`test:inline`/`test:bundle` 全绿，编译产物实测色条是 `var(--el-color-primary)`、无任何硬编码 hex；**口径打真实库验证**（临时库 + 备用端口 9191，28 项断言全过、连跑两次一致）：今天支付+待取票 ✅计入、今天支付+已取票 ✅计入、今天支付后退票 ✗排除、`pay_time` 挪到昨天 ✗排除（证明取的是收款日而非场次日）、待支付 ✗排除、匿名 GET 返回 200。**未做浏览器渲染验证**（UI 目视由用户自查）
+- **验证脚本**: 本次验证用的是临时脚本，按项目要求用完即删，仓库内不再保留 —— 上面这些口径结论无法从仓库里重跑，要复现请按同样的 5 类订单（今天支付待取票/今天支付已取票/今天支付后退票/`pay_time` 挪到昨天/今天下单未支付）在临时库上重建
+- **相关文件**: `OrderedMapper.java`/`OrderedMapper.xml`、`OrderedService.java`、`FilmController.java`、`OrderedServiceTest.java`、`vue/src/constants/index.js`、`vue/src/utils/format.js`、`vue/src/views/front/Home.vue`
+- **提交记录**: 未提交
+- **状态**: 已修复
+
+---
+
+### BUG-048: 用户端没有取票通路，评价闭环从未对用户打开
+
+- **日期**: 2026-09-29
+- **Bug 描述**: 用户在真实走完购票流程后发现，余额支付成功后跳到「购票记录」，看到的只是 `待取票` 状态，界面里没有任何"接下来去哪取票"的路径。初看是跳转体验问题，实际是**功能缺失**。
+- **根因分析**: `OrderedService.pickupOrder` 第 3 行就对 USER 硬拦截 ——
+  ```java
+  if ("USER".equals(role)) { throw new CustomException(ErrorCode.FORBIDDEN, "用户无权执行取票操作"); }
+  ```
+  取票只有 ADMIN / CINEMA 能做，入口在 `back/Ordered.vue` / `manage/Ordered.vue` 的订单列表里。而 `front/Orders.vue` 的「去评价」按钮只对 `已取票` 渲染。串起来就是：**普通用户买完票 → 状态永远停在 `待取票` → 永远看不到「去评价」→ 评价闭环对用户端从未打开过**。所有人都只在后台点「取票」时才会走通，前台缺半条链路。
+- **另一个同源缺陷**: `MarkService`（120 行）**全文没有任何一处引用订单** —— 零命中 `ordered` / `OrderStatus` / `PICKED_UP`。"已取票才能评价"此前只是 `front/Orders.vue` 的按钮可见性，服务端不校验，直接 `POST /api/v1/marks` 能给任何没买过票的影片打分。
+- **解决方案**:
+  1. `ordered` 加 `pickup_code`（唯一列），**取票码在 `payOrder` 内与扣款同一事务生成** —— 不存在"扣了钱没码"或"有码没扣钱"，且未支付的订单永远没有码。码形 `XXXX-XXXX`，生成字母表剔除 `I/L/O/0/1`（人工从手机抄到自助机上看不错）。
+  2. 新增 `POST /api/v1/tickets/redeem`（**免登录**）+ 前台「取票大厅」`front/Pickup.vue`（`meta.guest`，导航对游客可见）模拟影院自助机。入参**只有 code、没有 orderId** —— 码本身即凭证，允许传 orderId 就等于谁都能核销别人的单。
+  3. **码不带任何有效/失效标记**：核销只接受 `status = '待取票'`（`markPickedUpByCode` 的状态条件更新）。这一个谓词同时实现「一单一码」「用过即废」「退票/取消作废」「没付款不出发」。有效期到放映结束，由 `ordered.start` + `film.time` 派生。用户曾提出"为期一天"，但直译成支付后 24 小时会让当前种子数据（场次在 +5~+7 天）的码在开映前就过期 —— 比不做更糟，故改为"到放映结束"。
+  4. 并发重复核销**不靠悲观锁**：读到的状态可能是 `待取票`，写库走 `UPDATE ... WHERE status = '待取票'`，受影响 0 行即判定被人抢先（与余额扣减的 `WHERE balance >= ?` 同一手法）。
+  5. `AuthInterceptor` 新增 `ANONYMOUS_WRITE_EXACT`（**精确路径 + 仅 POST**）—— 本仓库第一个匿名写入口。三处刻意收窄：精确匹配而非前缀、只放行 POST、不与 `PUBLIC_READ_PREFIXES` 合并（读放行的依据是"内容本来公开"，写放行的依据是"动作由凭证授权"，混在一起会让人以为写操作只要前缀命中即可放行）。为何安全逐条论证写在 `TicketController` 的类注释里，并有 4 个单测钉住三处收窄。
+  6. 支付成功后的落地从"跳订单列表"改为 `OrderPayDialog` 就地切成**取票凭证态**（取票码 + 场次座位 + 「去取票大厅」），码由 `GET /api/v1/orders/{id}` 回查（该查询已 join 出影片/影院/影厅名）。
+  7. `MarkService.add` 补上服务端门禁：`countPickedUpByUserAndFilm(userId, filmId) > 0`。**修改评价不重复校验** —— `已取票` 是终态，退票与删除都进不来，资格一旦成立不会被推翻。
+- **踩到的坑（留给后来者）**: 本仓的业务异常经 `GlobalExceptionHandler` 返回的是 **HTTP 200 + body 里的 code**，只有 `AuthInterceptor` 才直写 401/403。本次的验证脚本第一版按 HTTP 状态码断言，6 条用例全红而产品行为其实全对（见预防清单第 15 条）。
+- **验证**: `mvn test` 173/173（OrderedServiceTest 42→53、MarkServiceTest 13→15、AuthInterceptorAccessTest 30→35）；前端 `npm run build` + `test:tokens`/`test:inline`/`test:bundle` 全绿，编译产物实测 `Pickup` 分块里是真 `post(REDEEM, {code})`、卡片无硬编码色值；**全链路打真实库验证**（临时库 + 备用端口 9191，39 项断言全过、连跑两次一致；改动后又各跑一遍仍是 39/39，并回归跑了今日票房那 28 项确认本次 schema/实体/XML 改动没影响它）：未支付无码 ✅、码形态与字母表 ✅、**全程不带 Authorization 核销成功** ✅、凭条不含 orderId/订单号/金额/userId（逐字段断言）✅、小写去横杠也能核销 ✅、同码再核销 409 ✅、退票后 409 ✅、放映结束后 409 ✅、无效码 404 / 长度不符 400 / 空码 400 ✅、**未取票评价被拒 → 取票后评价成功** ✅；另单独造了一个"升级前的库"（无 `pickup_code` 列 + 待取票与已退票各一条）验证迁移：待取票订单被补上 `XXXX-XXXX` 形态的码、已退票保持 NULL、重跑既不报错也不改写已有码（换出的码**不能**用固定值断言 —— 取值含 `RAND()`/`UUID()`，每次补出来的都不同）；补出来的码走状态条件更新仍是 1 行/0 行。迁移还给存量 `待取票` 订单补码，跑完后在真实开发库 `xm-film` 上实测：2 条待取票订单各得一枚码，4 条已取票 / 2 条已取消保持 NULL。**未做浏览器渲染验证**（UI 目视由用户自查）
+- **验证脚本**: 同 BUG-047，本次用的是临时脚本，按项目要求用完即删，仓库内不再保留
+- **相关文件**: `xm_film/sql/schema.sql`、`xm_film/sql/migration-20260929-pickup-code.sql`、`Ordered.java`、`OrderedMapper.java`/`.xml`、`OrderedService.java`、`MarkService.java`、`RecordService.java`（`DEFAULT_DURATION_MINUTES` 提为 public 复用）、`AuthInterceptor.java`、`TicketController.java`、`dto/request/TicketRedeemRequest.java`、`dto/response/TicketVoucher.java`、`OrderedServiceTest.java`、`MarkServiceTest.java`、`AuthInterceptorAccessTest.java`、`vue/src/constants/index.js`、`vue/src/router/index.js`、`vue/src/views/Front.vue`、`vue/src/views/front/Pickup.vue`、`vue/src/views/front/Orders.vue`、`vue/src/views/front/BuyTicket.vue`、`vue/src/components/OrderPayDialog.vue`
+- **提交记录**: 未提交
+- **状态**: 已修复
+
+---
+
 ## 预防清单
 
 1. **数据库初始化**: 新环境部署时务必执行 `xm_film/sql/init.sql`（或依次执行 `schema.sql` + `data.sql`）
@@ -735,6 +788,7 @@
 12. **MyBatis `<if>` null 语义**: UPDATE 语句中用 `<if test="field != null">` 包裹字段时，Java 显式设为 `null` 会导致该字段被跳过不更新。若需要允许将字段设为 `null`，应移除 `<if>` 包装
 13. **CORS 生产安全**: 生产环境 CORS 禁止使用 `*` 通配符，应使用环境变量白名单精确控制允许的域名
 14. **JDBC 编码**: MySQL JDBC 连接 URL 必须显式指定 `useUnicode=true&characterEncoding=utf-8`，防止生产环境中文乱码
+15. **业务异常不是 HTTP 错误**: 本仓 `GlobalExceptionHandler` 返回的业务异常是 **HTTP 200 + body 里的 `code`**（400/404/409…），只有 `AuthInterceptor` 才直写 401/403。写接口测试或前端判断时**必须读响应体的 `code`**，拿 HTTP 状态码当业务结果会让"预期失败"的用例全部误判为失败（BUG-048 的验证脚本就踩了这个）
 15. **Docker 卷初始化**: Docker 部署中首次挂载的命名卷为空，需要 entrypoint 脚本检测并自动填充种子数据（Docker 层已于 2026-09-27 移除，本项目改为纯本地运行，该项不再适用）
 16. **静态资源缓存**: 替换静态资源后需设置 `Cache-Control: no-cache` 防止浏览器缓存旧版本。原先配在 `nginx.conf`（已于 2026-09-27 移除）；本地开发由 Spring 静态资源处理器服务 `/files/**`，如需防缓存可设 `spring.web.resources.cache.period=0`
 17. **映射结构选择**: 文件映射关系使用 `Object` 存储时同名 key 会覆盖，应使用 `Array<[源, 目标]>` 支持一源多目标

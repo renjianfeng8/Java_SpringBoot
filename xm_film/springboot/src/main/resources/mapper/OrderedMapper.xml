@@ -50,6 +50,31 @@
         SELECT * FROM ordered WHERE id = #{id} FOR UPDATE
     </select>
 
+    <!-- 取票大厅核销入口：唯一索引 pickup_code 命中一行。刻意不加 FOR UPDATE ——
+         并发重复核销由 markPickedUpByCode 的状态条件更新兜住，见该方法的注释。 -->
+    <select id="selectByPickupCode" parameterType="java.lang.String"
+            resultType="com.example.springboot.entity.Ordered">
+        SELECT * FROM ordered WHERE pickup_code = #{pickupCode}
+    </select>
+
+    <!-- 核销：状态条件更新，受影响行数即"本次是否真的出票"。已取票/已退票/已取消/待支付
+         都不满足 status = '待取票'，因此这一个谓词同时实现"用过即废"与"废单不发码"。 -->
+    <update id="markPickedUpByCode" parameterType="java.lang.String">
+        UPDATE ordered
+        SET status = '已取票'
+        WHERE pickup_code = #{pickupCode}
+          AND status = '待取票'
+    </update>
+
+    <!-- 评价门禁：只有对该片取过票的用户才能评价。已取票是终态（退票/删除都进不来），
+         所以这个判断一旦成立就不会被后续状态变化推翻，修改评价时无需重复校验。 -->
+    <select id="countPickedUpByUserAndFilm" resultType="int">
+        SELECT COUNT(*) FROM ordered
+        WHERE user_id = #{userId}
+          AND film_id = #{filmId}
+          AND status = '已取票'
+    </select>
+
     <!-- 占用座位的订单：已取消/已退票都不再锁座；待支付仅在未超时时锁座 -->
     <select id="selectActiveByRecordId" resultType="com.example.springboot.entity.Ordered">
         SELECT * FROM ordered
@@ -83,6 +108,23 @@
         </foreach>
           AND status = '待支付'
     </update>
+
+    <!-- 今日票房：今天支付的售票收入合计（元）+ 统计时刻。
+         日期口径取 pay_time（收款日），不是 ordered.start（放映日）—— 本系统是提前购票，
+         按放映日聚合会让"今日"长期恒为 0，指标失去意义。
+         「已支付」状态集合与 FilmMapper.filmRevenueJoin 同源，新增任何改变
+         "是否已支付"的状态时两处必须同步，否则今日票房与总票房会各说各话。
+         SUM 在空集上返回 NULL，COALESCE 兜成 0：区间聚合的 0 是真实值（今天还没卖票），
+         不是"取不到数据"，前端因此不渲染「暂无数据」。
+         别名写 camelCase：map-underscore-to-camel-case 只转换 bean 属性，不转换 Map 的 key。 -->
+    <select id="selectTodayPaidRevenue" resultType="java.util.Map">
+        SELECT COALESCE(SUM(total), 0) AS total,
+               DATE_FORMAT(NOW(), '%Y-%m-%d %H:%i:%s') AS updatedAt
+        FROM ordered
+        WHERE pay_time >= CURDATE()
+          AND pay_time &lt; CURDATE() + INTERVAL 1 DAY
+          AND status IN ('待取票', '已取票')
+    </select>
 
     <!-- 删除守卫引用计数 -->
     <select id="countByFilmId" resultType="int">
@@ -131,6 +173,7 @@
             <if test="payAmount != null">pay_amount,</if>
             <if test="refundTime != null">refund_time,</if>
             <if test="refundAmount != null">refund_amount,</if>
+            <if test="pickupCode != null">pickup_code,</if>
         </trim>
         VALUES
         <trim prefix="(" suffix=")" suffixOverrides=",">
@@ -154,6 +197,7 @@
             <if test="payAmount != null">#{payAmount},</if>
             <if test="refundTime != null">#{refundTime},</if>
             <if test="refundAmount != null">#{refundAmount},</if>
+            <if test="pickupCode != null">#{pickupCode},</if>
         </trim>
     </insert>
 
@@ -181,6 +225,7 @@
             <if test="payAmount != null">pay_amount = #{payAmount},</if>
             <if test="refundTime != null">refund_time = #{refundTime},</if>
             <if test="refundAmount != null">refund_amount = #{refundAmount},</if>
+            <if test="pickupCode != null">pickup_code = #{pickupCode},</if>
         </set>
         WHERE id = #{id}
     </update>

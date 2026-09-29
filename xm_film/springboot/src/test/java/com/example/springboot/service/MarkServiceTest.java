@@ -4,6 +4,7 @@ import com.example.springboot.entity.Mark;
 import com.example.springboot.exception.CustomException;
 import com.example.springboot.mapper.FilmMapper;
 import com.example.springboot.mapper.MarkMapper;
+import com.example.springboot.mapper.OrderedMapper;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -26,8 +27,16 @@ class MarkServiceTest {
     @Mock
     private FilmMapper filmMapper;
 
+    @Mock
+    private OrderedMapper orderedMapper;
+
     @InjectMocks
     private MarkService markService;
+
+    /** 评价门禁的前置条件：该用户对该影片有已取票订单 */
+    private void givenPickedUpTicket(Integer userId, Integer filmId) {
+        when(orderedMapper.countPickedUpByUserAndFilm(userId, filmId)).thenReturn(1);
+    }
 
     private Mark request(Integer userId, Integer filmId, Double score) {
         Mark mark = new Mark();
@@ -41,6 +50,7 @@ class MarkServiceTest {
     @Test
     void add_shouldInsertAndRecalculateFilmScore() {
         Mark mark = request(6, 10, 9.5);
+        givenPickedUpTicket(6, 10);
         when(markMapper.countByUserAndFilm(6, 10)).thenReturn(0);
 
         markService.add(mark);
@@ -93,10 +103,12 @@ class MarkServiceTest {
     @Test
     void add_shouldAcceptBoundaryScores() {
         Mark lowest = request(6, 10, 0.0);
+        givenPickedUpTicket(6, 10);
         when(markMapper.countByUserAndFilm(6, 10)).thenReturn(0);
         markService.add(lowest);
 
         Mark highest = request(7, 10, 10.0);
+        givenPickedUpTicket(7, 10);
         when(markMapper.countByUserAndFilm(7, 10)).thenReturn(0);
         markService.add(highest);
 
@@ -106,11 +118,36 @@ class MarkServiceTest {
     @Test
     void add_duplicateReviewBySameUser_shouldThrow() {
         Mark mark = request(6, 10, 9.5);
+        givenPickedUpTicket(6, 10);
         when(markMapper.countByUserAndFilm(6, 10)).thenReturn(1);
 
         assertThrows(CustomException.class, () -> markService.add(mark));
         verify(markMapper, never()).insert(any());
         verify(filmMapper, never()).recalculateScore(anyInt());
+    }
+
+    /**
+     * 评价资格的服务端门禁：此前这条规则只有前端按钮在守（front/Orders.vue 仅对
+     * 已取票订单渲染「去评价」），直接 POST /api/v1/marks 能给没买过票的影片打分。
+     */
+    @Test
+    void add_withoutPickedUpTicket_shouldThrow() {
+        Mark mark = request(6, 10, 9.5);
+        when(orderedMapper.countPickedUpByUserAndFilm(6, 10)).thenReturn(0);
+
+        assertThrows(CustomException.class, () -> markService.add(mark));
+        verify(markMapper, never()).insert(any());
+        verify(filmMapper, never()).recalculateScore(anyInt());
+    }
+
+    /** 门禁按"该片是否取过票"判定，不看别的影片的票 —— 取过 A 片不能评 B 片 */
+    @Test
+    void add_withPickedUpTicketForAnotherFilm_shouldThrow() {
+        Mark mark = request(6, 11, 9.5);
+        when(orderedMapper.countPickedUpByUserAndFilm(6, 11)).thenReturn(0);
+
+        assertThrows(CustomException.class, () -> markService.add(mark));
+        verify(markMapper, never()).insert(any());
     }
 
     @Test

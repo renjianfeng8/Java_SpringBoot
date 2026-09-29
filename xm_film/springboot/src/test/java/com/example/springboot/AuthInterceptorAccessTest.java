@@ -220,4 +220,41 @@ class AuthInterceptorAccessTest {
         assertThat(withBrokenToken("/api/v1/marks", "POST")).isFalse();
         assertThat(withBrokenToken("/api/v1/films", "POST")).isFalse();
     }
+
+    // ========== 匿名写白名单：取票大厅核销是本仓库唯一的匿名写入口 ==========
+    // 自助机不认识用户、只认取票码，所以核销必须免登录。放行面积被三处收窄，
+    // 下面四个用例各钉住一处，任何一处放宽都会在这里失败。
+
+    @Test
+    void anonymousCanRedeemTicketCode() {
+        assertThat(anonymousAllowed("/api/v1/tickets/redeem", "POST")).isTrue();
+    }
+
+    /** 精确匹配而非前缀：子路径不得被连带放行 */
+    @Test
+    void anonymousCannotReachSubPathOfRedeem() {
+        assertThat(anonymousAllowed("/api/v1/tickets/redeem/extra", "POST")).isFalse();
+        assertThat(anonymousAllowed("/api/v1/tickets/redeem-all", "POST")).isFalse();
+    }
+
+    /** 只放行 POST：同路径的其它方法不享受匿名放行 */
+    @Test
+    void anonymousCannotRedeemViaOtherMethods() {
+        assertThat(anonymousAllowed("/api/v1/tickets/redeem", "GET")).isFalse();
+        assertThat(anonymousAllowed("/api/v1/tickets/redeem", "PUT")).isFalse();
+        assertThat(anonymousAllowed("/api/v1/tickets/redeem", "DELETE")).isFalse();
+    }
+
+    /** 放行的只有这一条路径，前缀下的其它端点照旧需要登录 */
+    @Test
+    void anonymousCannotReachOtherTicketEndpoints() {
+        assertThat(anonymousAllowed("/api/v1/tickets", "POST")).isFalse();
+        assertThat(anonymousAllowed("/api/v1/tickets/other", "POST")).isFalse();
+    }
+
+    /** 自助机上登录态早没了，带个过期令牌不该把这张码挡下来 */
+    @Test
+    void brokenTokenStillReachesTicketRedeem() {
+        assertThat(withBrokenToken("/api/v1/tickets/redeem", "POST")).isTrue();
+    }
 }

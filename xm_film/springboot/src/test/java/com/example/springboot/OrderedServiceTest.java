@@ -3,10 +3,14 @@ package com.example.springboot;
 import com.example.springboot.common.enums.ErrorCode;
 import com.example.springboot.common.enums.PayResult;
 import com.example.springboot.dto.response.SeatOccupancy;
+import com.example.springboot.dto.response.TicketVoucher;
+import com.example.springboot.entity.Cinema;
+import com.example.springboot.entity.Film;
 import com.example.springboot.entity.Ordered;
 import com.example.springboot.entity.Record;
 import com.example.springboot.entity.Room;
 import com.example.springboot.exception.CustomException;
+import com.example.springboot.mapper.CinemaMapper;
 import com.example.springboot.mapper.FilmMapper;
 import com.example.springboot.mapper.OrderedMapper;
 import com.example.springboot.mapper.RecordMapper;
@@ -22,7 +26,9 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -53,6 +59,9 @@ class OrderedServiceTest {
 
     @MockBean
     RoomMapper roomMapper;
+
+    @MockBean
+    CinemaMapper cinemaMapper;
 
     @MockBean
     WalletService walletService;
@@ -670,6 +679,217 @@ class OrderedServiceTest {
         assertThat(view).hasSize(1);
         assertThat(view.get(0).isMine()).isFalse();
         assertThat(view.get(0).getOrderId()).isNull();
+    }
+
+    // ========== 取票大厅自助核销 ==========
+
+    @Test
+    void payOrderGeneratesPickupCode() {
+        when(orderedMapper.selectByIdForUpdate(1)).thenReturn(pendingPaymentOrder());
+
+        orderedService.payOrder(1, "USER", 100);
+
+        // 字母表刻意剔除 I/L/O/0/1 —— 人工从手机抄到自助机上时这几个最容易看错。
+        // 正则写全字母表而不是 [A-Z2-9]，就是为了把"不许出现易混字符"钉住。
+        verify(orderedMapper).updateById(argThat(u ->
+                u.getPickupCode() != null
+                        && u.getPickupCode().matches(
+                        "[ABCDEFGHJKMNPQRSTUVWXYZ23456789]{4}-[ABCDEFGHJKMNPQRSTUVWXYZ23456789]{4}")
+        ));
+    }
+
+    @Test
+    void redeemByCodeMarksPickedUpAndReturnsVoucher() {
+        when(orderedMapper.selectByPickupCode("8F3A-2C71")).thenReturn(redeemableOrder());
+        when(orderedMapper.markPickedUpByCode("8F3A-2C71")).thenReturn(1);
+        when(filmMapper.selectById(24)).thenReturn(filmRow(24, "流浪地球2", 120));
+        when(cinemaMapper.selectById(10)).thenReturn(cinemaRow(10, "奥斯卡赛影城"));
+        when(roomMapper.selectById(7)).thenReturn(roomRow(7, "一号厅"));
+
+        // 入参刻意写成小写、去横杠：归一化后才会变成库里存的 8F3A-2C71
+        TicketVoucher voucher = orderedService.redeemByCode("8f3a2c71");
+
+        assertThat(voucher.getFilmTitle()).isEqualTo("流浪地球2");
+        assertThat(voucher.getCinemaName()).isEqualTo("奥斯卡赛影城");
+        assertThat(voucher.getRoomName()).isEqualTo("一号厅");
+        assertThat(voucher.getSeat()).isEqualTo("3排4座");
+        assertThat(voucher.getNumber()).isEqualTo(2);
+        // 凭条里不存在 orderId / 订单编号 / 金额 / userId 字段 —— 匿名端点靠类型本身保证不泄露，
+        // 不需要额外断言（要加字段就必须改 TicketVoucher，那一步会被人看见）
+    }
+
+    /** 长度不符的码直接判无效，不该白跑一次数据库 */
+    @Test
+    void redeemByCodeRejectsMalformedCodeWithoutQuerying() {
+        assertThatThrownBy(() -> orderedService.redeemByCode("123"))
+                .isInstanceOf(CustomException.class);
+        verify(orderedMapper, never()).selectByPickupCode(any());
+    }
+
+    @Test
+    void redeemByCodeRejectsUnknownCode() {
+        when(orderedMapper.selectByPickupCode("8F3A-2C71")).thenReturn(null);
+
+        assertThatThrownBy(() -> orderedService.redeemByCode("8F3A-2C71"))
+                .isInstanceOf(CustomException.class)
+                .hasMessageContaining("无效");
+        verify(orderedMapper, never()).markPickedUpByCode(any());
+    }
+
+    @Test
+    void redeemByCodeRejectsAlreadyPickedUpTicket() {
+        Ordered ordered = redeemableOrder();
+        ordered.setStatus("已取票");
+        when(orderedMapper.selectByPickupCode("8F3A-2C71")).thenReturn(ordered);
+
+        assertThatThrownBy(() -> orderedService.redeemByCode("8F3A-2C71"))
+                .isInstanceOf(CustomException.class)
+                .hasMessageContaining("已取出");
+        verify(orderedMapper, never()).markPickedUpByCode(any());
+    }
+
+    @Test
+    void redeemByCodeRejectsRefundedOrder() {
+        Ordered ordered = redeemableOrder();
+        ordered.setStatus("已退票");
+        when(orderedMapper.selectByPickupCode("8F3A-2C71")).thenReturn(ordered);
+
+        assertThatThrownBy(() -> orderedService.redeemByCode("8F3A-2C71"))
+                .isInstanceOf(CustomException.class)
+                .hasMessageContaining("退票");
+        verify(orderedMapper, never()).markPickedUpByCode(any());
+    }
+
+    @Test
+    void redeemByCodeRejectsCancelledOrder() {
+        Ordered ordered = redeemableOrder();
+        ordered.setStatus("已取消");
+        when(orderedMapper.selectByPickupCode("8F3A-2C71")).thenReturn(ordered);
+
+        assertThatThrownBy(() -> orderedService.redeemByCode("8F3A-2C71"))
+                .isInstanceOf(CustomException.class)
+                .hasMessageContaining("取消");
+        verify(orderedMapper, never()).markPickedUpByCode(any());
+    }
+
+    /** 没付款不给票 —— 码是支付成功那一刻才生成的，但真拿到一个待支付订单也不能出票 */
+    @Test
+    void redeemByCodeRejectsUnpaidOrder() {
+        Ordered ordered = redeemableOrder();
+        ordered.setStatus("待支付");
+        when(orderedMapper.selectByPickupCode("8F3A-2C71")).thenReturn(ordered);
+
+        assertThatThrownBy(() -> orderedService.redeemByCode("8F3A-2C71"))
+                .isInstanceOf(CustomException.class)
+                .hasMessageContaining("尚未支付");
+        verify(orderedMapper, never()).markPickedUpByCode(any());
+    }
+
+    /** 有效期到放映结束：放映开始 + 片长，超出即废 */
+    @Test
+    void redeemByCodeRejectsFinishedScreening() {
+        Ordered ordered = redeemableOrder();
+        ordered.setStart(minutesFromNow(-200));
+        when(orderedMapper.selectByPickupCode("8F3A-2C71")).thenReturn(ordered);
+        when(filmMapper.selectById(24)).thenReturn(filmRow(24, "流浪地球2", 120));
+
+        assertThatThrownBy(() -> orderedService.redeemByCode("8F3A-2C71"))
+                .isInstanceOf(CustomException.class)
+                .hasMessageContaining("已结束");
+        verify(orderedMapper, never()).markPickedUpByCode(any());
+    }
+
+    /**
+     * 正面守卫：status 没有库级约束，NULL / 脏值会绕过四条具体分支。
+     * 没有这道守卫就会落到条件更新上拿到 0 行，被误报成"该票已取出"。
+     */
+    @Test
+    void redeemByCodeRejectsBlankStatusWithAccurateMessage() {
+        Ordered ordered = redeemableOrder();
+        ordered.setStatus(null);
+        when(orderedMapper.selectByPickupCode("8F3A-2C71")).thenReturn(ordered);
+
+        assertThatThrownBy(() -> orderedService.redeemByCode("8F3A-2C71"))
+                .isInstanceOf(CustomException.class)
+                .hasMessageContaining("不可取票");
+        verify(orderedMapper, never()).markPickedUpByCode(any());
+    }
+
+    /**
+     * 并发重复核销：读到的状态是待取票，但改库时被抢先（受影响 0 行）。
+     * 这条不靠悲观锁，靠 {@code UPDATE ... WHERE status = '待取票'} 的行数判定 ——
+     * 若实现改成"读完直接无条件 update"，本用例会失败。
+     */
+    @Test
+    void redeemByCodeDetectsConcurrentRedemption() {
+        when(orderedMapper.selectByPickupCode("8F3A-2C71")).thenReturn(redeemableOrder());
+        when(filmMapper.selectById(24)).thenReturn(filmRow(24, "流浪地球2", 120));
+        when(orderedMapper.markPickedUpByCode("8F3A-2C71")).thenReturn(0);
+
+        assertThatThrownBy(() -> orderedService.redeemByCode("8F3A-2C71"))
+                .isInstanceOf(CustomException.class)
+                .hasMessageContaining("已取出");
+    }
+
+    // ========== 今日票房（前台公开只读聚合） ==========
+
+    /**
+     * 服务层只是转发：日期边界与统计时刻都由数据库时钟在同一条 SQL 里给出，
+     * 这里不得再补一次查询、不得把金额转成 double、不得加额外的派生字段。
+     * 谓词本身的正确性（pay_time 取日、status IN 待取票/已取票）Mockito 测不到 ——
+     * 打桩之后测的是桩，不是谓词。它只能在「备用端口 + 临时库」上打真实库验证
+     * （见 Bug.md BUG-047 的验证记录）。
+     */
+    @Test
+    void todayPaidRevenuePassesMapperRowThroughUnchanged() {
+        Map<String, Object> row = new LinkedHashMap<>();
+        row.put("total", new BigDecimal("136.50"));
+        row.put("updatedAt", "2026-09-29 15:04:23");
+        when(orderedMapper.selectTodayPaidRevenue()).thenReturn(row);
+
+        Map<String, Object> result = orderedService.todayPaidRevenue();
+
+        assertThat(result).hasSize(2)
+                .containsEntry("total", new BigDecimal("136.50"))
+                .containsEntry("updatedAt", "2026-09-29 15:04:23");
+        verify(orderedMapper).selectTodayPaidRevenue();
+    }
+
+    private Ordered redeemableOrder() {
+        Ordered ordered = new Ordered();
+        ordered.setId(1);
+        ordered.setUserId(100);
+        ordered.setStatus("待取票");
+        ordered.setPickupCode("8F3A-2C71");
+        ordered.setFilmId(24);
+        ordered.setCinemaId(10);
+        ordered.setRoomId(7);
+        ordered.setStart(futureStart());
+        ordered.setSeat("3排4座");
+        ordered.setNumber(2);
+        return ordered;
+    }
+
+    private Film filmRow(Integer id, String title, Integer minutes) {
+        Film film = new Film();
+        film.setId(id);
+        film.setTitle(title);
+        film.setTime(minutes);
+        return film;
+    }
+
+    private Cinema cinemaRow(Integer id, String name) {
+        Cinema cinema = new Cinema();
+        cinema.setId(id);
+        cinema.setName(name);
+        return cinema;
+    }
+
+    private Room roomRow(Integer id, String name) {
+        Room room = new Room();
+        room.setId(id);
+        room.setName(name);
+        return room;
     }
 
     private Ordered orderWithStatus(String status) {

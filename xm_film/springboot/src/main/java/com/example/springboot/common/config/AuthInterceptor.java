@@ -46,6 +46,25 @@ public class AuthInterceptor implements HandlerInterceptor {
             "/api/v1/marks"
     );
 
+    /**
+     * 匿名可写的**精确路径**白名单 —— 全仓唯一入口：取票大厅核销。
+     *
+     * 三处刻意收窄，改动时不要放宽：
+     *   1. **精确匹配，不是前缀**。写成前缀会让 `/api/v1/tickets/redeem/anything`
+     *      一并漏进来；精确匹配让放行面积等于一条路径。
+     *   2. **只放行 POST**（见 {@link #isAnonymousWrite}），不是"这类路径的所有方法"。
+     *   3. 不与 {@code PUBLIC_READ_PREFIXES} 合并：读放行是"这些内容本来就公开"，
+     *      写放行是"这个动作由凭证本身授权"，两者的安全依据不同，混在一起会让人
+     *      以为写操作也只要前缀命中即可放行。
+     *
+     * 为什么这一条安全，逐条论证见 {@code TicketController} 的类注释 ——
+     * 新增任何条目都必须同样能回答那五个问题（唯一入参是凭证、凭证不可猜、
+     * 一次性、有寿命、不泄露他人数据）。
+     */
+    private static final Set<String> ANONYMOUS_WRITE_EXACT = Set.of(
+            "/api/v1/tickets/redeem"
+    );
+
     @Resource
     private JwtUtils jwtUtils;
 
@@ -59,7 +78,7 @@ public class AuthInterceptor implements HandlerInterceptor {
 
         // Allow anonymous GET requests to public resources
         if (token == null) {
-            if (isAnonymousRead(request)) {
+            if (isAnonymousAllowed(request)) {
                 return true;
             }
             writeUnauthorized(response);
@@ -84,9 +103,12 @@ public class AuthInterceptor implements HandlerInterceptor {
             }
         }
 
-        // 令牌失效/过期时，公开只读资源仍按匿名放行。否则游客带着过期令牌浏览公开页会被判 401，
-        // 而前端 401 处理会把人踢去登录页 —— 公开内容就变成了事实上的必须登录。
-        if (isAnonymousRead(request)) {
+        // 令牌失效/过期时仍按匿名放行（读与写用同一个判定，见 isAnonymousAllowed）。
+        // 读：否则游客带着过期令牌浏览公开页会被判 401，而前端 401 处理会把人踢去登录页 ——
+        //     公开内容就变成了事实上的必须登录。
+        // 写：取票大厅的安全性完全不依赖调用者身份，自助机上登录态早没了，
+        //     不该因为一个过期令牌就把手里那张取票码挡下来。
+        if (isAnonymousAllowed(request)) {
             return true;
         }
 
@@ -94,10 +116,21 @@ public class AuthInterceptor implements HandlerInterceptor {
         return false;
     }
 
+    /** 匿名放行总判定。读写两条规则的依据不同，故分开维护、此处只做并集 */
+    private boolean isAnonymousAllowed(HttpServletRequest request) {
+        return isAnonymousRead(request) || isAnonymousWrite(request);
+    }
+
     /** 匿名可读判定：GET + 命中公开只读前缀 */
     private boolean isAnonymousRead(HttpServletRequest request) {
         return "GET".equalsIgnoreCase(request.getMethod())
                 && PUBLIC_READ_PREFIXES.stream().anyMatch(p -> request.getRequestURI().startsWith(p));
+    }
+
+    /** 匿名可写判定：POST + 路径**全等**命中白名单（不是 startsWith，避免子路径被连带放行） */
+    private boolean isAnonymousWrite(HttpServletRequest request) {
+        return "POST".equalsIgnoreCase(request.getMethod())
+                && ANONYMOUS_WRITE_EXACT.contains(request.getRequestURI());
     }
 
     private void writeUnauthorized(HttpServletResponse response) throws IOException {

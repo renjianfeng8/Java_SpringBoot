@@ -223,9 +223,11 @@ const canSubmit = computed(() =>
     selectedSeats.value.length > 0 && !loading.value && isLogin.value && !submitting.value
 );
 
-// 支付成功后订单已进入待取票，跳转订单列表查看
+// 支付成功后不再跳转：OrderPayDialog 就地切成取票凭证（取票码 + 「去取票大厅」）。
+// 此前跳 /front/orders 只会看到「待取票」状态，用户不知道下一步该去哪出票。
+// 这里只刷新选座图 —— 刚买的座位已从「本人未支付锁座」变为已售。
 const onPaid = () => {
-  router.push('/front/orders');
+  initSeats();
 };
 
 // 对本人未支付订单继续支付：直接复用支付弹窗，不必重新选座

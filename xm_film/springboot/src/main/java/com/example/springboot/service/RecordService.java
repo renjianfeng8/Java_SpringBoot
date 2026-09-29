@@ -25,8 +25,8 @@ import java.time.temporal.ChronoField;
 @Transactional(readOnly = true)
 public class RecordService extends BaseService<Record> {
 
-    /** 影片未配置片长时用于冲突检测的兜底时长（分钟） */
-    private static final int DEFAULT_DURATION_MINUTES = 120;
+    /** 影片未配置片长时的兜底时长（分钟）。排片冲突检测与取票码有效期同用此口径 */
+    public static final int DEFAULT_DURATION_MINUTES = 120;
 
     /** 兼容前端 datetime 选择器（分钟精度）与数据库返回（秒精度、空格分隔）的多种写法 */
     private static final DateTimeFormatter START_FORMATTER = new DateTimeFormatterBuilder()
