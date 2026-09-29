@@ -231,7 +231,7 @@ onMounted(loadAll);
   color: var(--el-text-color-regular);
 }
 
-/* 32px 属大文本，可用品牌红（规范 §2.4：品牌红仅限 ≥24px 与非文字） */
+/* 32px 属大文本，可用品牌红（规范 §3.2：品牌红仅限 ≥24px 与非文字） */
 .balance-value {
   margin-top: var(--space-4);
   font-size: var(--fs-4xl);
@@ -280,7 +280,7 @@ onMounted(loadAll);
   color: var(--el-text-color-regular);
 }
 
-/* 流水金额承载文字，用达 AA 的成功 / 危险色（规范 §3.3） */
+/* 流水金额承载文字，用达 AA 的成功 / 危险色（规范 §3.7） */
 .flow-amount--in {
   color: var(--el-color-success);
 }

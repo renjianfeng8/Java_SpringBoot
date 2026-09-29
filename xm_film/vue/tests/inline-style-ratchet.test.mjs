@@ -5,7 +5,7 @@ import test from 'node:test'
 const SRC = new URL('../src/', import.meta.url)
 
 /**
- * 阶段 3「内联样式消解」的终态守卫（规范 §9.2：禁止内联 style）。
+ * 阶段 3「内联样式消解」的终态守卫（规范 §11.2：禁止内联 style）。
  *
  * 本测试曾是递减棘轮（每个文件登记上限，逐页下调，全部归零后再改断言）。
  * 现在 src 下已全部清零，棘轮收敛为终态断言：任何 .vue 出现 `style="` 即失败，
@@ -25,7 +25,7 @@ const listVueFiles = async (directory, prefix = '') => {
   return found.sort()
 }
 
-test('src 下无任何内联 style（规范 §9.2）', async () => {
+test('src 下无任何内联 style（规范 §11.2）', async () => {
   const files = await listVueFiles(SRC)
   assert.ok(files.length > 0, '未扫描到任何 .vue 文件，路径可能有误')
 

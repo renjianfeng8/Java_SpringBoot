@@ -57,7 +57,7 @@ const goHome = () => {
   text-align: center;
 }
 
-/* 404 错误码，规范 §2.1 唯一豁免的 120px 特例 */
+/* 404 错误码，规范 §4.2 唯一豁免的 120px 特例 */
 .error-code {
   position: relative;
   margin-bottom: var(--space-20);

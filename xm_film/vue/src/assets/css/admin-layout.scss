@@ -71,7 +71,7 @@
 .username {
   font-size: var(--fs-base);
   color: var(--el-text-color-regular);
-  /* 用户名可能为中文，按 §2.3 只能 400 / 700（500 会触发伪粗体） */
+  /* 用户名可能为中文，按 §4.4 只能 400 / 700（500 会触发伪粗体） */
   font-weight: var(--fw-regular);
 }
 

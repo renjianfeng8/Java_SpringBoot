@@ -407,7 +407,7 @@ const fetchBaseInfo = () => {
 };
 
 // 座位操作工具函数
-// 座位状态 → 语义类名；色值统一由 scoped 样式经令牌给出（规范 §3.1）
+// 座位状态 → 语义类名；色值统一由 scoped 样式经令牌给出（规范 §3.7）
 const getSeatClass = (row, col) => {
   const r = row - 1;
   const c = col - 1;

@@ -5,7 +5,7 @@ import test from 'node:test'
 const read = (relativePath) =>
   readFile(new URL(`../${relativePath}`, import.meta.url), 'utf8')
 
-// §2.1 / §2.2 / §2.3 / §2.5 / §2.7 / §2.8 / §2.11 —— EP 未产出的部分，必须由 tokens.scss 补齐
+// §4.2 / §4.3 / §4.4 / §6.1 / §3.5 / §3.6 / §7.2 —— EP 未产出的部分，必须由 tokens.scss 补齐
 const REQUIRED_TOKENS = [
   '--fs-xs', '--fs-sm', '--fs-base', '--fs-md', '--fs-lg', '--fs-xl',
   '--fs-2xl', '--fs-3xl', '--fs-4xl', '--fs-5xl',
@@ -22,7 +22,7 @@ const REQUIRED_TOKENS = [
   '--shadow-edge', '--color-brand',
 ]
 
-// §3.4 —— 与 EP 实际产出的 primary 变量族一一对应，多写即为死代码
+// §3.2 —— 与 EP 实际产出的 primary 变量族一一对应，多写即为死代码
 const THEME_FRONT_VARS = [
   '--el-color-primary',
   '--el-color-primary-light-3',
@@ -34,7 +34,7 @@ const THEME_FRONT_VARS = [
   '--el-color-primary-rgb',
 ]
 
-// §3.5 —— 前台文字红 #BF352D 的派生族，按 EP 公式算得
+// §3.2 —— 前台文字红 #BF352D 的派生族，按 EP 公式算得
 const THEME_FRONT_RAMP = {
   '--el-color-primary': '#BF352D',
   '--el-color-primary-light-3': '#D2726C',
@@ -47,7 +47,7 @@ const THEME_FRONT_RAMP = {
   '--color-brand': '#ef4238',
 }
 
-// §2.5 —— 功能色重定值，EP 原值实测全部不达 AA
+// §3.3 —— 功能色重定值，EP 原值实测全部不达 AA
 const FUNCTIONAL_COLORS = {
   primary: '#165DFF',
   success: '#007E1D',
@@ -70,7 +70,7 @@ const contrast = (foreground, background) => {
   return (hi + 0.05) / (lo + 0.05)
 }
 
-test('tokens.scss 在 :root 声明 §2 全部基础层令牌', async () => {
+test('tokens.scss 在 :root 声明 §二 全部基础层令牌', async () => {
   const tokens = await read('src/assets/css/tokens.scss')
   assert.match(tokens, /:root\s*\{/, 'tokens.scss 缺少 :root 块')
   for (const token of REQUIRED_TOKENS) {
@@ -88,27 +88,27 @@ test('theme-front 只覆写 EP 实际产出的 primary 变量', async () => {
   assert.deepEqual(declared, [...THEME_FRONT_VARS].sort())
 })
 
-test('theme-front 派生族与规范 §3.5 逐一一致', async () => {
+test('theme-front 派生族与规范 §3.2 逐一一致', async () => {
   const tokens = await read('src/assets/css/tokens.scss')
   const block = tokens.match(/html\.theme-front\s*\{([\s\S]*?)\}/)[1]
   for (const [token, value] of Object.entries(THEME_FRONT_RAMP)) {
     assert.ok(
       block.includes(`${token}: ${value};`),
-      `${token} 应为 ${value}（§3.5 按 EP 公式派生值）`,
+      `${token} 应为 ${value}（§3.2 按 EP 公式派生值）`,
     )
   }
 })
 
-test('index.scss 的 EP 色板覆写全部取 §2.5 的 AA 值', async () => {
+test('index.scss 的 EP 色板覆写全部取 §3.3 的 AA 值', async () => {
   const scss = await read('src/assets/css/index.scss')
   for (const [name, value] of Object.entries(FUNCTIONAL_COLORS)) {
     const pattern = new RegExp(`'${name}':\\s*\\(\\s*'base':\\s*${value}\\s*\\)`, 'i')
-    assert.match(scss, pattern, `${name} 未取 §2.5 的 AA 值 ${value}`)
+    assert.match(scss, pattern, `${name} 未取 §3.3 的 AA 值 ${value}`)
   }
   assert.doesNotMatch(scss, /8438e1/i, 'index.scss 仍残留游离紫')
 })
 
-test('承载文字的颜色全部达 WCAG AA 4.5:1（§8.1）', async () => {
+test('承载文字的颜色全部达 WCAG AA 4.5:1（§10.1）', async () => {
   // 白底上的文字
   for (const [label, color] of [
     ['后台主色蓝', '#165DFF'],
@@ -147,9 +147,9 @@ test('承载文字的颜色全部达 WCAG AA 4.5:1（§8.1）', async () => {
   }
 })
 
-test('装饰红 #ef4238 不得承载正文（§2.4 拆档约束）', async () => {
+test('装饰红 #ef4238 不得承载正文（§3.2 拆档约束）', async () => {
   const ratio = contrast('#ef4238', '#ffffff')
-  assert.ok(ratio < 4.5, '前提变化：若 #ef4238 已达标，应重新评估 §2.4 的拆档设计')
+  assert.ok(ratio < 4.5, '前提变化：若 #ef4238 已达标，应重新评估 §3.2 的拆档设计')
   assert.ok(ratio >= 3, `装饰红需 ≥3:1，实测 ${ratio.toFixed(2)}:1`)
   // 深底上反而只能用装饰红，文字红会掉到 3:1 附近
   assert.ok(contrast('#BF352D', '#1a1a1a') < 4.5, '深底上不可用文字红')
@@ -193,7 +193,7 @@ test('后台两端不再各自维护一份外壳样式', async () => {
   }
 })
 
-test('登录 / 注册共用一份认证页外壳样式（§7.2）', async () => {
+test('登录 / 注册共用一份认证页外壳样式（§6.4）', async () => {
   const [login, register, shared] = await Promise.all([
     read('src/views/Login.vue'),
     read('src/views/Register.vue'),
@@ -207,7 +207,7 @@ test('登录 / 注册共用一份认证页外壳样式（§7.2）', async () => 
   }
 })
 
-test('认证页卡片宽度单一来源，容器不裁切（§7.2）', async () => {
+test('认证页卡片宽度单一来源，容器不裁切（§6.4）', async () => {
   const shared = await read('src/assets/css/auth-layout.scss')
 
   // 卡片宽度只能由 .auth-card 的 max-width 决定；内部控件一律 100% 跟随父级
@@ -229,7 +229,7 @@ test('认证页卡片宽度单一来源，容器不裁切（§7.2）', async () 
   }
 })
 
-test('认证页表单具备可访问名称、错误图标与回车提交（§8.2 / §六）', async () => {
+test('认证页表单具备可访问名称、错误图标与回车提交（§10.2 / §9.3）', async () => {
   for (const file of ['src/views/Login.vue', 'src/views/Register.vue']) {
     const source = await read(file)
 
@@ -240,9 +240,9 @@ test('认证页表单具备可访问名称、错误图标与回车提交（§8.2
       `${file} 仍用字符串 prefix-icon，图标不会渲染，应改为 :prefix-icon="User"`,
     )
 
-    assert.match(source, /label-position="top"/, `${file} 未使用顶部可见标签（§8.2）`)
-    assert.match(source, /status-icon/, `${file} 未开启 status-icon，错误反馈缺图标（§六）`)
-    assert.match(source, /@keyup\.enter=/, `${file} 未支持回车提交（§8.2）`)
+    assert.match(source, /label-position="top"/, `${file} 未使用顶部可见标签（§10.2）`)
+    assert.match(source, /status-icon/, `${file} 未开启 status-icon，错误反馈缺图标（§9.3）`)
+    assert.match(source, /@keyup\.enter=/, `${file} 未支持回车提交（§10.2）`)
 
     const items = [...source.matchAll(/<el-form-item\b([^>]*)>/g)].map((m) => m[1])
     assert.ok(items.length >= 3, `${file} 表单项数量异常：${items.length}`)

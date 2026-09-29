@@ -435,7 +435,7 @@ onMounted(() => {
   margin-top: var(--space-16);
 }
 
-/* ---------- 3.1 电影头部（深色表面，规范 §2.7） ---------- */
+/* ---------- 3.1 电影头部（深色表面，规范 §3.5） ---------- */
 .film-hero {
   background-color: var(--dark-bg-hero);
 }
