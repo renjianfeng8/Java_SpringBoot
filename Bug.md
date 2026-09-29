@@ -772,6 +772,48 @@
 
 ---
 
+### BUG-049: 前台购票记录的取票 / 退票按钮折行后左右错开
+
+- **日期**: 2026-09-29
+- **Bug 描述**: `front/Orders.vue` 购票记录表里，订单处于 `待取票` 时操作列同时有「取票」与「退票」两个文字按钮，用户反馈"因为空间有限…上下或左右无法对齐，极其影响视觉观感"。同表的 `待支付` 行「继续支付 / 取消」是同一个缺陷（更宽、错位更明显），一并修掉。
+- **根因分析**: 三层原因叠加，缺一不可。
+  1. **操作列分不到宽度** —— `el-table` 给未显式指定 `width` 的列按 `minWidth || 80` 起算（`element-plus/es/components/table/src/table-layout.mjs:102`），并把富余空间按各列 `minWidth` 权重分摊（`:96` 把无 `width` 的列全归入 `flexColumns`，`:106` 起分摊）。本表 13 列**全部未定宽**，最小总宽 13×80 = 1040px，而容器是 `.page-wide`（`min(85vw, 1200px)`）再减去 `.card` 的 8px 内边距 —— 1920 视口下也只有 1184px，富余 144px 摊完操作列约 **89px**，去掉 `.cell` 的 24px 内边距只剩 65px。
+  2. **两个文字按钮需要 ~100px** —— `.el-button.is-link` 是 `padding: 2px` 的内联元素：4 字按钮（继续支付 / 修改评价）= 56px + 4px，2 字按钮（取票 / 退票 / 取消）= 28px + 4px；按钮间距来自 EP 的 `.el-button+.el-button{margin-left:12px}`。于是 `继续支付 + 取消` 需 104px、`取票 + 退票` 需 76px，**都超过 65px**，必然折行。
+  3. **错位的直接原因**：那 12px 是 `margin-left`，**折行并不改变它**。第二个按钮落到第二行时仍带 12px 左边距，两行右错开 12px —— 用户看到的"上下无法对齐"就是这个。
+- **解决方案**:
+  1. 操作列显式定宽 `width="140"`（最宽组合 104px + 24px 内边距 = 128px，留 12px 富余）。
+  2. 按钮组套上 `front-pages.scss` 新增的 `.row-actions`：`display: flex; gap: var(--space-8)`，并把 `.el-button + .el-button` 的 `margin-left` 中和为 0。**间距从"相邻选择器的边距"变成"容器 gap"**，于是间距与"是否折行"解耦 —— 一行时是 8px 等距，真折行时第二行也从同一左边缘起排。
+  3. 定宽多出来的 60px 由两列让出：展开列 `min-width="60"`、单价列 `min-width="70"`（两列的内容本来就不需要 EP 的 80px 下限）。表格最小总宽只从 1040px 涨到 **1070px**，横向滚动条的触发阈值（约 1242px 视口）几乎不动 —— 若单纯把操作列加宽 60px 而不让宽，1280px 这类常见视口会凭空多出一条横向滚动条。
+- **哪些列能让宽、哪些不能**: 展开列没有表头文字、单价列表头只有 2 个字，压到 60 / 70 仍有余量。其余列的下限被内容或表头顶住 —— `电影图片` 表头 4 字就要 56px + 24px 内边距，压到 80px 以下表头即折行；`总费用` 可能出 `5994.00` 这类 7 位金额、`订单号` 是 16 位单号（本就在折叠行里被截断），压到 70px 会新造出"金额换行 / 单号截得更狠"。宁可让最小总宽多 30px，也不制造新的折行。
+- **验证**: 前端 `npm run test:tokens`(13) / `test:inline`(2) / `test:bundle`(3) 全绿，`npm run build` 通过。**构建产物客观核对**：`dist/assets/index-*.css` 内含 `.front-content .row-actions{display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-8)}` 与 `.front-content .row-actions .el-button+.el-button{margin-left:0}`（特异性 0-4-0，压得住 EP 的 0-2-0）；`dist/assets/Orders-*.js` 内含 `label:"操作",width:"140"`、`label:"单价"…"min-width":"70"`、`type:"expand","min-width":"60"`。**未做浏览器渲染验证**（UI 目视由用户自查），两列让宽后各列的实际分配是按 el-table 布局算法推算的，未经浏览器实测。
+- **相关文件**: `vue/src/views/front/Orders.vue`、`vue/src/assets/css/front-pages.scss`
+- **提交记录**: 未提交
+- **状态**: 已修复
+
+---
+
+### BUG-050: 管理员可一键把任意用户的票标记为已取
+
+- **日期**: 2026-09-29
+- **Bug 描述**: `manage/Ordered.vue`（管理员订单列表）对 `待取票` 行渲染「取票」按钮，点一下就把**别人的**订单置为 `已取票`。用户提出：票是用户的、取票也是用户的事，管理员界面上不该有这颗按钮。
+- **根因分析**: 权限判定把"能不能访问这一行"和"能不能执行取票这个动作"混成了一件事。
+  1. `ensureOrderAccess`（`OrderedService.java:519-521`）对 `ADMIN` **直接 `return`**，不做任何归属校验 —— 管理员对任意订单都有访问权，这是"管理所有数据"该有的。
+  2. `pickupOrder`（`:469-484`）却只做了一条 `if ("USER".equals(role)) throw` 的反向判断，于是 `ADMIN` 与 `CINEMA` 一起被放行。ADMIN 的**访问权**因此被顺带翻译成了"替任意用户确认取票"的**操作权**。
+  3. 三层放大：① 该方法**不记录操作人**（只写 `status`），伪造后查不出是谁点的；② `已取票` 是终态、没有任何出口（`redeemByCode` 对已取票直接拒、`cancelOrder` 的前置是 `待支付`），所以这个能力**连纠错用途都没有**，只能提前截胡真实柜台的交付；③ 它会**顺带伪造评价资格** —— `MarkService.add` 的门槛正是"该用户对该影片有已取票订单"（`countPickedUpByUserAndFilm`），管理员一点，那个用户就凭空获得给这部片打分的资格。
+  4. 旁证（说明它并非有意设计）：管理端订单页**只**接了 `PICKUP` 一个状态操作，金额更大的 退款 / 取消 都没接（`REFUND`/`CANCEL` 只出现在 `front/` 两页）—— 钱不动的取票给了管理员、钱动的退款不给，本身就不自洽。
+- **解决方案**:
+  1. `pickupOrder` 改为**只放行 `CINEMA` 的白名单**：`if (!"CINEMA".equals(role)) throw FORBIDDEN`。**不要**改成"再补一条拒 ADMIN" —— denylist 在新增角色时会静默把取票能力一并授予新角色，正是 `MarkService` 那轮"只有前端按钮在守"的同一种漏。`CINEMA` 保留，因为它本来就被 `ensureOrderAccess` 限制在**本影院的**订单上，是真实的柜台员工。
+  2. `manage/Ordered.vue` 删掉按钮、`pickupOrder()` 处理器与随之失效的 `ORDER_API` 导入。**只删按钮是错解**（会退化成"只有前端在守"）—— 权限落点始终是服务端的这一个方法：`AuthInterceptor` 的 `ADMIN_ONLY_PREFIXES`/`ADMIN_WRITE_PREFIXES` 都不含 `/orders`（只要求登录），`OrderedController.pickup` 只做转发。
+  3. `back/Ordered.vue`（影院端）不动 —— 影院端本来就该有，且受 `cinemaId` 约束。
+  4. 错误文案改成有指向性的"取票为影院柜台操作，请到取票大厅凭取票码自助取票"，把用户导向免登录的自助通路。
+- **代价（明确接受）**: 管理员从此不能代客取票。本系统里不算损失 —— "用户到店取票"由取票大厅覆盖（免登录、凭码），"柜台取票"由影院端覆盖；唯一受影响的是演示时想用 admin 账号把某条订单推到 `已取票`，改用取票大厅的码即可，反而把真实自助通路演到位。**未新增**"admin 只读看取票码"之类的补救功能（admin 要查码需先有正当场景，真有需求再单独提）。
+- **验证**: `mvn test` **173/173 全绿**（13 个测试类，Failures 0 / Errors 0）—— `adminPickupOrderSuccessfully` 反转为 `adminCannotPickupOrder`（断言 FORBIDDEN 且 `verify(..., never()).updateById(any())` 守住"拒绝时不写库"）；`userCannotPickupOrder` 的断言随文案从匹配"无权"改为匹配"影院柜台"；`cinemaPickupOrderSuccessfully` 继续守住影院端不受影响。前端 `npm run build` 通过 + `test:tokens`/`test:inline`/`test:bundle` 全绿，构建产物核对 `manage` 分块里已无 `PICKUP` 调用。**未做浏览器渲染验证**（UI 目视由用户自查）。
+- **相关文件**: `OrderedService.java`、`OrderedServiceTest.java`、`vue/src/views/manage/Ordered.vue`、`CLAUDE.md`
+- **提交记录**: 未提交
+- **状态**: 已修复
+
+---
+
 ## 预防清单
 
 1. **数据库初始化**: 新环境部署时务必执行 `xm_film/sql/init.sql`（或依次执行 `schema.sql` + `data.sql`）
@@ -834,3 +876,5 @@
 57. **往背景图上放文字必须先解决底衬**: 同一段文字在浅色插画上深浅两头都不到 4.5:1（`#ccc` 1.41:1、`#606266` 2.71:1）。要么给半透明面板兜底，要么不放文字 —— 换颜色解决不了（见 BUG-045）
 58. **手写业务数据迟早露馅，种子只放基础配置**: 订单/评价/场次这类"一整套互相印证"的数据不要用 `INSERT` 预置 —— 单号格式、单价快照、支付凭证、余额扣减、资金流水任意一处对不上就能被查出来。演示数据一律走真实接口生成（见 BUG-046 的 `scripts/seed-demo-data.py`）
 59. **派生指标不要留成静态列**: `film.box_office` 这种"人工填、没人重算"的列，迟早变成没有来源的数字并被当成真实数据展示。要么按业务表实时聚合，要么就让它是空的。**改这类指标时先 grep 一遍有没有任何代码在重算它**（见 BUG-046）
+60. **表格操作列必须显式定宽，多按钮格用 flex + gap 排**: `el-table` 给未指定 `width` 的列按 `minWidth || 80` 起算、再均分富余空间，列多的表操作列只会分到 ~80px；两个文字按钮（`继续支付 + 取消` 需 104px）必然折行，而 EP 的按钮间距是 `.el-button + .el-button{margin-left:12px}` —— **折行不改变它**，第二个按钮被右推 12px，两行就左右错开。操作列一律写 `width`，多按钮格套 `.row-actions`（`front-pages.scss`：flex + gap，已把该 margin 中和为 0）。加宽所需的像素尽量从"内容本就不需要 80px"的列上让出（展开列、2 字表头的列），别让表格最小总宽上涨 —— 否则窄视口会凭空多出横向滚动条（见 BUG-049）
+61. **"能访问这一行"不等于"能做这个动作"**: `ADMIN` 靠 `ensureOrderAccess` 的早退拿到**任意订单**的访问权（管理数据本该如此），但 `pickupOrder` 把它顺带翻译成了操作权，于是变成"一键把任意用户的票记为已取"。判断这类权限先问一句"这个动作记录的是谁的物理事实、谁能如实断言" —— 取票只有放映该场次的影院能断言，所以只放行 `CINEMA`。再叠加"不记录操作人"和"目标状态是终态无出口"，这种能力连纠错价值都没有，只剩伪造。**权限判断一律写白名单**（`if (!"CINEMA".equals(role))`），denylist 会在新增角色时静默扩权（见 BUG-050）

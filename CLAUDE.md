@@ -205,7 +205,7 @@ project_02/
 | `/api/v1/orders/seats` | GET | 查询某场次占用中的座位（`{seat, mine}` 投影；仅本人订单附带 orderId/金额/倒计时） | 登录用户 |
 | `/api/v1/orders/{id}/pay` | PUT | 支付待支付订单；超时则取消并返回 409 | 订单归属方 |
 | `/api/v1/orders/{id}/cancel` | PUT | 取消待支付订单 | 订单归属方 |
-| `/api/v1/orders/{id}/pickup` | PUT | 取票（待取票 → 已取票）；这是**影院柜台的员工通路**，用户的自助通路是 `/api/v1/tickets/redeem` | ADMIN / CINEMA |
+| `/api/v1/orders/{id}/pickup` | PUT | 取票（待取票 → 已取票）；这是**影院柜台的员工通路**，只对 `CINEMA` 开放（受 `cinemaId` 范围限制）；用户的自助通路是 `/api/v1/tickets/redeem` | CINEMA |
 | `/api/v1/orders/{id}/refund` | PUT | 退票（待取票 → 已退票，需放映前 60 分钟以上） | 订单归属方 |
 
 > 上面两条是同一个状态迁移的两个入口：柜台的 `pickup` 与自助机的 `redeem`，共用「待取票 → 已取票」这一条边，前端 `OrderPayDialog` 支付成功后展示取票码并给「去取票大厅」入口。
@@ -366,6 +366,7 @@ npm run dev
 - 票房口径只有一个来源：后端按 `ordered` 实时聚合的「本系统累计售票收入」（`FilmMapper.xml` 的 `filmRevenueJoin`，只统计 `待取票/已取票`），单位是**元**，前端 `utils/format.js` 只做格式化。`film.box_office` 静态列已废弃、恒为 0（`migration-20260929-deprecate-box-office.sql` 清零存量值并改列注释）。**`filmRevenueJoin` 的状态集合与 `OrderedMapper` 的占座判定同源**，新增改变"是否已支付"的状态时两处必须同步。
 - 「今日票房」是同一口径的日期切片：`OrderedMapper.selectTodayPaidRevenue` 按 **`pay_time` 取日**（收款日，不是 `ordered.start` 放映日 —— 本系统是提前购票，按放映日聚合会让「今日」长期恒为 0），状态集合与前一条**同源**，因此它必然 ≤ 累计票房。它挂在 `GET /api/v1/films/box-office/today`（`/api/v1/films` 已在 `PUBLIC_READ_PREFIXES` 内，**没有为它新增任何放行规则**），返回 `{total, updatedAt}`，日期边界与统计时刻都由库时钟在同一条 SQL 里给出。**空集上 SUM 为 0 是真实值，前端因此用 `formatYuan` 渲染 `0.00元` 而不是「暂无数据」** —— `formatBoxOffice` 把 0 当缺失值，两者不可混用。
 - Status tag colors are centralized in `xm_film/vue/src/constants/index.js` (`FILM_STATUS_MAP`/`getFilmStatusType`, `ORDER_STATUS_MAP`/`getOrderStatusType`, `RECORD_STATUS_MAP`/`getRecordStatusType`, `CINEMA_STATUS_MAP`/`getCinemaStatusType`); views import them instead of re-declaring the switch.
+- 表格的**操作列必须显式写 `width`**：`el-table` 给未指定宽度的列按 `minWidth || 80` 起算再均分富余空间，列多的表里操作列只会拿到 ~80px，两个文字按钮（`继续支付 + 取消` 需 104px）必然折行；而 EP 的按钮间距是 `.el-button + .el-button { margin-left: 12px }`，**折行不改变它**，第二个按钮被右推 12px，两行就左右错开（BUG-049）。多按钮格套 `front-pages.scss` 的 `.row-actions`（flex + gap，并把该 margin 中和为 0）。加宽所需像素从"内容本就不需要 80px"的列上让出（展开列、2 字表头的列），**不要让表格最小总宽上涨** —— 否则窄视口凭空多出横向滚动条。
 - 影院"上映哪些影片"由排片 `record` 派生（`FilmMapper.selectByCinema` / `CinemaMapper.selectByFilmId` 用 `EXISTS` 子查询）。**不存在影院-影片关联表**（原 `cinema_film` 已删除）——新建排片后前台立即可见，不要再引入第二张关联表。`record.film_id` 为 `NOT NULL`。
 - 场次可购票性由 `start` 与 `status` 共同决定，唯一权威实现在 `RecordService.isPurchasable`（`start` 晚于当前 且 `status != 停售`）；`OrderedService.insertOrder` 复用该规则做下单拦截，前端 `CinemaDetail.vue` 的 `recordState()`/`canBuy()` 与之同构。`未开始/放映中/已结束` 是派生状态，不落库；`record.status` 只保留 `正常/停售` 一个人工开关。
 - 排片的创建/编辑统一走 `RecordController` → `RecordService.validateSchedule(record, previousStart)`：校验影厅与影片归属、`start` 晚于当前（编辑时时间未改动则不重复校验，保证存量过期场次仍可停售）、`price > 0`、同影厅时段不重叠（按影片片长计算区间，无片长时按 120 分钟兜底），并按 `filmId` 回填 `title`。
@@ -375,6 +376,7 @@ npm run dev
 - **取票码（`ordered.pickup_code`）没有自己的有效/失效状态**，可用性完全派生自订单状态：核销只接受 `status = '待取票'`（`OrderedMapper.markPickedUpByCode` 的状态条件更新）。这一个谓词同时实现了「一单一码」「用过即废」「退票/取消作废」「没付款不出发」，因此**不要为它新增 `used` / `revoked` 之类的标记列** —— 那会引入需要人工同步的第二处真相。有效期到放映结束（`ordered.start` + `film.time`，片长缺失时按 `RecordService.DEFAULT_DURATION_MINUTES` 兜底），同样不落库。码在 `payOrder` 内与扣款同一事务生成，故未支付订单永远没有码。
 - 并发重复核销不靠悲观锁：读到的状态可能是 `待取票`，但写库走 `UPDATE ... WHERE status = '待取票'`，**受影响 0 行即判定为被人抢先**（`redeemByCode` 抛 409）。与余额扣减的 `UPDATE ... WHERE balance >= ?` 同一手法，改动时不要退回"先读后无条件写"。
 - 取票码的**生成字母表与输入校验刻意不同**：生成用 `ABCDEFGHJKMNPQRSTUVWXYZ23456789`（剔除 I/L/O/0/1，人工从手机抄到自助机上看不错），校验放宽到 `[A-Z0-9]` 并把输入归一成 `XXXX-XXXX` 再等值查（`OrderedService.normalizePickupCode`）—— 因为 `migration-20260929-pickup-code.sql` 给存量订单补的是含 0/1 的十六进制码，收窄校验会把它们挡在门外。归一后必须保持**等值**查询，写成 `WHERE REPLACE(pickup_code,'-','') = ?` 会让唯一索引失效。
+- **柜台取票（`pickupOrder`）只放行 `CINEMA`，且必须是白名单写法**（`if (!"CINEMA".equals(role))`）。取票记录的是"影院把票交到顾客手里"这一物理事实，能如实断言的只有放映该场次的影院；`ADMIN` 在 `ensureOrderAccess` 里不受 `cinemaId` 约束，放行它等于"一键把任意用户的票记为已取"，而该方法**不记录操作人**、事后无法追溯，又因 `已取票` 是终态而毫无纠错用途（Bug.md BUG-050）。写成 denylist（"拒 USER"）会让新增角色静默继承取票能力 —— 与 `MarkService` 那轮"只有前端按钮在守"是同一种漏。`manage/Ordered.vue` 因此也没有取票按钮，权限落点在服务端而不是按钮可见性。用户通路只有免登录的 `redeemByCode`。
 - 评价资格在服务端校验：`MarkService.add` 要求 `OrderedMapper.countPickedUpByUserAndFilm(userId, filmId) > 0`。**修改评价不重复校验**，因为 `已取票` 是终态（退票与删除都进不来），资格一旦成立不会被推翻。
 - 占用座位的判定只有一个出处：`OrderedMapper.countSeatInUse` / `selectActiveByRecordId`，状态集合为 `NOT IN ('已取消','已退票')`，且待支付订单仅在 `pending_timeout_at > NOW()` 时锁座。**新增任何"释放座位"的状态时，两处查询必须同步**，否则座位永远锁死。
 - `/api/v1/orders/seats` 对外返回的是投影 `SeatOccupancy`（`seat` + 后端按 JWT 算出的 `mine`），只有本人订单才带 `orderId`/`orders`/`total`/`pendingTimeoutAt`。**不要把 `Ordered` 实体直接回给这个端点** —— 那等于把该场次所有订单的订单号、`user_id`、金额发给任意登录用户（见 Bug.md BUG-040）。归属判定必须在后端做，前端只读 `mine`，不得再拿 `userId` 自己比对。

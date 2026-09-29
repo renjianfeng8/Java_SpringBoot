@@ -12,7 +12,7 @@
 
       <div class="card page-card">
         <el-table stripe :data="data.tableData">
-          <el-table-column type="expand">
+          <el-table-column type="expand" min-width="60">
             <template #default="props">
               <el-descriptions title="订单信息" :column="4" border>
                 <el-descriptions-item label="电影图片">
@@ -72,7 +72,7 @@
           </el-table-column>
           <el-table-column label="预约时间" prop="start" show-overflow-tooltip />
           <el-table-column label="电影票数量" prop="number"/>
-          <el-table-column label="单价" prop="unitPrice"/>
+          <el-table-column label="单价" prop="unitPrice" min-width="70"/>
           <el-table-column label="总费用" prop="total"/>
           <el-table-column label="订单状态" prop="status">
             <template #default="scope">
@@ -81,22 +81,29 @@
               </el-tag>
             </template>
           </el-table-column>
-          <el-table-column label="操作">
+          <!-- 操作列必须定宽：el-table 把未指定宽度的列一律按 80px 起算，13 列挤在 1200px
+               容器里操作列只剩 ~89px，装不下「继续支付 + 取消」这类两个文字按钮（需 ~100px），
+               折行后第二个按钮又被 EP 的 12px 兄弟边距推右错开（BUG-049）。
+               140px 里的 30px 由展开列与单价列让出（它们的内容本来不需要 80px），
+               表格最小总宽因此只从 1040px 涨到 1070px，横向滚动阈值几乎不动。 -->
+          <el-table-column label="操作" width="140">
             <template #default="scope">
-              <el-button v-if="scope.row.status === '待支付'" link type="danger"
-                         @click="() => continuePay(scope.row)">继续支付</el-button>
-              <el-button v-if="scope.row.status === '待支付'" link type="warning" @click="() => cancelOrder(scope.row.id)">取消</el-button>
-              <el-button v-if="scope.row.status === '待取票'" link type="primary"
-                         @click="goPickupHall">去取票大厅</el-button>
-              <el-button v-if="scope.row.status === '待取票'" link type="warning"
-                         @click="() => refundOrder(scope.row)">退票</el-button>
-              <el-button v-if="scope.row.status === '已取票'" link type="primary"
-                         @click="openReview(scope.row)">
-                {{ markOf(scope.row.filmId) ? '修改评价' : '去评价' }}
-              </el-button>
-              <!-- 只有终态废单可删除；已成交订单必须走退票，与后端删除守卫同构 -->
-              <el-button v-if="isOrderDeletable(scope.row.status)" class="row-action" link :icon="Delete"
-                         @click="() => del(scope.row.id)" type="danger"></el-button>
+              <div class="row-actions">
+                <el-button v-if="scope.row.status === '待支付'" link type="danger"
+                           @click="() => continuePay(scope.row)">继续支付</el-button>
+                <el-button v-if="scope.row.status === '待支付'" link type="warning" @click="() => cancelOrder(scope.row.id)">取消</el-button>
+                <el-button v-if="scope.row.status === '待取票'" link type="primary"
+                           @click="goPickupHall">取票</el-button>
+                <el-button v-if="scope.row.status === '待取票'" link type="warning"
+                           @click="() => refundOrder(scope.row)">退票</el-button>
+                <el-button v-if="scope.row.status === '已取票'" link type="primary"
+                           @click="openReview(scope.row)">
+                  {{ markOf(scope.row.filmId) ? '修改评价' : '去评价' }}
+                </el-button>
+                <!-- 只有终态废单可删除；已成交订单必须走退票，与后端删除守卫同构 -->
+                <el-button v-if="isOrderDeletable(scope.row.status)" class="row-action" link :icon="Delete"
+                           @click="() => del(scope.row.id)" type="danger"></el-button>
+              </div>
             </template>
           </el-table-column>
         </el-table>
