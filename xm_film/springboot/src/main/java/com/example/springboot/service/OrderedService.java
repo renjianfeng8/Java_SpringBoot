@@ -612,9 +612,8 @@ public class OrderedService extends BaseService<Ordered> {
      * 带不带空格、大小写混写都能核销。归一后是精确等值查询，pickup_code 的唯一索引照常命中
      * —— 若改成 {@code WHERE REPLACE(pickup_code,'-','') = ?}，列上套函数会让索引失效。
      *
-     * 字符集刻意放宽到 [A-Z0-9]：生成用的字母表更窄（去混淆），但
-     * migration-20260929-pickup-code.sql 给存量待取票订单补的是十六进制码，里面含 0/1，
-     * 收窄校验会把存量订单挡在门外。只对"生成"收窄，对"输入"放宽。
+     * 字符集刻意放宽到 [A-Z0-9]：生成用的字母表更窄（去混淆），但历史上给存量待取票订单
+     * 补过含 0/1 的十六进制码，收窄校验会把那批码挡在门外。只对"生成"收窄，对"输入"放宽。
      * 长度不符即判为无效，返回空串由调用方统一报「取票码无效」。
      */
     private static String normalizePickupCode(String raw) {
