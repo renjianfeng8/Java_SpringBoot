@@ -421,7 +421,9 @@ const fetchMarks = () => {
 };
 
 const goToFilmMarks = () => {
-  router.push({ name: 'filmMarks', params: { id: filmId } });
+  // 本仓库的路由一律没有 name（meta.name 是标题文案），导航一律走 path ——
+  // 写 { name: 'filmMarks' } 会在运行时抛 "No match for ..."，编译与构建都查不出来
+  router.push(`/front/filmMarks/${filmId}`);
 };
 
 // 7. 页面初始化：加载电影详情、演职人员与评价
