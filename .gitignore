@@ -6,8 +6,12 @@
 target/
 springboot-jar/
 *.class
+# 拦手工丢进源码树或下载来的 jar；构建产物本已在 target/ 覆盖
 *.jar
 *.war
+# 例外：wrapper jar 是构建工具本体，必须入库 —— 被静默忽略会让全新克隆跑不起 ./mvnw、./gradlew
+!**/.mvn/wrapper/*.jar
+!**/gradle/wrapper/*.jar
 
 # === Node.js ===
 node_modules/
@@ -32,6 +36,8 @@ Thumbs.db
 # === 项目本地文件 ===
 .env
 .env.*
+# 例外：开发/生产的共享默认值文件可入库，但只放非密钥内容（本地地址、公开开关）
+# 密钥与机器专属覆盖写 .env.local / .env.*.local —— 已被上面的 .env.* 覆盖，无需再加规则
 !.env.development
 !.env.production
 /claude.log
