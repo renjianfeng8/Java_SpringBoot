@@ -71,6 +71,37 @@
 
     <!-- 右侧内容（完善票房/评分列表跳转） -->
     <div class="home-aside">
+      <!-- 0. 今日票房：GET /api/v1/films/box-office/today（匿名可读，游客也看得到） -->
+      <div class="today-box">
+        <div class="today-box__strip">
+          <span>今</span><span>日</span><span>票</span><span>房</span>
+        </div>
+        <div class="today-box__body">
+          <!-- 仅首屏未拿到数据时占位；刷新时保留数字、只让按钮转圈，避免骨架屏闪烁 -->
+          <div v-if="loading.today && todayBoxOffice.total === null" class="today-box__skeleton">
+            <el-skeleton :rows="2" animated />
+          </div>
+          <template v-else>
+            <div class="today-box__row">
+              <div v-if="todayBoxOffice.error" class="today-box__error">数据加载失败，请稍后重试</div>
+              <div v-else class="today-box__amount">{{ formatYuan(todayBoxOffice.total) }}</div>
+              <el-button
+                  link
+                  type="primary"
+                  :loading="loading.today"
+                  @click="loadTodayBoxOffice"
+              >
+                <el-icon><Refresh /></el-icon>
+                刷新
+              </el-button>
+            </div>
+            <div v-if="!todayBoxOffice.error" class="today-box__time">
+              北京时间：{{ todayBoxOffice.updatedAt || '—' }}
+            </div>
+          </template>
+        </div>
+      </div>
+
       <!-- 1. 总票房Top 10（添加电影标题跳转详情） -->
       <div>
         <div class="aside-title">总票房Top 10</div>
@@ -155,9 +186,10 @@
 import { reactive } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
+import { Refresh } from '@element-plus/icons-vue';
 import request from "@/utils/request.js";
 import { API_PATHS, FILM_API } from '@/constants';
-import { formatBoxOffice } from '@/utils/format.js';
+import { formatBoxOffice, formatYuan } from '@/utils/format.js';
 // 引入Element Plus样式（移除el-rate相关样式）
 import 'element-plus/theme-chalk/el-skeleton.css';
 import 'element-plus/theme-chalk/el-button.css';
@@ -179,7 +211,16 @@ const boxOfficeTop10 = reactive([]); // 总票房Top10
 const ratingTop5 = reactive([]);     // 评分Top5
 const loading = reactive({           // 加载状态
   boxOffice: false,
-  mark: false
+  mark: false,
+  today: false
+});
+
+// 今日票房：后端按 ordered 实时聚合的「今天支付的售票收入」。
+// total 首屏为 null 用于区分「还没拿到数据」与「今天票房确实是 0」。
+const todayBoxOffice = reactive({
+  total: null,
+  updatedAt: '',
+  error: false
 });
 
 /**
@@ -210,6 +251,29 @@ const goToMovieList = (type) => {
 
 const goToRankPage = () => {
   router.push('/front/rank');
+};
+
+/**
+ * 加载今日票房。失败只落错误态，不弹提示 —— 网络异常/超时/5xx 的提示由 request.js
+ * 的响应拦截器统一给出，页面再弹一次会让同一次失败弹两遍（规范 §11.2）。
+ */
+const loadTodayBoxOffice = () => {
+  loading.today = true;
+  todayBoxOffice.error = false;
+  request.get(FILM_API.BOX_OFFICE_TODAY).then(res => {
+    if (res.code === '200') {
+      todayBoxOffice.total = res.data.total;
+      todayBoxOffice.updatedAt = res.data.updatedAt;
+    } else {
+      todayBoxOffice.error = true;
+    }
+  }).catch(err => {
+    // 响应体形状不符契约时也会落到这里（例如 data 缺失），此时同样按加载失败处理
+    console.error('今日票房接口请求异常：', err);
+    todayBoxOffice.error = true;
+  }).finally(() => {
+    loading.today = false;
+  });
 };
 
 // 加载总票房Top10数据
@@ -275,6 +339,7 @@ const load = () => {
 
 // 页面初始化加载所有数据
 load();
+loadTodayBoxOffice();
 loadFilmBoxOfficeTop();
 loadFilmMarkTop();
 </script>
@@ -390,6 +455,67 @@ loadFilmMarkTop();
 
 .home-aside__section {
   margin-top: var(--space-40);
+}
+
+/* ---------- 今日票房 ---------- */
+.today-box {
+  display: flex;
+  margin-bottom: var(--space-40);
+  overflow: hidden;
+  background-color: var(--el-fill-color-light);
+  border-radius: var(--el-border-radius-base);
+}
+
+/* 色条上压的是白字，底色必须是「承载文字」的品牌色 --el-color-primary（前台 #BF352D，5.58:1）。
+   --color-brand（前台 #ef4238）按规范 §3.2 只用于不承载文字的图形 / 大标题 —— 白字压它仅 3.81:1，不达 AA。 */
+.today-box__strip {
+  display: flex;
+  flex-shrink: 0;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  padding: var(--space-12) 0;
+  color: var(--color-on-accent);
+  font-size: var(--fs-base);
+  font-weight: var(--fw-bold);
+  line-height: var(--lh-base);
+  background-color: var(--el-color-primary);
+}
+
+.today-box__body {
+  flex: 1;
+  min-width: 0;
+  padding: var(--space-12) var(--space-16);
+}
+
+.today-box__skeleton {
+  padding: var(--space-4) 0;
+}
+
+.today-box__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* 前台数据大字，规范 §4.2 指定 --fs-5xl 给「评分 / 票房」 */
+.today-box__amount {
+  color: var(--el-text-color-primary);
+  font-size: var(--fs-5xl);
+  font-weight: var(--fw-bold);
+  line-height: var(--lh-loose);
+}
+
+.today-box__error {
+  color: var(--el-text-color-regular);
+  font-size: var(--fs-sm);
+}
+
+.today-box__time {
+  margin-top: var(--space-8);
+  color: var(--el-text-color-regular);
+  font-size: var(--fs-xs);
 }
 
 .aside-title {

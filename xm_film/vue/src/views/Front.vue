@@ -25,7 +25,10 @@
           </router-link>
           <router-link to="/front/cinema" class="nav-item" :class="{ 'active': activePath === '/front/cinema' }">影院</router-link>
           <router-link to="/front/rank" class="nav-item" :class="{ 'active': activePath === '/front/rank' }">排行榜</router-link>
+          <!-- 取票大厅刻意不挂在 showUserEntries 下：它是自助机口径，游客也必须能进 -->
+          <router-link to="/front/pickup" class="nav-item" :class="{ 'active': activePath === '/front/pickup' }">取票大厅</router-link>
           <router-link
+              v-if="showUserEntries"
               to="/front/orders"
               class="nav-item"
               :class="{ 'active': activePath === '/front/orders' }"
@@ -33,6 +36,7 @@
             购票记录
           </router-link>
           <router-link
+              v-if="showUserEntries"
               to="/front/account"
               class="nav-item"
               :class="{ 'active': activePath === '/front/account' }"
@@ -71,9 +75,11 @@
             </div>
             <template #dropdown>
               <el-dropdown-menu>
-                <el-dropdown-item @click="router.push('/front/person')">个人中心</el-dropdown-item>
-                <el-dropdown-item @click="router.push('/front/account')">我的账户</el-dropdown-item>
-                <el-dropdown-item @click="router.push('/front/password')">修改密码</el-dropdown-item>
+                <template v-if="showUserEntries">
+                  <el-dropdown-item @click="router.push('/front/person')">个人中心</el-dropdown-item>
+                  <el-dropdown-item @click="router.push('/front/account')">我的账户</el-dropdown-item>
+                  <el-dropdown-item @click="router.push('/front/password')">修改密码</el-dropdown-item>
+                </template>
                 <el-dropdown-item @click="logout">退出登录</el-dropdown-item>
               </el-dropdown-menu>
             </template>
@@ -108,6 +114,7 @@
               <li>使用风险由用户自行承担</li>
             </ul>
           </div>
+
           <div class="footer-column">
             <h3 class="footer-title">用户信息与隐私</h3>
             <ul class="footer-links">
@@ -117,6 +124,7 @@
               <li>请勿使用真实密码注册</li>
             </ul>
           </div>
+
           <div class="footer-column contact-column">
             <h3 class="footer-title">版权信息</h3>
             <div class="footer-copyright">
@@ -126,11 +134,12 @@
               <p class="contact-item">联系方式: 2145345678@qq.com</p>
             </div>
           </div>
+
         </div>
       </div>
       <div class="footer-bottom">
         <div class="footer-disclaimer">
-          <p>本系统为 <strong>个人学习项目</strong>，所有展示数据（包括但不限于电影信息、票房数据、影院信息、订单记录）均为 <strong>模拟数据</strong>，不反映真实市场情况。</p>
+          <p>本系统为 <strong>个人学习项目</strong>，不反映真实市场情况。</p>
           <p class="footer-disclaimer__note">严禁将本系统用于任何商业用途。使用本系统即表示您已了解并同意上述条款。</p>
         </div>
       </div>
@@ -162,6 +171,9 @@ const goAdmin = () => {
 }
 
 const userName = computed(() => user.value?.username || '')
+
+// 游客也要看得到（点击走登录引导），只对后台角色隐藏 —— 这些路由的 meta.roles 只认 USER
+const showUserEntries = computed(() => !isAdmin.value && !isCinema.value)
 
 const userAvatar = computed(() => {
   const avatar = user.value?.avatar

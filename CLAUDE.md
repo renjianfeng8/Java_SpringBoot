@@ -64,7 +64,7 @@ project_02/
 │   │       │   ├── common/config/
 │   │       │   │   ├── AuthInterceptor.java    # JWT 认证拦截器
 │   │       │   │   └── WebMvcConfig.java       # Web MVC 配置
-│   │       │   ├── controller/                 # 控制器层（20个）
+│   │       │   ├── controller/                 # 控制器层（21个，含 TicketController 取票大厅）
 │   │       │   ├── entity/                     # 实体类（16个）
 │   │       │   ├── mapper/                     # MyBatis Mapper（15个）
 │   │       │   ├── service/                    # 业务逻辑层（17个）
@@ -83,7 +83,7 @@ project_02/
 │   │   │   ├── router/index.js         # 路由配置 + 角色守卫
 │   │   │   ├── components/             # 通用组件
 │   │   │   │   ├── ErrorBoundary.vue   # 渲染异常兜底
-│   │   │   │   └── OrderPayDialog.vue  # 支付弹窗（选座页与订单页共用）
+│   │   │   │   └── OrderPayDialog.vue  # 支付弹窗（选座页与订单页共用；支付成功后就地切成取票凭证态）
 │   │   │   ├── composables/            # 组合式函数
 │   │   │   │   ├── useAuth.js          # 登录态 / 角色判断
 │   │   │   │   ├── useCrud.js          # 分页 CRUD 通用逻辑
@@ -102,7 +102,7 @@ project_02/
 │   │   │   │   ├── Front.vue           # 用户前台布局
 │   │   │   │   ├── Back.vue            # 影院后台布局
 │   │   │   │   ├── Manage.vue          # 管理后台布局
-│   │   │   │   ├── front/              # 12个用户端页面
+│   │   │   │   ├── front/              # 13个用户端页面（含取票大厅 Pickup.vue）
 │   │   │   │   ├── back/               # 7个影院端页面
 │   │   │   │   └── manage/             # 16个管理端页面
 │   │   │   └── assets/                 # 静态资源（css / imgs）
@@ -133,9 +133,10 @@ project_02/
 - **排片管理** — 创建放映场次（关联影片、影厅、时间、票价）；校验时间晚于当前、票价大于 0、同影厅时段不重叠
 - **在线选座** — 座位规模由影厅配置（`room.seat_rows` / `seat_cols`，默认 8×8）驱动的可视化选座图、选定下单；本人未支付锁座可继续支付或释放
 - **订单系统** — 购票下单、订单状态流转（待支付 → 待取票 → 已取票；待支付可取消或超时自动取消；待取票可退票 → 已退票）、支付与退款资金凭证留痕；订单留存**单价快照**（`ordered.unit_price`），场次改价不影响历史订单
+- **取票与取票大厅** — 支付成功即生成**取票码**（`ordered.pickup_code`，一单一码，`XXXX-XXXX`）；前台「取票大厅」模拟影院自助机，凭码核销出票（待取票 → 已取票）。该核销端点**免登录**（码本身即凭证），有效期到放映结束，用过/退票/取消即失效，均由订单状态派生
 - **账户与资金** — 用户账户余额（`user.balance`）、充值单据（处理中 → 已完成/已失败）、资金流水账本（充值/购票/退票三类来源，记录变动前后余额与关联单据ID）。**购票为余额支付**：支付时校验余额并原子扣减，余额不足则订单保持待支付、座位继续锁定；退票时金额退回余额。不接第三方支付渠道，充值由「提交单据 + 模拟支付回调」两步完成
-- **评价系统** — 已取票用户在订单页对影片评分 + 评语（一人一片一条，可修改）；评价均分回写 `film.score` 并驱动评分榜；影片详情页公开展示评价列表
-- **排行榜** — 票房榜 Top10（按 `ordered` 实时聚合的累计售票收入）、评分榜 Top5（按 `film.score`，即该片评价均分）
+- **评价系统** — **已取票**用户在订单页对影片评分 + 评语（一人一片一条，可修改）；评价均分回写 `film.score` 并驱动评分榜；影片详情页公开展示评价列表
+- **排行榜** — 票房榜 Top10（按 `ordered` 实时聚合的累计售票收入）、评分榜 Top5（按 `film.score`，即该片评价均分）；前台首页另展示「今日票房」（今天支付的售票收入合计，匿名可读）
 - **搜索筛选** — 按影片名称、类型、年份、地区多维筛选
 - **文件上传** — 图片/视频上传，支持本地存储（MIME 白名单校验）
 
@@ -164,7 +165,9 @@ project_02/
 
 > 匿名 GET 访问 `/api/v1/films`、`/api/v1/cinemas`、`/api/v1/types`、`/api/v1/areas`、`/api/v1/notices`、`/api/v1/actors`、`/api/v1/records`、`/api/v1/marks` 等公开资源无需认证，由 AuthInterceptor 自动放行。写操作（POST/PUT/DELETE）仍需登录；**令牌失效时公开只读资源仍按匿名放行**，否则前端 401 处理会把游客从公开页踢去登录页。
 
-> `marks` 的写操作有额外规则（在 `MarkController` 内校验，拦截器只做前缀级判断）：发表评价仅限 USER 且评价人取自 JWT；修改/删除仅限本人，ADMIN 可管理全部。
+> **唯一的匿名写入口**是取票大厅核销 `POST /api/v1/tickets/redeem`（`AuthInterceptor.ANONYMOUS_WRITE_EXACT`，**精确路径 + 仅 POST**，不是前缀）。自助机不认识用户、只认取票码，所以它必须免登录；安全性由"码本身即凭证"保证，逐条论证见 `TicketController` 的类注释 —— 新增任何匿名写端点都必须同样能回答那五个问题。
+
+> `marks` 的写操作有额外规则（在 `MarkController` 内校验，拦截器只做前缀级判断）：发表评价仅限 USER 且评价人取自 JWT；修改/删除仅限本人，ADMIN 可管理全部。**且发表评价要求该用户对该影片有 `已取票` 订单**（`OrderedMapper.countPickedUpByUserAndFilm`，在 `MarkService.add` 内校验）—— 这条此前只有前端按钮在守，服务端不校验，等于任何登录用户能给没买过票的影片打分。
 > `cinemas` 的公开列表只返回 `已审核` 影院，管理员（含后台审核列表）返回全部；新增影院仅管理员可用，初始状态固定为 `未审核`。
 
 ### 资源管理接口 (`/api/v1/{resources}`)
@@ -184,11 +187,13 @@ project_02/
 | 路径 | 方法 | 说明 |
 |------|------|------|
 | `/api/v1/films/box-office/top` | GET | 票房排行榜 Top10（按 `ordered` 实时聚合，只统计已支付；无售票的影片不上榜） |
+| `/api/v1/films/box-office/today` | GET | 今日票房：今天支付的售票收入合计 + 统计时刻（`{total, updatedAt}`）；**匿名可读**，前台首页展示 |
 | `/api/v1/films/mark/top` | GET | 评分排行榜 Top5 |
 | `/api/v1/films/search` | GET | 按标题搜索电影 |
 | `/api/v1/films/by-cinema` | GET | 按影院查询电影 |
 | `/api/v1/cinemas/page` | GET | 影院分页（支持按电影筛选）；匿名/非管理员只返回 `已审核` 影院，管理员返回全部（否则后台审核列表查不到待审核影院） |
 | `/api/v1/statistics/overview` | GET | 后台可视化大盘（影院状态分布 + 影片类型分布，数据库实时聚合；仅 ADMIN） |
+| `/api/v1/tickets/redeem` | POST | **取票大厅核销**：入参只有 `{code}`（没有 orderId），订单 待取票 → 已取票；返回出票凭条（不含 orderId/订单号/金额/userId）。**全站唯一免登录写接口**，见上方说明 |
 | `/api/v1/files/upload` | POST | 文件上传（图片/视频） |
 
 ### 订单状态机接口（`/api/v1/orders/**`）
@@ -200,8 +205,10 @@ project_02/
 | `/api/v1/orders/seats` | GET | 查询某场次占用中的座位（`{seat, mine}` 投影；仅本人订单附带 orderId/金额/倒计时） | 登录用户 |
 | `/api/v1/orders/{id}/pay` | PUT | 支付待支付订单；超时则取消并返回 409 | 订单归属方 |
 | `/api/v1/orders/{id}/cancel` | PUT | 取消待支付订单 | 订单归属方 |
-| `/api/v1/orders/{id}/pickup` | PUT | 取票（待取票 → 已取票） | ADMIN / CINEMA |
+| `/api/v1/orders/{id}/pickup` | PUT | 取票（待取票 → 已取票）；这是**影院柜台的员工通路**，用户的自助通路是 `/api/v1/tickets/redeem` | ADMIN / CINEMA |
 | `/api/v1/orders/{id}/refund` | PUT | 退票（待取票 → 已退票，需放映前 60 分钟以上） | 订单归属方 |
+
+> 上面两条是同一个状态迁移的两个入口：柜台的 `pickup` 与自助机的 `redeem`，共用「待取票 → 已取票」这一条边，前端 `OrderPayDialog` 支付成功后展示取票码并给「去取票大厅」入口。
 
 ### 账户与资金接口（`/api/v1/account/**` · `/api/v1/recharges/**` · `/api/v1/fund-flows/**`）
 
@@ -224,15 +231,17 @@ home, admin, user, cinema, type, area, film, actor, notice, room, record, ordere
 ### 影院后台 (`/back/*`) — 7个页面
 home, film, room, record, ordered, person, password
 
-### 用户前台 (`/front/*`) — 13个页面（公开浏览模式）
+### 用户前台 (`/front/*`) — 14个页面（公开浏览模式）
 系统支持公开访问，无需登录即可浏览电影、影院、排行榜等公开内容。根路径 `/` 自动重定向到 `/front/home`。
 
 | 访问模式 | 路由 | 说明 |
 |----------|------|------|
-| 公开访问（无需登录） | home, movie, filmDetail/:id, cinema, cinemaDetail/:id, filmCinema/:id, rank, search | 浏览类页面，无需认证 |
+| 公开访问（无需登录） | home, movie, filmDetail/:id, cinema, cinemaDetail/:id, filmCinema/:id, rank, search, **pickup** | 浏览类页面 + **取票大厅**（自助机口径，凭取票码核销，所以刻意不要求登录，导航也对游客可见） |
 | 需登录（USER） | buyTicket, orders, account, person, password | 操作类页面，未登录时弹框提示跳转登录 |
 
 访问受保护页面时，系统弹出确认框 → 跳转 `/login?redirect=<原路径>` → 登录成功后自动回跳。登录页根据角色（USER/CINEMA/ADMIN）分别跳转 `/front/home`、`/back/home`、`/manage/home`。
+
+购票闭环：选座页支付成功后 `OrderPayDialog` **不关闭**，就地切成「购票成功」凭证态显示取票码（`GET /api/v1/orders/{id}` 回查，含后端 join 的影片/影院/影厅名）并给「去取票大厅」；此后可在 `orders` 页 `待取票` 行的展开区再次查看取票码。
 
 评价闭环：`orders` 页对 `已取票` 的订单提供「去评价 / 修改评价」（弹窗内评分 + 评语）；`filmDetail/:id`（公开页）展示该片的评价列表，匿名可读。
 
@@ -258,6 +267,8 @@ SOURCE xm_film/sql/data.sql;
 > 账户余额/充值单据/资金流水/订单单价需要 `migration-20260928-p4-account-wallet.sql`，
 > 未执行该脚本时账户页与余额支付会报表不存在。
 > 废弃 `film.box_office` 静态票房需要 `migration-20260929-deprecate-box-office.sql`；
+> 取票码需要 `migration-20260929-pickup-code.sql`（加 `ordered.pickup_code` 唯一列，并给存量
+> `待取票` 订单补码 —— 不补的话升级前已支付的订单在取票大厅查不到）；
 > 存量库里的演示场次/订单/评价请用 `scripts/seed-demo-data.py` 清理与重建（按演示账号边界删除，不靠猜 id）。
 
 ### 2. 启动后端
@@ -303,7 +314,7 @@ npm run dev
 3. **文件存储**：当前为本地存储，建议生产环境迁移至 OSS（阿里云/S3）
 4. **日志配置**：✅ 已切换为 SLF4J + Logback，`logback-spring.xml` 按 mapper 包级别控制 SQL 日志（可通过 `MYBATIS_LOG_LEVEL` 环境变量调整）
 5. **API 文档**：✅ 已集成 SpringDoc OpenAPI —— `SwaggerConfig` 定义 OpenAPI Bean 与全局 Bearer 鉴权方案，控制器标注 `@Tag`/`@Operation`，规范端点 `/v3/api-docs`，UI 页面 `static/swagger-ui.html`（swagger-ui 资源走 CDN，离线环境需改用 `springdoc-openapi-starter-webmvc-ui` 本地内嵌）
-6. **单元测试**：✅ 已覆盖 13 个测试类 / 154 个用例 —— Service 层 CRUD 与权限（Admin/User/Cinema/Film/Ordered/Mark）、订单状态机（支付超时/退票窗口/座位边界与单笔上限）、评价规则（评分区间/一人一片去重/均分回写/归属不可转移）、影院审核与可见性下推、订单座位并发冲突、AuthInterceptor 访问边界（含令牌失效与匿名放行）、全局异常处理；**账户资金**（余额足额/不足扣减、退款入账、金额非正拒绝、流水前后余额与关联单据）、**充值单据状态机**（提交不改余额、回调成功/失败、重复回调被拒、金额上限、跨用户回调被拒）、**订单删除守卫**按状态拒绝；`mvn test` 可复现
+6. **单元测试**：✅ 已覆盖 13 个测试类 / 173 个用例 —— Service 层 CRUD 与权限（Admin/User/Cinema/Film/Ordered/Mark）、订单状态机（支付超时/退票窗口/座位边界与单笔上限）、评价规则（评分区间/一人一片去重/均分回写/归属不可转移/**未取票不得评价**）、影院审核与可见性下推、订单座位并发冲突、AuthInterceptor 访问边界（含令牌失效与匿名放行、**匿名写白名单的三处收窄**）、全局异常处理；**账户资金**（余额足额/不足扣减、退款入账、金额非正拒绝、流水前后余额与关联单据）、**充值单据状态机**（提交不改余额、回调成功/失败、重复回调被拒、金额上限、跨用户回调被拒）、**订单删除守卫**按状态拒绝、**取票码核销**（一次性/退票作废/过场作废/未支付拒绝/并发抢核销/输入归一化）；`mvn test` 可复现。**今日票房的 SQL 谓词与取票码/核销的全链路 Mockito 测不到**（打桩后测的是桩，不是谓词、不是唯一索引、不是状态条件更新），这两块必须另在「备用端口 + 临时库」上打真实库验证，单测覆盖不到它们
 7. **前端构建**：生产构建后建议接入 CDN 分发静态资源
 8. **CI/CD**：✅ 已配置 GitHub Actions 流水线（后端编译 → 前端构建）
 9. **错误边界**：前端可引入 Vue ErrorBoundary 机制处理渲染异常
@@ -346,18 +357,25 @@ npm run dev
 ## Current Architecture Notes
 
 - Authentication state is centralized in `xm_film/vue/src/utils/authStorage.js`; router guards, Axios token injection, password pages, profile pages, and ticket purchase use the same storage helpers.
+- Cross-shell entry lives in the top-right user area of each shell, as an explicit button: the front header renders 「管理后台」 for ADMIN/CINEMA (→ `/manage/home` or `/back/home`), and both back shells render 「前台首页」 (→ `/front/home`, never `router.back()` — an admin lands straight on their own backend home). Any entry rendered by a shell must match the route's `meta.roles`, because `Front.vue` gates 「购票记录」/「我的账户」/「个人中心」/「修改密码」 on `showUserEntries` (`!isAdmin && !isCinema`, so guests still see them and get the login prompt) — those routes are `roles: ['USER']`, and the backend side genuinely does not serve other roles (`/account/summary` is USER-only). Hiding is the fix; granting access is not. Standard: 《标准前端视觉与交互设计规范》§6.5. 同理，`取票大厅`（`/front/pickup`，`meta.guest`）**刻意不挂在 `showUserEntries` 下** —— 它是自助机口径、免登录，游客也必须能进，加上 `v-if` 就等于把唯一的自助取票通路藏起来。
+
 - Backend password changes trust the JWT-derived request role instead of the request body role.
 - `AuthInterceptor` enforces role boundaries for admin-only resources and write operations on protected resources.
 - Database relations now use explicit keys for the main booking path: `room.cinema_id`, `record.film_id`, and `ordered.record_id`; `xm_film/sql` is the single source of truth for both schema and seed data.
 - Film type/area display reads backend-resolved fields only: `areaName` (SQL `LEFT JOIN area`) and `typeList` (filled by `FilmService.fillFilmTypes` from `film_type`). `Film` has no `types` field — do not reintroduce frontend type/area dictionaries.
 - 票房口径只有一个来源：后端按 `ordered` 实时聚合的「本系统累计售票收入」（`FilmMapper.xml` 的 `filmRevenueJoin`，只统计 `待取票/已取票`），单位是**元**，前端 `utils/format.js` 只做格式化。`film.box_office` 静态列已废弃、恒为 0（`migration-20260929-deprecate-box-office.sql` 清零存量值并改列注释）。**`filmRevenueJoin` 的状态集合与 `OrderedMapper` 的占座判定同源**，新增改变"是否已支付"的状态时两处必须同步。
+- 「今日票房」是同一口径的日期切片：`OrderedMapper.selectTodayPaidRevenue` 按 **`pay_time` 取日**（收款日，不是 `ordered.start` 放映日 —— 本系统是提前购票，按放映日聚合会让「今日」长期恒为 0），状态集合与前一条**同源**，因此它必然 ≤ 累计票房。它挂在 `GET /api/v1/films/box-office/today`（`/api/v1/films` 已在 `PUBLIC_READ_PREFIXES` 内，**没有为它新增任何放行规则**），返回 `{total, updatedAt}`，日期边界与统计时刻都由库时钟在同一条 SQL 里给出。**空集上 SUM 为 0 是真实值，前端因此用 `formatYuan` 渲染 `0.00元` 而不是「暂无数据」** —— `formatBoxOffice` 把 0 当缺失值，两者不可混用。
 - Status tag colors are centralized in `xm_film/vue/src/constants/index.js` (`FILM_STATUS_MAP`/`getFilmStatusType`, `ORDER_STATUS_MAP`/`getOrderStatusType`, `RECORD_STATUS_MAP`/`getRecordStatusType`, `CINEMA_STATUS_MAP`/`getCinemaStatusType`); views import them instead of re-declaring the switch.
 - 影院"上映哪些影片"由排片 `record` 派生（`FilmMapper.selectByCinema` / `CinemaMapper.selectByFilmId` 用 `EXISTS` 子查询）。**不存在影院-影片关联表**（原 `cinema_film` 已删除）——新建排片后前台立即可见，不要再引入第二张关联表。`record.film_id` 为 `NOT NULL`。
 - 场次可购票性由 `start` 与 `status` 共同决定，唯一权威实现在 `RecordService.isPurchasable`（`start` 晚于当前 且 `status != 停售`）；`OrderedService.insertOrder` 复用该规则做下单拦截，前端 `CinemaDetail.vue` 的 `recordState()`/`canBuy()` 与之同构。`未开始/放映中/已结束` 是派生状态，不落库；`record.status` 只保留 `正常/停售` 一个人工开关。
 - 排片的创建/编辑统一走 `RecordController` → `RecordService.validateSchedule(record, previousStart)`：校验影厅与影片归属、`start` 晚于当前（编辑时时间未改动则不重复校验，保证存量过期场次仍可停售）、`price > 0`、同影厅时段不重叠（按影片片长计算区间，无片长时按 120 分钟兜底），并按 `filmId` 回填 `title`。
 - 父数据禁止物理删除：`ordered` 的 5 个外键、`record` 的 3 个外键、`room.cinema_id` 均为 `ON DELETE RESTRICT`；Film/Cinema/Room/Record/User 五个删除入口先做引用计数校验并返回可读提示。下架影片/场次请改 `status`，不要删除。
 - `/api/v1/records` 在 `AuthInterceptor.PUBLIC_READ_PREFIXES` 内（匿名 GET 放行），因为公开的影院详情页需要拉取场次列表。
-- 订单状态机只有一条合法路径：`待支付 → 待取票 → 已取票`，旁支为 `待支付 →（取消/超时）已取消` 与 `待取票 →（退票）已退票`。`OrderedService.updateScoped` 拒绝通用 PUT，状态只能经 `payOrder`/`cancelOrder`/`pickupOrder`/`refundOrder` 迁移。前端 `ORDER_STATUS_MAP` 是状态色的唯一来源，筛选下拉由 `ORDER_STATUS_OPTIONS` 从同一 map 派生，避免筛选项与状态脱节。
+- 订单状态机只有一条合法路径：`待支付 → 待取票 → 已取票`，旁支为 `待支付 →（取消/超时）已取消` 与 `待取票 →（退票）已退票`。`OrderedService.updateScoped` 拒绝通用 PUT，状态只能经 `payOrder`/`cancelOrder`/`pickupOrder`/`redeemByCode`/`refundOrder` 迁移。前端 `ORDER_STATUS_MAP` 是状态色的唯一来源，筛选下拉由 `ORDER_STATUS_OPTIONS` 从同一 map 派生，避免筛选项与状态脱节。
+- **取票码（`ordered.pickup_code`）没有自己的有效/失效状态**，可用性完全派生自订单状态：核销只接受 `status = '待取票'`（`OrderedMapper.markPickedUpByCode` 的状态条件更新）。这一个谓词同时实现了「一单一码」「用过即废」「退票/取消作废」「没付款不出发」，因此**不要为它新增 `used` / `revoked` 之类的标记列** —— 那会引入需要人工同步的第二处真相。有效期到放映结束（`ordered.start` + `film.time`，片长缺失时按 `RecordService.DEFAULT_DURATION_MINUTES` 兜底），同样不落库。码在 `payOrder` 内与扣款同一事务生成，故未支付订单永远没有码。
+- 并发重复核销不靠悲观锁：读到的状态可能是 `待取票`，但写库走 `UPDATE ... WHERE status = '待取票'`，**受影响 0 行即判定为被人抢先**（`redeemByCode` 抛 409）。与余额扣减的 `UPDATE ... WHERE balance >= ?` 同一手法，改动时不要退回"先读后无条件写"。
+- 取票码的**生成字母表与输入校验刻意不同**：生成用 `ABCDEFGHJKMNPQRSTUVWXYZ23456789`（剔除 I/L/O/0/1，人工从手机抄到自助机上看不错），校验放宽到 `[A-Z0-9]` 并把输入归一成 `XXXX-XXXX` 再等值查（`OrderedService.normalizePickupCode`）—— 因为 `migration-20260929-pickup-code.sql` 给存量订单补的是含 0/1 的十六进制码，收窄校验会把它们挡在门外。归一后必须保持**等值**查询，写成 `WHERE REPLACE(pickup_code,'-','') = ?` 会让唯一索引失效。
+- 评价资格在服务端校验：`MarkService.add` 要求 `OrderedMapper.countPickedUpByUserAndFilm(userId, filmId) > 0`。**修改评价不重复校验**，因为 `已取票` 是终态（退票与删除都进不来），资格一旦成立不会被推翻。
 - 占用座位的判定只有一个出处：`OrderedMapper.countSeatInUse` / `selectActiveByRecordId`，状态集合为 `NOT IN ('已取消','已退票')`，且待支付订单仅在 `pending_timeout_at > NOW()` 时锁座。**新增任何"释放座位"的状态时，两处查询必须同步**，否则座位永远锁死。
 - `/api/v1/orders/seats` 对外返回的是投影 `SeatOccupancy`（`seat` + 后端按 JWT 算出的 `mine`），只有本人订单才带 `orderId`/`orders`/`total`/`pendingTimeoutAt`。**不要把 `Ordered` 实体直接回给这个端点** —— 那等于把该场次所有订单的订单号、`user_id`、金额发给任意登录用户（见 Bug.md BUG-040）。归属判定必须在后端做，前端只读 `mine`，不得再拿 `userId` 自己比对。
 - 支付超时不用异常表达：`OrderedService.payOrder` 返回 `PayResult.TIMEOUT_CANCELLED`，由控制器翻译为 409。原因是该方法带 `rollbackFor = Exception.class`，"先取消再抛异常"会把取消一起回滚，订单停在待支付（另见 Bug.md BUG-035）。

@@ -13,6 +13,7 @@ export const API_PATHS = {
   ORDERS: '/api/v1/orders',
   MARKS: '/api/v1/marks',
   VIDEOS: '/api/v1/videos',
+  TICKETS: '/api/v1/tickets',
   RECHARGES: '/api/v1/recharges',
   FUND_FLOWS: '/api/v1/fund-flows',
   STATISTICS: '/api/v1/statistics',
@@ -36,6 +37,8 @@ export const FILM_API = {
   SEARCH: `${API_PATHS.FILMS}/search`,
   BY_CINEMA: `${API_PATHS.FILMS}/by-cinema`,
   BOX_OFFICE_TOP: `${API_PATHS.FILMS}/box-office/top`,
+  // 今日票房：走 /api/v1/films 这个匿名只读前缀，首页游客也能拿到
+  BOX_OFFICE_TODAY: `${API_PATHS.FILMS}/box-office/today`,
   MARK_TOP: `${API_PATHS.FILMS}/mark/top`,
 }
 
@@ -47,6 +50,16 @@ export const ORDER_API = {
   PICKUP: (id) => `${API_PATHS.ORDERS}/${id}/pickup`,
   REFUND: (id) => `${API_PATHS.ORDERS}/${id}/refund`,
   SEATS: `${API_PATHS.ORDERS}/seats`,
+  // 单笔订单明细（含后端 join 出的影片/影院/影厅名与取票码），支付成功后取凭证用
+  DETAIL: (id) => `${API_PATHS.ORDERS}/${id}`,
+}
+
+/**
+ * 取票大厅：凭取票码核销出票。
+ * 这是全站唯一免登录的写接口 —— 自助机不认识用户，码本身就是凭证（见 TicketController）。
+ */
+export const TICKET_API = {
+  REDEEM: `${API_PATHS.TICKETS}/redeem`,
 }
 
 export const AUTH_API = {

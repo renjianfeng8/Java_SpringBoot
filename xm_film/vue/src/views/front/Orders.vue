@@ -20,6 +20,11 @@
                             :src="props.row.img"/>
                 </el-descriptions-item>
                 <el-descriptions-item label="订单号">{{props.row.orders}}</el-descriptions-item>
+                <!-- 取票码：支付成功时生成，在取票大厅凭它核销出票（终态订单没有码） -->
+                <el-descriptions-item label="取票码">
+                  <span v-if="props.row.pickupCode" class="pickup-code">{{ props.row.pickupCode }}</span>
+                  <span v-else>—</span>
+                </el-descriptions-item>
                 <el-descriptions-item label="用户名称">{{props.row.userName}}</el-descriptions-item>
                 <el-descriptions-item label="电影名称">{{props.row.filmName}}</el-descriptions-item>
                 <el-descriptions-item label="影院名称">{{props.row.cinemaName}}</el-descriptions-item>
@@ -81,6 +86,8 @@
               <el-button v-if="scope.row.status === '待支付'" link type="danger"
                          @click="() => continuePay(scope.row)">继续支付</el-button>
               <el-button v-if="scope.row.status === '待支付'" link type="warning" @click="() => cancelOrder(scope.row.id)">取消</el-button>
+              <el-button v-if="scope.row.status === '待取票'" link type="primary"
+                         @click="goPickupHall">去取票大厅</el-button>
               <el-button v-if="scope.row.status === '待取票'" link type="warning"
                          @click="() => refundOrder(scope.row)">退票</el-button>
               <el-button v-if="scope.row.status === '已取票'" link type="primary"
@@ -138,6 +145,7 @@
 
 <script setup lang="ts">
 import { reactive, ref } from "vue";
+import { useRouter } from "vue-router";
 import { Delete, Search } from "@element-plus/icons-vue";
 import request from "@/utils/request.js";
 import { ElMessage, ElMessageBox } from "element-plus";
@@ -172,6 +180,8 @@ interface Ordered {
   payAmount?: number;
   refundTime?: string;
   refundAmount?: number;
+  // 取票码（支付成功时由后端生成，一单一码；在取票大厅凭它核销出票）
+  pickupCode?: string;
   // 新增后端返回的关联字段
   userName?: string;
   filmName?: string;
@@ -187,6 +197,13 @@ const data = reactive({
   orders: null,
   status: undefined
 });
+
+const router = useRouter();
+
+// 待取票订单的取票入口：取票码在展开行的「取票码」一栏，到大厅凭码核销出票
+const goPickupHall = () => {
+  router.push('/front/pickup');
+};
 
 const load = () => {
   request.get(apiPage(API_PATHS.ORDERS), {
@@ -339,4 +356,11 @@ loadMyMarks()
 </script>
 
 <style scoped>
+/* 取票码要能一眼抄准：加大字号与字距，用承载文字的主色（前台 #BF352D，5.58:1） */
+.pickup-code {
+  font-size: var(--fs-md);
+  font-weight: var(--fw-bold);
+  letter-spacing: 1px;
+  color: var(--el-color-primary);
+}
 </style>

@@ -16,6 +16,8 @@
       </div>
 
       <div class="manage-header-right">
+        <el-button size="small" @click="navigateTo('/front/home')">前台首页</el-button>
+
         <el-dropdown trigger="click">
           <div class="user-info">
             <img :src="userAvatar" alt="用户头像" class="avatar">

@@ -56,6 +56,8 @@ const router = createRouter({
         { path: 'movie', meta: { guest: true, name: '电影列表' }, component: () => import('../views/front/Movie.vue') },
         { path: 'cinema', meta: { guest: true, name: '影院列表' }, component: () => import('../views/front/Cinema.vue') },
         { path: 'rank', meta: { guest: true, name: '排行榜' }, component: () => import('../views/front/Rank.vue') },
+        // 取票大厅是自助机口径：免登录，凭取票码核销（见后端 TicketController）
+        { path: 'pickup', meta: { guest: true, name: '取票大厅' }, component: () => import('../views/front/Pickup.vue') },
         { path: 'filmDetail/:id', meta: { guest: true, name: '电影详情' }, component: () => import('../views/front/FilmDetail.vue') },
         { path: 'filmCinema/:id', meta: { guest: true, name: '选择影院' }, component: () => import('../views/front/FilmCinema.vue') },
         { path: 'cinemaDetail/:id', meta: { guest: true, name: '影院详情' }, component: () => import('../views/front/CinemaDetail.vue') },
