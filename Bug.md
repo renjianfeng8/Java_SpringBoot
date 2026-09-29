@@ -12,6 +12,12 @@
 > 以及 `xm_film/vue/tests/` 下的前端守卫测试（`scripts/` 与 `xm_film/vue/tests/` 两个目录已随之删除）。
 > 以下历史条目中凡提及这些脚本的验证记录与结论均按当时情况原样保留，仅供追溯；
 > 其中与工具无关的经验（如"手写业务数据迟早露馅""Mockito 打桩测不到 SQL 谓词"等）仍然适用。
+>
+> **注**：项目中的增量迁移脚本已于 2026-09-29 整体移除 —— `xm_film/sql/migration-*.sql` 共 8 个文件
+> （自动建列、给存量订单回填取票码、收敛影院审核词表等）已从工作区删除，`xm_film/sql` 只保留
+> `schema.sql` / `data.sql` / `init.sql` 一条全新安装口径；已存在的库改为 `DROP DATABASE` 后重建
+> （见 `xm_film/sql/README.md`）。以下历史条目中凡提及这些迁移脚本的「相关文件」与验证记录均按
+> 当时情况原样保留，仅供追溯；需要脚本本身时用 `git log --all -- xm_film/sql/migration-*.sql` 取回。
 
 ## 提交规范
 

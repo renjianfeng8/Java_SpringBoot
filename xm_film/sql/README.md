@@ -4,15 +4,10 @@
 
 ```
 sql/
-├── schema.sql                               # 数据库表结构（17 张表的 CREATE TABLE 语句）
-├── data.sql                                 # 基础种子（不含场次/订单/评价，见「数据约定」）
-├── init.sql                                 # 一键初始化脚本（整合 schema + data）
-├── migration-20260927-delete-guard.sql      # 增量迁移（删除守卫 + 上映关系派生）
-├── migration-20260927-p2-seat-payment.sql   # 增量迁移（座位容量 + 订单资金凭证）
-├── migration-20260928-p3-review-score-cinema-audit.sql  # 增量迁移（评价数值评分 + 影院审核词表）
-├── migration-20260928-p4-account-wallet.sql # 增量迁移（账户余额 + 充值单据 + 资金流水 + 订单单价）
-├── migration-20260929-deprecate-box-office.sql  # 增量迁移（废弃 film.box_office 静态票房列）
-└── migration-20260929-mark-like.sql         # 增量迁移（评价点赞关系表 mark_like）
+├── schema.sql     # 17 张表全量建表语句（含所有列 —— 表结构的唯一权威）
+├── data.sql       # 基础种子（不含场次/订单/评价，见「数据约定」）
+├── init.sql       # 一键初始化（建库 + schema + data）—— 唯一受支持的入口
+└── README.md      # 本文件
 ```
 
 ## 使用方式
@@ -76,66 +71,29 @@ SOURCE data.sql;
 > `fund_flow.related_id` 指向 `recharge_order.id` 或 `ordered.id`（跨表二选一），故不建外键。
 > `record` / `ordered` / `mark` 三张表不预置种子数据，行一律由真实业务接口产生。
 
-## 增量迁移（已有数据库）
+## 已存在的数据库：重建，不做增量升级
 
-已初始化过的库不要重跑 `schema.sql` / `data.sql`（会与现有数据冲突），改用迁移脚本，按文件名日期顺序执行：
+本项目**不提供增量迁移脚本**，只维护「全新安装」一条口径：`schema.sql` 是 17 张表全量、含所有列的
+最终结构（包括 `ordered.pickup_code`、`mark_like`、`room.seat_rows/seat_cols`、钱包三表），
+`init.sql` 是唯一受支持的入口。对已经初始化过的库，正确做法是重建：
 
 ```bash
-mysql -u root -p --default-character-set=utf8mb4 xm-film < migration-20260927-delete-guard.sql
-mysql -u root -p --default-character-set=utf8mb4 xm-film < migration-20260927-p2-seat-payment.sql
-mysql -u root -p --default-character-set=utf8mb4 xm-film < migration-20260928-p3-review-score-cinema-audit.sql
-mysql -u root -p --default-character-set=utf8mb4 xm-film < migration-20260928-p4-account-wallet.sql
-mysql -u root -p --default-character-set=utf8mb4 xm-film < migration-20260929-deprecate-box-office.sql
-mysql -u root -p --default-character-set=utf8mb4 xm-film < migration-20260929-mark-like.sql
+mysql -u root -p -e "DROP DATABASE \`xm-film\`"
+cd xm_film/sql && mysql --default-character-set=utf8mb4 -u root -p < init.sql
 ```
 
-`migration-20260927-delete-guard.sql` 内容（幂等，可重复执行）：
+不必担心丢数据：`data.sql` 只播基础种子，`record`（场次）/ `ordered`（订单）/ `mark`（评价）/
+`mark_like`（点赞）的行一律由真实业务接口产生（前台下单 → 支付 → 取票 → 评价 → 点赞），
+本就不该有需要手工保住的内容。
 
-1. `room`/`record`/`ordered` 的外键删除动作统一改为 `RESTRICT` 并显式命名
-2. `record.film_id` 改为 `NOT NULL`
-3. `record.status` 旧词汇（待上映/已上映/停止上映）归一为 `正常/停售`
-4. 删除冗余表 `cinema_film`
+2026-09-29 之前，仓库为「已有库」另维护过 8 个 `migration-*.sql`（自动建列、给存量订单回填取票码、
+收敛影院审核词表等）。它们已被整体移除 —— 同时维护「全新安装」与「增量升级」两套口径，正是文档与
+脚本漂移的来源（当时本文件的脚本清单就已经漏掉了其中 2 个）。历史脚本仍可取回：
 
-`migration-20260927-p2-seat-payment.sql` 内容（幂等，可重复执行）：
+```bash
+git log --all --oneline -- xm_film/sql/migration-*.sql
+git show <commit>:xm_film/sql/migration-20260929-pickup-code.sql
+```
 
-1. `room` 新增 `seat_rows` / `seat_cols`（默认 8×8）
-2. `ordered` 新增 `pay_time` / `pay_amount` / `refund_time` / `refund_amount`
-3. `ordered.status` 词表补 `已退票`
-4. 为存量已支付订单（待取票/已取票）回填支付凭证，仅填充空值
-
-`migration-20260928-p3-review-score-cinema-audit.sql` 内容（幂等，可重复执行）：
-
-1. `mark` 新增 `score`（DECIMAL(3,1)，影片评分的唯一数值来源）
-2. `mark.mark` 语义由「评分/评语」收敛为「评语」并加宽到 `VARCHAR(255)`
-3. 回填存量评价：数字文本（如 `'9.5'`）搬进 `score`，原列改填评语；其余空评分按所属影片基线分补齐
-4. `film.score` 按 `mark.score` 均分回写（`EXISTS` 守卫：无评价的影片保留基线分，不归零）
-5. 影院审核词表收敛：`待审核` → `未审核`，种子影院 8 改为 `已审核`
-
-> 旧版第 4 步会往已有库灌入 51 条演示评价（镜像 `data.sql` 的评价种子）。`data.sql` 已移除评价种子，
-> 该步一并删除 —— 不删的话，这个迁移就成了唯一还会造出假评价的地方。演示评价只能由真实业务接口产生。
-
-> 迁移不会修改排片时间。若库中的 `record.start` 停留在过去，场次在前台会显示"已结束"且不可购票，
-> 需另行把场次时间调整到未来 —— `data.sql` 已不再预置场次，新库建完后经排片接口创建场次即可。
->
-> 已有影厅一律按 8×8 初始化 —— 这是旧规则下唯一合法的座位范围，因此存量订单的座位号必然落在新边界内。
-> 需要更大的厅，请到影院后台修改该厅的座位行列数（1~50）。
-
-`migration-20260929-deprecate-box-office.sql` 内容（幂等，可重复执行）：
-
-1. `film.box_office` 的残留值清零
-2. 更新该列注释，标明已废弃
-
-> 票房已改为按 `ordered` 实时聚合的累计售票收入（`FilmMapper.xml` 的 `filmRevenueJoin`，只统计 `待取票/已取票`），
-> 前端展示口径由「万元」改为**元**；`film.box_office` 不再被任何查询读取。
-> 本脚本刻意不删除 `record` / `ordered` / `mark` 的任何行 —— 存量库的演示数据请按演示账号边界手工清理（不靠猜 id），再经真实业务接口重建。
-
-`migration-20260929-mark-like.sql` 内容（幂等，可重复执行）：
-
-1. 新增评价点赞关系表 `mark_like`（`PRIMARY KEY (mark_id, user_id)`，两个外键均 `ON DELETE CASCADE`）
-
-> 用 `CREATE TABLE IF NOT EXISTS`，**不含任何 `DROP TABLE`** —— 脚本跑在活库上，DROP 会抹掉用户
-> 真实的点赞数据。全新安装以 `schema.sql` 为唯一来源（其中的 `mark_like` 与本脚本定义一致），
-> 本脚本只服务"已存在的库"；未执行时点赞接口报错 `mark_like` 表不存在。
-> 部署顺序：先上新代码，再执行本脚本。
-> 赞数**不落冗余计数列**：主键同时承担"一人一赞"与"可取消"，是赞数的唯一权威来源，
-> 冗余列会引入需要人工同步的第二处真相（与 `user.balance` 为唯一余额来源同一思路）。
+> 注意：这些历史脚本引用的 `scripts/seed-demo-data.py` 等本地工具脚本同样已删除，
+> 取回迁移脚本时不要照抄其中的命令。

@@ -104,13 +104,12 @@ project_02/
 │   │   │                               # global.css 全局重置 · admin-layout.scss 后台外壳
 │   │   │                               # auth-layout.scss 认证页外壳（登录/注册共用）
 │   │   │                               # admin-pages.scss / front-pages.scss 列表页共用骨架
-│   ├── sql/                           # 数据库初始化脚本
+│   ├── sql/                           # 数据库初始化（全新安装的唯一路径）
 │   │   ├── README.md                  # 数据库说明
-│   │   ├── schema.sql                 # 17张表建表语句
+│   │   ├── schema.sql                 # 17张表建表语句（含全部列，无补充脚本）
 │   │   ├── data.sql                   # 基础种子（管理员/用户/影院/影厅/影片/词表；
 │   │   │                              #   不含场次/订单/评价 —— 这三类由真实接口产生）
-│   │   ├── init.sql                   # 一键初始化入口
-│   │   └── migration-*.sql            # 增量迁移（已有库执行，幂等）
+│   │   └── init.sql                   # 一键初始化入口（建库 + schema + data）
 
 ## 核心模块说明
 
@@ -259,14 +258,12 @@ SOURCE xm_film/sql/schema.sql;
 SOURCE xm_film/sql/data.sql;
 ```
 
-> **已有数据库请勿重跑 `schema.sql`/`data.sql`**，改用增量迁移并按文件名日期顺序执行。
-> 账户余额/充值单据/资金流水/订单单价需要 `migration-20260928-p4-account-wallet.sql`，
-> 未执行该脚本时账户页与余额支付会报表不存在。
-> 废弃 `film.box_office` 静态票房需要 `migration-20260929-deprecate-box-office.sql`；
-> 取票码需要 `migration-20260929-pickup-code.sql`（加 `ordered.pickup_code` 唯一列，并给存量
-> `待取票` 订单补码 —— 不补的话升级前已支付的订单在取票大厅查不到）；
-> 评价点赞需要 `migration-20260929-mark-like.sql`（新增 `mark_like` 关系表，`CREATE TABLE IF NOT EXISTS`
-> 幂等、不含 `DROP`）；未执行该脚本时点赞报错 `mark_like` 表不存在（先上新代码再跑脚本）。
+> **`init.sql` 是唯一的初始化路径**（建库 + `schema.sql` + `data.sql`）：`schema.sql` 已含全部 17 张表
+> 与所有列（包括 `ordered.pickup_code`、`mark_like`、`room.seat_rows/seat_cols`、钱包三表），
+> 不存在需要补执行的脚本。此前为「已有库」维护的 `sql/migration-*.sql` 已于 2026-09-29 整体移除
+> （历史脚本可取回：`git log --all -- xm_film/sql/migration-*.sql`）。
+> **已存在的库请重建**，不要试图增量升级：`DROP DATABASE \`xm-film\`;` 后重跑 `init.sql` 即可 ——
+> 旧库里的场次/订单/评价/点赞本就只能经真实业务接口产生，没有需要保住的手工数据。
 > 存量库里的演示场次/订单/评价不要手工 `INSERT` 补 —— 手写交易数据（单号、单价快照、支付凭证、余额扣减、资金流水）任意一处对不上就是可被查出的假数据，只能经真实业务接口重新产生（前台下单 → 支付 → 取票 → 评价）。
 
 ### 2. 启动后端
@@ -361,7 +358,7 @@ npm run dev
 - `AuthInterceptor` enforces role boundaries for admin-only resources and write operations on protected resources.
 - Database relations now use explicit keys for the main booking path: `room.cinema_id`, `record.film_id`, and `ordered.record_id`; `xm_film/sql` is the single source of truth for both schema and seed data.
 - Film type/area display reads backend-resolved fields only: `areaName` (SQL `LEFT JOIN area`) and `typeList` (filled by `FilmService.fillFilmTypes` from `film_type`). `Film` has no `types` field — do not reintroduce frontend type/area dictionaries.
-- 票房口径只有一个来源：后端按 `ordered` 实时聚合的「本系统累计售票收入」（`FilmMapper.xml` 的 `filmRevenueJoin`，只统计 `待取票/已取票`），单位是**元**，前端 `utils/format.js` 只做格式化。`film.box_office` 静态列已废弃、恒为 0（`migration-20260929-deprecate-box-office.sql` 清零存量值并改列注释）。**`filmRevenueJoin` 的状态集合与 `OrderedMapper` 的占座判定同源**，新增改变"是否已支付"的状态时两处必须同步。
+- 票房口径只有一个来源：后端按 `ordered` 实时聚合的「本系统累计售票收入」（`FilmMapper.xml` 的 `filmRevenueJoin`，只统计 `待取票/已取票`），单位是**元**，前端 `utils/format.js` 只做格式化。`film.box_office` 静态列已废弃、恒为 0（列注释已标明废弃，取值不被任何查询读取）。**`filmRevenueJoin` 的状态集合与 `OrderedMapper` 的占座判定同源**，新增改变"是否已支付"的状态时两处必须同步。
 - 「今日票房」是同一口径的日期切片：`OrderedMapper.selectTodayPaidRevenue` 按 **`pay_time` 取日**（收款日，不是 `ordered.start` 放映日 —— 本系统是提前购票，按放映日聚合会让「今日」长期恒为 0），状态集合与前一条**同源**，因此它必然 ≤ 累计票房。它挂在 `GET /api/v1/films/box-office/today`（`/api/v1/films` 已在 `PUBLIC_READ_PREFIXES` 内，**没有为它新增任何放行规则**），返回 `{total, updatedAt}`，日期边界与统计时刻都由库时钟在同一条 SQL 里给出。**空集上 SUM 为 0 是真实值，前端因此用 `formatYuan` 渲染 `0.00元` 而不是「暂无数据」** —— `formatBoxOffice` 把 0 当缺失值，两者不可混用。
 - Status tag colors are centralized in `xm_film/vue/src/constants/index.js` (`FILM_STATUS_MAP`/`getFilmStatusType`, `ORDER_STATUS_MAP`/`getOrderStatusType`, `RECORD_STATUS_MAP`/`getRecordStatusType`, `CINEMA_STATUS_MAP`/`getCinemaStatusType`); views import them instead of re-declaring the switch.
 - 表格的**操作列必须显式写 `width`**：`el-table` 给未指定宽度的列按 `minWidth || 80` 起算再均分富余空间，列多的表里操作列只会拿到 ~80px，两个文字按钮（`继续支付 + 取消` 需 104px）必然折行；而 EP 的按钮间距是 `.el-button + .el-button { margin-left: 12px }`，**折行不改变它**，第二个按钮被右推 12px，两行就左右错开（BUG-049）。多按钮格套 `front-pages.scss` 的 `.row-actions`（flex + gap，并把该 margin 中和为 0）。加宽所需像素从"内容本就不需要 80px"的列上让出（展开列、2 字表头的列），**不要让表格最小总宽上涨** —— 否则窄视口凭空多出横向滚动条。
@@ -373,7 +370,7 @@ npm run dev
 - 订单状态机只有一条合法路径：`待支付 → 待取票 → 已取票`，旁支为 `待支付 →（取消/超时）已取消` 与 `待取票 →（退票）已退票`。`OrderedService.updateScoped` 拒绝通用 PUT，状态只能经 `payOrder`/`cancelOrder`/`pickupOrder`/`redeemByCode`/`refundOrder` 迁移。前端 `ORDER_STATUS_MAP` 是状态色的唯一来源，筛选下拉由 `ORDER_STATUS_OPTIONS` 从同一 map 派生，避免筛选项与状态脱节。
 - **取票码（`ordered.pickup_code`）没有自己的有效/失效状态**，可用性完全派生自订单状态：核销只接受 `status = '待取票'`（`OrderedMapper.markPickedUpByCode` 的状态条件更新）。这一个谓词同时实现了「一单一码」「用过即废」「退票/取消作废」「没付款不出发」，因此**不要为它新增 `used` / `revoked` 之类的标记列** —— 那会引入需要人工同步的第二处真相。有效期到放映结束（`ordered.start` + `film.time`，片长缺失时按 `RecordService.DEFAULT_DURATION_MINUTES` 兜底），同样不落库。码在 `payOrder` 内与扣款同一事务生成，故未支付订单永远没有码。
 - 并发重复核销不靠悲观锁：读到的状态可能是 `待取票`，但写库走 `UPDATE ... WHERE status = '待取票'`，**受影响 0 行即判定为被人抢先**（`redeemByCode` 抛 409）。与余额扣减的 `UPDATE ... WHERE balance >= ?` 同一手法，改动时不要退回"先读后无条件写"。
-- 取票码的**生成字母表与输入校验刻意不同**：生成用 `ABCDEFGHJKMNPQRSTUVWXYZ23456789`（剔除 I/L/O/0/1，人工从手机抄到自助机上看不错），校验放宽到 `[A-Z0-9]` 并把输入归一成 `XXXX-XXXX` 再等值查（`OrderedService.normalizePickupCode`）—— 因为 `migration-20260929-pickup-code.sql` 给存量订单补的是含 0/1 的十六进制码，收窄校验会把它们挡在门外。归一后必须保持**等值**查询，写成 `WHERE REPLACE(pickup_code,'-','') = ?` 会让唯一索引失效。
+- 取票码的**生成字母表与输入校验刻意不同**：生成用 `ABCDEFGHJKMNPQRSTUVWXYZ23456789`（剔除 I/L/O/0/1，人工从手机抄到自助机上看不错），校验放宽到 `[A-Z0-9]` 并把输入归一成 `XXXX-XXXX` 再等值查（`OrderedService.normalizePickupCode`）—— 生成收窄、输入放宽是刻意的：历史上给存量订单补过含 0/1 的十六进制码，收窄校验会把那批码挡在门外。归一后必须保持**等值**查询，写成 `WHERE REPLACE(pickup_code,'-','') = ?` 会让唯一索引失效。
 - **柜台取票（`pickupOrder`）只放行 `CINEMA`，且必须是白名单写法**（`if (!"CINEMA".equals(role))`）。取票记录的是"影院把票交到顾客手里"这一物理事实，能如实断言的只有放映该场次的影院；`ADMIN` 在 `ensureOrderAccess` 里不受 `cinemaId` 约束，放行它等于"一键把任意用户的票记为已取"，而该方法**不记录操作人**、事后无法追溯，又因 `已取票` 是终态而毫无纠错用途（Bug.md BUG-050）。写成 denylist（"拒 USER"）会让新增角色静默继承取票能力 —— 与 `MarkService` 那轮"只有前端按钮在守"是同一种漏。`manage/Ordered.vue` 因此也没有取票按钮，权限落点在服务端而不是按钮可见性。用户通路只有免登录的 `redeemByCode`。
 - 评价资格在服务端校验：`MarkService.add` 要求 `OrderedMapper.countPickedUpByUserAndFilm(userId, filmId) > 0`。**修改评价不重复校验**，因为 `已取票` 是终态（退票与删除都进不来），资格一旦成立不会被推翻。
 - 占用座位的判定只有一个出处：`OrderedMapper.countSeatInUse` / `selectActiveByRecordId`，状态集合为 `NOT IN ('已取消','已退票')`，且待支付订单仅在 `pending_timeout_at > NOW()` 时锁座。**新增任何"释放座位"的状态时，两处查询必须同步**，否则座位永远锁死。
@@ -382,7 +379,7 @@ npm run dev
 - 金额字段必须是包装类型：`ordered.total` 为 `Double` 而非 `double`。`updateById` 用 `<if test="total != null">` 守卫，原始类型永远非 null，会让支付/取票/取消等局部更新把金额写成 0.00（另见 Bug.md BUG-034）。
 - 选座图的座位来源是 `record.roomSeatRows` / `roomSeatCols`（`RecordMapper` 从 `room` 表 JOIN 出来），而不是写死的 8×8，也不是让用户端去读 `/api/v1/rooms`（USER 无权访问影厅接口）。后端座位合法性校验同样按影厅边界，单笔订单座位数上限 6（`OrderedService.MAX_SEATS_PER_ORDER`）。
 - 影厅的 `title`（影院名称）由后端按所属影院记录派生，前端不再手填；`back/Room.vue` 的影院名是只读展示。影厅 `seat_rows`/`seat_cols` 合法区间为 1~50，由 `RoomController.validateSeatLayout` 兜底。
-- 影片评分只有一个数值来源：`mark.score`（`DECIMAL(3,1)`，0~10）。`film.score` 是派生缓存，由 `MarkService` 在评价增删改后经 `FilmMapper.recalculateScore` 回写；无评价时保留基线分、**不归零**（`data.sql` 已不再预置评价，种子影片的 `score` 就是它的基线分本身；老库由 `migration-20260928-p3` 的同一条 `EXISTS` 守卫规则收敛）。评价唯一性由 `MarkMapper.countByUserAndFilm` 保证（一人一片一条），评价人只认 JWT 里的 `userId`。前端「去评价」入口在 `front/Orders.vue`（仅 `已取票` 订单，点击跳影评页），`front/FilmDetail.vue` 展示热评（该赞序前 3 条）、完整列表在 `front/FilmMarks.vue`。
+- 影片评分只有一个数值来源：`mark.score`（`DECIMAL(3,1)`，0~10）。`film.score` 是派生缓存，由 `MarkService` 在评价增删改后经 `FilmMapper.recalculateScore` 回写；无评价时保留基线分、**不归零**（`data.sql` 已不再预置评价，种子影片的 `score` 就是它的基线分本身）。评价唯一性由 `MarkMapper.countByUserAndFilm` 保证（一人一片一条），评价人只认 JWT 里的 `userId`。前端「去评价」入口在 `front/Orders.vue`（仅 `已取票` 订单，点击跳影评页），`front/FilmDetail.vue` 展示热评（该赞序前 3 条）、完整列表在 `front/FilmMarks.vue`。
 - 影院审核状态词表 `CinemaStatus` 只有 `未审核`/`已审核`（与 `schema.sql` 默认值、`data.sql` 种子一致）。`CinemaService.login` 拒绝未审核影院；公开列表经 `CinemaMapper.selectByFilmId` 的 `approvedOnly` 过滤，该标记由 `CinemaController` 按 `!isAdmin()` 传入 —— 管理员必须看得到未审核的，否则无法审核（见 Bug.md BUG-036）。
 - `WebMvcConfig.excludePathPatterns` 是**角色盲区**：被排除的路径不执行 `AuthInterceptor`，request 上没有 `role`/`userId`，控制器里的角色判断会静默失效（BUG-036 即由此而来）。公开访问统一交给 `PUBLIC_READ_PREFIXES`，**不要往排除表里加路径**。
 - 令牌失效时公开只读资源仍按匿名放行（`AuthInterceptor.isAnonymousRead`）。否则游客带着过期令牌浏览公开页会被判 401，而前端 `request.js` 的 401 处理会跳登录页 —— 公开内容就变成了事实上的必须登录。
@@ -392,7 +389,7 @@ npm run dev
 - 金额字段一律 `BigDecimal`（`user.balance` / `recharge_order.amount` / `fund_flow.change_amount` 等），前端展示经 `Number(...).toFixed(2)`。`ordered.total`/`unit_price` 仍是 `Double`/`BigDecimal`，历史原因不同，新增资金字段不要再用 `double`。
 - 充值单据状态机只有三个状态、两条边：`处理中 → 已完成`（回调成功，入账）、`处理中 → 已失败`（回调失败，余额不变）。**终态不可再流转**，重复回调返回业务冲突——这是幂等的唯一实现，新增任何充值入口都必须复用 `RechargeService.handleCallback`。
 - 订单物理删除只允许终态废单（`已取消` / `已退票`），白名单在 `OrderedService.DELETABLE_STATUSES`，前端三端按钮由 `constants.isOrderDeletable` 同构渲染。**这是"删订单当免费退票用"的后门**：退票能回款而删除不能，一旦放开已支付订单的删除，资金账就永远对不平。
-- 演示账号 `zhangsan` 预置 100 元余额（`data.sql` 与 `migration-20260928-p4-account-wallet.sql` 保持一致）。余额不足的演示路径由"连买几张高价票"自然触发，不需要额外的穷账号。
+- 演示账号 `zhangsan` 预置 100 元余额（`data.sql` 是唯一出处）。余额不足的演示路径由"连买几张高价票"自然触发，不需要额外的穷账号。
 - **`data.sql` 不预置交易类数据**：`record`（场次）/ `ordered`（订单）/ `mark`（评价）一律由真实业务接口产生。手写的订单必须同时伪造订单号、单价快照、支付凭证、余额扣减与资金流水 —— 老种子正是如此（`unit_price` 全为 NULL、`fund_flow` 里没有对应购票记录、`zhangsan` 余额未因那条 42 元订单扣减、单号是 12 位纯数字而真实单号是 `yyyyMMdd` + 8 位十六进制），一查就露。**要演示数据只能经真实业务接口生成**（前台下单 → 支付 → 取票 → 评价），不要手工 `INSERT` 补单。
 - 后台大盘统计走 `StatisticsController` / `StatisticsService` → `GET /api/v1/statistics/overview`（仅 ADMIN），由 `CinemaMapper.countGroupByStatus` / `FilmMapper.countGroupByType` 用 `GROUP BY` 实时聚合。**前端不再拉全表自己算**（`manage/Home.vue` 原先为此拉取 films + cinemas + types 三张全表再在 JS 里聚合）。无数据时按规范 §11.2 渲染「暂无数据」占位，不塞编造默认值。
 - 前端空态与异常的文案分工（规范 §11.2）：接口成功但无数据 → 「暂无数据」；请求失败（网络异常 / 超时 / 5xx）→ 「数据加载失败，请稍后重试」。失败提示由 `utils/request.js` 的响应拦截器统一给出，**页面内的 `catch` 只落错误态、不再重复弹提示**，否则同一次失败会弹两次。区分两者是必需的：请求失败时显示「暂无数据」会让用户以为系统里真的没有数据。
