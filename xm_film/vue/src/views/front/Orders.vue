@@ -97,7 +97,7 @@
                 <el-button v-if="scope.row.status === '待取票'" link type="warning"
                            @click="() => refundOrder(scope.row)">退票</el-button>
                 <el-button v-if="scope.row.status === '已取票'" link type="primary"
-                           @click="openReview(scope.row)">
+                           @click="goReview(scope.row)">
                   {{ markOf(scope.row.filmId) ? '修改评价' : '去评价' }}
                 </el-button>
                 <!-- 只有终态废单可删除；已成交订单必须走退票，与后端删除守卫同构 -->
@@ -126,28 +126,6 @@
 
   <OrderPayDialog v-model="payDialogVisible" :order="payingOrder"
                   @paid="load" @cancelled="load" @timeout="load" />
-
-  <el-dialog v-model="reviewDialogVisible" :title="reviewForm.id ? '修改评价' : '发表评价'" width="480" destroy-on-close>
-    <el-form label-width="70px">
-      <el-form-item label="影片">
-        <span>{{ reviewForm.filmName }}</span>
-      </el-form-item>
-      <el-form-item label="评分">
-        <el-input-number v-model="reviewForm.score" :min="0" :max="10" :step="0.1" :precision="1"
-                         class="field-full"/>
-      </el-form-item>
-      <el-form-item label="评语">
-        <el-input v-model="reviewForm.mark" type="textarea" :rows="3" maxlength="255" show-word-limit
-                  placeholder="说说你的观后感（选填）"/>
-      </el-form-item>
-    </el-form>
-    <template #footer>
-      <div class="dialog-footer">
-        <el-button @click="reviewDialogVisible = false">取 消</el-button>
-        <el-button type="primary" :loading="reviewSubmitting" @click="submitReview">保 存</el-button>
-      </div>
-    </template>
-  </el-dialog>
 </template>
 
 <script setup lang="ts">
@@ -296,15 +274,6 @@ const refundOrder = (order: Ordered) => {
 // 评价：闭环的最后一环 —— 已取票订单可对影片评分/评语，评分会回写影片均分与评分榜
 const { user } = useAuth();
 const myMarks = ref<MarkRow[]>([]);
-const reviewDialogVisible = ref(false);
-const reviewSubmitting = ref(false);
-const reviewForm = reactive({
-  id: undefined as number | undefined,
-  filmId: undefined as number | undefined,
-  filmName: '',
-  score: 8,
-  mark: ''
-});
 
 const markOf = (filmId?: number): MarkRow | undefined =>
     myMarks.value.find(item => item.filmId === filmId);
@@ -322,39 +291,14 @@ const loadMyMarks = async () => {
   }
 }
 
-const openReview = (order: Ordered) => {
-  const existing = markOf(order.filmId);
-  reviewForm.id = existing?.id;
-  reviewForm.filmId = order.filmId;
-  reviewForm.filmName = order.filmName || '';
-  reviewForm.score = existing?.score ?? 8;
-  reviewForm.mark = existing?.mark || '';
-  reviewDialogVisible.value = true;
-}
-
-const submitReview = async () => {
-  if (reviewForm.score === null || reviewForm.score === undefined) {
-    ElMessage.warning('请先给出评分');
+// 评价表单已搬到影评页（/front/filmMarks/:id）—— 发表与点赞要在同一条赞序列表上，
+// 弹窗里看不到别人的评价，把「修改」做成跳转后闭环才完整
+const goReview = (order: Ordered) => {
+  if (!order.filmId) {
+    ElMessage.warning('该订单缺少影片信息，无法评价');
     return;
   }
-  reviewSubmitting.value = true;
-  try {
-    const payload = { score: reviewForm.score, mark: reviewForm.mark };
-    const res = reviewForm.id
-        ? await request.put(API_PATHS.MARKS, { id: reviewForm.id, ...payload })
-        : await request.post(API_PATHS.MARKS, { filmId: reviewForm.filmId, ...payload });
-    if (res.code === '200') {
-      ElMessage.success(reviewForm.id ? '评价已更新' : '评价发表成功');
-      reviewDialogVisible.value = false;
-      await loadMyMarks();
-    } else {
-      ElMessage.error(res.msg || '保存失败');
-    }
-  } catch (error) {
-    // request.js has already shown the backend message.
-  } finally {
-    reviewSubmitting.value = false;
-  }
+  router.push({ name: 'filmMarks', params: { id: order.filmId } });
 }
 
 // 初始加载

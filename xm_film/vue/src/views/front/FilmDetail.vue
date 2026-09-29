@@ -174,23 +174,32 @@
         </div>
       </div>
 
-      <!-- 3.3 用户评价区域（数据来自 /api/v1/marks，匿名可读） -->
+      <!-- 3.3 用户热评：与影评页同一条「赞数降序」查询，这里只取前 3 条，不是第二条排序 -->
       <div class="marks-section">
         <h3 class="section-title">
-          用户评价
-          <span class="section-title__count">（{{ marks.length }} 条）</span>
+          用户热评
+          <span class="section-title__count">（{{ marksTotal }} 条）</span>
         </h3>
         <div v-if="loadingMarks" class="marks-hint">正在加载评价...</div>
-        <div v-else-if="!marks.length" class="marks-hint">暂无评价，购票取票后可以发表第一条</div>
-        <div v-else class="marks-list">
-          <div v-for="item in marks" :key="item.id" class="mark-item">
-            <div class="mark-item__head">
-              <span class="mark-item__user">{{ item.userName || '匿名用户' }}</span>
-              <span class="mark-item__score">{{ item.score }} 分</span>
+        <div v-else-if="marksError" class="marks-hint marks-hint--error">数据加载失败，请稍后重试</div>
+        <div v-else-if="!hotMarks.length" class="marks-hint">暂无数据</div>
+        <template v-else>
+          <div class="marks-list">
+            <div v-for="item in hotMarks" :key="item.id" class="mark-item">
+              <div class="mark-item__main">
+                <div class="mark-item__head">
+                  <span class="mark-item__user">{{ item.userName || '匿名用户' }}</span>
+                  <span class="mark-item__score">{{ item.score }} 分</span>
+                </div>
+                <div v-if="item.mark" class="mark-item__text">{{ item.mark }}</div>
+                <div class="mark-item__meta">赞 {{ item.likeCount ?? 0 }}</div>
+              </div>
             </div>
-            <div v-if="item.mark" class="mark-item__text">{{ item.mark }}</div>
           </div>
-        </div>
+          <el-button class="marks-section__more" @click="goToFilmMarks">
+            查看全部 {{ marksTotal }} 条评价
+          </el-button>
+        </template>
       </div>
     </div>
   </div>
@@ -202,7 +211,7 @@ import {useRoute} from 'vue-router';
 import {ElMessage} from 'element-plus';
 import request from "@/utils/request.js";
 import 'element-plus/theme-chalk/el-button.css';
-import { API_PATHS, apiById } from '@/constants';
+import { API_PATHS, MARK_API, apiById } from '@/constants';
 import { formatBoxOffice } from '@/utils/format.js';
 
 
@@ -382,25 +391,37 @@ const goToFilmCinema = (filmId) => {
   });
 };
 
-// 6. 用户评价（公开数据；由用户在订单页「已取票 → 去评价」发表）
-const marks = ref([]);        // 该影片的评价列表
+// 6. 用户热评（公开数据）：by-film 这条查询按赞数降序，取前 3 条即热评；
+//    完整列表与发表/点赞都在影评页 FilmMarks.vue，这里只做只读展示。
+const hotMarks = ref([]);     // 热评前 3 条
+const marksTotal = ref(0);    // 该片评价总数（含本人，由后端给出）
 const loadingMarks = ref(false);
+const marksError = ref(false);
 
 const fetchMarks = () => {
   if (!filmId || Number.isNaN(Number(filmId))) return;
   loadingMarks.value = true;
-  request.get(API_PATHS.MARKS, { params: { filmId } })
+  marksError.value = false;
+  request.get(MARK_API.BY_FILM, { params: { filmId, pageNum: 1, pageSize: 3 } })
       .then(res => {
-        if (res.code === '200') {
-          marks.value = res.data || [];
+        if (res.code === '200' && res.data) {
+          hotMarks.value = res.data.list || [];
+          marksTotal.value = res.data.total || 0;
+        } else {
+          marksError.value = true;
         }
       })
       .catch(() => {
-        marks.value = [];
+        marksError.value = true;
+        hotMarks.value = [];
       })
       .finally(() => {
         loadingMarks.value = false;
       });
+};
+
+const goToFilmMarks = () => {
+  router.push({ name: 'filmMarks', params: { id: filmId } });
 };
 
 // 7. 页面初始化：加载电影详情、演职人员与评价
@@ -601,48 +622,17 @@ onMounted(() => {
   line-height: var(--lh-loose);
 }
 
-/* ---------- 3.3 用户评价 ---------- */
+/* ---------- 3.3 用户热评 ---------- */
+/* 条目样式（.marks-list / .marks-hint / .mark-item*）已收进 front-pages.scss：
+ * 热评与影评页共用一份，不再两处各写一套。这里只留本页专有的区块布局。 */
 .marks-section {
   width: 60%;
   max-width: 1200px;
   margin: var(--space-32) auto 0;
 }
 
-.marks-hint {
-  padding: var(--space-20);
-  color: var(--el-text-color-regular);
-}
-
-.marks-list {
+.marks-section__more {
   margin-top: var(--space-16);
-}
-
-.mark-item {
-  padding: var(--space-12) 0;
-  border-bottom: 1px solid var(--el-fill-color-dark);
-}
-
-.mark-item__head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.mark-item__user {
-  font-weight: var(--fw-bold);
-  color: var(--el-text-color-primary);
-}
-
-/* 评分承载文字，用白底评分文字色（4.68:1） */
-.mark-item__score {
-  font-weight: var(--fw-bold);
-  color: var(--color-rating-text);
-}
-
-.mark-item__text {
-  margin-top: var(--space-8);
-  color: var(--el-text-color-regular);
-  line-height: var(--lh-base);
 }
 
 /* 演职人员样式：圆形头像+卡片布局 */
