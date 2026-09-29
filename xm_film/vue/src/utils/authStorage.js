@@ -1,4 +1,4 @@
-export const USER_KEY = 'xm-pro-user'
+export const USER_KEY = 'xm-film-user'
 
 export function getStoredUser() {
   try {
