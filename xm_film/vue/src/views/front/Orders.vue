@@ -298,7 +298,8 @@ const goReview = (order: Ordered) => {
     ElMessage.warning('该订单缺少影片信息，无法评价');
     return;
   }
-  router.push({ name: 'filmMarks', params: { id: order.filmId } });
+  // 路由没有 name（meta.name 是标题文案），导航一律走 path
+  router.push(`/front/filmMarks/${order.filmId}`);
 }
 
 // 初始加载
