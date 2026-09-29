@@ -5,12 +5,13 @@
 ```
 sql/
 ├── schema.sql                               # 数据库表结构（16 张表的 CREATE TABLE 语句）
-├── data.sql                                 # 初始数据（所有表的 INSERT 语句）
+├── data.sql                                 # 基础种子（不含场次/订单/评价，见「数据约定」）
 ├── init.sql                                 # 一键初始化脚本（整合 schema + data）
 ├── migration-20260927-delete-guard.sql      # 增量迁移（删除守卫 + 上映关系派生）
 ├── migration-20260927-p2-seat-payment.sql   # 增量迁移（座位容量 + 订单资金凭证）
 ├── migration-20260928-p3-review-score-cinema-audit.sql  # 增量迁移（评价数值评分 + 影院审核词表）
-└── migration-20260928-p4-account-wallet.sql # 增量迁移（账户余额 + 充值单据 + 资金流水 + 订单单价）
+├── migration-20260928-p4-account-wallet.sql # 增量迁移（账户余额 + 充值单据 + 资金流水 + 订单单价）
+└── migration-20260929-deprecate-box-office.sql  # 增量迁移（废弃 film.box_office 静态票房列）
 ```
 
 ## 使用方式
@@ -42,6 +43,7 @@ SOURCE data.sql;
 - 数据库名：`xm-film`（与 `application.yml` 配置一致）
 - 字符集：`utf8mb4` + `utf8mb4_unicode_ci`
 - 引擎：`InnoDB`
+- **种子范围**：`data.sql` 只写基础数据（`admin` / `user` / `area` / `type` / `cinema` / `room` / `film` / `film_type` / `actor` / `notice` / `video`）。`record`（场次）、`ordered`（订单）、`mark`（评价）**不预置** —— 手写的订单必须同时伪造订单号、单价快照、支付凭证、余额扣减与资金流水，任意一处对不上就是能被查出的假数据（老种子正是如此）。需要演示数据请跑 `scripts/seed-demo-data.py`，它走真实接口生成。
 
 ## 表清单（16 张）
 
@@ -67,6 +69,7 @@ SOURCE data.sql;
 > 影院"上映哪些影片"由 `record` 派生（`EXISTS` 子查询），没有独立的影院-影片关联表。
 > `record` 与 `ordered` 的外键、`room.cinema_id`、`recharge_order.user_id`、`fund_flow.user_id` 均为 `ON DELETE RESTRICT`。
 > `fund_flow.related_id` 指向 `recharge_order.id` 或 `ordered.id`（跨表二选一），故不建外键。
+> `record` / `ordered` / `mark` 三张表不预置种子数据，行一律由真实业务接口产生。
 
 ## 增量迁移（已有数据库）
 
@@ -77,6 +80,7 @@ mysql -u root -p --default-character-set=utf8mb4 xm-film < migration-20260927-de
 mysql -u root -p --default-character-set=utf8mb4 xm-film < migration-20260927-p2-seat-payment.sql
 mysql -u root -p --default-character-set=utf8mb4 xm-film < migration-20260928-p3-review-score-cinema-audit.sql
 mysql -u root -p --default-character-set=utf8mb4 xm-film < migration-20260928-p4-account-wallet.sql
+mysql -u root -p --default-character-set=utf8mb4 xm-film < migration-20260929-deprecate-box-office.sql
 ```
 
 `migration-20260927-delete-guard.sql` 内容（幂等，可重复执行）：
@@ -98,15 +102,26 @@ mysql -u root -p --default-character-set=utf8mb4 xm-film < migration-20260928-p4
 1. `mark` 新增 `score`（DECIMAL(3,1)，影片评分的唯一数值来源）
 2. `mark.mark` 语义由「评分/评语」收敛为「评语」并加宽到 `VARCHAR(255)`
 3. 回填存量评价：数字文本（如 `'9.5'`）搬进 `score`，原列改填评语；其余空评分按所属影片基线分补齐
-4. 写入演示评价（每部影片 3 条，均分恰好等于原基线分，评分榜排序不变但从此由评价派生）
-5. `film.score` 按 `mark.score` 均分回写（`EXISTS` 守卫：无评价的影片保留基线分，不归零）
-6. 影院审核词表收敛：`待审核` → `未审核`，种子影院 8 改为 `已审核`
+4. `film.score` 按 `mark.score` 均分回写（`EXISTS` 守卫：无评价的影片保留基线分，不归零）
+5. 影院审核词表收敛：`待审核` → `未审核`，种子影院 8 改为 `已审核`
 
-> 第 3、4 步的演示评价与 `data.sql` 完全一致，目的是让"已有库执行迁移"与"新库执行 init.sql"收敛到同一状态；
-> `data.sql` 才是种子数据的权威副本。
+> 旧版第 4 步会往已有库灌入 51 条演示评价（镜像 `data.sql` 的评价种子）。`data.sql` 已移除评价种子，
+> 该步一并删除 —— 不删的话，这个迁移就成了唯一还会造出假评价的地方。演示评价改由
+> `scripts/seed-demo-data.py` 走真实接口生成。
 
 > 迁移不会修改排片时间。若库中的 `record.start` 停留在过去，场次在前台会显示"已结束"且不可购票，
-> 需另行把演示场次时间调整到未来（新库由 `data.sql` 直接写入未来时间）。
+> 需另行把场次时间调整到未来 —— `data.sql` 已不再预置场次，新库建完后跑
+> `scripts/seed-demo-data.py` 即可得到 3 个未来场次。
 >
 > 已有影厅一律按 8×8 初始化 —— 这是旧规则下唯一合法的座位范围，因此存量订单的座位号必然落在新边界内。
 > 需要更大的厅，请到影院后台修改该厅的座位行列数（1~50）。
+
+`migration-20260929-deprecate-box-office.sql` 内容（幂等，可重复执行）：
+
+1. `film.box_office` 的残留值清零
+2. 更新该列注释，标明已废弃
+
+> 票房已改为按 `ordered` 实时聚合的累计售票收入（`FilmMapper.xml` 的 `filmRevenueJoin`，只统计 `待取票/已取票`），
+> 前端展示口径由「万元」改为**元**；`film.box_office` 不再被任何查询读取。
+> 本脚本刻意不删除 `record` / `ordered` / `mark` 的任何行 —— 存量库的演示数据请用
+> `scripts/seed-demo-data.py` 清理与重建（按演示账号边界删除，不靠猜 id）。

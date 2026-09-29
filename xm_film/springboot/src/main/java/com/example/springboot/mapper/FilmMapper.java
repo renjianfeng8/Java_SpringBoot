@@ -22,6 +22,9 @@ public interface FilmMapper extends BaseMapper<Film> {
 
     List<Map<String, Object>> selectFilmTypeJoin(@Param("filmIds") List<Integer> filmIds);
 
+    /** 大盘统计：影片类型分布（[{name, value}]，由 film_type 实时计数） */
+    List<Map<String, Object>> countGroupByType();
+
     void insertFilmTypes(@Param("filmId") Integer filmId, @Param("typeIds") List<Integer> typeIds);
 
     void deleteFilmTypesByFilmId(@Param("filmId") Integer filmId);

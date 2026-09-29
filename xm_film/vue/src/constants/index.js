@@ -15,6 +15,7 @@ export const API_PATHS = {
   VIDEOS: '/api/v1/videos',
   RECHARGES: '/api/v1/recharges',
   FUND_FLOWS: '/api/v1/fund-flows',
+  STATISTICS: '/api/v1/statistics',
   ACCOUNT: '/api/v1/account',
   FILES: '/api/v1/files/upload',
   YEARS: '/api/v1/auth/years',
@@ -71,6 +72,11 @@ export const RECHARGE_API = {
 /** 资金流水（只读账本） */
 export const FUND_FLOW_API = {
   PAGE: apiPage(API_PATHS.FUND_FLOWS),
+}
+
+/** 后台可视化大盘的统计接口：数值全部由数据库实时聚合，前端不再拉全表自己算 */
+export const STATISTICS_API = {
+  OVERVIEW: `${API_PATHS.STATISTICS}/overview`,
 }
 
 /** 充值单据状态 → el-tag type，取值与后端 RechargeStatus 一致 */

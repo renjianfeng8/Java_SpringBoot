@@ -15,6 +15,10 @@
           <el-skeleton avatar :rows="10" :columns="3" />
         </div>
 
+        <div v-else-if="!data.boxOfficeData.length" class="rank-card__empty">
+          <el-empty description="暂无票房数据" />
+        </div>
+
         <div v-else class="rank-card__body">
           <div
               v-for="(film, index) in data.boxOfficeData"
@@ -126,7 +130,7 @@ const loading = reactive({
   mark: false,
 });
 
-// 前三名用奖牌色，其余用中性底（规范 §2.8；名次同时由数字表达，不依赖颜色）
+// 前三名用奖牌色，其余用中性底（规范 §3.6；名次同时由数字表达，不依赖颜色）
 const rankBadgeClass = (index) =>
   index < 3 ? `rank-item__badge--top${index + 1}` : 'rank-item__badge--plain';
 
@@ -142,7 +146,7 @@ const loadFilmBoxOfficeTop = () => {
     }
   }).catch(err => {
     console.error('票房接口请求异常：', err);
-    ElMessage.error('网络异常，无法加载票房数据');
+    ElMessage.error('数据加载失败，请稍后重试');
   }).finally(() => {
     loading.boxOffice = false;
   });
@@ -160,7 +164,7 @@ const loadFilmMarkTop = () => {
     }
   }).catch(err => {
     console.error('评分接口请求异常：', err);
-    ElMessage.error('网络异常，无法加载评分数据');
+    ElMessage.error('数据加载失败，请稍后重试');
   }).finally(() => {
     loading.mark = false;
   });

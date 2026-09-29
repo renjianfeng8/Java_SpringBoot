@@ -28,7 +28,9 @@ public class Film {
   private List<Integer> ids;
   private Integer typeId;
   // 必须用包装类型：FilmMapper.updateById 用 <if test="boxOffice != null"> 守卫，
-  // 原始类型 double 永远非 null，任何不带票房的局部更新都会把票房写成 0（同 BUG-034）
+  // 原始类型 double 永远非 null，任何不带票房的局部更新都会把票房写成 0（同 BUG-034）。
+  // 查询时由 FilmMapper 的 filmRevenueJoin 按 ordered 实时聚合填充，单位是元；
+  // film.box_office 静态列已废弃、不再作为票房来源（恒为 0）。
   private Double boxOffice;
   private Integer actorId;
   private String actorInfo;

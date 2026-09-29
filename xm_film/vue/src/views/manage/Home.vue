@@ -81,7 +81,7 @@ import { BarChart, PieChart } from 'echarts/charts';
 import { GridComponent, LegendComponent, TooltipComponent } from 'echarts/components';
 import { LabelLayout } from 'echarts/features';
 import { CanvasRenderer } from 'echarts/renderers';
-import { API_PATHS } from '@/constants';
+import { STATISTICS_API } from '@/constants';
 
 echarts.use([
   BarChart,
@@ -113,93 +113,35 @@ const handleResize = () => {
   if (typeChart) typeChart.resize();
 };
 
-// ECharts 用 canvas 渲染，不解析 CSS 变量，只能在运行期把令牌值读出来（规范 §3.1）
+// ECharts 用 canvas 渲染，不解析 CSS 变量，只能在运行期把令牌值读出来（规范 §3.7）
 const cssVar = (name: string, fallback = '') =>
   getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback;
 
-// 页面核心数据
-const data = reactive({
-  cinemaList: [] as Array<{ status: string }>,
-  filmList: [] as Array<{ type_ids: number[] | string, typeIds?: number[] | string }>,
-  typeList: [] as Array<{ id: number; title: string }>
-});
-
-// 影院状态统计数据
-const cinemaStatusData = computed(() => {
-  // 后端 CinemaStatus 只有「未审核 / 已审核」（见 constants 的 CINEMA_STATUS），
-  // 原先列的「审核中 / 已驳回 / 已下架」在系统里不存在，恒为 0
-  const statusMap: Record<string, number> = {
-    '已审核': 0,
-    '未审核': 0
-  };
-
-  // 遍历影院数据统计状态
-  data.cinemaList.forEach((cinema) => {
-    if (!cinema.status) return;
-
-    if (statusMap.hasOwnProperty(cinema.status)) {
-      statusMap[cinema.status]++;
-    } else {
-      statusMap['其他'] = (statusMap['其他'] || 0) + 1;
-    }
-  });
-
-  return {
-    labels: Object.keys(statusMap),
-    values: Object.values(statusMap)
-  };
-});
-
-// 动态创建类型ID到名称的映射
-const getTypeIdToName = () => {
-  const typeMap: Record<number, string> = {};
-  data.typeList.forEach(type => {
-    typeMap[type.id] = type.title;
-  });
-  return typeMap;
-};
-
-// 电影类型统计数据
-const filmTypeData = computed(() => {
-  const typeIdToName = getTypeIdToName();
-  const typeMap: Record<string, number> = {};
-
-  data.filmList.forEach(film => {
-    let typeIds: number[] = [];
-
-    // 兼容 typeIds/type_ids 两种字段名
-    const typeIdField = film.typeIds !== undefined ? film.typeIds : film.type_ids;
-
-    if (typeof typeIdField === 'string') {
-      try {
-        const cleanStr = typeIdField.trim();
-        typeIds = JSON.parse(cleanStr);
-      } catch (e) {
-        const numbers = typeIdField.match(/\d+/g) || [];
-        typeIds = numbers.map(Number);
-      }
-    } else if (Array.isArray(typeIdField)) {
-      typeIds = typeIdField;
-    }
-
-    typeIds = typeIds.filter(id => !isNaN(Number(id))).map(Number);
-
-    typeIds.forEach(id => {
-      const typeName = typeIdToName[id] || `未知类型(${id})`;
-      typeMap[typeName] = (typeMap[typeName] || 0) + 1;
-    });
-  });
-
-  return {
-    labels: Object.keys(typeMap),
-    values: Object.values(typeMap)
-  };
+// 大盘统计：数值全部来自 /statistics/overview 的实时聚合，前端不再拉全表自己算
+const stats = reactive({
+  cinemaStatus: [] as Array<{ name: string; value: number }>,
+  filmType: [] as Array<{ name: string; value: number }>
 });
 
 // 图表是否有真实数据。无数据时渲染「暂无数据」占位，不再用假数据填充 ——
-// 画一张有数据的图会让人以为系统里真有那些影院 / 电影。
-const hasCinemaStatus = computed(() => cinemaStatusData.value.values.some((value) => value > 0));
-const hasFilmType = computed(() => filmTypeData.value.values.some((value) => value > 0));
+// 画一张有数据的图会让人以为系统里真有那些影院 / 电影（规范 §608）。
+const hasCinemaStatus = computed(() => stats.cinemaStatus.length > 0);
+const hasFilmType = computed(() => stats.filmType.length > 0);
+
+const loadStats = async () => {
+  try {
+    const res = await request.get(STATISTICS_API.OVERVIEW);
+    if (res.code === '200') {
+      stats.cinemaStatus = res.data?.cinemaStatus || [];
+      stats.filmType = res.data?.filmType || [];
+    } else {
+      ElMessage.error(res.msg);
+    }
+  } catch (error) {
+    // 网络异常的统一提示由 request.js 响应拦截器给出；这里保持空数据 → 图表显示占位
+    console.error('统计接口请求异常：', error);
+  }
+};
 
 // 初始化影院状态饼图
 const initCinemaStatusChart = () => {
@@ -212,23 +154,20 @@ const initCinemaStatusChart = () => {
   }
 
   const chart = echarts.init(cinemaStatusChart.value);
-  // 状态配色取自令牌（§2.5 功能色），不再自成一表
+  // 状态配色取自令牌（§3.3 功能色），不再自成一表
   const statusColorMap: Record<string, string> = {
     '已审核': cssVar('--el-color-success'),
-    '未审核': cssVar('--el-color-warning'),
-    '其他': cssVar('--el-text-color-secondary')
+    '未审核': cssVar('--el-color-warning')
   };
 
-  // 构建饼图数据
-  const pieData = cinemaStatusData.value.labels
-      .map((label, index) => ({
-        name: label,
-        value: cinemaStatusData.value.values[index],
-        itemStyle: {
-          color: statusColorMap[label] || cssVar('--el-text-color-secondary')
-        }
-      }))
-      .filter(item => item.value > 0);
+  // 后端已按 status 分组，这里只做配色映射
+  const pieData = stats.cinemaStatus.map((item) => ({
+    name: item.name,
+    value: item.value,
+    itemStyle: {
+      color: statusColorMap[item.name] || cssVar('--el-text-color-secondary')
+    }
+  }));
 
   const option = {
     tooltip: {
@@ -289,7 +228,7 @@ const initFilmTypeChart = () => {
     xAxis: [
       {
         type: 'category',
-        data: filmTypeData.value.labels,
+        data: stats.filmType.map((item) => item.name),
         axisTick: { alignWithLabel: true },
         axisLabel: { fontSize: 12, rotate: 30 }
       }
@@ -306,7 +245,7 @@ const initFilmTypeChart = () => {
         name: '电影数量',
         type: 'bar',
         barWidth: '60%',
-        data: filmTypeData.value.values,
+        data: stats.filmType.map((item) => item.value),
         itemStyle: { borderRadius: 4 }
       }
     ],
@@ -315,45 +254,19 @@ const initFilmTypeChart = () => {
   chart.setOption(option, true);
 };
 
-// 加载电影列表数据
-const getFilmList = async () => {
-  try {
-    const res = await request.get(API_PATHS.FILMS);
-    data.filmList = res.data || [];
-  } catch (error) {
-    ElMessage.warning("电影数据加载失败，不影响核心功能使用");
-  }
-};
-
 // 初始化页面所有数据
 const initData = async () => {
-  try {
-    const cinemaRes = await request.get(API_PATHS.CINEMAS);
-    data.cinemaList = cinemaRes.data || [];
+  await loadStats();
 
-    const typeRes = await request.get(API_PATHS.TYPES);
-    data.typeList = typeRes.data || [];
-
-    // 加载电影数据
-    await getFilmList();
-
-    // 等待DOM更新后初始化图表
-    await nextTick();
-    initCinemaStatusChart();
-    initFilmTypeChart();
-  } catch (error) {
-    ElMessage.error("系统数据加载异常，请刷新页面重试");
-
-    // 即使接口失败，也初始化图表（使用兜底数据）
-    await nextTick();
-    initCinemaStatusChart();
-    initFilmTypeChart();
-  }
+  // 等待DOM更新后初始化图表
+  await nextTick();
+  initCinemaStatusChart();
+  initFilmTypeChart();
 };
 
 // 监听数据变化更新图表
 watch(
-    [cinemaStatusData, filmTypeData],
+    [() => stats.cinemaStatus, () => stats.filmType],
     async () => {
       await nextTick();
       initCinemaStatusChart();

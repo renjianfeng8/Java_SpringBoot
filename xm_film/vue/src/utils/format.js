@@ -1,10 +1,11 @@
 /**
  * 票房格式化。
- * film.box_office 的单位是「万元」（见 xm_film/sql/schema.sql），不是元。
- * 按行业惯例（猫眼/灯塔）：不足 1 亿显示「万」，达到 1 亿显示「亿」。
+ * 数值来源是后端按 ordered 实时聚合的「本系统累计售票收入」，单位是元（见 FilmMapper.xml 的 filmRevenueJoin）。
+ * 不再使用 film.box_office 静态列，也不再用万/亿口径 —— 本系统内的售票收入是几十到几百元量级，
+ * 按万元渲染会恒显示 0.00万。
  */
 export function formatBoxOffice(value) {
-  const wan = Number(value)
-  if (!wan) return '暂无数据'
-  return wan >= 10000 ? `${(wan / 10000).toFixed(2)}亿` : `${wan}万`
+  const yuan = Number(value)
+  if (!yuan) return '暂无数据'
+  return `${yuan.toFixed(2)}元`
 }

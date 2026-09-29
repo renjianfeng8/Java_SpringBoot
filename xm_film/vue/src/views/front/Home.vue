@@ -35,6 +35,8 @@
             </el-button>
           </el-col>
         </el-row>
+        <div v-if="data.error" class="empty-hint">数据加载失败，请稍后重试</div>
+        <div v-else-if="!data.playingData.length" class="empty-hint">暂无数据</div>
       </div>
 
       <!-- 即将上映区域 -->
@@ -61,6 +63,8 @@
               </div>
             </el-col>
           </el-row>
+          <div v-if="data.error" class="empty-hint">数据加载失败，请稍后重试</div>
+          <div v-else-if="!data.noPlayData.length" class="empty-hint">暂无数据</div>
         </div>
       </div>
     </div>
@@ -74,7 +78,7 @@
           <div v-if="loading.boxOffice" class="rank-box__loading">
             <el-skeleton :rows="10" :columns="3" avatar class="skeleton--sm" />
           </div>
-          <div v-else>
+          <div v-else-if="boxOfficeTop10.length">
             <div v-for="(movie, index) in boxOfficeTop10" :key="movie.id" class="rank-row" @click="goToFilmDetail(movie.id)">
               <!-- 排名标识 -->
               <div
@@ -94,29 +98,11 @@
               <div class="rank-row__value">{{ formatBoxOffice(movie.boxOffice) }}</div>
             </div>
           </div>
+          <div v-else class="empty-hint">暂无数据</div>
         </div>
       </div>
 
-      <!-- 2. 今日票房（保持不变） -->
-      <div class="today-box">
-        <div class="today-box__label">
-          <div class="today-box__label-text">
-            <span>今</span><span>日</span><span>票</span><span>房</span>
-          </div>
-        </div>
-        <div class="today-box__body">
-          <div class="today-box__row">
-            <div class="today-box__value">{{ totalPrice.total }}亿</div>
-            <el-button type="text" class="today-box__refresh" @click="refreshTodayBoxOffice">
-              <el-icon><Refresh /></el-icon>
-              <span class="today-box__refresh-text">刷新</span>
-            </el-button>
-          </div>
-          <div class="today-box__time">北京时间 : {{ updateTime }}</div>
-        </div>
-      </div>
-
-      <!-- 3. 评分Top 5（添加电影标题/海报跳转详情，星级改为分数） -->
+      <!-- 2. 评分Top 5（添加电影标题/海报跳转详情，星级改为分数） -->
       <div class="home-aside__section">
         <div class="section-head">
           <div class="section-head__title">评分Top 5</div>
@@ -132,7 +118,7 @@
           <div v-if="loading.mark" class="rank-box__loading">
             <el-skeleton :rows="5" :columns="3" avatar class="skeleton--lg" />
           </div>
-          <div v-else>
+          <div v-else-if="ratingTop5.length">
             <div v-for="(movie, index) in ratingTop5" :key="movie.id" class="rank-row rank-row--divided" @click="goToFilmDetail(movie.id)">
               <!-- 排名标识 -->
               <div
@@ -157,6 +143,7 @@
               </div>
             </div>
           </div>
+          <div v-else class="empty-hint">暂无数据</div>
         </div>
       </div>
 
@@ -165,7 +152,7 @@
 </template>
 
 <script setup>
-import { reactive, ref } from 'vue';
+import { reactive } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import request from "@/utils/request.js";
@@ -174,8 +161,6 @@ import { formatBoxOffice } from '@/utils/format.js';
 // 引入Element Plus样式（移除el-rate相关样式）
 import 'element-plus/theme-chalk/el-skeleton.css';
 import 'element-plus/theme-chalk/el-button.css';
-// 引入刷新图标组件（若之前未引入需补充）
-import { Refresh } from '@element-plus/icons-vue';
 
 // 路由实例初始化
 const router = useRouter();
@@ -185,17 +170,13 @@ const data = reactive({
   data1: [], // 已上映电影
   data2: [], // 待上映电影
   playingData: [], // 正在热播展示数据（前8条）
-  noPlayData: [] // 即将上映展示数据（前8条）
+  noPlayData: [], // 即将上映展示数据（前8条）
+  error: false // 电影列表加载失败：与"暂无数据"区分，避免把网络错误显示成没有影片
 });
 
 // 右侧接口数据（保持不变）
 const boxOfficeTop10 = reactive([]); // 总票房Top10
 const ratingTop5 = reactive([]);     // 评分Top5
-const totalPrice = reactive({        // 今日票房
-  total: 1.28,
-  change: 5.3
-});
-const updateTime = ref(new Date().toLocaleString()); // 刷新时间
 const loading = reactive({           // 加载状态
   boxOffice: false,
   mark: false
@@ -245,7 +226,7 @@ const loadFilmBoxOfficeTop = () => {
     }
   }).catch(err => {
     console.error('票房接口请求异常：', err);
-    ElMessage.error('网络异常，无法加载票房数据');
+    ElMessage.error('数据加载失败，请稍后重试');
   }).finally(() => {
     loading.boxOffice = false;
   });
@@ -265,19 +246,10 @@ const loadFilmMarkTop = () => {
     }
   }).catch(err => {
     console.error('评分接口请求异常：', err);
-    ElMessage.error('网络异常，无法加载评分数据');
+    ElMessage.error('数据加载失败，请稍后重试');
   }).finally(() => {
     loading.mark = false;
   });
-};
-
-// 模拟今日票房刷新
-const refreshTodayBoxOffice = () => {
-  setTimeout(() => {
-    totalPrice.total = parseFloat((totalPrice.total + (Math.random() - 0.5) * 0.1).toFixed(2));//使用随机数模拟
-    updateTime.value = new Date().toLocaleString();
-    ElMessage.success('已更新最新今日票房数据');
-  }, 500);
 };
 
 // 电影数据加载
@@ -290,8 +262,14 @@ const load = () => {
       data.playingData = data.data1.length > 8 ? data.data1.slice(0, 8) : data.data1;
       data.noPlayData = data.data2.length > 8 ? data.data2.slice(0, 8) : data.data2;
     } else {
+      data.error = true;
       ElMessage.error(res.msg);
     }
+  }).catch(err => {
+    // 网络异常的统一提示由 request.js 的响应拦截器给出，这里只落错误态，
+    // 让占位显示"数据加载失败，请稍后重试"，避免同一错误弹两个提示
+    console.error('电影列表接口请求异常：', err);
+    data.error = true;
   });
 };
 
@@ -536,64 +514,11 @@ loadFilmMarkTop();
   color: var(--color-rating-text);
 }
 
-/* ---------- 今日票房 ---------- */
-.today-box {
-  display: flex;
-  margin-top: var(--space-40);
-  border-radius: var(--el-border-radius-base);
-  overflow: hidden;
-}
-
-.today-box__label {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  padding: var(--space-12);
-  background-color: var(--el-color-primary);
-}
-
-.today-box__label-text {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  color: var(--color-on-accent);
-  font-weight: var(--fw-bold);
-  line-height: var(--lh-loose);
-}
-
-.today-box__body {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  justify-content: center;
-  padding: 0 var(--space-20);
-  background-color: var(--el-fill-color-dark);
-}
-
-.today-box__row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.today-box__value {
-  font-size: var(--fs-3xl);
-  font-weight: var(--fw-bold);
-  color: var(--el-text-color-primary);
-}
-
-.today-box__refresh {
-  color: var(--el-color-primary);
-}
-
-.today-box__refresh-text {
-  margin-left: var(--space-4);
-}
-
-.today-box__time {
-  margin-top: var(--space-8);
-  font-size: var(--fs-xs);
+/* 无数据 / 加载失败的占位（规范 §608：禁止用假数据填充，无数据渲染「暂无数据」） */
+.empty-hint {
+  padding: var(--space-20) 0;
+  font-size: var(--fs-base);
   color: var(--el-text-color-regular);
+  text-align: center;
 }
 </style>
