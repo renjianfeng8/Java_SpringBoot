@@ -188,6 +188,28 @@ class AuthInterceptorAccessTest {
         assertThat(hasAccess(newInterceptor(), "/api/v1/marks", "POST", "USER")).isTrue();
     }
 
+    @Test
+    void anonymousCanReadFilmMarks() {
+        // 影片详情页的评价列表是公开内容，liked/mine 由后端按 JWT 计算，匿名恒 false
+        assertThat(anonymousAllowed("/api/v1/marks/by-film", "GET")).isTrue();
+    }
+
+    @Test
+    void anonymousCannotLikeMark() {
+        assertThat(anonymousAllowed("/api/v1/marks/1/like", "PUT")).isFalse();
+    }
+
+    @Test
+    void interceptorLetsCinemaReachLikeEndpoint() {
+        // 点赞的角色门禁（仅 USER）在 MarkController 内，拦截器只做前缀级判断
+        assertThat(hasAccess(newInterceptor(), "/api/v1/marks/1/like", "PUT", "CINEMA")).isTrue();
+    }
+
+    @Test
+    void brokenTokenCannotLikeMark() {
+        assertThat(withBrokenToken("/api/v1/marks/1/like", "PUT")).isFalse();
+    }
+
     // ========== Cinemas: 读公开，写（新增/删除）在 CinemaController 内限管理员 ==========
 
     @Test

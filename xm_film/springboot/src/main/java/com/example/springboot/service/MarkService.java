@@ -3,11 +3,17 @@ package com.example.springboot.service;
 import com.example.springboot.common.BaseMapper;
 import com.example.springboot.common.BaseService;
 import com.example.springboot.common.enums.ErrorCode;
+import com.example.springboot.dto.response.FilmMarksView;
+import com.example.springboot.dto.response.MarkLikeResult;
+import com.example.springboot.dto.response.MarkView;
 import com.example.springboot.entity.Mark;
 import com.example.springboot.exception.CustomException;
 import com.example.springboot.mapper.FilmMapper;
+import com.example.springboot.mapper.MarkLikeMapper;
 import com.example.springboot.mapper.MarkMapper;
 import com.example.springboot.mapper.OrderedMapper;
+import com.github.pagehelper.PageInfo;
+import com.github.pagehelper.page.PageMethod;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,6 +32,9 @@ public class MarkService extends BaseService<Mark> {
 
     @Resource
     private MarkMapper markMapper;
+
+    @Resource
+    private MarkLikeMapper markLikeMapper;
 
     @Resource
     private FilmMapper filmMapper;
@@ -99,6 +108,51 @@ public class MarkService extends BaseService<Mark> {
         }
         mapper().deleteBatch(ids);
         filmIds.forEach(this::recalculateFilmScore);
+    }
+
+    /**
+     * 点赞 / 取消点赞。liked 是**显式意图**而非 toggle，连点与重试收敛到用户要的状态。
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public MarkLikeResult setLike(Integer markId, Integer userId, boolean liked) {
+        requireExisting(markId);
+        if (liked) {
+            // 主键 (mark_id, user_id) 让"已赞过"变成一次无副作用的空更新；不用 INSERT IGNORE，
+            // 因为它会把外键错误也一并吞掉（见 MarkLikeMapper 的注释）。
+            markLikeMapper.insertIfAbsent(markId, userId);
+        } else {
+            markLikeMapper.deleteByMarkAndUser(markId, userId);
+        }
+        // 回读权威状态，而不是假定请求生效：重复点赞时受影响行数同样是 0，
+        // 且并发下两个请求都应拿到同一份真相。
+        boolean nowLiked = markLikeMapper.countByMarkAndUser(markId, userId) > 0;
+        return new MarkLikeResult(nowLiked, markLikeMapper.countByMarkId(markId));
+    }
+
+    /**
+     * 某片的评价列表（分页，按赞数降序 → id 降序），附带本人评价与发表资格。
+     *
+     * liked / mine 交给 SQL 按访问者算（viewer 为 null 时一并为 false）；
+     * 只有 USER 才有"我的评价 / 我的点赞"可言，其余角色（含游客）按匿名口径查。
+     */
+    public FilmMarksView listByFilm(Integer filmId, Integer viewerId, String role,
+                                    Integer pageNum, Integer pageSize) {
+        if (filmId == null) {
+            throw new CustomException(ErrorCode.PARAM_INVALID, "缺少影片ID");
+        }
+        if (filmMapper.selectById(filmId) == null) {
+            throw new CustomException(ErrorCode.NOT_FOUND, "影片不存在");
+        }
+        // 非 USER 不查本人评价，也免得白跑一次已取票统计
+        boolean isUser = "USER".equals(role) && viewerId != null;
+        Integer viewer = isUser ? viewerId : null;
+        PageMethod.startPage(pageNum, pageSize);
+        List<MarkView> list = markMapper.selectFilmMarks(filmId, viewer);
+        long total = new PageInfo<>(list).getTotal();
+        MarkView my = isUser ? markMapper.selectFilmMarkOfUser(filmId, viewer) : null;
+        // reviewable 只表示"够格发表"（已取票）；是否已评过由 my != null 回答
+        boolean reviewable = isUser && orderedMapper.countPickedUpByUserAndFilm(viewerId, filmId) > 0;
+        return new FilmMarksView(total, reviewable, my, list);
     }
 
     private Mark requireExisting(Integer id) {
