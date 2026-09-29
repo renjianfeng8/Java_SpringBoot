@@ -814,6 +814,19 @@
 
 ---
 
+### BUG-051: 点赞并发时回读到旧快照，返回了与事实相反的 liked
+
+- **日期**: 2026-09-29
+- **Bug 描述**: 多个请求几乎同时点赞同一条评价时，库里正确只留下 1 行（主键去重生效），但其中一部分响应报 `liked=false` / `likeCount=0`。前端把响应当权威值写回该行，于是"刚点上的赞"显示成没点上，刷新才恢复。真库复现（`scripts/verify/p5-mark-like.py` 并发段）：5 个并发响应里 **4 个**报 `liked=false`。
+- **根因分析**: `MarkService.setLike` 承诺"回读写库后的权威状态"，但它用的是**一致读**（`SELECT ... COUNT(*)`），而 MySQL 默认隔离级别 REPEATABLE READ 让一个事务的所有一致读共享**同一条快照**，该快照在事务的**第一条一致读**时就已经固定。`setLike` 的第一条一致读是 `requireExisting(markId)`（`selectById`）；随后 `insertIfAbsent` 撞上另一个**尚未提交**的同键事务时会**阻塞到对方提交之后**才返回 —— 快照却仍是那条早于对方提交的旧快照。此后再 `COUNT`，读到的还是"没有这一行"。**库里有行、回读说没有**，与方法自己的承诺正好相反。这不是主键去重的问题（去重是对的），是"回读"这一步读到的不是当前状态。
+- **解决方案**: `setLike` 显式声明 `@Transactional(rollbackFor = Exception.class, isolation = Isolation.READ_COMMITTED)`（`MarkService.java`）。READ_COMMITTED 下每条语句取**最新已提交**快照，回读才是本方法真正需要的"权威状态"。**刻意不用锁定读（`SELECT ... FOR UPDATE`）来纠正**：那会锁住该评价行，把同一部片子上所有人的点赞串行化 —— 用一个写热点换一次回读，代价不成比例。
+- **验证**: `mvn test` **193/193 全绿**（14 个测试类，Failures 0 / Errors 0）—— 但**隔离级别 Mockito 验不了**（打桩后测的是桩，不是事务边界），真正守住这条的是真库脚本 `scripts/verify/p5-mark-like.py`：**74/74 断言**（连跑两次），并发段 5 个响应一致报 `liked=true` / `likeCount=1`。修复前该段稳定复现 4/5 报 `liked=false`。
+- **相关文件**: `xm_film/springboot/src/main/java/com/example/springboot/service/MarkService.java`、`scripts/verify/p5-mark-like.py`
+- **提交记录**: `cade086d`
+- **状态**: 已修复
+
+---
+
 ## 预防清单
 
 1. **数据库初始化**: 新环境部署时务必执行 `xm_film/sql/init.sql`（或依次执行 `schema.sql` + `data.sql`）
@@ -878,3 +891,4 @@
 59. **派生指标不要留成静态列**: `film.box_office` 这种"人工填、没人重算"的列，迟早变成没有来源的数字并被当成真实数据展示。要么按业务表实时聚合，要么就让它是空的。**改这类指标时先 grep 一遍有没有任何代码在重算它**（见 BUG-046）
 60. **表格操作列必须显式定宽，多按钮格用 flex + gap 排**: `el-table` 给未指定 `width` 的列按 `minWidth || 80` 起算、再均分富余空间，列多的表操作列只会分到 ~80px；两个文字按钮（`继续支付 + 取消` 需 104px）必然折行，而 EP 的按钮间距是 `.el-button + .el-button{margin-left:12px}` —— **折行不改变它**，第二个按钮被右推 12px，两行就左右错开。操作列一律写 `width`，多按钮格套 `.row-actions`（`front-pages.scss`：flex + gap，已把该 margin 中和为 0）。加宽所需的像素尽量从"内容本就不需要 80px"的列上让出（展开列、2 字表头的列），别让表格最小总宽上涨 —— 否则窄视口会凭空多出横向滚动条（见 BUG-049）
 61. **"能访问这一行"不等于"能做这个动作"**: `ADMIN` 靠 `ensureOrderAccess` 的早退拿到**任意订单**的访问权（管理数据本该如此），但 `pickupOrder` 把它顺带翻译成了操作权，于是变成"一键把任意用户的票记为已取"。判断这类权限先问一句"这个动作记录的是谁的物理事实、谁能如实断言" —— 取票只有放映该场次的影院能断言，所以只放行 `CINEMA`。再叠加"不记录操作人"和"目标状态是终态无出口"，这种能力连纠错价值都没有，只剩伪造。**权限判断一律写白名单**（`if (!"CINEMA".equals(role))`），denylist 会在新增角色时静默扩权（见 BUG-050）
+62. **"回读权威状态"只在读是"当前读"时才权威**: REPEATABLE READ 下同一事务的一致读共享一条**在第一条读时固定**的快照；若中间有一次写入撞上并发事务的提交而阻塞（如 `INSERT ... ON DUPLICATE KEY` 撞同键的未提交事务），阻塞结束后的一致读**看不到**那条刚提交的写 —— 于是"库里有、回读说没有"。凡"写后回读"的语义要求读到最新状态，必须显式把该方法降到 `READ_COMMITTED`，或改用锁定读（后者以串行化为代价）。兄弟先例：`WalletService` 的 `SELECT ... FOR UPDATE` 是**当前读**，天然免疫（见 BUG-051）

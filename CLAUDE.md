@@ -66,12 +66,12 @@ project_02/
 │   │       │   │   └── WebMvcConfig.java       # Web MVC 配置
 │   │       │   ├── controller/                 # 控制器层（21个，含 TicketController 取票大厅）
 │   │       │   ├── entity/                     # 实体类（16个）
-│   │       │   ├── mapper/                     # MyBatis Mapper（15个）
+│   │       │   ├── mapper/                     # MyBatis Mapper（16个，含 MarkLikeMapper 点赞关系）
 │   │       │   ├── service/                    # 业务逻辑层（17个）
 │   │       │   └── exception/                  # 异常处理
 │   │       └── resources/
 │   │           ├── application.yml             # 应用配置
-│   │           └── mapper/                     # MyBatis XML 映射（15个）
+│   │           └── mapper/                     # MyBatis XML 映射（16个）
 │   ├── vue/                            # 前端（Vue 3）
 │   │   ├── index.html                  # HTML 入口
 │   │   ├── vite.config.js              # Vite 配置（含 AutoImport / Components 插件）
@@ -102,7 +102,7 @@ project_02/
 │   │   │   │   ├── Front.vue           # 用户前台布局
 │   │   │   │   ├── Back.vue            # 影院后台布局
 │   │   │   │   ├── Manage.vue          # 管理后台布局
-│   │   │   │   ├── front/              # 13个用户端页面（含取票大厅 Pickup.vue）
+│   │   │   │   ├── front/              # 15个用户端页面（含取票大厅 Pickup.vue、影评页 FilmMarks.vue）
 │   │   │   │   ├── back/               # 7个影院端页面
 │   │   │   │   └── manage/             # 16个管理端页面
 │   │   │   └── assets/                 # 静态资源（css / imgs）
@@ -112,7 +112,7 @@ project_02/
 │   │   │                               # admin-pages.scss / front-pages.scss 列表页共用骨架
 │   ├── sql/                           # 数据库初始化脚本
 │   │   ├── README.md                  # 数据库说明
-│   │   ├── schema.sql                 # 16张表建表语句
+│   │   ├── schema.sql                 # 17张表建表语句
 │   │   ├── data.sql                   # 基础种子（管理员/用户/影院/影厅/影片/词表；
 │   │   │                              #   不含场次/订单/评价 —— 这三类由真实接口产生）
 │   │   ├── init.sql                   # 一键初始化入口
@@ -135,7 +135,7 @@ project_02/
 - **订单系统** — 购票下单、订单状态流转（待支付 → 待取票 → 已取票；待支付可取消或超时自动取消；待取票可退票 → 已退票）、支付与退款资金凭证留痕；订单留存**单价快照**（`ordered.unit_price`），场次改价不影响历史订单
 - **取票与取票大厅** — 支付成功即生成**取票码**（`ordered.pickup_code`，一单一码，`XXXX-XXXX`）；前台「取票大厅」模拟影院自助机，凭码核销出票（待取票 → 已取票）。该核销端点**免登录**（码本身即凭证），有效期到放映结束，用过/退票/取消即失效，均由订单状态派生
 - **账户与资金** — 用户账户余额（`user.balance`）、充值单据（处理中 → 已完成/已失败）、资金流水账本（充值/购票/退票三类来源，记录变动前后余额与关联单据ID）。**购票为余额支付**：支付时校验余额并原子扣减，余额不足则订单保持待支付、座位继续锁定；退票时金额退回余额。不接第三方支付渠道，充值由「提交单据 + 模拟支付回调」两步完成
-- **评价系统** — **已取票**用户在订单页对影片评分 + 评语（一人一片一条，可修改）；评价均分回写 `film.score` 并驱动评分榜；影片详情页公开展示评价列表
+- **评价系统** — **已取票**用户在影评页对影片评分 + 评语（一人一片一条，可修改）；评价均分回写 `film.score` 并驱动评分榜；影片详情页与影评页公开展示评价列表。**点赞**：登录用户可为任一评价点赞 / 取消（一人对一条评价一赞，`mark_like` 关系表的行即唯一权威，赞数按 `COUNT(*)` 实时聚合，不落计数列），列表按赞数降序排列（热评即其头部）
 - **排行榜** — 票房榜 Top10（按 `ordered` 实时聚合的累计售票收入）、评分榜 Top5（按 `film.score`，即该片评价均分）；前台首页另展示「今日票房」（今天支付的售票收入合计，匿名可读）
 - **搜索筛选** — 按影片名称、类型、年份、地区多维筛选
 - **文件上传** — 图片/视频上传，支持本地存储（MIME 白名单校验）
@@ -191,6 +191,8 @@ project_02/
 | `/api/v1/films/mark/top` | GET | 评分排行榜 Top5 |
 | `/api/v1/films/search` | GET | 按标题搜索电影 |
 | `/api/v1/films/by-cinema` | GET | 按影院查询电影 |
+| `/api/v1/marks/by-film` | GET | 某片评价分页（按**赞数降序 → id 降序**），返回 `{total, reviewable, my, list}`；每行 `MarkView` 的 `liked`/`mine` 由后端按 JWT 计算、**投影不含 `userId`**；**匿名可读**，热评即该排序的头部 |
+| `/api/v1/marks/{id}/like` | PUT | 点赞 / 取消点赞：入参 `{liked:true\|false}`（**显式意图**，缺失即拒，不是服务端 toggle），响应回读写库后的 `{liked, likeCount}`；**仅 USER**，重复调用幂等 |
 | `/api/v1/cinemas/page` | GET | 影院分页（支持按电影筛选）；匿名/非管理员只返回 `已审核` 影院，管理员返回全部（否则后台审核列表查不到待审核影院） |
 | `/api/v1/statistics/overview` | GET | 后台可视化大盘（影院状态分布 + 影片类型分布，数据库实时聚合；仅 ADMIN） |
 | `/api/v1/tickets/redeem` | POST | **取票大厅核销**：入参只有 `{code}`（没有 orderId），订单 待取票 → 已取票；返回出票凭条（不含 orderId/订单号/金额/userId）。**全站唯一免登录写接口**，见上方说明 |
@@ -231,19 +233,19 @@ home, admin, user, cinema, type, area, film, actor, notice, room, record, ordere
 ### 影院后台 (`/back/*`) — 7个页面
 home, film, room, record, ordered, person, password
 
-### 用户前台 (`/front/*`) — 14个页面（公开浏览模式）
+### 用户前台 (`/front/*`) — 15个页面（公开浏览模式）
 系统支持公开访问，无需登录即可浏览电影、影院、排行榜等公开内容。根路径 `/` 自动重定向到 `/front/home`。
 
 | 访问模式 | 路由 | 说明 |
 |----------|------|------|
-| 公开访问（无需登录） | home, movie, filmDetail/:id, cinema, cinemaDetail/:id, filmCinema/:id, rank, search, **pickup** | 浏览类页面 + **取票大厅**（自助机口径，凭取票码核销，所以刻意不要求登录，导航也对游客可见） |
+| 公开访问（无需登录） | home, movie, filmDetail/:id, cinema, cinemaDetail/:id, filmCinema/:id, rank, search, **pickup**, **filmMarks/:id** | 浏览类页面 + **取票大厅**（自助机口径，凭取票码核销，所以刻意不要求登录，导航也对游客可见）+ **影评页**（只从影片详情页与购票记录两处进入，**刻意不进顶部导航**；游客也能看别人的评价） |
 | 需登录（USER） | buyTicket, orders, account, person, password | 操作类页面，未登录时弹框提示跳转登录 |
 
 访问受保护页面时，系统弹出确认框 → 跳转 `/login?redirect=<原路径>` → 登录成功后自动回跳。登录页根据角色（USER/CINEMA/ADMIN）分别跳转 `/front/home`、`/back/home`、`/manage/home`。
 
 购票闭环：选座页支付成功后 `OrderPayDialog` **不关闭**，就地切成「购票成功」凭证态显示取票码（`GET /api/v1/orders/{id}` 回查，含后端 join 的影片/影院/影厅名）并给「去取票大厅」；此后可在 `orders` 页 `待取票` 行的展开区再次查看取票码。
 
-评价闭环：`orders` 页对 `已取票` 的订单提供「去评价 / 修改评价」（弹窗内评分 + 评语）；`filmDetail/:id`（公开页）展示该片的评价列表，匿名可读。
+评价闭环：`orders` 页对 `已取票` 的订单提供「去评价 / 修改评价」，点击跳转影评页 `/front/filmMarks/:id`（发表/修改与点赞在同一条赞序列表上，故表单从订单页搬到了该页）；`filmDetail/:id`（公开页）展示该片「用户热评」（即赞序的前 3 条）并给「查看全部 N 条评价」入口，匿名可读。
 
 ## 快速启动命令
 
@@ -269,6 +271,8 @@ SOURCE xm_film/sql/data.sql;
 > 废弃 `film.box_office` 静态票房需要 `migration-20260929-deprecate-box-office.sql`；
 > 取票码需要 `migration-20260929-pickup-code.sql`（加 `ordered.pickup_code` 唯一列，并给存量
 > `待取票` 订单补码 —— 不补的话升级前已支付的订单在取票大厅查不到）；
+> 评价点赞需要 `migration-20260929-mark-like.sql`（新增 `mark_like` 关系表，`CREATE TABLE IF NOT EXISTS`
+> 幂等、不含 `DROP`）；未执行该脚本时点赞报错 `mark_like` 表不存在（先上新代码再跑脚本）。
 > 存量库里的演示场次/订单/评价请用 `scripts/seed-demo-data.py` 清理与重建（按演示账号边界删除，不靠猜 id）。
 
 ### 2. 启动后端
@@ -314,7 +318,7 @@ npm run dev
 3. **文件存储**：当前为本地存储，建议生产环境迁移至 OSS（阿里云/S3）
 4. **日志配置**：✅ 已切换为 SLF4J + Logback，`logback-spring.xml` 按 mapper 包级别控制 SQL 日志（可通过 `MYBATIS_LOG_LEVEL` 环境变量调整）
 5. **API 文档**：✅ 已集成 SpringDoc OpenAPI —— `SwaggerConfig` 定义 OpenAPI Bean 与全局 Bearer 鉴权方案，控制器标注 `@Tag`/`@Operation`，规范端点 `/v3/api-docs`，UI 页面 `static/swagger-ui.html`（swagger-ui 资源走 CDN，离线环境需改用 `springdoc-openapi-starter-webmvc-ui` 本地内嵌）
-6. **单元测试**：✅ 已覆盖 13 个测试类 / 173 个用例 —— Service 层 CRUD 与权限（Admin/User/Cinema/Film/Ordered/Mark）、订单状态机（支付超时/退票窗口/座位边界与单笔上限）、评价规则（评分区间/一人一片去重/均分回写/归属不可转移/**未取票不得评价**）、影院审核与可见性下推、订单座位并发冲突、AuthInterceptor 访问边界（含令牌失效与匿名放行、**匿名写白名单的三处收窄**）、全局异常处理；**账户资金**（余额足额/不足扣减、退款入账、金额非正拒绝、流水前后余额与关联单据）、**充值单据状态机**（提交不改余额、回调成功/失败、重复回调被拒、金额上限、跨用户回调被拒）、**订单删除守卫**按状态拒绝、**取票码核销**（一次性/退票作废/过场作废/未支付拒绝/并发抢核销/输入归一化）；`mvn test` 可复现。**今日票房的 SQL 谓词与取票码/核销的全链路 Mockito 测不到**（打桩后测的是桩，不是谓词、不是唯一索引、不是状态条件更新），这两块必须另在「备用端口 + 临时库」上打真实库验证，单测覆盖不到它们
+6. **单元测试**：✅ 已覆盖 14 个测试类 / 193 个用例 —— Service 层 CRUD 与权限（Admin/User/Cinema/Film/Ordered/Mark）、订单状态机（支付超时/退票窗口/座位边界与单笔上限）、评价规则（评分区间/一人一片去重/均分回写/归属不可转移/**未取票不得评价**）、影院审核与可见性下推、订单座位并发冲突、AuthInterceptor 访问边界（含令牌失效与匿名放行、**匿名写白名单的三处收窄**）、全局异常处理；**账户资金**（余额足额/不足扣减、退款入账、金额非正拒绝、流水前后余额与关联单据）、**充值单据状态机**（提交不改余额、回调成功/失败、重复回调被拒、金额上限、跨用户回调被拒）、**订单删除守卫**按状态拒绝、**取票码核销**（一次性/退票作废/过场作废/未支付拒绝/并发抢核销/输入归一化）、**点赞**（重复点赞幂等与回读权威状态、取消点赞、点赞授权边界、`MarkView` **投影不含 `userId`** 的序列化断言、`reviewable` 口径与本人评价可见性）；`mvn test` 可复现。**今日票房的 SQL 谓词、取票码/核销的全链路、点赞的 `ORDER BY likeCount DESC` 排序与赞数聚合、以及 `setLike` 的事务隔离级别，Mockito 都测不到**（打桩后测的是桩，不是谓词、不是唯一索引、不是状态条件更新、不是隔离级别），这几块必须另在「备用端口 + 临时库」上打真实库验证（点赞见 `scripts/verify/p5-mark-like.py`），单测覆盖不到它们
 7. **前端构建**：生产构建后建议接入 CDN 分发静态资源
 8. **CI/CD**：✅ 已配置 GitHub Actions 流水线（后端编译 → 前端构建）
 9. **错误边界**：前端可引入 Vue ErrorBoundary 机制处理渲染异常
@@ -384,7 +388,7 @@ npm run dev
 - 金额字段必须是包装类型：`ordered.total` 为 `Double` 而非 `double`。`updateById` 用 `<if test="total != null">` 守卫，原始类型永远非 null，会让支付/取票/取消等局部更新把金额写成 0.00（另见 Bug.md BUG-034）。
 - 选座图的座位来源是 `record.roomSeatRows` / `roomSeatCols`（`RecordMapper` 从 `room` 表 JOIN 出来），而不是写死的 8×8，也不是让用户端去读 `/api/v1/rooms`（USER 无权访问影厅接口）。后端座位合法性校验同样按影厅边界，单笔订单座位数上限 6（`OrderedService.MAX_SEATS_PER_ORDER`）。
 - 影厅的 `title`（影院名称）由后端按所属影院记录派生，前端不再手填；`back/Room.vue` 的影院名是只读展示。影厅 `seat_rows`/`seat_cols` 合法区间为 1~50，由 `RoomController.validateSeatLayout` 兜底。
-- 影片评分只有一个数值来源：`mark.score`（`DECIMAL(3,1)`，0~10）。`film.score` 是派生缓存，由 `MarkService` 在评价增删改后经 `FilmMapper.recalculateScore` 回写；无评价时保留基线分、**不归零**（`data.sql` 已不再预置评价，种子影片的 `score` 就是它的基线分本身；老库由 `migration-20260928-p3` 的同一条 `EXISTS` 守卫规则收敛）。评价唯一性由 `MarkMapper.countByUserAndFilm` 保证（一人一片一条），评价人只认 JWT 里的 `userId`。前端「去评价」入口在 `front/Orders.vue`（仅 `已取票` 订单），`front/FilmDetail.vue` 展示评价列表。
+- 影片评分只有一个数值来源：`mark.score`（`DECIMAL(3,1)`，0~10）。`film.score` 是派生缓存，由 `MarkService` 在评价增删改后经 `FilmMapper.recalculateScore` 回写；无评价时保留基线分、**不归零**（`data.sql` 已不再预置评价，种子影片的 `score` 就是它的基线分本身；老库由 `migration-20260928-p3` 的同一条 `EXISTS` 守卫规则收敛）。评价唯一性由 `MarkMapper.countByUserAndFilm` 保证（一人一片一条），评价人只认 JWT 里的 `userId`。前端「去评价」入口在 `front/Orders.vue`（仅 `已取票` 订单，点击跳影评页），`front/FilmDetail.vue` 展示热评（该赞序前 3 条）、完整列表在 `front/FilmMarks.vue`。
 - 影院审核状态词表 `CinemaStatus` 只有 `未审核`/`已审核`（与 `schema.sql` 默认值、`data.sql` 种子一致）。`CinemaService.login` 拒绝未审核影院；公开列表经 `CinemaMapper.selectByFilmId` 的 `approvedOnly` 过滤，该标记由 `CinemaController` 按 `!isAdmin()` 传入 —— 管理员必须看得到未审核的，否则无法审核（见 Bug.md BUG-036）。
 - `WebMvcConfig.excludePathPatterns` 是**角色盲区**：被排除的路径不执行 `AuthInterceptor`，request 上没有 `role`/`userId`，控制器里的角色判断会静默失效（BUG-036 即由此而来）。公开访问统一交给 `PUBLIC_READ_PREFIXES`，**不要往排除表里加路径**。
 - 令牌失效时公开只读资源仍按匿名放行（`AuthInterceptor.isAnonymousRead`）。否则游客带着过期令牌浏览公开页会被判 401，而前端 `request.js` 的 401 处理会跳登录页 —— 公开内容就变成了事实上的必须登录。
@@ -401,6 +405,12 @@ npm run dev
 - `excludePathPatterns` 是角色盲区（BUG-036），账户/充值/流水端点**都在拦截器覆盖范围内**：`/api/v1/recharges`、`/api/v1/fund-flows`、`/api/v1/account` 均未加入 `PUBLIC_READ_PREFIXES`，因此未登录一律 401 而不是匿名放行。
 - 登录 / 注册页共用一套外壳 `assets/css/auth-layout.scss`（两页各自 `@use` 进 `scoped` 块，与 `admin-layout.scss` 同构）。**卡片宽度只有 `.auth-card` 的 `max-width` 一个来源，卡片内部一律 `width: 100%`** —— 曾因内层写死 `380px` 而父级内容宽仅 192px，导致标题折行、表单溢出 188px（BUG-042）。容器用 `min-height: 100vh` + flex 居中，**不要**改回 `height: 100vh` + `overflow: hidden` + 绝对定位（矮视口会裁掉卡片且无法滚动）。口径见规范 §6.4，回归守卫在 `tests/design-tokens.test.mjs`。
 - 认证页表单的固定形态：`label-position="top"` + `status-icon` + 可见 `label` + 文本输入框 `@keyup.enter`（`el-form` 上 `@submit.prevent` 兜底）+ 图标一律组件绑定 `:prefix-icon="User"`（字符串写法不会解析，`main.js` 未全局注册图标集，BUG-043）。登录角色默认 `USER`，**不要**改回 `ADMIN`（BUG-044）。
+- `mark_like` 是评价点赞的**纯关系表**（`PRIMARY KEY (mark_id, user_id)`，两个外键均 `ON DELETE CASCADE`）：一行即一个赞，"一人一赞"与"可取消"都由主键承担，赞数由 `COUNT(*)` 实时聚合，**刻意不落计数列** —— 冗余计数列会把真相分到两处（取消赞 / 评价被删 / 并发点赞任一处漏同步，计数就永久偏离且无法自证对错），与 `user.balance` 为唯一余额来源同一思路。`MarkLikeMapper` 因此**不继承 `BaseMapper`**（没有 CRUD 资源，继承来的 7 个方法只会是死代码），也没有实体类（只有关系、没有身份），四条语句只收/还 int。
+- **「热评」不是第二条查询**：`filmDetail/:id` 的头部 3 条就是 `GET /api/v1/marks/by-film` 那条「`likeCount DESC, mark.id DESC`」排序（`MarkMapper.xml` 的 `selectFilmMarks`）的**前 3 行**（`pageSize=3`），影评页 `/front/filmMarks/:id` 是同一排序的完整分页。**不要再为热评另写一条 SQL 或另开一个端点** —— 两个排序一旦分叉，同一部片会在两个页面给出不同的"热门"。
+- `MarkView` 的 `liked` / `mine` 由后端按 JWT 在 SQL 里算好（`viewer` 为 null 时一并为 false），**投影不含 `userId`** —— 下发作者 id 等于把"这条是不是我写的"下放给前端自己比对，正是 BUG-040 的漏（`/api/v1/orders/seats` 曾直接下发他人订单号与 `userId`）。归属只认 `mine` 布尔量，前端不得再拿 `userId` 自己比对。
+- `MarkService.setLike` 必须 `@Transactional(isolation = Isolation.READ_COMMITTED)`。MySQL 默认的 REPEATABLE READ 下，本事务的读快照在第一条一致读（`requireExisting`）就已固定；`insertIfAbsent` 撞上另一个**尚未提交**的同键事务会阻塞到对方提交之后才返回，此后再用一致读 `COUNT`，读到的仍是那个早于对方提交的旧快照 —— 库里已有该行，回读却报 `liked=false` / `likeCount=0`，与"返回写库后的权威状态"正好相反（真库复现：5 个并发响应里 4 个报 `liked=false`，见 Bug.md BUG-051）。**不要改用锁定读 `FOR UPDATE`**：那会锁住该评价行，把同一部片子上所有人的点赞串行化。
+- `insertIfAbsent` 用 `ON DUPLICATE KEY UPDATE mark_id = mark_id`，**不用 `INSERT IGNORE`**：`INSERT IGNORE` 把**所有**错误一并降级为警告，外键违规（`mark_id` 指向的评价已被删）同样只返回 `ROW_COUNT()=0`，与"已赞过"字节级相同，使二者不可区分；`ON DUPLICATE KEY` 只吸收重复键冲突，真实的外键错误照常抛 1452。端点是**构造上幂等**的：`liked` 是显式意图（非服务端 toggle）叠加主键去重；响应回读权威状态而非信任受影响行数，因为重复插入同样报 0 行。
+- 点赞**没有新增任何拦截器放行规则**：`/api/v1/marks` 早已在 `PUBLIC_READ_PREFIXES` 内（评价列表本就匿名可读），`PUT /{id}/like` 的 `USER` 限制落在 `MarkController.requireUser`，不是 `excludePathPatterns` 那类角色盲区（BUG-036）。
 
 ## Git 提交历史
 
