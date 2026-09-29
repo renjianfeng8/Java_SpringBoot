@@ -40,6 +40,7 @@ SOURCE data.sql;
 - 字符集：`utf8mb4` + `utf8mb4_unicode_ci`
 - 引擎：`InnoDB`
 - **种子范围**：`data.sql` 只写基础数据（`admin` / `user` / `area` / `type` / `cinema` / `room` / `film` / `film_type` / `actor` / `notice` / `video`）。`record`（场次）、`ordered`（订单）、`mark`（评价）**不预置** —— 手写的订单必须同时伪造订单号、单价快照、支付凭证、余额扣减与资金流水，任意一处对不上就是能被查出的假数据（老种子正是如此）。需要演示数据只能经真实业务接口生成（前台下单 → 支付 → 取票 → 评价），不要手工 `INSERT`。
+- **派生指标不预置**：`film.score`（影片评分）是派生列 —— 来自 `mark.score` 的均分，由 `MarkService` 在评价增删改后回写。种子里 17 部影片的 `score` **一律写 `NULL`**，表示"还没有人评过"（前端渲染「暂无评分」）；该列也刻意**不给 `DEFAULT`**，否则"新增影片不带评分"会落成「0 分」——`0.0` 是合法的真实评分，与 `NULL` 是两回事。已废弃的 `film.box_office` 同理（由 `ordered` 实时聚合）。
 
 ## 表清单（17 张）
 

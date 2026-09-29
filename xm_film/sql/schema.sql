@@ -98,7 +98,7 @@ CREATE TABLE `film` (
     `employee`  VARCHAR(100)                              COMMENT '维护人员',
     `area_id`   INT                                       COMMENT '产地ID（关联area表）',
     `status`    VARCHAR(20)   DEFAULT '待上映'             COMMENT '状态（已上映/待上映）',
-    `score`     DECIMAL(3,1)  DEFAULT 0.0                 COMMENT '评分（由 mark.score 回写；无评价时保留基线值）',
+    `score`     DECIMAL(3,1)                              COMMENT '评分 = 该片真实评价均分（仅 MarkService 经 FilmMapper.recalculateScore 写）；无评价为 NULL',
     `box_office` DECIMAL(10,1) DEFAULT 0.0                COMMENT '已废弃：票房改由 ordered 实时聚合（见 FilmMapper.filmRevenueJoin），此列恒为 0',
     `actor_id`   INT                                      COMMENT '关联演员ID',
     `video`     VARCHAR(500)                              COMMENT '预告片URL',

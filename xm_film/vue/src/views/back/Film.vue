@@ -46,7 +46,8 @@
                   </el-tag>
               </el-descriptions-item>
               <el-descriptions-item label="电影评分">
-                <el-rate v-model="props.row.score" disabled show-score text-color="var(--color-rating-text)" score-template="{value} 分"/>
+                <el-rate v-if="props.row.score != null" v-model="props.row.score" disabled show-score text-color="var(--color-rating-text)" score-template="{value} 分"/>
+                <span v-else>暂无评分</span>
               </el-descriptions-item>
             </el-descriptions>
 

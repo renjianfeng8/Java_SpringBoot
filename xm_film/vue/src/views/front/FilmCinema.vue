@@ -43,7 +43,7 @@
           <div class="film-hero__stats">
             <div class="film-hero__stat">
               <div class="film-hero__stat-label">影片口碑</div>
-              <div class="film-hero__stat-value">{{ film.score || 0 }}分</div>
+              <div class="film-hero__stat-value">{{ formatScore(film.score) }}</div>
             </div>
             <div>
               <div class="film-hero__stat-label">累计票房</div>
@@ -154,7 +154,7 @@ import request from "@/utils/request.js";
 import 'element-plus/theme-chalk/el-pagination.css';
 import 'element-plus/theme-chalk/el-button.css';
 import { API_PATHS, apiById, apiPage } from '@/constants';
-import { formatBoxOffice } from '@/utils/format.js';
+import { formatBoxOffice, formatScore } from '@/utils/format.js';
 
 // 1. 路由相关（获取电影ID + 路由跳转）
 const route = useRoute();
@@ -169,7 +169,7 @@ const film = reactive({
   title: '',
   english: '',
   img: '',
-  score: 0,
+  score: null,
   boxOffice: 0,
   types: [],
   area: '',
@@ -228,7 +228,7 @@ const fetchFilmFullInfo = () => {
             title: data.title?.trim() || '未知电影',
             english: data.english || '无英文标题',
             img: data.img,
-            score: data.score || 0,
+            score: data.score,
             boxOffice: data.boxOffice || 0,
             types: (data.typeList || []).map(t => t.title),
             area: data.areaName || '未知地区',

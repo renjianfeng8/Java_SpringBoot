@@ -19,3 +19,15 @@ export function formatBoxOffice(value) {
 export function formatYuan(value) {
   return `${Number(value || 0).toFixed(2)}元`
 }
+
+/**
+ * 影片评分格式化。
+ * 数值来源是 film.score —— 该片真实用户评价（mark.score）的均分，由后端 MarkService
+ * 在评价增删改后回写；没有任何评价时该列是 NULL，表示"这片还没人评过"，渲染「暂无评分」。
+ * 刻意不用 falsy 判断：0.0 是合法的真实评分（mark.score 允许 0~10），只有 null / undefined
+ * 才代表没有评分 —— 与 formatBoxOffice 把 0 当缺失值正好相反，两者不可混用。
+ */
+export function formatScore(value) {
+  if (value === null || value === undefined || value === '') return '暂无评分'
+  return `${Number(value).toFixed(1)} 分`
+}

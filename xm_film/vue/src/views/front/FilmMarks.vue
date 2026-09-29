@@ -19,7 +19,7 @@
           <img :src="film.img" :alt="`${film.title}的海报`" class="marks-hero__img">
           <div class="marks-hero__info">
             <div class="marks-hero__title">{{ film.title }}</div>
-            <div class="marks-hero__score">影片口碑 {{ film.score }} 分</div>
+            <div class="marks-hero__score">影片口碑 {{ formatScore(film.score) }}</div>
           </div>
         </div>
       </div>
@@ -120,6 +120,7 @@ import { computed, onMounted, reactive, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import request from '@/utils/request.js';
+import { formatScore } from '@/utils/format.js';
 import { API_PATHS, MARK_API, apiById } from '@/constants';
 import { useAuth } from '@/composables/useAuth';
 
@@ -138,7 +139,7 @@ const listLoading = ref(false);   // 仅列表（翻页时重取的加载态）
 const errorMsg = ref('');
 const listError = ref(false);     // 列表重取失败
 
-const film = reactive({ id: '', title: '', img: '', score: 0 });
+const film = reactive({ id: '', title: '', img: '', score: null });
 const marks = reactive({ list: [], pageNum: 1, pageSize: 10, total: 0 });
 const reviewable = ref(false);    // 够格发表（对该片有已取票订单），是否已评过看 my
 const my = ref(null);             // 本人对该片的评价
@@ -163,7 +164,7 @@ const loadFilm = async () => {
     id: data.id,
     title: data.title?.trim() || '未知电影',
     img: data.img || '',
-    score: data.score || 0,
+    score: data.score,
   });
 };
 
