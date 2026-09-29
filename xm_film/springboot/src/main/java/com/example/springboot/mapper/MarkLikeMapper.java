@@ -9,7 +9,14 @@ import org.apache.ibatis.annotations.Param;
  */
 public interface MarkLikeMapper {
 
-    int insertIgnore(@Param("markId") Integer markId, @Param("userId") Integer userId);
+    /**
+     * 插入点赞关系；若 (markId, userId) 已存在则什么都不做（唯一键把重复插入降级为无副作用的空更新）。
+     * <p>
+     * 刻意不用 INSERT IGNORE：后者把外键违规（markId 指向的评价已被删）也降级成 ROW_COUNT()=0，
+     * 使"已赞过"与"评价不存在"无法区分。**重复时受影响行数同样是 0**，因此调用方必须回读权威状态
+     * （countByMarkAndUser / 重新查点赞列表），不要用返回值判断本次点赞是否生效。
+     */
+    int insertIfAbsent(@Param("markId") Integer markId, @Param("userId") Integer userId);
 
     int deleteByMarkAndUser(@Param("markId") Integer markId, @Param("userId") Integer userId);
 
