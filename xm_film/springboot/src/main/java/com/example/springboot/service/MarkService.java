@@ -118,8 +118,8 @@ public class MarkService extends BaseService<Mark> {
      * 一致读（下面的 requireExisting）就已经固定；而 insertIfAbsent 若撞上另一个**尚未
      * 提交**的同键事务会阻塞到对方提交之后才返回。此后再用一致读去 COUNT，读到的依然是
      * 那个早于对方提交的旧快照 —— 库里明明已有这一行，回读却报 liked=false / likeCount=0，
-     * 与"返回写库后的权威状态"这个承诺正好相反（真库复现见 scripts/verify/p5-mark-like.py
-     * 并发段：修复前 5 个并发响应里 4 个报 liked=false）。READ_COMMITTED 让每条语句取最新
+     * 与"返回写库后的权威状态"这个承诺正好相反（真库并发复现：修复前 5 个并发响应里 4 个报
+     * liked=false）。READ_COMMITTED 让每条语句取最新
      * 已提交快照，这才是本方法需要的"权威状态"。
      *
      * 不用锁定读（FOR UPDATE）来纠正：那会锁住该评价行，把同一部片子上所有人的点赞串行化。

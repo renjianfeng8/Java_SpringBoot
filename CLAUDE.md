@@ -39,12 +39,6 @@ project_02/
 ├── Bug.md                             # Bug 修复记录（修复前先查阅）
 ├── 标准前端视觉与交互设计规范.md        # 前端视觉与交互设计规范（新增页面前先查阅）
 ├── 前端规范待办.md                     # 规范未落地条目与整改进度（规范正文不记进度）
-├── scripts/                           # 通用脚本
-│   ├── start-dev.bat                  # 一键启动
-│   ├── seed-demo-data.py              # 演示数据生成（走真实接口；默认计划模式，--apply 才写库）
-│   └── verify/                        # 隔离环境验证脚本（备用端口 + 临时库，不碰开发库）
-│       ├── p4-account-wallet-e2e.py   # 账户-充值-订单闭环端到端验证（70 断言，可反复运行）
-│       └── p4-concurrency.py          # 余额扣减并发正确性验证（12 断言，可反复运行）
 ├── xm_film/                           # 项目主目录
 │   ├── springboot/                    # 后端（Spring Boot）
 │   │   ├── pom.xml                    # Maven 依赖配置
@@ -273,7 +267,7 @@ SOURCE xm_film/sql/data.sql;
 > `待取票` 订单补码 —— 不补的话升级前已支付的订单在取票大厅查不到）；
 > 评价点赞需要 `migration-20260929-mark-like.sql`（新增 `mark_like` 关系表，`CREATE TABLE IF NOT EXISTS`
 > 幂等、不含 `DROP`）；未执行该脚本时点赞报错 `mark_like` 表不存在（先上新代码再跑脚本）。
-> 存量库里的演示场次/订单/评价请用 `scripts/seed-demo-data.py` 清理与重建（按演示账号边界删除，不靠猜 id）。
+> 存量库里的演示场次/订单/评价不要手工 `INSERT` 补 —— 手写交易数据（单号、单价快照、支付凭证、余额扣减、资金流水）任意一处对不上就是可被查出的假数据，只能经真实业务接口重新产生（前台下单 → 支付 → 取票 → 评价）。
 
 ### 2. 启动后端
 ```bash
@@ -318,7 +312,7 @@ npm run dev
 3. **文件存储**：当前为本地存储，建议生产环境迁移至 OSS（阿里云/S3）
 4. **日志配置**：✅ 已切换为 SLF4J + Logback，`logback-spring.xml` 按 mapper 包级别控制 SQL 日志（可通过 `MYBATIS_LOG_LEVEL` 环境变量调整）
 5. **API 文档**：✅ 已集成 SpringDoc OpenAPI —— `SwaggerConfig` 定义 OpenAPI Bean 与全局 Bearer 鉴权方案，控制器标注 `@Tag`/`@Operation`，规范端点 `/v3/api-docs`，UI 页面 `static/swagger-ui.html`（swagger-ui 资源走 CDN，离线环境需改用 `springdoc-openapi-starter-webmvc-ui` 本地内嵌）
-6. **单元测试**：✅ 已覆盖 14 个测试类 / 193 个用例 —— Service 层 CRUD 与权限（Admin/User/Cinema/Film/Ordered/Mark）、订单状态机（支付超时/退票窗口/座位边界与单笔上限）、评价规则（评分区间/一人一片去重/均分回写/归属不可转移/**未取票不得评价**）、影院审核与可见性下推、订单座位并发冲突、AuthInterceptor 访问边界（含令牌失效与匿名放行、**匿名写白名单的三处收窄**）、全局异常处理；**账户资金**（余额足额/不足扣减、退款入账、金额非正拒绝、流水前后余额与关联单据）、**充值单据状态机**（提交不改余额、回调成功/失败、重复回调被拒、金额上限、跨用户回调被拒）、**订单删除守卫**按状态拒绝、**取票码核销**（一次性/退票作废/过场作废/未支付拒绝/并发抢核销/输入归一化）、**点赞**（重复点赞幂等与回读权威状态、取消点赞、点赞授权边界、`MarkView` **投影不含 `userId`** 的序列化断言、`reviewable` 口径与本人评价可见性）；`mvn test` 可复现。**今日票房的 SQL 谓词、取票码/核销的全链路、点赞的 `ORDER BY likeCount DESC` 排序与赞数聚合、以及 `setLike` 的事务隔离级别，Mockito 都测不到**（打桩后测的是桩，不是谓词、不是唯一索引、不是状态条件更新、不是隔离级别），这几块必须另在「备用端口 + 临时库」上打真实库验证（点赞见 `scripts/verify/p5-mark-like.py`），单测覆盖不到它们
+6. **单元测试**：✅ 已覆盖 14 个测试类 / 193 个用例 —— Service 层 CRUD 与权限（Admin/User/Cinema/Film/Ordered/Mark）、订单状态机（支付超时/退票窗口/座位边界与单笔上限）、评价规则（评分区间/一人一片去重/均分回写/归属不可转移/**未取票不得评价**）、影院审核与可见性下推、订单座位并发冲突、AuthInterceptor 访问边界（含令牌失效与匿名放行、**匿名写白名单的三处收窄**）、全局异常处理；**账户资金**（余额足额/不足扣减、退款入账、金额非正拒绝、流水前后余额与关联单据）、**充值单据状态机**（提交不改余额、回调成功/失败、重复回调被拒、金额上限、跨用户回调被拒）、**订单删除守卫**按状态拒绝、**取票码核销**（一次性/退票作废/过场作废/未支付拒绝/并发抢核销/输入归一化）、**点赞**（重复点赞幂等与回读权威状态、取消点赞、点赞授权边界、`MarkView` **投影不含 `userId`** 的序列化断言、`reviewable` 口径与本人评价可见性）；`mvn test` 可复现。**今日票房的 SQL 谓词、取票码/核销的全链路、点赞的 `ORDER BY likeCount DESC` 排序与赞数聚合、以及 `setLike` 的事务隔离级别，Mockito 都测不到**（打桩后测的是桩，不是谓词、不是唯一索引、不是状态条件更新、不是隔离级别），这几块必须另在「备用端口 + 临时库」上打真实库验证，单测覆盖不到它们
 7. **前端构建**：生产构建后建议接入 CDN 分发静态资源
 8. **CI/CD**：✅ 已配置 GitHub Actions 流水线（后端编译 → 前端构建）
 9. **错误边界**：前端可引入 Vue ErrorBoundary 机制处理渲染异常
@@ -394,16 +388,16 @@ npm run dev
 - 令牌失效时公开只读资源仍按匿名放行（`AuthInterceptor.isAnonymousRead`）。否则游客带着过期令牌浏览公开页会被判 401，而前端 `request.js` 的 401 处理会跳登录页 —— 公开内容就变成了事实上的必须登录。
 - `Film.boxOffice` 已由原始 `double` 改为 `Double`，与 `ordered.total` 同因同治（`film.box_office` 有 `DEFAULT 0.0`，新增影片不受影响）。凡是被 `<if test="X != null">` 守卫的字段一律用包装类型。查询时该字段承载上面聚合出来的票房（元），**不再来自 `film.box_office` 列**。
 - 账户余额的唯一可信来源是 `user.balance`；`fund_flow` 是只增的审计副本。**任何改余额的代码只能走 `WalletService`**（`creditRecharge` / `debitPurchase` / `creditRefund`），它统一做「行锁读余额 → 校验/变更 → 写一条流水」，因此不会出现"改了余额没记账"或"扣款成功但订单没出票"。
-- 余额扣减是 `SELECT balance ... FOR UPDATE` 行锁 + `UPDATE ... WHERE balance >= ?` 条件更新双保险。**不要绕过 `WalletService` 直接用 `UserMapper.addBalance` 写业务代码** —— 那样会跳过流水与校验，余额与账本必然对不上（并发验证见 `scripts/verify/p4-concurrency.py`）。
+- 余额扣减是 `SELECT balance ... FOR UPDATE` 行锁 + `UPDATE ... WHERE balance >= ?` 条件更新双保险。**不要绕过 `WalletService` 直接用 `UserMapper.addBalance` 写业务代码** —— 那样会跳过流水与校验，余额与账本必然对不上。
 - 金额字段一律 `BigDecimal`（`user.balance` / `recharge_order.amount` / `fund_flow.change_amount` 等），前端展示经 `Number(...).toFixed(2)`。`ordered.total`/`unit_price` 仍是 `Double`/`BigDecimal`，历史原因不同，新增资金字段不要再用 `double`。
 - 充值单据状态机只有三个状态、两条边：`处理中 → 已完成`（回调成功，入账）、`处理中 → 已失败`（回调失败，余额不变）。**终态不可再流转**，重复回调返回业务冲突——这是幂等的唯一实现，新增任何充值入口都必须复用 `RechargeService.handleCallback`。
 - 订单物理删除只允许终态废单（`已取消` / `已退票`），白名单在 `OrderedService.DELETABLE_STATUSES`，前端三端按钮由 `constants.isOrderDeletable` 同构渲染。**这是"删订单当免费退票用"的后门**：退票能回款而删除不能，一旦放开已支付订单的删除，资金账就永远对不平。
 - 演示账号 `zhangsan` 预置 100 元余额（`data.sql` 与 `migration-20260928-p4-account-wallet.sql` 保持一致）。余额不足的演示路径由"连买几张高价票"自然触发，不需要额外的穷账号。
-- **`data.sql` 不预置交易类数据**：`record`（场次）/ `ordered`（订单）/ `mark`（评价）一律由真实业务接口产生。手写的订单必须同时伪造订单号、单价快照、支付凭证、余额扣减与资金流水 —— 老种子正是如此（`unit_price` 全为 NULL、`fund_flow` 里没有对应购票记录、`zhangsan` 余额未因那条 42 元订单扣减、单号是 12 位纯数字而真实单号是 `yyyyMMdd` + 8 位十六进制），一查就露。**要演示数据请跑 `scripts/seed-demo-data.py`**：默认计划模式（`--apply` 才写库），走真实接口生成 3 条已支付订单 + 3 条真实评价 + 真实充值与流水；幂等可重跑，按"同影厅同影片已有可购票场次就复用"避免排片膨胀，并且只在检测到 v1 种子订单（单号 12 位纯数字）时才清理旧种子排片。
+- **`data.sql` 不预置交易类数据**：`record`（场次）/ `ordered`（订单）/ `mark`（评价）一律由真实业务接口产生。手写的订单必须同时伪造订单号、单价快照、支付凭证、余额扣减与资金流水 —— 老种子正是如此（`unit_price` 全为 NULL、`fund_flow` 里没有对应购票记录、`zhangsan` 余额未因那条 42 元订单扣减、单号是 12 位纯数字而真实单号是 `yyyyMMdd` + 8 位十六进制），一查就露。**要演示数据只能经真实业务接口生成**（前台下单 → 支付 → 取票 → 评价），不要手工 `INSERT` 补单。
 - 后台大盘统计走 `StatisticsController` / `StatisticsService` → `GET /api/v1/statistics/overview`（仅 ADMIN），由 `CinemaMapper.countGroupByStatus` / `FilmMapper.countGroupByType` 用 `GROUP BY` 实时聚合。**前端不再拉全表自己算**（`manage/Home.vue` 原先为此拉取 films + cinemas + types 三张全表再在 JS 里聚合）。无数据时按规范 §11.2 渲染「暂无数据」占位，不塞编造默认值。
 - 前端空态与异常的文案分工（规范 §11.2）：接口成功但无数据 → 「暂无数据」；请求失败（网络异常 / 超时 / 5xx）→ 「数据加载失败，请稍后重试」。失败提示由 `utils/request.js` 的响应拦截器统一给出，**页面内的 `catch` 只落错误态、不再重复弹提示**，否则同一次失败会弹两次。区分两者是必需的：请求失败时显示「暂无数据」会让用户以为系统里真的没有数据。
 - `excludePathPatterns` 是角色盲区（BUG-036），账户/充值/流水端点**都在拦截器覆盖范围内**：`/api/v1/recharges`、`/api/v1/fund-flows`、`/api/v1/account` 均未加入 `PUBLIC_READ_PREFIXES`，因此未登录一律 401 而不是匿名放行。
-- 登录 / 注册页共用一套外壳 `assets/css/auth-layout.scss`（两页各自 `@use` 进 `scoped` 块，与 `admin-layout.scss` 同构）。**卡片宽度只有 `.auth-card` 的 `max-width` 一个来源，卡片内部一律 `width: 100%`** —— 曾因内层写死 `380px` 而父级内容宽仅 192px，导致标题折行、表单溢出 188px（BUG-042）。容器用 `min-height: 100vh` + flex 居中，**不要**改回 `height: 100vh` + `overflow: hidden` + 绝对定位（矮视口会裁掉卡片且无法滚动）。口径见规范 §6.4，回归守卫在 `tests/design-tokens.test.mjs`。
+- 登录 / 注册页共用一套外壳 `assets/css/auth-layout.scss`（两页各自 `@use` 进 `scoped` 块，与 `admin-layout.scss` 同构）。**卡片宽度只有 `.auth-card` 的 `max-width` 一个来源，卡片内部一律 `width: 100%`** —— 曾因内层写死 `380px` 而父级内容宽仅 192px，导致标题折行、表单溢出 188px（BUG-042）。容器用 `min-height: 100vh` + flex 居中，**不要**改回 `height: 100vh` + `overflow: hidden` + 绝对定位（矮视口会裁掉卡片且无法滚动）。口径见规范 §6.4；改动共用外壳时须同时核对登录/注册两页的上述布局不变量。
 - 认证页表单的固定形态：`label-position="top"` + `status-icon` + 可见 `label` + 文本输入框 `@keyup.enter`（`el-form` 上 `@submit.prevent` 兜底）+ 图标一律组件绑定 `:prefix-icon="User"`（字符串写法不会解析，`main.js` 未全局注册图标集，BUG-043）。登录角色默认 `USER`，**不要**改回 `ADMIN`（BUG-044）。
 - `mark_like` 是评价点赞的**纯关系表**（`PRIMARY KEY (mark_id, user_id)`，两个外键均 `ON DELETE CASCADE`）：一行即一个赞，"一人一赞"与"可取消"都由主键承担，赞数由 `COUNT(*)` 实时聚合，**刻意不落计数列** —— 冗余计数列会把真相分到两处（取消赞 / 评价被删 / 并发点赞任一处漏同步，计数就永久偏离且无法自证对错），与 `user.balance` 为唯一余额来源同一思路。`MarkLikeMapper` 因此**不继承 `BaseMapper`**（没有 CRUD 资源，继承来的 7 个方法只会是死代码），也没有实体类（只有关系、没有身份），四条语句只收/还 int。
 - **「热评」不是第二条查询**：`filmDetail/:id` 的头部 3 条就是 `GET /api/v1/marks/by-film` 那条「`likeCount DESC, mark.id DESC`」排序（`MarkMapper.xml` 的 `selectFilmMarks`）的**前 3 行**（`pageSize=3`），影评页 `/front/filmMarks/:id` 是同一排序的完整分页。**不要再为热评另写一条 SQL 或另开一个端点** —— 两个排序一旦分叉，同一部片会在两个页面给出不同的"热门"。

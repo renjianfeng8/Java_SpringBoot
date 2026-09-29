@@ -150,7 +150,7 @@ INSERT INTO `actor` (`id`, `film_id`, `title`, `img`, `actor`, `figure`, `pictur
 -- 旧种子正是"可被查出的假数据"的样本：orders 列清单不含 unit_price（快照为 NULL）、
 -- fund_flow 里没有对应的购票流水、zhangsan 余额未因那条 42 元订单扣减、
 -- 订单号是 12 位纯数字（真实单号是 yyyyMMdd + 8 位十六进制）。
--- 需要演示数据请跑 scripts/seed-demo-data.py —— 它走真实接口生成，账实相符。
+-- 演示数据只能经真实业务接口产生（前台下单 → 支付 → 取票 → 评价），手工写的对不上账。
 
 -- ---------------------------
 -- 13. notice — 通知公告数据
