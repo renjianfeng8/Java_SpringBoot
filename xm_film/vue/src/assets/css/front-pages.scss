@@ -92,4 +92,103 @@
   .filter-options {
     flex: 1;
   }
+
+  /* 评价条目（影片详情页「用户热评」与影评页共用，因此收在这里，两页不再各写一份） */
+  .marks-list {
+    margin-top: var(--space-16);
+  }
+
+  .mark-item {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-12);
+    padding: var(--space-12) 0;
+    border-bottom: 1px solid var(--el-fill-color-dark);
+
+    /* 点赞：文字按钮。已赞用主色（5.58:1）、未赞用常规文字色（6.11:1），两态都达 AA。
+     * 必须嵌在 .mark-item 里才够特异性：编译出 .front-content .mark-item .mark-item__like（0-3-0），
+     * 压过 EP 的 .el-button.is-link（0-2-0）。若平铺成 .mark-item__like 就只有 0-2-0，与 EP 打平，
+     * 胜负交给样式表顺序 —— 那正是规范 §11.2 要求用特异性而非 !important 解决的场景。 */
+    .mark-item__like {
+      color: var(--el-text-color-regular);
+
+      &:hover {
+        color: var(--el-color-primary);
+      }
+
+      &:active {
+        color: var(--el-color-primary-dark-2);
+      }
+
+      /* 上面三条（0-3-0 / 0-4-0）会压过 EP 的 .el-button.is-disabled（0-2-0），
+       * 所以禁用态必须显式补一条，否则请求进行中按钮看着还能点（§9.1 五态）。 */
+      &:disabled {
+        color: var(--el-text-color-disabled);
+      }
+    }
+
+    .mark-item__like--on {
+      color: var(--el-color-primary);
+    }
+
+    .mark-item__like--on:hover {
+      color: var(--el-color-primary-dark-2);
+    }
+  }
+
+  /* 头像既是图片容器也是无图时的首字兜底底色：浅主色底 + 主色文字（不承载正文，只放昵称首字） */
+  .mark-item__avatar {
+    flex: 0 0 auto;
+    background-color: var(--el-color-primary-light-9);
+    color: var(--el-color-primary);
+  }
+
+  .mark-item__main {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .mark-item__head {
+    display: flex;
+    align-items: center;
+    gap: var(--space-8);
+  }
+
+  .mark-item__user {
+    font-weight: var(--fw-bold);
+    color: var(--el-text-color-primary);
+  }
+
+  .mark-item__score {
+    /* 顶到行尾：有「我的」标签时也保持评分右对齐 */
+    margin-left: auto;
+    font-weight: var(--fw-bold);
+    color: var(--color-rating-text);
+  }
+
+  .mark-item__text {
+    margin-top: var(--space-8);
+    color: var(--el-text-color-regular);
+    line-height: var(--lh-base);
+  }
+
+  .mark-item__meta {
+    margin-top: var(--space-4);
+    font-size: var(--fs-xs);
+    color: var(--el-text-color-regular);
+  }
+
+  .mark-item__actions {
+    flex: 0 0 auto;
+  }
+
+  /* 评价列表的加载 / 空 / 失败提示（规范 §11.2：空态与失败态文案固定且必须区分） */
+  .marks-hint {
+    padding: var(--space-20) 0;
+    color: var(--el-text-color-regular);
+  }
+
+  .marks-hint--error {
+    color: var(--el-color-danger);
+  }
 }

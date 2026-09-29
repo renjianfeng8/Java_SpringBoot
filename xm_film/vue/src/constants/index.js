@@ -42,6 +42,17 @@ export const FILM_API = {
   MARK_TOP: `${API_PATHS.FILMS}/mark/top`,
 }
 
+/**
+ * 影评业务接口。
+ * BY_FILM 是「某片全部评价」的唯一入口：列表按赞数降序 → id 降序，
+ * 影片详情页的「热评」只是它的前 3 条，不存在第二条排序或第二个端点。
+ * liked / mine 由后端按访问者算好（响应刻意不带 userId），前端不推导归属。
+ */
+export const MARK_API = {
+  BY_FILM: `${API_PATHS.MARKS}/by-film`,
+  LIKE: (id) => `${API_PATHS.MARKS}/${id}/like`,
+}
+
 /** 订单业务接口（非标准 CRUD） */
 export const ORDER_API = {
   CREATE: `${API_PATHS.ORDERS}/create`,
