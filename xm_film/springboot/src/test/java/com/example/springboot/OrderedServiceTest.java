@@ -102,9 +102,10 @@ class OrderedServiceTest {
         ordered.setStatus("待取票");
         when(orderedMapper.selectByIdForUpdate(1)).thenReturn(ordered);
 
+        // 用户即使操作自己的订单也走不通柜台通路；提示把他导向取票大厅的自助核销
         assertThatThrownBy(() -> orderedService.pickupOrder(1, "USER", 100))
                 .isInstanceOf(CustomException.class)
-                .hasMessageContaining("无权");
+                .hasMessageContaining("影院柜台");
     }
 
     @Test
@@ -271,7 +272,7 @@ class OrderedServiceTest {
     }
 
     @Test
-    void adminPickupOrderSuccessfully() {
+    void adminCannotPickupOrder() {
         Ordered ordered = new Ordered();
         ordered.setId(1);
         ordered.setUserId(100);
@@ -279,11 +280,12 @@ class OrderedServiceTest {
         ordered.setStatus("待取票");
         when(orderedMapper.selectByIdForUpdate(1)).thenReturn(ordered);
 
-        orderedService.pickupOrder(1, "ADMIN", 999);
+        // 取票是影院柜台的物理交付动作，ADMIN 不受 cinemaId 约束、放行等于可伪造任意用户的取票
+        assertThatThrownBy(() -> orderedService.pickupOrder(1, "ADMIN", 999))
+                .isInstanceOf(CustomException.class)
+                .hasMessageContaining("影院柜台");
 
-        verify(orderedMapper).updateById(argThat(u ->
-                1 == u.getId() && "已取票".equals(u.getStatus())
-        ));
+        verify(orderedMapper, never()).updateById(any());
     }
 
     @Test

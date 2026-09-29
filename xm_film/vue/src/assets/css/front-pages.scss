@@ -47,6 +47,21 @@
     font-size: var(--fs-lg);
   }
 
+  /* 一格放多个操作按钮时的按钮组：一律从同一左边缘起排。
+   * EP 的按钮间距是 `.el-button + .el-button { margin-left: 12px }`，列宽不够折行时
+   * 第二个按钮会被这 12px 右推，两行左右错开（BUG-049）。改用 flex + gap 后，
+   * 间距与"是否折行"解耦，一行也好、折行也好都对齐。 */
+  .row-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-8);
+
+    .el-button + .el-button {
+      margin-left: 0;
+    }
+  }
+
   .field-full {
     width: 100%;
   }

@@ -285,7 +285,7 @@ public class OrderedService extends BaseService<Ordered> {
      * 「没付款不出发」四条都由这一个前提实现，不存在"新增状态时忘了同步"的空间。
      *
      * 与 {@link #pickupOrder} 的关系：两者是同一个状态迁移的两个入口 ——
-     * pickupOrder 是影院柜台的员工操作（仍是 ADMIN/CINEMA 专属），本方法是自助机通路。
+     * pickupOrder 是影院柜台的员工操作（仅 CINEMA，见该方法的注释），本方法是自助机通路。
      */
     @Transactional(rollbackFor = Exception.class)
     public TicketVoucher redeemByCode(String rawCode) {
@@ -469,10 +469,17 @@ public class OrderedService extends BaseService<Ordered> {
     public void pickupOrder(Integer id, String role, Integer userId) {
         Ordered ordered = orderedMapper.selectByIdForUpdate(id);
         ensureOrderAccess(ordered, role, userId);
-        // 这是影院柜台的员工通路，仍然只对 ADMIN/CINEMA 开放。
+        // 柜台通路只对 CINEMA 开放。取票记录的是"影院把票交到顾客手里"这一物理事实，
+        // 能如实断言的只有放映该场次的影院；而 ADMIN 在 ensureOrderAccess 里不受 cinemaId 约束，
+        // 放行它等于"一键把任意用户的票记为已取"，且本方法不记录操作人、事后无法追溯。
+        // 又因「已取票」是终态、没有任何出口，这个能力连纠错用途都没有，只剩伪造一条路。
+        //
+        // 写成白名单而不是再补一条"拒 ADMIN"：denylist 在新增角色时会静默把取票能力
+        // 一起授予新角色，这正是 MarkService 那轮"只有前端按钮在守"的同一种漏。
+        //
         // 用户的自助通路是 redeemByCode（凭取票码在取票大厅核销），两者共用同一个状态迁移。
-        if ("USER".equals(role)) {
-            throw new CustomException(ErrorCode.FORBIDDEN, "用户无权执行取票操作");
+        if (!"CINEMA".equals(role)) {
+            throw new CustomException(ErrorCode.FORBIDDEN, "取票为影院柜台操作，请到取票大厅凭取票码自助取票");
         }
         if (!OrderStatus.PENDING.equals(ordered.getStatus())) {
             throw new CustomException(ErrorCode.BUSINESS_CONFLICT, "当前状态不允许取票");

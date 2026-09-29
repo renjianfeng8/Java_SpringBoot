@@ -82,8 +82,9 @@
         </el-table-column>
         <el-table-column label="操作">
           <template #default="scope">
-            <el-button v-if="scope.row.status === '待取票'" link type="primary"
-                       @click="() => pickupOrder(scope.row)">取票</el-button>
+            <!-- 管理员刻意没有取票入口：取票是影院柜台的物理交付动作，只有放映该场次的影院能
+                 如实断言，故后端 pickupOrder 只放行 CINEMA。服务端才是权限落点，这里删按钮
+                 不是"以藏代守"；用户侧的取票走前台取票大厅凭码核销。 -->
             <!-- 只有终态废单可删除，与后端删除守卫同构 -->
             <el-button v-if="isOrderDeletable(scope.row.status)" class="row-action" link :icon="Delete"
                        @click="() => handleDel(scope.row.id)" type="danger"></el-button>
@@ -111,7 +112,7 @@
 import { Delete, Search } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useCrud } from '@/composables/useCrud'
-import { API_PATHS, ORDER_API, ORDER_STATUS_OPTIONS, getOrderStatusType as getStatusType, isOrderDeletable } from '@/constants'
+import { API_PATHS, ORDER_STATUS_OPTIONS, getOrderStatusType as getStatusType, isOrderDeletable } from '@/constants'
 import request from '@/utils/request'
 
 const crud = useCrud(API_PATHS.ORDERS)
@@ -140,20 +141,6 @@ function handleDelBatch() {
   if (!selectedIds.value.length) { ElMessage.warning('请选择数据'); return }
   ElMessageBox.confirm(`确定删除选中的 ${selectedIds.value.length} 条数据吗？`, '删除确认', { type: 'warning' })
     .then(() => delBatch(selectedIds.value)).catch()
-}
-
-async function pickupOrder(order) {
-  try {
-    const res = await request.put(ORDER_API.PICKUP(order.id))
-    if (res.code === '200') {
-      ElMessage.success('取票成功')
-      crud.load()
-    } else {
-      ElMessage.error(res.msg || '取票失败')
-    }
-  } catch (error) {
-    // request.js has already shown the backend message.
-  }
 }
 
 crud.load()
