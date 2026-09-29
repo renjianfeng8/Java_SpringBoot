@@ -19,7 +19,7 @@
 | 影院管理员 | asks | cinema123 |
 | 普通用户 | zhangsan | user123 |
 
-**代码质量**: 单元测试覆盖核心 Service 与权限边界（154 用例），BCrypt 密码加密 + JWT 认证 + RBAC 权限控制，GitHub Actions CI 流水线。
+**代码质量**: 单元测试覆盖核心 Service 与权限边界（193 用例），BCrypt 密码加密 + JWT 认证 + RBAC 权限控制，GitHub Actions CI 流水线。
 
 ---
 
@@ -122,7 +122,10 @@ xm_film/
 │           ├── RecordMapper.xml
 │           ├── RoomMapper.xml
 │           ├── MarkMapper.xml
-│           └── VideoMapper.xml
+│           ├── MarkLikeMapper.xml
+│           ├── VideoMapper.xml
+│           ├── FundFlowMapper.xml
+│           └── RechargeOrderMapper.xml
 │
 ├── vue/                               # 前端（Vue 3）
 │   └── src/
@@ -339,7 +342,8 @@ file:
 - **在线选座** — 按影厅座位规模渲染的可视化座位图、选定下单；座位占用接口只返回「座位 + 是否本人」投影，归属由后端按 JWT 判定，不泄露他人订单明细
 - **订单系统** — 购票下单、订单状态流转（含超时取消、取票、退票）与支付/退款凭证留痕；订单留存单价快照，场次改价不影响历史订单
 - **账户与资金** — 用户账户余额、充值单据（处理中/已完成/已失败）、资金流水账本（充值/购票/退票三类来源，记录变动前后余额与关联单据ID）。**购票为余额支付**：支付时校验余额并原子扣减，余额不足则支付失败、订单保持待支付且座位继续锁定；退票时金额退回余额。充值走"提交单据 + 模拟支付回调"两步，提交单据不改余额，回调成功才入账，重复回调被拒
-- **评价系统** — 已取票用户在订单页评价影片（一单一评一人一片），评价均分回写 `film.score` 并驱动评分榜；影片详情页展示评价
+- **评价系统** — 已取票用户对影片评分 + 评语（一人一片一条，可修改），均分回写 `film.score` 并驱动评分榜；入口在购票记录的「去评价/修改评价」，落到**影评页** `/front/filmMarks/:id`（游客可读）：全部评价按赞数降序分页、可写/改自己的评价。影片详情页展示「用户热评」（同一条排序的前 3 条）
+- **评价点赞** — 对别人的评价点赞/取消（一人一赞、可取消），赞数按 `mark_like` 实时 `COUNT(*)` 聚合、不落计数列；`PUT /api/v1/marks/{id}/like` 仅 USER 可用，游客可见赞数、点赞时引导登录
 - **排行榜** — 票房榜（按订单实时聚合的累计售票收入）、评分榜（按评价均分）
 - **搜索筛选** — 按影片名称、类型、年份、地区多维筛选
 - **文件上传** — 图片/视频上传，支持本地存储
@@ -389,6 +393,8 @@ file:
 | `/api/v1/recharges/page` | GET | 充值单据分页（USER 只看自己的） | Bearer |
 | `/api/v1/recharges/{id}/callback` | POST | 模拟支付网关回调（幂等，终态不可再流转） | Bearer |
 | `/api/v1/fund-flows/page` | GET | 资金流水分页（USER 只看自己的） | Bearer |
+| `/api/v1/marks/by-film` | GET | 某片评价列表（按赞数降序→id 降序分页，附带本人评价与「是否够格发表」；`liked`/`mine` 由后端按 JWT 算出，投影不含 `userId`） | 否 |
+| `/api/v1/marks/{id}/like` | PUT | 点赞/取消点赞（`{"liked":true\|false}` 是显式意图而非 toggle，重复调用幂等；写库后回读权威状态再返回） | Bearer（USER） |
 
 统一响应格式：
 
@@ -404,7 +410,7 @@ file:
 
 ## 数据库设计
 
-系统共 16 张核心表：
+系统共 17 张核心表：
 
 | 表名 | 说明 | 关键字段 |
 |------|------|----------|
@@ -421,6 +427,7 @@ file:
 | `record` | 放映记录（排片） | film_id, cinema_id, room_id, start, price, status |
 | `ordered` | 购票订单 | record_id, user_id, seat, total, unit_price（单价快照）, status, pay_time/refund_time |
 | `mark` | 用户评价 | film_id, user_id, score（评分 0~10，影片评分的唯一数值来源）, mark（评语） |
+| `mark_like` | 评价点赞（一人一赞，可取消） | mark_id, user_id（两者为复合主键；刻意不设计数列，赞数由 `COUNT(*)` 聚合） |
 | `video` | 预告片 | film_id, url, title |
 | `recharge_order` | 充值单据 | recharge_no, user_id, amount, status（处理中/已完成/已失败） |
 | `fund_flow` | 资金流水（只增不改不删） | user_id, source（充值/购票/退票）, change_amount, balance_before, balance_after, related_id |
@@ -432,6 +439,7 @@ file:
 
 > `record` / `ordered` / `mark` 三张表**不预置种子数据**：手写的订单必须同时伪造单号、单价快照、支付凭证、余额扣减与资金流水，任意一处对不上就是可被查出的假数据。演示数据请用 `scripts/seed-demo-data.py` 走真实接口生成（幂等可重跑）。
 > `film.box_office` 已废弃（票房改由订单实时聚合），存量库用 `migration-20260929-deprecate-box-office.sql` 清零。
+> **已有数据库**还需执行 `migration-20260929-mark-like.sql`（新增 `mark_like` 评价点赞表；幂等、只增不删）。未执行时影评页与点赞会报表不存在。
 
 ---
 
@@ -509,14 +517,16 @@ server {
 
 ## 测试
 
-### 单元测试（154 用例）
+### 单元测试（193 用例）
 
 ```bash
 cd xm_film/springboot
 mvn test
 ```
 
-覆盖核心 Service（Admin/User/Cinema/Film/Ordered/Mark/Wallet/Recharge/FundFlow）及权限拦截、异常处理、健康检查模块，包括登录认证、密码加密、注册去重、密码修改、批量赋值防护、排行榜查询、类型关联维护、订单状态流转、座位冲突检测、RBAC 权限边界、全局异常处理，以及**账户资金**（余额足额/不足扣减、退款入账、金额非正拒绝、流水前后余额与关联单据）、**充值单据状态机**（提交不改余额、回调成功/失败、重复回调被拒、金额上限、跨用户回调被拒）、**订单删除守卫**（按状态拒绝）等业务逻辑。
+覆盖核心 Service（Admin/User/Cinema/Film/Ordered/Mark/Wallet/Recharge/FundFlow）及权限拦截、异常处理、健康检查模块，包括登录认证、密码加密、注册去重、密码修改、批量赋值防护、排行榜查询、类型关联维护、订单状态流转、座位冲突检测、RBAC 权限边界、全局异常处理，以及**账户资金**（余额足额/不足扣减、退款入账、金额非正拒绝、流水前后余额与关联单据）、**充值单据状态机**（提交不改余额、回调成功/失败、重复回调被拒、金额上限、跨用户回调被拒）、**订单删除守卫**（按状态拒绝）、**评价点赞**（显式 `liked` 意图幂等、仅 USER 可点赞、投影不下发 `userId`、`reviewable` 的已取票口径）等业务逻辑。
+
+> **Mockito 打桩后测到的是桩，不是 SQL。** 赞数聚合、`ORDER BY likeCount DESC, id DESC` 的并列裁决、以及事务隔离下"回读是否为最新已提交快照"，这三类单测覆盖不到，只能在真库上验证 —— 见下方 `p5-mark-like.py`。
 
 ### 端到端验证（临时库 + 备用端口）
 
@@ -524,9 +534,10 @@ mvn test
 # 见脚本头部说明：建临时库 → 用 DB_NAME 指向它并在备用端口起后端 → 跑脚本
 python scripts/verify/p4-account-wallet-e2e.py   # 账户-充值-订单闭环 + 选座接口越权读，70 断言
 python scripts/verify/p4-concurrency.py          # 余额扣减并发正确性，12 断言
+python scripts/verify/p5-mark-like.py            # 点赞主键去重/并发回读/热评排序/匿名投影/CASCADE，74 断言
 ```
 
-两个脚本都自带状态重置、可反复运行，且**不触碰开发库 `xm-film` 与本机 9090/5173**。它们会自己准备一个独占场次（种子已不再预置排片）。
+三个脚本都自带状态重置、可反复运行，且**不触碰开发库 `xm-film` 与本机 9090/5173**。它们会自己准备一个独占场次（种子已不再预置排片）。
 
 ### 演示数据生成（走真实接口）
 
