@@ -13,7 +13,7 @@
       <div class="film-card" v-for="film in filmList" :key="film.id" @click="goToDetail(film.id)">
         <div class="film-card__poster-wrap">
           <img :src="film.img" :alt="film.title" class="film-card__img">
-          <div class="film-card__score">{{ film.score }}</div>
+          <div class="film-card__score">{{ formatScore(film.score) }}</div>
         </div>
 
         <div class="film-card__body">
@@ -44,6 +44,7 @@ import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import request from "@/utils/request.js";
+import { formatScore } from '@/utils/format.js';
 import { FILM_API } from '@/constants';
 
 // 路由实例

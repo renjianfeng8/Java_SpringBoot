@@ -47,7 +47,7 @@
           <div class="film-hero__stats">
             <div>
               <div>影片口碑</div>
-              <div class="film-hero__stat-value">{{ film.score || 0 }}分</div>
+              <div class="film-hero__stat-value">{{ formatScore(film.score) }}</div>
             </div>
             <div class="film-hero__stat-spacer">
               <div>累计票房</div>
@@ -212,7 +212,7 @@ import {ElMessage} from 'element-plus';
 import request from "@/utils/request.js";
 import 'element-plus/theme-chalk/el-button.css';
 import { API_PATHS, MARK_API, apiById } from '@/constants';
-import { formatBoxOffice } from '@/utils/format.js';
+import { formatBoxOffice, formatScore } from '@/utils/format.js';
 
 
 // 初始化路由实例
@@ -229,7 +229,7 @@ const film = reactive({     // 电影基础数据（默认值避免渲染空白�
   id: '',
   title: '',
   img: '',
-  score: 0,
+  score: null,
   start: '',
   types: [],
   area: '',
@@ -296,7 +296,7 @@ const fetchFilmDetail = () => {
             id: data.id,
             title: data.title?.trim() || '未知电影',
             img: data.img || '默认海报地址（可选）',
-            score: data.score || 0,
+            score: data.score,
             start: data.start || '未知上映时间',
             types: (data.typeList || []).map(t => t.title),
             area: data.areaName || '未知地区',

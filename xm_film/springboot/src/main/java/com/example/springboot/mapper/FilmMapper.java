@@ -15,9 +15,10 @@ public interface FilmMapper extends BaseMapper<Film> {
 
     List<Film> selectBoxOfficeTop(@Param("topNum") Integer topNum);
 
+    /** 评分榜：只含真正有评价的影片（SQL 内含 EXISTS(mark) 谓词） */
     List<Film> selectMarkTop(@Param("topNum") Integer topNum);
 
-    /** 按 mark 评价均分回写影片评分；该影片无评价时不改动 */
+    /** 按 mark 评价均分回写影片评分；film.score 的唯一写者，无评价时写 NULL */
     void recalculateScore(@Param("filmId") Integer filmId);
 
     List<Map<String, Object>> selectFilmTypeJoin(@Param("filmIds") List<Integer> filmIds);

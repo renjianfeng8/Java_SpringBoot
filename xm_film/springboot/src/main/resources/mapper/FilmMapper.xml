@@ -114,17 +114,20 @@
         FROM film
         LEFT JOIN area ON film.area_id = area.id
         LEFT JOIN actor ON film.actor_id = actor.id
+        <!-- 必须"有真实评价"才上榜，与票房榜的 WHERE rev.revenue > 0 同构；
+             film.score IS NOT NULL 是第二层保险 —— 该列只由 recalculateScore 写，无评价时为 NULL -->
         WHERE film.score IS NOT NULL
+          AND EXISTS (SELECT 1 FROM mark m WHERE m.film_id = film.id)
         ORDER BY film.score DESC
         LIMIT #{topNum}
     </select>
 
-    <!-- 影片评分 = 该影片评价均分；没有任何评价时不动该字段（保留基线分，不归零） -->
+    <!-- 影片评分 = 该影片评价均分。没有任何评价时写 NULL（AVG 空集即 NULL）——
+         film.score 是纯派生列，本语句是它唯一的写者；种子里不再预置任何分数 -->
     <update id="recalculateScore">
         UPDATE film f
         SET f.score = (SELECT ROUND(AVG(m.score), 1) FROM mark m WHERE m.film_id = f.id)
         WHERE f.id = #{filmId}
-          AND EXISTS (SELECT 1 FROM mark m2 WHERE m2.film_id = f.id)
     </update>
 
     <insert id="insert" parameterType="com.example.springboot.entity.Film" useGeneratedKeys="true" keyProperty="id">
@@ -141,7 +144,6 @@
             <if test="employee != null">employee,</if>
             <if test="areaId != null">area_id,</if>
             <if test="status != null">status,</if>
-            <if test="score != null">score,</if>
             <if test="boxOffice != null">box_office,</if>
             <if test="video != null">video,</if>
             <if test="actorId != null">actor_id,</if>
@@ -159,7 +161,6 @@
             <if test="employee != null">#{employee},</if>
             <if test="areaId != null">#{areaId},</if>
             <if test="status != null">#{status},</if>
-            <if test="score != null">#{score},</if>
             <if test="boxOffice != null">#{boxOffice},</if>
             <if test="video != null">#{video},</if>
             <if test="actorId != null">#{actorId},</if>
@@ -180,7 +181,6 @@
             <if test="employee != null">employee = #{employee},</if>
             <if test="areaId != null">area_id = #{areaId},</if>
             <if test="status != null">status = #{status},</if>
-            <if test="score != null">score = #{score},</if>
             <if test="boxOffice != null">box_office = #{boxOffice},</if>
             <if test="video != null">video = #{video},</if>
             <if test="actorId != null">actor_id = #{actorId},</if>

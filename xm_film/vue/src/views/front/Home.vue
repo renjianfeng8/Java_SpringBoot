@@ -169,7 +169,7 @@
                 <div class="rank-row__meta">{{ movie.typeList?.map(t => t.title).join(' / ') || '未知类型' }}</div>
                 <!-- 评分：移除el-rate星级，改为分数显示 -->
                 <div class="rank-row__score">
-                  {{ movie.score || 0 }} 分
+                  {{ formatScore(movie.score) }}
                 </div>
               </div>
             </div>
@@ -189,7 +189,7 @@ import { ElMessage } from 'element-plus';
 import { Refresh } from '@element-plus/icons-vue';
 import request from "@/utils/request.js";
 import { API_PATHS, FILM_API } from '@/constants';
-import { formatBoxOffice, formatYuan } from '@/utils/format.js';
+import { formatBoxOffice, formatYuan, formatScore } from '@/utils/format.js';
 // 引入Element Plus样式（移除el-rate相关样式）
 import 'element-plus/theme-chalk/el-skeleton.css';
 import 'element-plus/theme-chalk/el-button.css';

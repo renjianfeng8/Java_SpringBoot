@@ -127,7 +127,7 @@
                   <!-- 评分（名称下方） -->
                   <div class="film-base-info__score">
                     <el-icon class="film-base-info__score-icon"><StarFilled /></el-icon>
-                    {{ film.score }}分
+                    {{ formatScore(film.score) }}
                   </div>
                 </div>
 
@@ -228,6 +228,7 @@ import {
   Clock, Connection, InfoFilled, Loading, Location, Phone, RefreshLeft, StarFilled, User, VideoPlay,
 } from '@element-plus/icons-vue';
 import request from "@/utils/request.js";
+import { formatScore } from '@/utils/format.js';
 import { API_PATHS, FILM_API, apiById, apiPage } from '@/constants';
 
 

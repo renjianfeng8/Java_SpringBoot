@@ -100,7 +100,7 @@
             </div>
 
             <div class="rank-item__value rank-item__value--score">
-              {{ film.score || 0 }} 分
+              {{ formatScore(film.score) }}
             </div>
           </div>
         </div>
@@ -114,7 +114,7 @@ import { reactive } from 'vue';
 import request from "@/utils/request.js";
 import { ElMessage } from 'element-plus';
 import { FILM_API } from '@/constants';
-import { formatBoxOffice } from '@/utils/format.js';
+import { formatBoxOffice, formatScore } from '@/utils/format.js';
 import 'element-plus/theme-chalk/el-skeleton.css';
 import 'element-plus/theme-chalk/el-empty.css';
 import 'element-plus/theme-chalk/el-image.css';

@@ -66,7 +66,7 @@
                 {{ item.status }}
               </el-tag>
             </div>
-            <div class="film-card__score">{{ item.score }} 分</div>
+            <div class="film-card__score">{{ formatScore(item.score) }}</div>
           </div>
         </el-col>
       </el-row>
@@ -92,6 +92,7 @@
 import { reactive } from "vue"; // 补充导入reactive
 import { useRouter } from "vue-router"; // 导入路由
 import request from "@/utils/request.js";
+import { formatScore } from '@/utils/format.js';
 import { ElMessage } from "element-plus"; // 补充导入ElMessage
 import { API_PATHS, apiPage, getFilmStatusType as getStatusType } from '@/constants';
 
