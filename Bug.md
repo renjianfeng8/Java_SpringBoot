@@ -19,7 +19,7 @@
 > （见 `xm_film/sql/README.md`）。以下历史条目中凡提及这些迁移脚本的「相关文件」与验证记录均按
 > 当时情况原样保留，仅供追溯；需要脚本本身时用 `git log --all -- xm_film/sql/migration-*.sql` 取回。
 
-## 提交规范
+## 记录格式
 
 每条 Bug 记录包含：
 - **Bug 描述**: 问题现象
@@ -27,6 +27,8 @@
 - **解决方案**: 如何修复
 - **相关文件**: 涉及的文件路径
 - **提交记录**: 对应的 Git commit
+
+> 提交**信息**的写法规范见 [CONTRIBUTING.md](CONTRIBUTING.md#一提交信息规范)；本节的「提交记录」只是指向该 Bug 的 commit 编号。
 
 ---
 
@@ -853,6 +855,43 @@
 
 ---
 
+### BUG-053: 评分榜读的是种子里的编造分数，与有没有真实评价无关
+
+- **日期**: 2026-09-29
+- **Bug 描述**: 开发库重建后 `mark`（评价）0 行、`ordered`（订单）0 行，前台评分榜仍列出 9.6 / 9.2 / 9.1 / 8.8 / 8.7 五部影片，影片列表、搜索结果、详情页、影评页也都带着分数。用户指出「数据已经清零，评分榜还有数据」。数据库现场：`mark`=0 行、`film.score > 0`=17 行，榜单值与该列逐一对得上。
+- **根因分析**: 评分榜查询 `selectMarkTop` 只做 `WHERE film.score IS NOT NULL ORDER BY film.score DESC`，**整条 SQL 不读 `mark` 表**；而 `film.score` 的初值是 `data.sql` 里人工填死的静态值（17 部影片每部带一个 9.x/8.x）。`MarkService` 只在评价增删改时经 `FilmMapper.recalculateScore` 回写均分，且带 `AND EXISTS (SELECT 1 FROM mark ...)` 守卫（无评价时不写），于是那个编造初值永远留存、不需要任何评价就能上榜。**与 BUG-046 废掉的 `film.box_office` 是同一族**：一个"人工填、没人重算"的列被当成真实业务数据展示。`film.score` 比它更隐蔽 —— 它确实有个写者，只是那个写者从不处理"没有评价"的情形。
+- **解决方案**: 让 `film.score` 成为纯派生列，四个入口一起堵：
+  1. `data.sql` 的 17 部影片 `score` 改显式 `NULL`；`schema.sql` 该列**去掉 `DEFAULT 0.0`**（否则"新增影片不带评分"会落成「0 分」，而 `0.0` 是合法的真实评分，与 NULL 是两回事）
+  2. `recalculateScore` 去掉 `AND EXISTS` 守卫 —— 无评价时写 NULL。该守卫是"保留基线分"设计的产物，而基线分本身就是编造值；不删它则"删光某片评价后旧均分残留"
+  3. `selectMarkTop` 加 `EXISTS (SELECT 1 FROM mark ...)` 谓词，与票房榜 `WHERE rev.revenue > 0`（无售票不上榜）同构 —— 这是第二层保险，不靠"score 恰好为 NULL"这条不变量独担
+  4. 删掉 `FilmMapper.xml` 里 insert/updateById 的 score 分支 —— `FilmController` 继承 `BaseController` 的通用 `POST/PUT /api/v1/films` 直收整实体，留着那个 `<if>` 分支等于任何人能手写一个评分
+  前端同时把 9 处渲染改走新增的 `utils/format.js#formatScore`，并删掉 `{{ film.score || 0 }} 分` 与 `score: data.score || 0` 这类兜底 —— 它们把"无评分"渲染成「0 分」，凭空造出第二个假分数。
+- **验证**: `mvn test` 193/193；`npm run build` 通过、产物含 `暂无评分`。真实闭环全部在临时库 `xm_score_verify` + 备用端口 9191 上跑（用户的 9090 / 5173 未碰）：影院建排片 → 用户下单 35.00 → 支付（余额 100→65）→ 匿名核销取票（码 `A5UF-N9RS`）→ **支付后尚无评价时 `film10.score` 仍为 NULL、榜单仍 `[]`** → 发表 8.5 → `film10.score`=8.5、榜单只出现这一部 → 第二个用户（先经充值 200 入账）评 9.5 → 均分 9.0、榜单 9.0 → 删掉一条 → 9.5 → **删光两条 → `film.score` 回 NULL、该片离开榜单**；`PUT /api/v1/films` 带 `score:9.9`、`POST` 新增影片带 `score:9.9` 均**不落库**；整实体 PUT 编辑影片仍正常（200，字段照改、score 不被改写）；匿名可读评分榜 200（未新增任何放行规则）。**未做浏览器渲染验证**（UI 目视由用户自查）。
+- **顺带发现（未修，非本次引入）**: 通用 `PUT /api/v1/{resource}` 只传 `{id}`（无任何可更新字段）时 `<set>` 为空，生成 `UPDATE film SET WHERE id=?` 直接 500。既有行为、任何资源都如此；本次改动只是让 `score` 也进入"不可更新字段"集合（`{id,score}` 的 PUT 因此也落到这条路径）。修法应收敛在 `BaseController`/`BaseService`（无字段可更新时返回 400），属另一件事。
+- **相关文件**: `xm_film/sql/data.sql`、`xm_film/sql/schema.sql`、`xm_film/springboot/src/main/resources/mapper/FilmMapper.xml`、`xm_film/springboot/src/main/java/com/example/springboot/mapper/FilmMapper.java`、`xm_film/vue/src/utils/format.js`、`xm_film/vue/src/views/front/{Movie,Search,Home,Rank,FilmDetail,FilmCinema,CinemaDetail,FilmMarks}.vue`、`xm_film/vue/src/views/{manage,back}/Film.vue`
+- **提交记录**: 未提交
+- **状态**: 已修复
+
+---
+
+### BUG-054: 无 `.env` 的构建把 http://localhost:9090 烘进上传端点与头像地址
+
+- **日期**: 2026-09-29
+- **Bug 描述**: 全新克隆或 CI（没有 `.env`）执行 `npm run build`，产物里文件上传端点是 `http://localhost:9090/api/v1/files/upload`，头像也被拼成 `http://localhost:9090/files/...`。前者把上传请求发到访问者本机，后者在生产直接取不到图。开发机上完全看不出来 —— 本机有 `.env`（`VITE_API_BASE_URL=/`），Vite 把 `"/" || '…'` 常量折叠，那个 localhost 字面量成了死代码，`grep dist` 是 0 命中。
+- **根因分析**: `VITE_API_BASE_URL` 有**三个读取点、两套兜底值** —— `utils/request.js` 用 `'/'`，`constants/index.js` 与 `views/Front.vue` 用 `'http://localhost:9090'`。BUG-023 取消 `.env` 跟踪时只改了 `request.js` 的回退值，另外两处沿用了跨域开发时代的老兜底。**第二个独立缺陷**：`Front.vue` 把头像与 base 直接字符串相加，同源（`/`）时会拼出 `//files/...` —— 浏览器按**协议相对 URL** 解析，指向 host `files`，即便兜底值正确也会坏。`data.sql` 里 41 处文件引用全是 `/files/...` 相对路径、零 `http://`，且 `Back.vue`/`Manage.vue` 及其余 15+ 处都直接绑定，可见"存相对路径、直接绑定"本就是全站约定，`Front.vue` 的拼接是异类。
+- **解决方案**: 收敛为单一来源，两个缺陷一起堵：
+  1. `constants/index.js` 兜底改为 `'/'`，成为**全仓唯一**读取点
+  2. `utils/request.js` 改为 `import { API_BASE_URL } from '@/constants'`，不再自己读环境变量（`@/constants` 不含任何 import，不构成循环依赖）
+  3. `views/Front.vue` 的 `userAvatar` 去掉拼接，直接 `user.value?.avatar || null`，与其余视图一致；注释写明**不要**在这里拼 `API_BASE_URL`
+  4. `env.d.ts` 类型改为 `string | undefined` —— 原本声明成 `string` 会让下一个读者以为它一定有值
+- **验证**: 空变量构建（`VITE_API_BASE_URL= npm run build`，等价于无 `.env` 的全新克隆/CI）：修复前产物含 `http://localhost:9090` **2 处**（`Front-*.js` 的头像、`index-*.js` 的 `As = ${Yr}${FILES}`），修复后 **0 处**，且上传端点折叠为 `As = T.FILES`（相对路径）、axios `baseURL` 取自同一个 `API_BASE_URL`。跨域开发分支回归：`npm run build -- --mode development`（加载 `.env.development`）产物仍为绝对地址，未被破坏。正常 `npm run build` 通过。**未做浏览器验证**（UI 目视由用户自查）。
+- **相关文件**: `xm_film/vue/src/constants/index.js`、`xm_film/vue/src/utils/request.js`、`xm_film/vue/src/views/Front.vue`、`xm_film/vue/src/env.d.ts`、`README.md`
+- **提交记录**: 未提交
+- **状态**: 已修复
+- **同族未修（记录备查）**: 开发环境的 `file.access-prefix` 是绝对值（`fileBaseUrl = http://localhost:${server.port}`），所以在**开发环境上传**的文件会在库里存成绝对 URL；把这样一个开发库直接部署到生产，图片会指向 localhost。生产 profile 的 `FILE_ACCESS_PREFIX` 默认 `/files/`，故生产环境产生的数据不受影响。要不要让开发环境也返回相对路径，属另一件事。
+
+---
+
 ## 预防清单
 
 1. **数据库初始化**: 新环境部署时务必执行 `xm_film/sql/init.sql`（或依次执行 `schema.sql` + `data.sql`）
@@ -919,3 +958,5 @@
 61. **"能访问这一行"不等于"能做这个动作"**: `ADMIN` 靠 `ensureOrderAccess` 的早退拿到**任意订单**的访问权（管理数据本该如此），但 `pickupOrder` 把它顺带翻译成了操作权，于是变成"一键把任意用户的票记为已取"。判断这类权限先问一句"这个动作记录的是谁的物理事实、谁能如实断言" —— 取票只有放映该场次的影院能断言，所以只放行 `CINEMA`。再叠加"不记录操作人"和"目标状态是终态无出口"，这种能力连纠错价值都没有，只剩伪造。**权限判断一律写白名单**（`if (!"CINEMA".equals(role))`），denylist 会在新增角色时静默扩权（见 BUG-050）
 62. **"回读权威状态"只在读是"当前读"时才权威**: REPEATABLE READ 下同一事务的一致读共享一条**在第一条读时固定**的快照；若中间有一次写入撞上并发事务的提交而阻塞（如 `INSERT ... ON DUPLICATE KEY` 撞同键的未提交事务），阻塞结束后的一致读**看不到**那条刚提交的写 —— 于是"库里有、回读说没有"。凡"写后回读"的语义要求读到最新状态，必须显式把该方法降到 `READ_COMMITTED`，或改用锁定读（后者以串行化为代价）。兄弟先例：`WalletService` 的 `SELECT ... FOR UPDATE` 是**当前读**，天然免疫（见 BUG-051）
 63. **本仓库的路由没有 `name`，导航一律走 `path`**: `router/index.js` 里每条的 `meta.name` 是**标题文案**（'影评' / '电影详情'），不是路由名 —— 全仓没有一条路由声明过 `name`。所以 `router.push({ name: 'xxx' })` 必然在运行时抛 `No match for {"name":"xxx",...}`，冒到渲染层就是「页面渲染异常」。这个错**编译、构建、三个守卫测试、dev server 的模块编译全都查不出来**，只有真的点一下才炸 —— 验证"路由能解析"属于必须跑起来的那一类。新增页面时照抄邻座写法（`Movie.vue` 的 `` `/front/filmDetail/${id}` `` 或 `{ path }`）；真要用具名路由，先把 `name` 加进路由表并全仓统一（见 BUG-052）
+64. **派生指标列必须只有唯一写者，且不接受客户端入参**: `film.score` 与 `film.box_office` 是同一族踩了两次 —— 前者有个"只在有评价时回写"的写者、初值却由种子填死，于是 `mark` 0 行时评分榜照样有数据（见 BUG-053）。**凡被判为"派生"的列**：① 种子里一律写 `NULL`，别给 `DEFAULT`（`DEFAULT 0.0` 会把"没有"渲染成「0 分」，而 0 是合法的真实值）；② 通用 CRUD 的 insert/updateById 里删掉它的 `<if>` 分支 —— `@RequestBody` 整实体 + `BaseController` 的组合会让任何调用方手写这个值；③ 消费端（榜单 / 聚合查询）显式再声明一次前置条件（如 `EXISTS (mark)`），别让"某列恰好为 NULL"这条不变量独自承担正确性；④ 前端区分"无"与"0"，判定用 `== null` 而不是 falsy
+65. **同一配置项只留一个读取点、一个兜底值**: `VITE_API_BASE_URL` 曾有三个读取点、两套兜底（`'/'` 与 `'http://localhost:9090'`），BUG-023 修一处漏两处，直到"无 `.env` 构建"才暴露（见 BUG-054）。凡读环境变量：① 收敛到**一个模块**导出，其余 import；② 兜底值全仓只有一个，改的时候先 `grep` 旧值；③ 兜底值的正确性必须在**变量缺失**的条件下验证 —— 本机通常有 `.env`，Vite 会把 `"/" || '字面量'` 常量折叠掉，`grep dist` 查不到那个字面量，只能显式跑一次 `VITE_API_BASE_URL= npm run build`。另：把相对路径与 base 直接字符串相加时，同源 base `/` 会拼出 `//host/path`（协议相对 URL，指向名为 `host` 的主机）—— 拼之前先想 base 会不会是 `/`

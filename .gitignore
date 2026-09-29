@@ -36,10 +36,10 @@ Thumbs.db
 # === 项目本地文件 ===
 .env
 .env.*
-# 例外：开发/生产的共享默认值文件可入库，但只放非密钥内容（本地地址、公开开关）
+# 例外只有 `.env.development`（本地开发共享默认值），只放非密钥内容（本地地址、公开开关）
+# `.env` 刻意不入库：它是机器本地文件，生产构建的默认值由部署环境给出（见 Bug.md BUG-023）
 # 密钥与机器专属覆盖写 .env.local / .env.*.local —— 已被上面的 .env.* 覆盖，无需再加规则
 !.env.development
-!.env.production
 /claude.log
 scripts/start-claude.bat
 /start_claude.bat
