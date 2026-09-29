@@ -4,14 +4,15 @@
 
 ```
 sql/
-├── schema.sql                               # 数据库表结构（16 张表的 CREATE TABLE 语句）
+├── schema.sql                               # 数据库表结构（17 张表的 CREATE TABLE 语句）
 ├── data.sql                                 # 基础种子（不含场次/订单/评价，见「数据约定」）
 ├── init.sql                                 # 一键初始化脚本（整合 schema + data）
 ├── migration-20260927-delete-guard.sql      # 增量迁移（删除守卫 + 上映关系派生）
 ├── migration-20260927-p2-seat-payment.sql   # 增量迁移（座位容量 + 订单资金凭证）
 ├── migration-20260928-p3-review-score-cinema-audit.sql  # 增量迁移（评价数值评分 + 影院审核词表）
 ├── migration-20260928-p4-account-wallet.sql # 增量迁移（账户余额 + 充值单据 + 资金流水 + 订单单价）
-└── migration-20260929-deprecate-box-office.sql  # 增量迁移（废弃 film.box_office 静态票房列）
+├── migration-20260929-deprecate-box-office.sql  # 增量迁移（废弃 film.box_office 静态票房列）
+└── migration-20260929-mark-like.sql         # 增量迁移（评价点赞关系表 mark_like）
 ```
 
 ## 使用方式
@@ -45,7 +46,7 @@ SOURCE data.sql;
 - 引擎：`InnoDB`
 - **种子范围**：`data.sql` 只写基础数据（`admin` / `user` / `area` / `type` / `cinema` / `room` / `film` / `film_type` / `actor` / `notice` / `video`）。`record`（场次）、`ordered`（订单）、`mark`（评价）**不预置** —— 手写的订单必须同时伪造订单号、单价快照、支付凭证、余额扣减与资金流水，任意一处对不上就是能被查出的假数据（老种子正是如此）。需要演示数据请跑 `scripts/seed-demo-data.py`，它走真实接口生成。
 
-## 表清单（16 张）
+## 表清单（17 张）
 
 | # | 表名 | 说明 |
 |---|------|------|
@@ -65,8 +66,12 @@ SOURCE data.sql;
 | 14 | video | 视频/预告片表 |
 | 15 | recharge_order | 充值单据表（处理中/已完成/已失败；提交单据不改余额，仅回调成功入账） |
 | 16 | fund_flow | 资金流水表（充值/购票/退票三类来源，记录变动前后余额与关联单据ID；只增不改不删） |
+| 17 | mark_like | 评价点赞关系表（复合主键 `(mark_id, user_id)` 即"一人一赞"的唯一权威，赞数由 `COUNT(*)` 聚合，**无计数列**） |
 
 > 影院"上映哪些影片"由 `record` 派生（`EXISTS` 子查询），没有独立的影院-影片关联表。
+> `mark_like` 是纯关系表：复合主键不留代理 `id`（与 `film_type` 同构），一行即一个赞。
+> 两个外键均为 `ON DELETE CASCADE`（评价或用户被删，其点赞关系随之消失）—— 与 `ordered` 等
+> 资金凭证的 `RESTRICT` 方向相反，是刻意的区分：点赞是"轻关系"，订单是"资金凭证"。
 > `record` 与 `ordered` 的外键、`room.cinema_id`、`recharge_order.user_id`、`fund_flow.user_id` 均为 `ON DELETE RESTRICT`。
 > `fund_flow.related_id` 指向 `recharge_order.id` 或 `ordered.id`（跨表二选一），故不建外键。
 > `record` / `ordered` / `mark` 三张表不预置种子数据，行一律由真实业务接口产生。
@@ -81,6 +86,7 @@ mysql -u root -p --default-character-set=utf8mb4 xm-film < migration-20260927-p2
 mysql -u root -p --default-character-set=utf8mb4 xm-film < migration-20260928-p3-review-score-cinema-audit.sql
 mysql -u root -p --default-character-set=utf8mb4 xm-film < migration-20260928-p4-account-wallet.sql
 mysql -u root -p --default-character-set=utf8mb4 xm-film < migration-20260929-deprecate-box-office.sql
+mysql -u root -p --default-character-set=utf8mb4 xm-film < migration-20260929-mark-like.sql
 ```
 
 `migration-20260927-delete-guard.sql` 内容（幂等，可重复执行）：
@@ -125,3 +131,14 @@ mysql -u root -p --default-character-set=utf8mb4 xm-film < migration-20260929-de
 > 前端展示口径由「万元」改为**元**；`film.box_office` 不再被任何查询读取。
 > 本脚本刻意不删除 `record` / `ordered` / `mark` 的任何行 —— 存量库的演示数据请用
 > `scripts/seed-demo-data.py` 清理与重建（按演示账号边界删除，不靠猜 id）。
+
+`migration-20260929-mark-like.sql` 内容（幂等，可重复执行）：
+
+1. 新增评价点赞关系表 `mark_like`（`PRIMARY KEY (mark_id, user_id)`，两个外键均 `ON DELETE CASCADE`）
+
+> 用 `CREATE TABLE IF NOT EXISTS`，**不含任何 `DROP TABLE`** —— 脚本跑在活库上，DROP 会抹掉用户
+> 真实的点赞数据。全新安装以 `schema.sql` 为唯一来源（其中的 `mark_like` 与本脚本定义一致），
+> 本脚本只服务"已存在的库"；未执行时点赞接口报错 `mark_like` 表不存在。
+> 部署顺序：先上新代码，再执行本脚本。
+> 赞数**不落冗余计数列**：主键同时承担"一人一赞"与"可取消"，是赞数的唯一权威来源，
+> 冗余列会引入需要人工同步的第二处真相（与 `user.balance` 为唯一余额来源同一思路）。
