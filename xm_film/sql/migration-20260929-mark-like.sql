@@ -27,11 +27,11 @@
 -- ============================================================
 
 CREATE TABLE IF NOT EXISTS `mark_like` (
-  `id`      INT NOT NULL AUTO_INCREMENT COMMENT '主键',
-  `mark_id` INT NOT NULL COMMENT '被点赞的评价ID',
-  `user_id` INT NOT NULL COMMENT '点赞人ID',
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_mark_like_mark_user` (`mark_id`, `user_id`),
-  CONSTRAINT `fk_mark_like_mark` FOREIGN KEY (`mark_id`) REFERENCES `mark`(`id`) ON DELETE CASCADE,
-  CONSTRAINT `fk_mark_like_user` FOREIGN KEY (`user_id`) REFERENCES `user`(`id`) ON DELETE CASCADE
+    `id`      INT AUTO_INCREMENT PRIMARY KEY COMMENT '主键',
+    `mark_id` INT NOT NULL                   COMMENT '被点赞的评价ID',
+    `user_id` INT NOT NULL                   COMMENT '点赞人ID',
+    UNIQUE KEY uk_mark_like_mark_user (mark_id, user_id),
+    INDEX idx_mark_like_user_id (user_id),
+    FOREIGN KEY (mark_id) REFERENCES mark(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='评价点赞关系';

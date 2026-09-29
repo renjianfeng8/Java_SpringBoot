@@ -6,12 +6,19 @@
 <mapper namespace="com.example.springboot.mapper.MarkLikeMapper">
 
     <!--
-      INSERT IGNORE 让唯一键 (mark_id, user_id) 自己完成去重：重复点赞不抛错、直接忽略。
-      这样就不存在"捕获重复键异常后事务处于何种状态"的问题；调用方也不假设本次写入生效，
-      而是回读权威状态（COUNT / 重新查点赞列表）后再返回。
+      唯一键 (mark_id, user_id) 让"已赞过"成为无副作用的写入：重复插入被降级为 ON DUPLICATE KEY UPDATE
+      的空更新，不需要捕获重复键异常，也就不存在"异常抛出后事务处于何种状态"的问题。
+
+      与 INSERT IGNORE 的关键区别：后者把**所有**错误一并降级成警告，外键违规（mark_id 指向的评价
+      已被删除）同样只返回 ROW_COUNT()=0，与"已赞过"字节级相同 —— 调用方再也分不出"本来就在"和
+      "这条评价已经不存在了"。ON DUPLICATE KEY UPDATE 只吸收重复键冲突，真实的外键错误照常抛 1452。
+
+      注意：重复插入时受影响行数同样是 0，所以调用方**不能**用返回值判断本次点赞是否生效，
+      而应回读权威状态（COUNT / 重新查点赞列表）后再返回。
     -->
-    <insert id="insertIgnore">
-        INSERT IGNORE INTO mark_like (mark_id, user_id) VALUES (#{markId}, #{userId})
+    <insert id="insertIfAbsent">
+        INSERT INTO mark_like (mark_id, user_id) VALUES (#{markId}, #{userId})
+        ON DUPLICATE KEY UPDATE mark_id = mark_id
     </insert>
 
     <delete id="deleteByMarkAndUser">
