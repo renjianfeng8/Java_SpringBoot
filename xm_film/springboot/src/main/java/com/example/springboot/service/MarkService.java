@@ -16,6 +16,7 @@ import com.github.pagehelper.PageInfo;
 import com.github.pagehelper.page.PageMethod;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.HashSet;
@@ -112,8 +113,18 @@ public class MarkService extends BaseService<Mark> {
 
     /**
      * 点赞 / 取消点赞。liked 是**显式意图**而非 toggle，连点与重试收敛到用户要的状态。
+     *
+     * 必须显式声明 READ_COMMITTED。默认的 REPEATABLE READ 下，本事务的读快照在第一条
+     * 一致读（下面的 requireExisting）就已经固定；而 insertIfAbsent 若撞上另一个**尚未
+     * 提交**的同键事务会阻塞到对方提交之后才返回。此后再用一致读去 COUNT，读到的依然是
+     * 那个早于对方提交的旧快照 —— 库里明明已有这一行，回读却报 liked=false / likeCount=0，
+     * 与"返回写库后的权威状态"这个承诺正好相反（真库复现见 scripts/verify/p5-mark-like.py
+     * 并发段：修复前 5 个并发响应里 4 个报 liked=false）。READ_COMMITTED 让每条语句取最新
+     * 已提交快照，这才是本方法需要的"权威状态"。
+     *
+     * 不用锁定读（FOR UPDATE）来纠正：那会锁住该评价行，把同一部片子上所有人的点赞串行化。
      */
-    @Transactional(rollbackFor = Exception.class)
+    @Transactional(rollbackFor = Exception.class, isolation = Isolation.READ_COMMITTED)
     public MarkLikeResult setLike(Integer markId, Integer userId, boolean liked) {
         requireExisting(markId);
         if (liked) {
@@ -124,7 +135,7 @@ public class MarkService extends BaseService<Mark> {
             markLikeMapper.deleteByMarkAndUser(markId, userId);
         }
         // 回读权威状态，而不是假定请求生效：重复点赞时受影响行数同样是 0，
-        // 且并发下两个请求都应拿到同一份真相。
+        // 光看返回值分不出"本来就赞过"和"这次刚赞上"。
         boolean nowLiked = markLikeMapper.countByMarkAndUser(markId, userId) > 0;
         return new MarkLikeResult(nowLiked, markLikeMapper.countByMarkId(markId));
     }
