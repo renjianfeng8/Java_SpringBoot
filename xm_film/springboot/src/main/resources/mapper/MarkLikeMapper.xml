@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.springboot.mapper.MarkLikeMapper">
+
+    <!--
+      INSERT IGNORE 让唯一键 (mark_id, user_id) 自己完成去重：重复点赞不抛错、直接忽略。
+      这样就不存在"捕获重复键异常后事务处于何种状态"的问题；调用方也不假设本次写入生效，
+      而是回读权威状态（COUNT / 重新查点赞列表）后再返回。
+    -->
+    <insert id="insertIgnore">
+        INSERT IGNORE INTO mark_like (mark_id, user_id) VALUES (#{markId}, #{userId})
+    </insert>
+
+    <delete id="deleteByMarkAndUser">
+        DELETE FROM mark_like WHERE mark_id = #{markId} AND user_id = #{userId}
+    </delete>
+
+    <select id="countByMarkId" resultType="int">
+        SELECT COUNT(*) FROM mark_like WHERE mark_id = #{markId}
+    </select>
+
+    <select id="countByMarkAndUser" resultType="int">
+        SELECT COUNT(*) FROM mark_like WHERE mark_id = #{markId} AND user_id = #{userId}
+    </select>
+
+</mapper>
