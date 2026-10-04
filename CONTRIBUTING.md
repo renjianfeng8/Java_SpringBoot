@@ -4,7 +4,7 @@
 >
 > - 环境搭建与启动命令 → [README.md 快速启动](README.md#快速启动)
 > - 架构约束、业务不变量、开发守则 → [CLAUDE.md](CLAUDE.md)
-> - 已修复缺陷的根因与预防清单 → [Bug.md](Bug.md)
+> - 已修复缺陷的根因与经验规则 → [Bug.md](Bug.md)
 
 ---
 
@@ -66,7 +66,7 @@
 | 页面清单与访问模式 | [CLAUDE.md · 页面清单](CLAUDE.md#页面清单) |
 | 架构不变量（结构事实：表关系、口径来源、状态机结构、目录约束） | [CLAUDE.md · 架构不变量](CLAUDE.md#架构不变量) |
 | 硬约束索引（一行/条，正文指向 Bug.md） | [CLAUDE.md · 硬约束索引](CLAUDE.md#硬约束索引) |
-| 经验教训全文（预防清单） | [Bug.md · 规则篇](Bug.md#规则篇) |
+| 经验教训全文（规则篇） | [Bug.md · 规则篇](Bug.md#规则篇) |
 | 缺陷根因叙事 | [Bug.md · 案例篇](Bug.md#案例篇) |
 | 数据库表设计与初始化指引 | [xm_film/sql/README.md](xm_film/sql/README.md) |
 | 前端视觉与交互标准 | [标准前端视觉与交互设计规范.md](标准前端视觉与交互设计规范.md) |
@@ -95,6 +95,6 @@
 
 - [README.md](README.md) — 项目说明、快速启动、部署方式
 - [CLAUDE.md](CLAUDE.md) — 项目总览、架构约束、开发守则
-- [Bug.md](Bug.md) — 已修复缺陷的根因与预防清单
+- [Bug.md](Bug.md) — 已修复缺陷的根因与经验规则
 - [数据库说明](xm_film/sql/README.md) — 表设计与初始化指引
 - [前端设计规范](标准前端视觉与交互设计规范.md) — 三端视觉与交互标准
