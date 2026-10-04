@@ -264,62 +264,83 @@ npm run dev
 
 - [README.md](README.md) — 功能、技术栈、快速启动、配置、部署（对外门面）
 - [CONTRIBUTING.md](CONTRIBUTING.md) — 提交信息规范、分支实践、**文档归属表**
-- [Bug 修复记录](Bug.md) — 已修复 Bug 的根因与解决方案，遇到相似问题优先查阅
+- [Bug 修复记录](Bug.md) — 规则篇（硬约束）+ 案例篇（根因）；遇到相似问题优先查阅
 - [数据库说明](xm_film/sql/README.md) — 数据库表设计与初始化指引
 - [前端设计规范](标准前端视觉与交互设计规范.md) — 三端视觉与交互标准（设计原则、令牌表、色板分端机制、组件与可访问性条款）
 - [前端规范待办](前端规范待办.md) — 尚未落地的规范条目与整改进度（规范正文不记录进度）
 
-## Current Architecture Notes
+## 架构不变量
 
-- Authentication state is centralized in `xm_film/vue/src/utils/authStorage.js`; router guards, Axios token injection, password pages, profile pages, and ticket purchase use the same storage helpers.
-- Cross-shell entry lives in the top-right user area of each shell, as an explicit button: the front header renders 「管理后台」 for ADMIN/CINEMA (→ `/manage/home` or `/back/home`), and both back shells render 「前台首页」 (→ `/front/home`, never `router.back()` — an admin lands straight on their own backend home). Any entry rendered by a shell must match the route's `meta.roles`, because `Front.vue` gates 「购票记录」/「我的账户」/「个人中心」/「修改密码」 on `showUserEntries` (`!isAdmin && !isCinema`, so guests still see them and get the login prompt) — those routes are `roles: ['USER']`, and the backend side genuinely does not serve other roles (`/account/summary` is USER-only). Hiding is the fix; granting access is not. Standard: 《标准前端视觉与交互设计规范》§6.5. 同理，`取票大厅`（`/front/pickup`，`meta.guest`）**刻意不挂在 `showUserEntries` 下** —— 它是自助机口径、免登录，游客也必须能进，加上 `v-if` 就等于把唯一的自助取票通路藏起来。
+> 本节是**结构事实**（能画成图/表、即使没出过 bug 也成立）的唯一落点。"改动时不要做 X / 必须做 Y"的硬约束见下方「硬约束索引」与 [Bug.md · 规则篇](Bug.md#规则篇)。
 
-- Backend password changes trust the JWT-derived request role instead of the request body role.
-- `AuthInterceptor` enforces role boundaries for admin-only resources and write operations on protected resources.
-- Database relations now use explicit keys for the main booking path: `room.cinema_id`, `record.film_id`, and `ordered.record_id`; `xm_film/sql` is the single source of truth for both schema and seed data.
-- Film type/area display reads backend-resolved fields only: `areaName` (SQL `LEFT JOIN area`) and `typeList` (filled by `FilmService.fillFilmTypes` from `film_type`). `Film` has no `types` field — do not reintroduce frontend type/area dictionaries.
-- 票房口径只有一个来源：后端按 `ordered` 实时聚合的「本系统累计售票收入」（`FilmMapper.xml` 的 `filmRevenueJoin`，只统计 `待取票/已取票`），单位是**元**，前端 `utils/format.js` 只做格式化。`film.box_office` 静态列已废弃、恒为 0（列注释已标明废弃，取值不被任何查询读取）。**`filmRevenueJoin` 的状态集合与 `OrderedMapper` 的占座判定同源**，新增改变"是否已支付"的状态时两处必须同步。
-- 「今日票房」是同一口径的日期切片：`OrderedMapper.selectTodayPaidRevenue` 按 **`pay_time` 取日**（收款日，不是 `ordered.start` 放映日 —— 本系统是提前购票，按放映日聚合会让「今日」长期恒为 0），状态集合与前一条**同源**，因此它必然 ≤ 累计票房。它挂在 `GET /api/v1/films/box-office/today`（`/api/v1/films` 已在 `PUBLIC_READ_PREFIXES` 内，**没有为它新增任何放行规则**），返回 `{total, updatedAt}`，日期边界与统计时刻都由库时钟在同一条 SQL 里给出。**空集上 SUM 为 0 是真实值，前端因此用 `formatYuan` 渲染 `0.00元` 而不是「暂无数据」** —— `formatBoxOffice` 把 0 当缺失值，两者不可混用。
-- Status tag colors are centralized in `xm_film/vue/src/constants/index.js` (`FILM_STATUS_MAP`/`getFilmStatusType`, `ORDER_STATUS_MAP`/`getOrderStatusType`, `RECORD_STATUS_MAP`/`getRecordStatusType`, `CINEMA_STATUS_MAP`/`getCinemaStatusType`); views import them instead of re-declaring the switch.
-- 表格的**操作列必须显式写 `width`**：`el-table` 给未指定宽度的列按 `minWidth || 80` 起算再均分富余空间，列多的表里操作列只会拿到 ~80px，两个文字按钮（`继续支付 + 取消` 需 104px）必然折行；而 EP 的按钮间距是 `.el-button + .el-button { margin-left: 12px }`，**折行不改变它**，第二个按钮被右推 12px，两行就左右错开（BUG-049）。多按钮格套 `front-pages.scss` 的 `.row-actions`（flex + gap，并把该 margin 中和为 0）。加宽所需像素从"内容本就不需要 80px"的列上让出（展开列、2 字表头的列），**不要让表格最小总宽上涨** —— 否则窄视口凭空多出横向滚动条。
-- 影院"上映哪些影片"由排片 `record` 派生（`FilmMapper.selectByCinema` / `CinemaMapper.selectByFilmId` 用 `EXISTS` 子查询）。**不存在影院-影片关联表**（原 `cinema_film` 已删除）——新建排片后前台立即可见，不要再引入第二张关联表。`record.film_id` 为 `NOT NULL`。
-- 场次可购票性由 `start` 与 `status` 共同决定，唯一权威实现在 `RecordService.isPurchasable`（`start` 晚于当前 且 `status != 停售`）；`OrderedService.insertOrder` 复用该规则做下单拦截，前端 `CinemaDetail.vue` 的 `recordState()`/`canBuy()` 与之同构。`未开始/放映中/已结束` 是派生状态，不落库；`record.status` 只保留 `正常/停售` 一个人工开关。
-- 排片的创建/编辑统一走 `RecordController` → `RecordService.validateSchedule(record, previousStart)`：校验影厅与影片归属、`start` 晚于当前（编辑时时间未改动则不重复校验，保证存量过期场次仍可停售）、`price > 0`、同影厅时段不重叠（按影片片长计算区间，无片长时按 120 分钟兜底），并按 `filmId` 回填 `title`。
-- 父数据禁止物理删除：`ordered` 的 5 个外键、`record` 的 3 个外键、`room.cinema_id` 均为 `ON DELETE RESTRICT`；Film/Cinema/Room/Record/User 五个删除入口先做引用计数校验并返回可读提示。下架影片/场次请改 `status`，不要删除。
-- `/api/v1/records` 在 `AuthInterceptor.PUBLIC_READ_PREFIXES` 内（匿名 GET 放行），因为公开的影院详情页需要拉取场次列表。
-- 订单状态机只有一条合法路径：`待支付 → 待取票 → 已取票`，旁支为 `待支付 →（取消/超时）已取消` 与 `待取票 →（退票）已退票`。`OrderedService.updateScoped` 拒绝通用 PUT，状态只能经 `payOrder`/`cancelOrder`/`pickupOrder`/`redeemByCode`/`refundOrder` 迁移。前端 `ORDER_STATUS_MAP` 是状态色的唯一来源，筛选下拉由 `ORDER_STATUS_OPTIONS` 从同一 map 派生，避免筛选项与状态脱节。
-- **取票码（`ordered.pickup_code`）没有自己的有效/失效状态**，可用性完全派生自订单状态：核销只接受 `status = '待取票'`（`OrderedMapper.markPickedUpByCode` 的状态条件更新）。这一个谓词同时实现了「一单一码」「用过即废」「退票/取消作废」「没付款不出发」，因此**不要为它新增 `used` / `revoked` 之类的标记列** —— 那会引入需要人工同步的第二处真相。有效期到放映结束（`ordered.start` + `film.time`，片长缺失时按 `RecordService.DEFAULT_DURATION_MINUTES` 兜底），同样不落库。码在 `payOrder` 内与扣款同一事务生成，故未支付订单永远没有码。
-- 并发重复核销不靠悲观锁：读到的状态可能是 `待取票`，但写库走 `UPDATE ... WHERE status = '待取票'`，**受影响 0 行即判定为被人抢先**（`redeemByCode` 抛 409）。与余额扣减的 `UPDATE ... WHERE balance >= ?` 同一手法，改动时不要退回"先读后无条件写"。
-- 取票码的**生成字母表与输入校验刻意不同**：生成用 `ABCDEFGHJKMNPQRSTUVWXYZ23456789`（剔除 I/L/O/0/1，人工从手机抄到自助机上看不错），校验放宽到 `[A-Z0-9]` 并把输入归一成 `XXXX-XXXX` 再等值查（`OrderedService.normalizePickupCode`）—— 生成收窄、输入放宽是刻意的：历史上给存量订单补过含 0/1 的十六进制码，收窄校验会把那批码挡在门外。归一后必须保持**等值**查询，写成 `WHERE REPLACE(pickup_code,'-','') = ?` 会让唯一索引失效。
-- **柜台取票（`pickupOrder`）只放行 `CINEMA`，且必须是白名单写法**（`if (!"CINEMA".equals(role))`）。取票记录的是"影院把票交到顾客手里"这一物理事实，能如实断言的只有放映该场次的影院；`ADMIN` 在 `ensureOrderAccess` 里不受 `cinemaId` 约束，放行它等于"一键把任意用户的票记为已取"，而该方法**不记录操作人**、事后无法追溯，又因 `已取票` 是终态而毫无纠错用途（Bug.md BUG-050）。写成 denylist（"拒 USER"）会让新增角色静默继承取票能力 —— 与 `MarkService` 那轮"只有前端按钮在守"是同一种漏。`manage/Ordered.vue` 因此也没有取票按钮，权限落点在服务端而不是按钮可见性。用户通路只有免登录的 `redeemByCode`。
-- 评价资格在服务端校验：`MarkService.add` 要求 `OrderedMapper.countPickedUpByUserAndFilm(userId, filmId) > 0`。**修改评价不重复校验**，因为 `已取票` 是终态（退票与删除都进不来），资格一旦成立不会被推翻。
-- 占用座位的判定只有一个出处：`OrderedMapper.countSeatInUse` / `selectActiveByRecordId`，状态集合为 `NOT IN ('已取消','已退票')`，且待支付订单仅在 `pending_timeout_at > NOW()` 时锁座。**新增任何"释放座位"的状态时，两处查询必须同步**，否则座位永远锁死。
-- `/api/v1/orders/seats` 对外返回的是投影 `SeatOccupancy`（`seat` + 后端按 JWT 算出的 `mine`），只有本人订单才带 `orderId`/`orders`/`total`/`pendingTimeoutAt`。**不要把 `Ordered` 实体直接回给这个端点** —— 那等于把该场次所有订单的订单号、`user_id`、金额发给任意登录用户（见 Bug.md BUG-040）。归属判定必须在后端做，前端只读 `mine`，不得再拿 `userId` 自己比对。
-- 支付超时不用异常表达：`OrderedService.payOrder` 返回 `PayResult.TIMEOUT_CANCELLED`，由控制器翻译为 409。原因是该方法带 `rollbackFor = Exception.class`，"先取消再抛异常"会把取消一起回滚，订单停在待支付（另见 Bug.md BUG-035）。
-- 金额字段必须是包装类型：`ordered.total` 为 `Double` 而非 `double`。`updateById` 用 `<if test="total != null">` 守卫，原始类型永远非 null，会让支付/取票/取消等局部更新把金额写成 0.00（另见 Bug.md BUG-034）。
-- 选座图的座位来源是 `record.roomSeatRows` / `roomSeatCols`（`RecordMapper` 从 `room` 表 JOIN 出来），而不是写死的 8×8，也不是让用户端去读 `/api/v1/rooms`（USER 无权访问影厅接口）。后端座位合法性校验同样按影厅边界，单笔订单座位数上限 6（`OrderedService.MAX_SEATS_PER_ORDER`）。
-- 影厅的 `title`（影院名称）由后端按所属影院记录派生，前端不再手填；`back/Room.vue` 的影院名是只读展示。影厅 `seat_rows`/`seat_cols` 合法区间为 1~50，由 `RoomController.validateSeatLayout` 兜底。
-- 影片评分只有一个数值来源：`mark.score`（`DECIMAL(3,1)`，0~10）。`film.score` 是**纯派生列**，唯一写者是 `MarkService` → `FilmMapper.recalculateScore`（评价增删改后回写该片均分）；**无评价时为 NULL**（AVG 空集即 NULL，`schema.sql` 里该列也刻意不给 DEFAULT），前端一律渲染「暂无评分」。因此它**不接受客户端入参**：`FilmMapper.xml` 的 insert/updateById 刻意不写 score —— `FilmController` 继承 `BaseController` 的通用 `POST/PUT /api/v1/films` 直收整实体，留着那个 `<if>` 分支等于任何人能手写一个评分。`data.sql` 里 17 部影片的 `score` 全是 NULL（原先是人工填死的编造值，见下一条）。评价唯一性由 `MarkMapper.countByUserAndFilm` 保证（一人一片一条），评价人只认 JWT 里的 `userId`。前端「去评价」入口在 `front/Orders.vue`（仅 `已取票` 订单，点击跳影评页），`front/FilmDetail.vue` 展示热评（该赞序前 3 条）、完整列表在 `front/FilmMarks.vue`。
-- 评分榜（`selectMarkTop`）**只含真正有评价的影片**：SQL 里带 `EXISTS (SELECT 1 FROM mark ...)` 谓词，与票房榜的 `WHERE rev.revenue > 0`（无售票不上榜）同构 —— 这是刻意的第二层保险，不能靠"无评价时 score 恰好为 NULL"这条不变量独自承担（种子曾预置编造分数，于是 `mark` 0 行时榜单照样有数据）。`film.score` 的"0.0 分"与"暂无评分"是两回事：`0.0` 是合法的真实评分，只有 NULL 才代表没人评过，前端 `utils/format.js` 的 `formatScore` 因此**只判 null/undefined**（与把 0 当缺失值的 `formatBoxOffice` 正好相反，两者不可混用）。
-- 影院审核状态词表 `CinemaStatus` 只有 `未审核`/`已审核`（与 `schema.sql` 默认值、`data.sql` 种子一致）。`CinemaService.login` 拒绝未审核影院；公开列表经 `CinemaMapper.selectByFilmId` 的 `approvedOnly` 过滤，该标记由 `CinemaController` 按 `!isAdmin()` 传入 —— 管理员必须看得到未审核的，否则无法审核（见 Bug.md BUG-036）。
-- `WebMvcConfig.excludePathPatterns` 是**角色盲区**：被排除的路径不执行 `AuthInterceptor`，request 上没有 `role`/`userId`，控制器里的角色判断会静默失效（BUG-036 即由此而来）。公开访问统一交给 `PUBLIC_READ_PREFIXES`，**不要往排除表里加路径**。
-- 令牌失效时公开只读资源仍按匿名放行（`AuthInterceptor.isAnonymousRead`）。否则游客带着过期令牌浏览公开页会被判 401，而前端 `request.js` 的 401 处理会跳登录页 —— 公开内容就变成了事实上的必须登录。
-- `Film.boxOffice` 已由原始 `double` 改为 `Double`，与 `ordered.total` 同因同治（`film.box_office` 有 `DEFAULT 0.0`，新增影片不受影响）。凡是被 `<if test="X != null">` 守卫的字段一律用包装类型。查询时该字段承载上面聚合出来的票房（元），**不再来自 `film.box_office` 列**。
-- 账户余额的唯一可信来源是 `user.balance`；`fund_flow` 是只增的审计副本。**任何改余额的代码只能走 `WalletService`**（`creditRecharge` / `debitPurchase` / `creditRefund`），它统一做「行锁读余额 → 校验/变更 → 写一条流水」，因此不会出现"改了余额没记账"或"扣款成功但订单没出票"。
-- 余额扣减是 `SELECT balance ... FOR UPDATE` 行锁 + `UPDATE ... WHERE balance >= ?` 条件更新双保险。**不要绕过 `WalletService` 直接用 `UserMapper.addBalance` 写业务代码** —— 那样会跳过流水与校验，余额与账本必然对不上。
-- 金额字段一律 `BigDecimal`（`user.balance` / `recharge_order.amount` / `fund_flow.change_amount` 等），前端展示经 `Number(...).toFixed(2)`。`ordered.total`/`unit_price` 仍是 `Double`/`BigDecimal`，历史原因不同，新增资金字段不要再用 `double`。
-- 充值单据状态机只有三个状态、两条边：`处理中 → 已完成`（回调成功，入账）、`处理中 → 已失败`（回调失败，余额不变）。**终态不可再流转**，重复回调返回业务冲突——这是幂等的唯一实现，新增任何充值入口都必须复用 `RechargeService.handleCallback`。
-- 订单物理删除只允许终态废单（`已取消` / `已退票`），白名单在 `OrderedService.DELETABLE_STATUSES`，前端三端按钮由 `constants.isOrderDeletable` 同构渲染。**这是"删订单当免费退票用"的后门**：退票能回款而删除不能，一旦放开已支付订单的删除，资金账就永远对不平。
-- 演示账号 `zhangsan` 预置 100 元余额（`data.sql` 是唯一出处）。余额不足的演示路径由"连买几张高价票"自然触发，不需要额外的穷账号。
-- **`data.sql` 不预置交易类数据**：`record`（场次）/ `ordered`（订单）/ `mark`（评价）一律由真实业务接口产生。手写的订单必须同时伪造订单号、单价快照、支付凭证、余额扣减与资金流水 —— 老种子正是如此（`unit_price` 全为 NULL、`fund_flow` 里没有对应购票记录、`zhangsan` 余额未因那条 42 元订单扣减、单号是 12 位纯数字而真实单号是 `yyyyMMdd` + 8 位十六进制），一查就露。**要演示数据只能经真实业务接口生成**（前台下单 → 支付 → 取票 → 评价），不要手工 `INSERT` 补单。
-- 后台大盘统计走 `StatisticsController` / `StatisticsService` → `GET /api/v1/statistics/overview`（仅 ADMIN），由 `CinemaMapper.countGroupByStatus` / `FilmMapper.countGroupByType` 用 `GROUP BY` 实时聚合。**前端不再拉全表自己算**（`manage/Home.vue` 原先为此拉取 films + cinemas + types 三张全表再在 JS 里聚合）。无数据时按规范 §11.2 渲染「暂无数据」占位，不塞编造默认值。
-- 前端空态与异常的文案分工（规范 §11.2）：接口成功但无数据 → 「暂无数据」；请求失败（网络异常 / 超时 / 5xx）→ 「数据加载失败，请稍后重试」。失败提示由 `utils/request.js` 的响应拦截器统一给出，**页面内的 `catch` 只落错误态、不再重复弹提示**，否则同一次失败会弹两次。区分两者是必需的：请求失败时显示「暂无数据」会让用户以为系统里真的没有数据。
-- `excludePathPatterns` 是角色盲区（BUG-036），账户/充值/流水端点**都在拦截器覆盖范围内**：`/api/v1/recharges`、`/api/v1/fund-flows`、`/api/v1/account` 均未加入 `PUBLIC_READ_PREFIXES`，因此未登录一律 401 而不是匿名放行。
-- 登录 / 注册页共用一套外壳 `assets/css/auth-layout.scss`（两页各自 `@use` 进 `scoped` 块，与 `admin-layout.scss` 同构）。**卡片宽度只有 `.auth-card` 的 `max-width` 一个来源，卡片内部一律 `width: 100%`** —— 曾因内层写死 `380px` 而父级内容宽仅 192px，导致标题折行、表单溢出 188px（BUG-042）。容器用 `min-height: 100vh` + flex 居中，**不要**改回 `height: 100vh` + `overflow: hidden` + 绝对定位（矮视口会裁掉卡片且无法滚动）。口径见规范 §6.4；改动共用外壳时须同时核对登录/注册两页的上述布局不变量。
-- 认证页表单的固定形态：`label-position="top"` + `status-icon` + 可见 `label` + 文本输入框 `@keyup.enter`（`el-form` 上 `@submit.prevent` 兜底）+ 图标一律组件绑定 `:prefix-icon="User"`（字符串写法不会解析，`main.js` 未全局注册图标集，BUG-043）。登录角色默认 `USER`，**不要**改回 `ADMIN`（BUG-044）。
-- `mark_like` 是评价点赞的**纯关系表**（`PRIMARY KEY (mark_id, user_id)`，两个外键均 `ON DELETE CASCADE`）：一行即一个赞，"一人一赞"与"可取消"都由主键承担，赞数由 `COUNT(*)` 实时聚合，**刻意不落计数列** —— 冗余计数列会把真相分到两处（取消赞 / 评价被删 / 并发点赞任一处漏同步，计数就永久偏离且无法自证对错），与 `user.balance` 为唯一余额来源同一思路。`MarkLikeMapper` 因此**不继承 `BaseMapper`**（没有 CRUD 资源，继承来的 7 个方法只会是死代码），也没有实体类（只有关系、没有身份），四条语句只收/还 int。
-- **「热评」不是第二条查询**：`filmDetail/:id` 的头部 3 条就是 `GET /api/v1/marks/by-film` 那条「`likeCount DESC, mark.id DESC`」排序（`MarkMapper.xml` 的 `selectFilmMarks`）的**前 3 行**（`pageSize=3`），影评页 `/front/filmMarks/:id` 是同一排序的完整分页。**不要再为热评另写一条 SQL 或另开一个端点** —— 两个排序一旦分叉，同一部片会在两个页面给出不同的"热门"。
-- `MarkView` 的 `liked` / `mine` 由后端按 JWT 在 SQL 里算好（`viewer` 为 null 时一并为 false），**投影不含 `userId`** —— 下发作者 id 等于把"这条是不是我写的"下放给前端自己比对，正是 BUG-040 的漏（`/api/v1/orders/seats` 曾直接下发他人订单号与 `userId`）。归属只认 `mine` 布尔量，前端不得再拿 `userId` 自己比对。
-- `MarkService.setLike` 必须 `@Transactional(isolation = Isolation.READ_COMMITTED)`。MySQL 默认的 REPEATABLE READ 下，本事务的读快照在第一条一致读（`requireExisting`）就已固定；`insertIfAbsent` 撞上另一个**尚未提交**的同键事务会阻塞到对方提交之后才返回，此后再用一致读 `COUNT`，读到的仍是那个早于对方提交的旧快照 —— 库里已有该行，回读却报 `liked=false` / `likeCount=0`，与"返回写库后的权威状态"正好相反（真库复现：5 个并发响应里 4 个报 `liked=false`，见 Bug.md BUG-051）。**不要改用锁定读 `FOR UPDATE`**：那会锁住该评价行，把同一部片子上所有人的点赞串行化。
-- `insertIfAbsent` 用 `ON DUPLICATE KEY UPDATE mark_id = mark_id`，**不用 `INSERT IGNORE`**：`INSERT IGNORE` 把**所有**错误一并降级为警告，外键违规（`mark_id` 指向的评价已被删）同样只返回 `ROW_COUNT()=0`，与"已赞过"字节级相同，使二者不可区分；`ON DUPLICATE KEY` 只吸收重复键冲突，真实的外键错误照常抛 1452。端点是**构造上幂等**的：`liked` 是显式意图（非服务端 toggle）叠加主键去重；响应回读权威状态而非信任受影响行数，因为重复插入同样报 0 行。
-- 点赞**没有新增任何拦截器放行规则**：`/api/v1/marks` 早已在 `PUBLIC_READ_PREFIXES` 内（评价列表本就匿名可读），`PUT /{id}/like` 的 `USER` 限制落在 `MarkController.requireUser`，不是 `excludePathPatterns` 那类角色盲区（BUG-036）。
+### 数据模型与关系
+- 主订票路径用显式外键：`room.cinema_id`、`record.film_id`、`ordered.record_id`；`xm_film/sql` 是 schema 与种子数据的唯一出处。
+- 影院"上映哪些影片"由排片 `record` 派生（`FilmMapper.selectByCinema` / `CinemaMapper.selectByFilmId` 用 `EXISTS` 子查询）。**不存在影院-影片关联表**；`record.film_id` 为 `NOT NULL`。（→ 规则 22）
+- 影片的类型/地区只读后端解析字段：`areaName`（`LEFT JOIN area`）与 `typeList`（`FilmService.fillFilmTypes` 从 `film_type` 填）。`Film` 无 `types` 字段。（→ 规则 20）
+- 影厅 `title`（影院名称）由后端按所属影院派生；座位规模随 `room.seat_rows` / `seat_cols`。（→ 规则 31）
+- **选座**：座位来源 `record.roomSeatRows` / `roomSeatCols`（`RecordMapper` 从 `room` JOIN 出来），非写死 8×8；后端座位校验按影厅边界，单笔订单上限 6（`OrderedService.MAX_SEATS_PER_ORDER`）；USER 无权访问 `/api/v1/rooms`。（→ 规则 30）
+
+### 口径来源（唯一聚合点）
+- **票房**：`FilmMapper.xml` 的 `filmRevenueJoin` 按 `ordered` 实时聚合（只统计 `待取票/已取票`），单位**元**；前端 `utils/format.js` 只做格式化。`film.box_office` 静态列已废弃、恒为 0。
+- **今日票房**：同一口径按 `pay_time` 取日的切片（`OrderedMapper.selectTodayPaidRevenue`），挂 `GET /api/v1/films/box-office/today`，返回 `{total, updatedAt}`。空集 SUM 为 0 是真实值（前端 `formatYuan` 渲染 `0.00元`，非「暂无数据」）。（→ 规则 75）
+- **影片评分**：`mark.score` 是唯一数值来源；`film.score` 是纯派生列，唯一写者 `MarkService` → `FilmMapper.recalculateScore`，**无评价时为 NULL**。
+- **账户余额**：`user.balance` 是唯一可信来源，`fund_flow` 是只增的审计副本。（→ 规则 38）
+- **后台大盘**：`StatisticsController` → `GET /api/v1/statistics/overview`（仅 ADMIN），`GROUP BY` 实时聚合。
+
+### 状态机
+- **订单**：`待支付 → 待取票 → 已取票`，旁支 `待支付 →（取消/超时）已取消` 与 `待取票 →（退票）已退票`。`OrderedService.updateScoped` 拒绝通用 PUT，状态只能经 `payOrder` / `cancelOrder` / `pickupOrder` / `redeemByCode` / `refundOrder` 迁移。
+- **充值单据**：`处理中 → 已完成` / `处理中 → 已失败`，终态不可再流转。（→ 规则 42）
+- **影院审核词表** `CinemaStatus` 只有 `未审核`/`已审核`。（→ 规则 37）
+- **场次可购票性**：唯一权威在 `RecordService.isPurchasable`（`start` 晚于当前 且 `status != 停售`）；`未开始/放映中/已结束` 派生不落库，`record.status` 只保留 `正常/停售`。（→ 规则 24）
+- **排片创建/编辑**统一走 `RecordController` → `RecordService.validateSchedule`：校验影厅与影片归属、`start` 晚于当前、`price > 0`、同影厅不重叠（按片长算区间，无片长按 120 分钟兜底），并按 `filmId` 回填 `title`。
+
+### 鉴权与放行
+- `AuthInterceptor` 对 admin-only 资源与受保护资源的写操作做角色边界；公开只读统一走 `PUBLIC_READ_PREFIXES`。
+- `/api/v1/records`、`/api/v1/films` 等在 `PUBLIC_READ_PREFIXES` 内，供公开页拉取。（→ 规则 25）
+- 令牌失效时公开只读资源仍按匿名放行（`AuthInterceptor.isAnonymousRead`）。（→ 规则 33）
+- 账户/充值/流水端点都在拦截器覆盖范围内，未登录一律 401。（→ 规则 32）
+
+### 并发与一致性
+- **座位占用判定**唯一出处 `OrderedMapper.countSeatInUse` / `selectActiveByRecordId`（`NOT IN ('已取消','已退票')`；待支付仅在 `pending_timeout_at > NOW()` 锁座）。（→ 规则 29）
+- **余额扣减**：`SELECT ... FOR UPDATE` 行锁 + `UPDATE ... WHERE balance >= ?` 条件更新双保险。（→ 规则 40）
+- 点赞 `MarkService.setLike` 用 `READ_COMMITTED` 隔离级别。（→ 规则 63）
+
+### 前端
+- 认证状态集中在 `xm_film/vue/src/utils/authStorage.js`；路由守卫、Axios 注令牌、改密/资料页共用同一组 helper。
+- 状态色集中在 `constants/index.js`（`FILM/ORDER/RECORD/CINEMA_STATUS_MAP`），视图 import 而不自行实现 switch。（→ 规则 21）
+- 跨端入口在每个外壳右上角，是显式按钮（前台给 ADMIN/CINEMA 「管理后台」，两后台给「前台首页」→ `/front/home`，不用 `router.back()`）。（→ 规则 73）
+- **「热评」不是第二条查询**：`filmDetail/:id` 头部 3 条就是 `GET /api/v1/marks/by-film`（`likeCount DESC, mark.id DESC`）的前 3 行（`pageSize=3`）；影评页 `filmMarks/:id` 是同一排序的完整分页。
+- `mark_like` 是纯关系表（`PRIMARY KEY (mark_id, user_id)`，两外键 `ON DELETE CASCADE`），赞数按 `COUNT(*)` 实时聚合，**无计数列**。
+
+## 硬约束索引
+
+> 一行一条，正文在 [Bug.md · 规则篇](Bug.md#规则篇)。新增教训只改规则篇，此处补一行。
+
+- 金额 / 计数 / 比率字段用包装类型，不用原始类型（规则 27）
+- 事务方法内不得"先写入再抛异常"表达失败（规则 28）
+- 父数据禁止物理删除，下架改 `status`（规则 23）
+- `excludePathPatterns` 是角色盲区，公开访问只走 `PUBLIC_READ_PREFIXES`（规则 32）
+- 令牌失效时公开只读资源按匿名放行（规则 33）
+- 余额变更只走 `WalletService`（规则 38）；扣减用行锁 + 条件更新（规则 40）
+- 资金字段一律 `BigDecimal` 且 > 0（规则 41）
+- 充值回调必须幂等，复用 `RechargeService.handleCallback`（规则 42）
+- 订单物理删除只允许「已取消 / 已退票」（规则 44）
+- 同步写库面测试用临时库 + 备用端口（规则 46）
+- 只读视图回投影、不回实体；归属只认 `mine`（规则 47 / 48）
+- 取票码不加 `used`/`revoked` 标记列（规则 67）；并发核销靠条件更新影响行数（规则 68）
+- 取票码生成收窄、输入放宽，归一后等值查（规则 69）
+- 柜台取票只放行 `CINEMA`，白名单写法（规则 62）
+- 评价资格在服务端校验（规则 70）
+- 表格操作列必须显式写 `width`（规则 60）
+- 影厅容量随实体列走，不写死（规则 30）
+- 派生字段不接受前端输入，后端按外键回填（规则 31）
+- 派生指标列只留唯一写者、不接受客户端入参（规则 65）
+- 去重插入用 `ON DUPLICATE KEY`，不用 `INSERT IGNORE`（规则 71）
+- 点赞"写后回读"需 `READ_COMMITTED`（规则 63）
+- 前端空态与异常文案分工，失败提示只在 `request.js` 统一给（规则 72）
+- shell 渲染的入口必须匹配 `meta.roles`（规则 73）
+- 改密只认 JWT 里的角色（规则 74）
+- 同一配置项只留一个读取点、一个兜底值（规则 66）
+- 种子只放基础配置，交易类数据走真实接口生成（规则 58）
+- 同一主体对同一目标显式去重，如一人一片一条（规则 35）
+- "是否已支付 / 占座"状态集合多消费点必须同源（规则 75）
