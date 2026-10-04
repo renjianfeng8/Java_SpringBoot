@@ -17,6 +17,7 @@ project_02/
 ├── Bug.md                             # Bug 修复记录（修复前先查阅）
 ├── 标准前端视觉与交互设计规范.md        # 前端视觉与交互设计规范（新增页面前先查阅）
 ├── 前端规范待办.md                     # 规范未落地条目与整改进度（规范正文不记进度）
+├── .github/workflows/ci.yml           # CI：后端编译 → 前端构建
 ├── xm_film/                           # 项目主目录
 │   ├── springboot/                    # 后端（Spring Boot）
 │   │   ├── pom.xml                    # Maven 依赖配置
@@ -32,7 +33,7 @@ project_02/
 │   │       │   │   ├── FileUtil.java           # 文件上传工具（含 MIME 白名单）
 │   │       │   │   ├── JwtUtils.java           # JWT 令牌工具（JJWT 新版 API）
 │   │       │   │   ├── Result.java             # 统一响应封装
-│   │       │   │   └── enums/                  # 词表枚举（RoleEnum / OrderStatus / RecordStatus / PayResult / CinemaStatus / RechargeStatus / FundSource）
+│   │       │   │   └── enums/                  # 词表枚举（RoleEnum / OrderStatus / RecordStatus / PayResult / CinemaStatus / RechargeStatus / FundSource / ErrorCode）
 │   │       │   ├── common/config/
 │   │       │   │   ├── AuthInterceptor.java    # JWT 认证拦截器
 │   │       │   │   └── WebMvcConfig.java       # Web MVC 配置
@@ -52,6 +53,8 @@ project_02/
 │   │   ├── vite.config.js              # Vite 配置（含 AutoImport / Components 插件）
 │   │   ├── jsconfig.json               # 路径别名与编译选项
 │   │   ├── package.json                # 前端依赖
+│   │   ├── .env.development            # 开发环境默认值（已入库）
+│   │   ├── .env                        # 生产构建默认值（不入库，本机文件）
 │   │   ├── src/
 │   │   │   ├── main.js                 # Vue 入口（含全局 errorHandler）
 │   │   │   ├── App.vue                 # 根组件（ElConfigProvider + ErrorBoundary）
@@ -71,7 +74,7 @@ project_02/
 │   │   │   ├── utils/                  # 工具层
 │   │   │   │   ├── request.js          # Axios 封装（拦截器 + 统一错误提示）
 │   │   │   │   ├── authStorage.js      # 登录态本地存储
-│   │   │   │   └── format.js           # 票房格式化（后端聚合的累计售票收入，单位元）
+│   │   │   │   └── format.js           # 格式化（formatBoxOffice / formatYuan 票房 · formatScore 评分）
 │   │   │   ├── views/                  # 页面视图
 │   │   │   │   ├── Login.vue / Register.vue / 404.vue
 │   │   │   │   ├── Front.vue           # 用户前台布局
@@ -123,8 +126,8 @@ project_02/
 | Service | `BaseService<T>` | 提供 CRUD 方法 + 事务管理 |
 | Mapper | `BaseMapper<T>` | 提供 MyBatis CRUD 方法定义 |
 
-- 13 个 Service 全部继承 `BaseService<T>`，仅需实现 `mapper()` 方法返回具体 Mapper
-- 13 个 Controller 继承 `BaseController<T>`，仅需声明 `@RequestMapping` + 构造函数注入
+- 17 个 Service 中 13 个继承 `BaseService<T>`，仅需实现 `mapper()` 方法返回具体 Mapper；例外四个不构成通用 CRUD 资源：`WalletService`、`RechargeService`、`FundFlowService`、`StatisticsService`
+- 21 个 Controller 中 13 个继承 `BaseController<T>`，仅需声明 `@RequestMapping` + 构造函数注入；例外八个：`Auth`/`Account`/`Recharge`/`FundFlow`/`Statistics`/`Ticket`/`FileUpload`/`Health`（认证、状态机端点、免登录核销、文件上传、健康检查）
 - 复杂业务（如 Film 的排行榜、Cinema 的按电影筛选分页）通过方法覆写实现
 
 ## API 接口清单
