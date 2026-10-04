@@ -143,7 +143,7 @@ flowchart LR
   API --> Upload[本地文件存储]
 ```
 
-后端采用**泛型三层抽象**消除重复 CRUD 代码：`BaseController<T>` 提供 7 个标准 RESTful 端点，`BaseService<T>` 提供事务化的 CRUD 方法，`BaseMapper<T>` 提供 SQL 方法定义。13 个资源 Controller 与 13 个 Service 继承基类，各只需实现一个方法；复杂业务（票房榜、按片筛选、订单状态机）通过方法覆写或独立端点扩展。设计取舍见 [CLAUDE.md · 后端架构设计](CLAUDE.md#后端架构设计)。
+后端采用**泛型三层抽象**消除重复 CRUD 代码：`BaseController<T>` 提供 7 个标准 RESTful 端点，`BaseService<T>` 提供事务化的 CRUD 方法，`BaseMapper<T>` 提供 SQL 方法定义。13 个资源 Controller 与 13 个 Service 继承基类，各只需实现一个方法；复杂业务（票房榜、按片筛选、订单状态机）通过方法覆写或独立端点扩展。设计取舍见 [CLAUDE.md · 后端抽象](CLAUDE.md#后端抽象)。
 
 ---
 
