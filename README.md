@@ -38,6 +38,7 @@
 - [安全机制](#安全机制)
 - [测试](#测试)
 - [部署指南](#部署指南)
+- [后续计划](#后续计划)
 - [相关文档](#相关文档)
 
 ---
@@ -115,48 +116,16 @@
 
 ```
 project_02/
-├── README.md                              # 项目说明（本文件）
-├── CONTRIBUTING.md                        # 提交规范 · 分支实践 · 文档归属
-├── CLAUDE.md                              # 架构约束 · 目录树 · API/页面清单 · 开发守则
-├── Bug.md                                 # 缺陷根因与预防清单
-├── 标准前端视觉与交互设计规范.md            # 三端视觉与交互标准
-├── 前端规范待办.md                         # 规范未落地条目与整改进度
+├── README.md / CONTRIBUTING.md / CLAUDE.md / Bug.md   # 文档（各文件职责见 CONTRIBUTING 归属表）
+├── 标准前端视觉与交互设计规范.md / 前端规范待办.md
 ├── .github/workflows/ci.yml               # CI：后端编译 → 前端构建
 └── xm_film/
     ├── springboot/                        # 后端（Spring Boot）
-    │   └── src/main/
-    │       ├── java/com/example/springboot/
-    │       │   ├── common/                # 泛型基类 · 拦截器 · 工具 · 词表枚举
-    │       │   ├── controller/            # 控制器层（21 个）
-    │       │   ├── entity/                # 实体类（16 个）
-    │       │   ├── mapper/                # MyBatis Mapper 接口（16 个）
-    │       │   ├── service/               # 业务逻辑层（17 个）
-    │       │   └── exception/             # 全局异常处理
-    │       └── resources/
-    │           ├── application.yml        # 开发环境配置
-    │           ├── application-prod.yml   # 生产环境配置（禁用 Swagger、必填密钥）
-    │           ├── logback-spring.xml     # 日志配置
-    │           └── mapper/                # MyBatis XML 映射（16 个）
     ├── vue/                               # 前端（Vue 3）
-    │   └── src/
-    │       ├── views/                     # 页面视图
-    │       │   ├── front/                 # 用户前台（15 页）
-    │       │   ├── back/                  # 影院后台（7 页）
-    │       │   ├── manage/                # 管理后台（16 页）
-    │       │   └── Login / Register / 404.vue
-    │       ├── components/                # 通用组件（ErrorBoundary / OrderPayDialog）
-    │       ├── composables/               # useAuth / useCrud / useFormDialog
-    │       ├── router/index.js            # 路由配置 + 角色守卫
-    │       ├── constants/index.js         # API 路径与状态映射
-    │       ├── utils/                     # request / authStorage / format
-    │       └── assets/css/                # 设计令牌与共用样式骨架
-    └── sql/                               # 数据库初始化（唯一入口）
-        ├── schema.sql                     # 17 张表建表语句
-        ├── data.sql                       # 基础种子数据
-        └── init.sql                       # 一键初始化（建库 + schema + data）
+    └── sql/                               # 数据库初始化（init.sql 一键入口）
 ```
 
-> 完整目录树（逐文件注解）、API 接口清单与页面清单见 [CLAUDE.md](CLAUDE.md)。
+> 这里是两层概览；**完整目录树（逐文件注解）**、API 接口清单与页面清单见 [CLAUDE.md](CLAUDE.md#目录结构)。
 
 ---
 
@@ -413,6 +382,14 @@ server {
 - [数据库说明](xm_film/sql/README.md) — 表设计与初始化指引
 - [前端设计规范](标准前端视觉与交互设计规范.md) — 三端视觉与交互标准
 - [前端规范待办](前端规范待办.md) — 规范未落地条目与整改进度
+
+---
+
+## 后续计划
+
+- **文件存储** —— 现为本地磁盘（`FILE_UPLOAD_DIR`），生产环境建议迁移至对象存储（OSS / S3）。
+- **前端静态资源分发** —— 生产构建后建议接入 CDN。
+- **API 文档** —— 静态资源走 CDN（`static/swagger-ui.html`）；离线环境需改用 `springdoc-openapi-starter-webmvc-ui` 本地内嵌。
 
 ---
 
