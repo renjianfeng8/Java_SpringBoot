@@ -55,19 +55,31 @@
 | 事实 | 唯一落点 |
 |------|----------|
 | 项目简介、演示地址、测试账号 | [README.md](README.md) |
+| 三端角色职责表 | [README.md · 功能模块](README.md#功能模块) |
+| 功能模块摘要（对外视角，不含规则细节） | [README.md · 功能模块](README.md#功能模块) |
 | 技术栈与版本号 | [README.md · 技术栈](README.md#技术栈) |
 | 配置项、环境变量与部署方式 | [README.md · 配置说明](README.md#配置说明) |
 | 快速启动（完整步骤） | [README.md · 快速启动](README.md#快速启动) |
-| 功能模块摘要（对外视角，不含规则细节） | [README.md · 功能模块](README.md#功能模块) |
+| 已知改进空间 / 后续计划 | [README.md · 后续计划](README.md#后续计划) |
 | 完整目录树（带逐文件注释） | [CLAUDE.md · 目录结构](CLAUDE.md#目录结构) |
 | API 接口清单与鉴权规则 | [CLAUDE.md · API 接口清单](CLAUDE.md#api-接口清单) |
 | 页面清单与访问模式 | [CLAUDE.md · 页面清单](CLAUDE.md#页面清单) |
+| 架构不变量（结构事实：表关系、口径来源、状态机结构、目录约束） | [CLAUDE.md · 架构不变量](CLAUDE.md#架构不变量) |
+| 硬约束索引（一行/条，正文指向 Bug.md） | [CLAUDE.md · 硬约束索引](CLAUDE.md#硬约束索引) |
+| 经验教训全文（预防清单） | [Bug.md · 规则篇](Bug.md#规则篇) |
+| 缺陷根因叙事 | [Bug.md · 案例篇](Bug.md#案例篇) |
 | 数据库表设计与初始化指引 | [xm_film/sql/README.md](xm_film/sql/README.md) |
-| 架构不变量与业务规则 | [CLAUDE.md · Current Architecture Notes](CLAUDE.md#current-architecture-notes) |
-| 缺陷根因与预防清单 | [Bug.md](Bug.md) |
 | 前端视觉与交互标准 | [标准前端视觉与交互设计规范.md](标准前端视觉与交互设计规范.md) |
 | 前端规范的未落地条目与整改进度 | [前端规范待办.md](前端规范待办.md) |
 | 提交信息规范、分支实践、文档归属 | 本文件 |
+
+**归档前的三分判据**（决定一段内容该进哪个家）：
+
+| 桶 | 判据 | 家 |
+|----|------|----|
+| 结构事实 | 即使从没出过 bug 也成立；能画成图/表 | [CLAUDE.md · 架构不变量](CLAUDE.md#架构不变量) |
+| 硬约束 / 教训 | 祈使句——"改动时不要做 X / 必须做 Y"，且由某个 bug 确立 | [Bug.md · 规则篇](Bug.md#规则篇)（CLAUDE.md 只留一行索引） |
+| 叙事 / 进度 | 事故经过、修订史、已落地记录 | [Bug.md · 案例篇](Bug.md#案例篇) / [前端规范待办.md](前端规范待办.md) |
 
 > 唯一的有意例外：CLAUDE.md 保留了一段**最小启动命令**（6 行，跨端切换时省一次跳转），但不重复环境要求、配置项与排错说明 —— 完整步骤以 README 为准。
 
