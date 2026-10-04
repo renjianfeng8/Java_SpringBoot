@@ -378,7 +378,7 @@ server {
 
 - [CONTRIBUTING.md](CONTRIBUTING.md) — 提交信息规范、分支实践、文档归属表
 - [CLAUDE.md](CLAUDE.md) — 项目总览、架构约束、API / 页面清单、开发守则
-- [Bug.md](Bug.md) — 已修复缺陷的根因分析与预防清单
+- [Bug.md](Bug.md) — 已修复缺陷的根因分析与经验规则
 - [数据库说明](xm_film/sql/README.md) — 表设计与初始化指引
 - [前端设计规范](标准前端视觉与交互设计规范.md) — 三端视觉与交互标准
 - [前端规范待办](前端规范待办.md) — 规范未落地条目与整改进度
