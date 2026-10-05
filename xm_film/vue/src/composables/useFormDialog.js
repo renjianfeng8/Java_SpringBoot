@@ -42,5 +42,5 @@ export function useFormDialog(crud, options = {}) {
     formRef.value?.resetFields()
   }
 
-  return { dialogVisible, isEdit, formRef, form, openAdd, openEdit, submit, close }
+  return { dialogVisible, isEdit, formRef, form, rules, openAdd, openEdit, submit, close }
 }

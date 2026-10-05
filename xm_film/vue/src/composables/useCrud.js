@@ -2,8 +2,7 @@ import { ref, reactive } from 'vue'
 import { ElMessage } from 'element-plus'
 import request from '@/utils/request'
 
-export function useCrud(apiBase, options = {}) {
-  const { defaultSort = 'id', defaultOrder = 'desc' } = options
+export function useCrud(apiBase) {
   const dataList = ref([])
   const loading = ref(false)
   const error = ref('')
@@ -35,6 +34,7 @@ export function useCrud(apiBase, options = {}) {
         ElMessage.error(error.value)
       }
     } catch (e) {
+      // request.js 已统一弹出网络/HTTP 提示，这里仅清空数据兜底，异常不再上抛
       fail('数据加载失败，请稍后重试')
     } finally {
       loading.value = false
@@ -53,6 +53,7 @@ export function useCrud(apiBase, options = {}) {
         ElMessage.error(error.value)
       }
     } catch (e) {
+      // request.js 已统一弹出网络/HTTP 提示，这里仅清空数据兜底，异常不再上抛
       fail('数据加载失败，请稍后重试')
     } finally {
       loading.value = false

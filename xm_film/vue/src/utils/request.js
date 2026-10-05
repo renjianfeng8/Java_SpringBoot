@@ -41,7 +41,10 @@ request.interceptors.request.use(
 request.interceptors.response.use(
   response => {
     const res = response.data
-    return typeof res === 'string' ? (res ? JSON.parse(res) : res) : res
+    if (typeof res === 'string' && res) {
+      return JSON.parse(res)
+    }
+    return res
   },
   error => {
     if (error.code === 'ERR_NETWORK') {
