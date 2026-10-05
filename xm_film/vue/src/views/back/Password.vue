@@ -23,16 +23,15 @@
 
 <script setup>
 
-import {reactive, ref} from "vue";
+import { reactive, ref } from "vue";
 import request from "@/utils/request.js";
 import { ElMessage } from "element-plus";
 import { AUTH_API } from "@/constants";
 import { clearStoredUser, getStoredUser } from "@/utils/authStorage";
 
-
 const formRef = ref()
 
-const validatePass = (rule,value,callback) => {
+const validatePass = (rule, value, callback) => {
   if (!value) {
     callback(new Error('请再次确认新密码'))
   } else if (value !== data.form.newPassword) {
@@ -47,13 +46,13 @@ const data = reactive({
   form: {},
   rules: {
     password: [
-      {required: true, message: '请输入原密码', trigger: 'blur'}
+      { required: true, message: '请输入原密码', trigger: 'blur' }
     ],
     newPassword: [
-      {required: true, message: '请输入新密码', trigger: 'blur'}
+      { required: true, message: '请输入新密码', trigger: 'blur' }
     ],
     confirmPassword: [
-      { validator: validatePass, trigger: 'blur'}
+      { validator: validatePass, trigger: 'blur' }
     ]
   }
 })
@@ -61,15 +60,15 @@ const data = reactive({
 const updatePassword = () => {
   data.form.id = data.user.id
   data.form.role = data.user.role
-  formRef.value.validate((valid) =>{
+  formRef.value.validate((valid) => {
     if (valid) {
-      request.put(AUTH_API.PASSWORD,data.form).then(res => {
+      request.put(AUTH_API.PASSWORD, data.form).then(res => {
         if (res.code === '200') {
           ElMessage.success('修改成功')
           clearStoredUser()
           setTimeout(() => {
             location.href = '/login'
-          },500)
+          }, 500)
         } else {
           ElMessage.error(res.msg)
         }
