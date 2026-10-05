@@ -19,6 +19,7 @@ public class Mark {
     private String img; // 相关图片（如评分截图、标记配图）
     private Double score; // 评分（0.0~10.0）—— 影片评分的唯一数值来源，film.score 由它聚合回写
     // 字段名与类名同名（SonarLint java:S1700），刻意保留：mark 同时是 DB 列名、MyBatis 自动映射目标与前端 prop="mark" 的契约键
+    @SuppressWarnings("java:S1700")
     private String mark; // 评语
     // 关联展示字段（非数据库存储，通过关联查询获取，用于前端展示）
     private String userName; // 用户名（通过 userId 关联查询用户表获得）

@@ -18,6 +18,9 @@ import com.example.springboot.mapper.RoomMapper;
 import com.example.springboot.service.OrderedService;
 import com.example.springboot.service.WalletService;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.ArgumentMatcher;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -29,9 +32,11 @@ import java.time.format.DateTimeFormatter;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.params.provider.Arguments.arguments;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.argThat;
@@ -609,7 +614,8 @@ class OrderedServiceTest {
         when(orderedMapper.selectById(1)).thenReturn(orderWithStatus("已取消"));
         when(orderedMapper.selectById(2)).thenReturn(orderWithStatus("待取票"));
 
-        assertThatThrownBy(() -> orderedService.deleteBatchScoped(List.of(1, 2), "USER", 100))
+        List<Integer> ids = List.of(1, 2);
+        assertThatThrownBy(() -> orderedService.deleteBatchScoped(ids, "USER", 100))
                 .isInstanceOf(CustomException.class);
 
         verify(orderedMapper, never()).deleteBatch(any());
@@ -738,67 +744,36 @@ class OrderedServiceTest {
         verify(orderedMapper, never()).markPickedUpByCode(any());
     }
 
-    @Test
-    void redeemByCodeRejectsAlreadyPickedUpTicket() {
+    /**
+     * 取票码不可核销的各种情形，统一走「读到的状态/时间不合法 → 拒绝且不改库」。
+     * 「已结束」一例把放映时间挪到过去（片长 120 分钟，由 filmMapper 提供），
+     * 其余四例走到状态分支即抛，不需片长。
+     */
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("unredeemableOrders")
+    void redeemByCodeRejectsUnredeemableOrder(String status, Integer startMinutesFromNow, String expectedMessage) {
         Ordered ordered = redeemableOrder();
-        ordered.setStatus("已取票");
+        ordered.setStatus(status);
         when(orderedMapper.selectByPickupCode("8F3A-2C71")).thenReturn(ordered);
+        if (startMinutesFromNow != null) {
+            ordered.setStart(minutesFromNow(startMinutesFromNow));
+            when(filmMapper.selectById(24)).thenReturn(filmRow(24, "流浪地球2", 120));
+        }
 
         assertThatThrownBy(() -> orderedService.redeemByCode("8F3A-2C71"))
                 .isInstanceOf(CustomException.class)
-                .hasMessageContaining("已取出");
+                .hasMessageContaining(expectedMessage);
         verify(orderedMapper, never()).markPickedUpByCode(any());
     }
 
-    @Test
-    void redeemByCodeRejectsRefundedOrder() {
-        Ordered ordered = redeemableOrder();
-        ordered.setStatus("已退票");
-        when(orderedMapper.selectByPickupCode("8F3A-2C71")).thenReturn(ordered);
-
-        assertThatThrownBy(() -> orderedService.redeemByCode("8F3A-2C71"))
-                .isInstanceOf(CustomException.class)
-                .hasMessageContaining("退票");
-        verify(orderedMapper, never()).markPickedUpByCode(any());
-    }
-
-    @Test
-    void redeemByCodeRejectsCancelledOrder() {
-        Ordered ordered = redeemableOrder();
-        ordered.setStatus("已取消");
-        when(orderedMapper.selectByPickupCode("8F3A-2C71")).thenReturn(ordered);
-
-        assertThatThrownBy(() -> orderedService.redeemByCode("8F3A-2C71"))
-                .isInstanceOf(CustomException.class)
-                .hasMessageContaining("取消");
-        verify(orderedMapper, never()).markPickedUpByCode(any());
-    }
-
-    /** 没付款不给票 —— 码是支付成功那一刻才生成的，但真拿到一个待支付订单也不能出票 */
-    @Test
-    void redeemByCodeRejectsUnpaidOrder() {
-        Ordered ordered = redeemableOrder();
-        ordered.setStatus("待支付");
-        when(orderedMapper.selectByPickupCode("8F3A-2C71")).thenReturn(ordered);
-
-        assertThatThrownBy(() -> orderedService.redeemByCode("8F3A-2C71"))
-                .isInstanceOf(CustomException.class)
-                .hasMessageContaining("尚未支付");
-        verify(orderedMapper, never()).markPickedUpByCode(any());
-    }
-
-    /** 有效期到放映结束：放映开始 + 片长，超出即废 */
-    @Test
-    void redeemByCodeRejectsFinishedScreening() {
-        Ordered ordered = redeemableOrder();
-        ordered.setStart(minutesFromNow(-200));
-        when(orderedMapper.selectByPickupCode("8F3A-2C71")).thenReturn(ordered);
-        when(filmMapper.selectById(24)).thenReturn(filmRow(24, "流浪地球2", 120));
-
-        assertThatThrownBy(() -> orderedService.redeemByCode("8F3A-2C71"))
-                .isInstanceOf(CustomException.class)
-                .hasMessageContaining("已结束");
-        verify(orderedMapper, never()).markPickedUpByCode(any());
+    static Stream<Arguments> unredeemableOrders() {
+        return Stream.of(
+                arguments("已取票", null, "已取出"),
+                arguments("已退票", null, "退票"),
+                arguments("已取消", null, "取消"),
+                arguments("待支付", null, "尚未支付"),
+                arguments("待取票", -200, "已结束")
+        );
     }
 
     /**

@@ -61,8 +61,9 @@ class RechargeServiceTest {
 
     @Test
     void createRecharge_withNonUserRole_shouldThrow() {
+        BigDecimal amount = new BigDecimal("200.00");
         CustomException ex = assertThrows(CustomException.class,
-                () -> rechargeService.createRecharge(USER_ID, "CINEMA", new BigDecimal("200.00")));
+                () -> rechargeService.createRecharge(USER_ID, "CINEMA", amount));
 
         assertEquals(ErrorCode.FORBIDDEN.code(), ex.getCode());
         verify(rechargeOrderMapper, never()).insert(any());
@@ -80,8 +81,9 @@ class RechargeServiceTest {
 
     @Test
     void createRecharge_withAmountAboveLimit_shouldThrow() {
+        BigDecimal amount = new BigDecimal("50000.01");
         CustomException ex = assertThrows(CustomException.class,
-                () -> rechargeService.createRecharge(USER_ID, "USER", new BigDecimal("50000.01")));
+                () -> rechargeService.createRecharge(USER_ID, "USER", amount));
 
         assertEquals(ErrorCode.PARAM_INVALID.code(), ex.getCode());
         verify(rechargeOrderMapper, never()).insert(any());
