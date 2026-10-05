@@ -73,9 +73,9 @@
 
 <script setup lang="ts">
 import { computed, reactive, ref } from "vue";
-import {Delete, Edit, Search} from "@element-plus/icons-vue";
+import { Delete, Edit, Search } from "@element-plus/icons-vue";
 import request from "@/utils/request.js";
-import {ElMessage, ElMessageBox, FormRules} from "element-plus";
+import { ElMessage, ElMessageBox } from "element-plus";
 import { API_PATHS, apiBatch, apiById, apiPage } from "@/constants";
 import { useAuth } from "@/composables/useAuth";
 
@@ -91,21 +91,7 @@ interface RoomForm {
 const { user } = useAuth();
 const cinemaName = computed(() => user.value?.name || '当前影院');
 
-const rules: FormRules = {
-  name: [
-    { required: true, message: '请输入影厅名称', trigger: 'blur' }
-  ],
-  seatRows: [
-    { required: true, message: '请输入座位行数', trigger: 'blur' }
-  ],
-  seatCols: [
-    { required: true, message: '请输入座位列数', trigger: 'blur' }
-  ]
-};
-
-// 表单引用
 const formRef = ref();
-
 
 const data = reactive({
   tableData: [] as RoomForm[],
@@ -114,13 +100,21 @@ const data = reactive({
   total: 0,
   formVisible: false,
   name: '',
-  form: {} as RoomForm, // 表单数据
+  form: {} as RoomForm,
   ids: [] as number[],
-  rules: rules
+  rules: {
+    name: [
+      { required: true, message: '请输入影厅名称', trigger: 'blur' }
+    ],
+    seatRows: [
+      { required: true, message: '请输入座位行数', trigger: 'blur' }
+    ],
+    seatCols: [
+      { required: true, message: '请输入座位列数', trigger: 'blur' }
+    ]
+  }
 });
 
-
-// 加载电影分类列表
 const load = () => {
   request.get(apiPage(API_PATHS.ROOMS), {
     params: {
@@ -138,7 +132,6 @@ const load = () => {
     ElMessage.error('加载数据失败，请重试');
   });
 }
-
 
 const add = () => {
   request.post(API_PATHS.ROOMS, data.form).then(res => {
@@ -168,21 +161,16 @@ const update = () => {
   });
 }
 
-// 重置查询条件
 const reset = () => {
   data.name = '';
   load();
 }
-
-// 初始加载数据
-load();
 
 const handleAdd = () => {
   data.formVisible = true;
   // 新影厅默认 8×8，与 room 表列默认值一致
   data.form = { seatRows: 8, seatCols: 8 } as RoomForm;
 }
-
 
 const handleUpdate = (row: RoomForm) => {
   data.form = JSON.parse(JSON.stringify(row)) as RoomForm;
@@ -197,8 +185,6 @@ const save = () => {
   });
 }
 
-
-// 删除单个电影分类
 const del = (id: number) => {
   ElMessageBox.confirm('删除数据后无法恢复，您确认删除吗?', '删除确认', { type: 'warning' })
       .then(() => {
@@ -216,12 +202,10 @@ const del = (id: number) => {
       .catch();
 }
 
-// 处理选中行变更
 const handleSelectionChange = (rows: RoomForm[]) => {
   data.ids = rows.map(row => row.id).filter((id): id is number => id !== undefined);
 }
 
-// 批量删除电影分类
 const delBatch = () => {
   if (data.ids.length === 0) {
     ElMessage.warning('请先选择要删除的分类');
@@ -243,9 +227,5 @@ const delBatch = () => {
       .catch();
 }
 
+load();
 </script>
-
-<style scoped>
-
-
-</style>

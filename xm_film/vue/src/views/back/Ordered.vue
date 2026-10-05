@@ -117,21 +117,25 @@ import request from "@/utils/request.js";
 import { ElMessage, ElMessageBox } from "element-plus";
 import { API_PATHS, ORDER_API, ORDER_STATUS_OPTIONS, getOrderStatusType as getStatusType, apiBatch, apiById, apiPage, isOrderDeletable } from "@/constants";
 
-
 interface Ordered {
-  id?: number;  // 假设这个id同时代表影厅关联ID
+  id?: number;
   orders?: string;
-  userId?: number;
-  filmId?: number;
   img?: string;
-  cinemaId?: number;
-  appointment?: string;
-  total?: string;
-  unitPrice?: number;
-  number?: number;
-  status?: string;
-  start?: string;
+  userName?: string;
+  filmName?: string;
+  cinemaName?: string;
+  roomId?: number;
+  roomName?: string;
   seat?: string;
+  start?: string;
+  number?: number;
+  unitPrice?: number;
+  total?: string;
+  status?: string;
+  payTime?: string;
+  payAmount?: number;
+  refundTime?: string;
+  refundAmount?: number;
 }
 
 interface RoomData {
@@ -139,23 +143,21 @@ interface RoomData {
   name: string;
 }
 
-
 const data = reactive({
   tableData: [] as Ordered[],
   pageNumber: 1,
   pageSize: 10,
   total: 0,
   ids: [] as number[],
-  RoomData: [] as RoomData[],
+  rooms: [] as RoomData[],
   orders: null,
   status: undefined
 });
 
-
 const loadRoom = () => {
   return request.get(API_PATHS.ROOMS).then(res => {
     if(res.code === '200') {
-      data.RoomData = res.data;
+      data.rooms = res.data;
     } else {
       ElMessage.error(res.msg)
     }
@@ -186,7 +188,7 @@ const load = () => {
 
 const getRoomName = (roomId?: number) => {
   if (!roomId) return '无ID';
-  const room = data.RoomData.find(room => room.id === roomId);
+  const room = data.rooms.find(room => room.id === roomId);
   if (!room) {
     return '未知影厅';
   }
@@ -248,18 +250,12 @@ const reset = () => {
   load();
 }
 
-// 调整加载顺序，确保影厅数据先加载
+// 先加载影厅数据，再加载订单，确保订单行能解析出影厅名称
 const initLoad = async () => {
-  await Promise.all([
-    loadRoom()
-  ]);
-  load(); // 最后加载订单数据
+  await loadRoom();
+  load();
 }
 
-// 执行初始加载
 initLoad();
 </script>
-
-<style scoped>
-</style>
 

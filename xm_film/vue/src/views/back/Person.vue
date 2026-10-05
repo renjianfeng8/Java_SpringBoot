@@ -35,7 +35,7 @@
 
 <script setup>
 
-import {reactive , ref} from "vue";
+import { reactive, ref } from "vue";
 import request from "@/utils/request.js";
 import { ElMessage } from "element-plus";
 import { API_PATHS, apiById } from "@/constants";
@@ -43,17 +43,17 @@ import { getStoredUser, setStoredUser } from "@/utils/authStorage";
 
 
 const formRef = ref()
-const data = reactive ({
+const data = reactive({
   form: {
     sex: '男'
   },
   user: getStoredUser() || {},
   rules: {
     username: [
-      { required: true ,message: '请输入账号', trigger: 'blur'}
+      { required: true, message: '请输入账号', trigger: 'blur' }
     ],
     name: [
-      { required: true ,message: '请输入名称', trigger: 'blur'}
+      { required: true, message: '请输入名称', trigger: 'blur' }
     ],
     email: [
       { type: 'email', message: '请输入正确的邮箱地址', trigger: ['blur', 'change'] }
@@ -72,43 +72,18 @@ if (data.user.role === 'USER') {
 }
 
 const updateUser = () => {
-  if (data.user.role === 'USER') {
-    request.put(API_PATHS.USERS,data.form).then(res =>{
-      if (res.code === '200') {
-        ElMessage.success('更新成功')
-        //更新缓存数据
-        setStoredUser({ ...data.user, ...data.form })
-        //触发父级从缓存里面取到最新的数据
-        emit('updateUser', data.form)
-      } else {
-        ElMessage.error(res.msg)
-      }
-    })
-  } else if (data.user.role === 'CINEMA') {
-    request.put(API_PATHS.CINEMAS,data.form).then(res =>{
-      if (res.code === '200') {
-        ElMessage.success('更新成功')
-        //更新缓存数据
-        setStoredUser({ ...data.user, ...data.form })
-        //触发父级从缓存里面取到最新的数据
-        emit('updateUser', data.form)
-      } else {
-        ElMessage.error(res.msg)
-      }
-    })
-  } else {
-    request.put(API_PATHS.ADMINS,data.form).then(res =>{
-      if (res.code === '200') {
-        ElMessage.success('更新成功')
-        //更新缓存数据
-        setStoredUser({ ...data.user, ...data.form })
-        //触发父级从缓存里面取到最新的数据
-        emit('updateUser', data.form)
-      } else {
-        ElMessage.error(res.msg)
-      }
-    })
-  }
+  const endpoint = { USER: API_PATHS.USERS, CINEMA: API_PATHS.CINEMAS }[data.user.role] ?? API_PATHS.ADMINS
+  request.put(endpoint, data.form).then(res => {
+    if (res.code === '200') {
+      ElMessage.success('更新成功')
+      //更新缓存数据
+      setStoredUser({ ...data.user, ...data.form })
+      //触发父级从缓存里面取到最新的数据
+      emit('updateUser', data.form)
+    } else {
+      ElMessage.error(res.msg)
+    }
+  })
 }
 
 </script>

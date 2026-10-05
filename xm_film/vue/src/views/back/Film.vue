@@ -107,8 +107,7 @@ import request from "@/utils/request.js";
 import { ElMessage } from "element-plus";
 import { API_PATHS, apiPage, getFilmStatusType as getStatusType } from "@/constants";
 
-interface FormData {
-  id?: number;
+interface Film {
   title?: string;       // 电影名称
   english?: string;     // 英文名称
   img?: string;         // 封面图
@@ -120,17 +119,16 @@ interface FormData {
   areaName?: string;    // 区域名称
   resolution?: string;  // 分辨率
   employee?: string;    // 制作公司
-  areaId?: number;      // 区域ID
   status?: string;      // 状态（待上映/已上映/停止上映）
+  score?: number | null;  // 评分，无评价为 null
 }
 
-
 const data = reactive({
-  tableData: [] as FormData[],
+  tableData: [] as Film[],
   pageNumber: 1,
   pageSize: 10,
   total: 0,
-  title: null
+  title: null as string | null
 });
 
 const load = () => {
@@ -158,8 +156,6 @@ const reset = () => {
 
 // 初始加载
 load()
-
-
 </script>
 
 <style scoped>

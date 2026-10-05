@@ -111,7 +111,7 @@
 
 <script setup lang="ts">
 import { computed, reactive, ref } from "vue";
-import {Delete, Edit, Search} from "@element-plus/icons-vue";
+import { Delete, Edit, Search } from "@element-plus/icons-vue";
 import request from "@/utils/request.js";
 import { ElMessage, ElMessageBox } from "element-plus";
 import { API_PATHS, apiBatch, apiById, apiPage, getRecordStatusType as getStatusType } from "@/constants";
@@ -154,8 +154,8 @@ const data = reactive({
   ids: [] as number[],
   roomData: [] as RoomData[],
   filmData: [] as FilmData[],
-  title: null,
-  start: null,
+  title: null as string | null,
+  start: null as string | null,
   status: undefined as string | undefined,
   rules: {
     roomId: [{ required: true, message: '请选择影厅', trigger: 'change' }],
@@ -215,7 +215,6 @@ const load = () => {
   });
 };
 
-
 const del = (id: number) => {
   ElMessageBox.confirm('删除数据后无法恢复,您确认删除吗?', '删除确认', { type: 'warning' }).then(() => {
     request.delete(apiById(API_PATHS.RECORDS, id)).then(res => {
@@ -229,7 +228,6 @@ const del = (id: number) => {
     });
   }).catch(() => {});
 };
-
 
 const add = () => {
   request.post(API_PATHS.RECORDS, data.form).then(res => {
@@ -259,6 +257,8 @@ const update = () => {
   });
 }
 
+const formRef = ref();
+
 const save = () => {
   formRef.value?.validate((valid: boolean) => {
     if (valid) {
@@ -267,12 +267,9 @@ const save = () => {
   });
 }
 
-
-
-
 const loadRoom = () => {
   return request.get(API_PATHS.ROOMS).then(res => {
-    if(res.code === '200') {
+    if (res.code === '200') {
       data.roomData = res.data;
     } else {
       ElMessage.error(res.msg);
@@ -283,7 +280,7 @@ const loadRoom = () => {
 // 片库为全局资源，影院从中选片排期；影院上映列表由排片反推
 const loadFilm = () => {
   return request.get(API_PATHS.FILMS).then(res => {
-    if(res.code === '200') {
+    if (res.code === '200') {
       data.filmData = res.data;
     } else {
       ElMessage.error(res.msg);
@@ -298,18 +295,12 @@ const handleFilmChange = (filmId: number) => {
 
 // 初始加载：先加载影厅和影片，再加载表格
 const init = async () => {
-  await Promise.all([
-    loadRoom(),
-    loadFilm()
-  ]);
+  await Promise.all([loadRoom(), loadFilm()]);
   load();
 };
 
 // 执行初始化
 init();
-
-const formRef = ref();
-
 
 const handleAdd = () => {
   data.formVisible = true;
@@ -317,14 +308,9 @@ const handleAdd = () => {
   data.form = {};
 }
 
-
-const handleUpdate = (row) => {
+const handleUpdate = (row: Record) => {
   data.form = JSON.parse(JSON.stringify(row));
   data.formVisible = true;
 }
 
 </script>
-
-<style scoped>
-
-</style>
