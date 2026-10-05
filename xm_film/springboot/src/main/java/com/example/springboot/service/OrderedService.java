@@ -75,6 +75,9 @@ public class OrderedService extends BaseService<Ordered> {
     private static final Set<String> DELETABLE_STATUSES =
             Set.of(OrderStatus.CANCELLED, OrderStatus.REFUNDED);
 
+    private static final String ROLE_CINEMA = "CINEMA";
+    private static final String ROLE_USER = "USER";
+
     @Resource
     private OrderedMapper orderedMapper;
 
@@ -102,9 +105,9 @@ public class OrderedService extends BaseService<Ordered> {
         if (ordered == null || role == null || userId == null) {
             return;
         }
-        if ("USER".equals(role)) {
+        if (ROLE_USER.equals(role)) {
             ordered.setUserId(userId);
-        } else if ("CINEMA".equals(role)) {
+        } else if (ROLE_CINEMA.equals(role)) {
             ordered.setCinemaId(userId);
         }
     }
@@ -121,7 +124,7 @@ public class OrderedService extends BaseService<Ordered> {
     }
 
     private void insertOrder(Ordered ordered, String role, Integer tokenUserId) {
-        if (role != null && !"USER".equals(role)) {
+        if (role != null && !ROLE_USER.equals(role)) {
             throw new CustomException(ErrorCode.FORBIDDEN, "仅普通用户可创建订单");
         }
         if (ordered == null || ordered.getRecordId() == null) {
@@ -478,7 +481,7 @@ public class OrderedService extends BaseService<Ordered> {
         // 一起授予新角色，这正是 MarkService 那轮"只有前端按钮在守"的同一种漏。
         //
         // 用户的自助通路是 redeemByCode（凭取票码在取票大厅核销），两者共用同一个状态迁移。
-        if (!"CINEMA".equals(role)) {
+        if (!ROLE_CINEMA.equals(role)) {
             throw new CustomException(ErrorCode.FORBIDDEN, "取票为影院柜台操作，请到取票大厅凭取票码自助取票");
         }
         if (!OrderStatus.PENDING.equals(ordered.getStatus())) {
@@ -526,10 +529,10 @@ public class OrderedService extends BaseService<Ordered> {
         if ("ADMIN".equals(role)) {
             return;
         }
-        if ("USER".equals(role) && userId != null && userId.equals(ordered.getUserId())) {
+        if (ROLE_USER.equals(role) && userId != null && userId.equals(ordered.getUserId())) {
             return;
         }
-        if ("CINEMA".equals(role) && userId != null && userId.equals(ordered.getCinemaId())) {
+        if (ROLE_CINEMA.equals(role) && userId != null && userId.equals(ordered.getCinemaId())) {
             return;
         }
         throw new CustomException(ErrorCode.FORBIDDEN, "无权操作该订单");

@@ -16,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
 import java.time.format.DateTimeParseException;
@@ -54,12 +55,12 @@ public class RecordService extends BaseService<Record> {
      * 场次可购票判定 —— 全场唯一的权威规则。
      * 展示状态（未开始/放映中/已结束）由 start 派生，status 只作为人工停售开关。
      */
-    public static boolean isPurchasable(Record record) {
-        if (record == null || RecordStatus.STOPPED.equals(record.getStatus())) {
+    public static boolean isPurchasable(Record recordItem) {
+        if (recordItem == null || RecordStatus.STOPPED.equals(recordItem.getStatus())) {
             return false;
         }
-        LocalDateTime start = readStart(record.getStart());
-        return start != null && start.isAfter(LocalDateTime.now());
+        LocalDateTime start = readStart(recordItem.getStart());
+        return start != null && start.isAfter(LocalDateTime.now(ZoneId.systemDefault()));
     }
 
     public static LocalDateTime parseStart(String raw) {
@@ -96,24 +97,24 @@ public class RecordService extends BaseService<Record> {
      * @param previousStart 编辑前的放映时间；与提交值相同时说明未改时间，
      *                      此时不强制"必须晚于当前"，以便存量过期场次仍可停售
      */
-    public void validateSchedule(Record record, String previousStart) {
-        if (record.getRoomId() == null) {
+    public void validateSchedule(Record recordItem, String previousStart) {
+        if (recordItem.getRoomId() == null) {
             throw new CustomException(ErrorCode.PARAM_INVALID, "请选择影厅");
         }
-        if (record.getFilmId() == null) {
+        if (recordItem.getFilmId() == null) {
             throw new CustomException(ErrorCode.PARAM_INVALID, "请选择影片");
         }
-        Film film = filmMapper.selectById(record.getFilmId());
+        Film film = filmMapper.selectById(recordItem.getFilmId());
         if (film == null) {
             throw new CustomException(ErrorCode.PARAM_INVALID, "影片不存在");
         }
 
-        LocalDateTime start = parseStart(record.getStart());
-        if (!record.getStart().equals(previousStart) && !start.isAfter(LocalDateTime.now())) {
+        LocalDateTime start = parseStart(recordItem.getStart());
+        if (!recordItem.getStart().equals(previousStart) && !start.isAfter(LocalDateTime.now(ZoneId.systemDefault()))) {
             throw new CustomException(ErrorCode.PARAM_INVALID, "放映时间必须晚于当前时间");
         }
 
-        BigDecimal price = parsePrice(record.getPrice());
+        BigDecimal price = parsePrice(recordItem.getPrice());
         if (price.signum() <= 0) {
             throw new CustomException(ErrorCode.PARAM_INVALID, "票价必须大于 0");
         }
@@ -123,17 +124,17 @@ public class RecordService extends BaseService<Record> {
                 : DEFAULT_DURATION_MINUTES;
         String storedStart = start.format(STORE_FORMATTER);
         int overlap = recordMapper.countRoomOverlap(
-                record.getRoomId(),
-                record.getId(),
+                recordItem.getRoomId(),
+                recordItem.getId(),
                 storedStart,
                 start.plusMinutes(duration).format(STORE_FORMATTER));
         if (overlap > 0) {
             throw new CustomException(ErrorCode.BUSINESS_CONFLICT, "该影厅在此时间段已有排片");
         }
 
-        record.setTitle(film.getTitle());
-        record.setStart(storedStart);
-        record.setPrice(price.toPlainString());
+        recordItem.setTitle(film.getTitle());
+        recordItem.setStart(storedStart);
+        recordItem.setPrice(price.toPlainString());
     }
 
     public int countByFilmId(Integer filmId) {

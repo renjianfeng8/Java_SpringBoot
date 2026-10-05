@@ -62,8 +62,9 @@ class WalletServiceTest {
     void debitPurchase_withInsufficientBalance_shouldThrowAndChangeNothing() {
         when(userMapper.selectBalanceForUpdate(USER_ID)).thenReturn(new BigDecimal("10.00"));
 
+        BigDecimal amount = new BigDecimal("60.00");
         CustomException ex = assertThrows(CustomException.class,
-                () -> walletService.debitPurchase(USER_ID, new BigDecimal("60.00"), 99));
+                () -> walletService.debitPurchase(USER_ID, amount, 99));
 
         assertEquals(ErrorCode.BUSINESS_CONFLICT.code(), ex.getCode());
         verify(userMapper, never()).deductBalance(anyInt(), any());
@@ -72,8 +73,9 @@ class WalletServiceTest {
 
     @Test
     void debitPurchase_whenUserMissing_shouldThrowNotFound() {
+        BigDecimal amount = new BigDecimal("60.00");
         CustomException ex = assertThrows(CustomException.class,
-                () -> walletService.debitPurchase(USER_ID, new BigDecimal("60.00"), 99));
+                () -> walletService.debitPurchase(USER_ID, amount, 99));
 
         assertEquals(ErrorCode.NOT_FOUND.code(), ex.getCode());
         verify(fundFlowMapper, never()).insert(any());
@@ -106,8 +108,9 @@ class WalletServiceTest {
 
     @Test
     void creditRecharge_withNonPositiveAmount_shouldThrowAndChangeNothing() {
+        BigDecimal amount = new BigDecimal("-50.00");
         assertThrows(CustomException.class,
-                () -> walletService.creditRecharge(USER_ID, new BigDecimal("-50.00"), 7));
+                () -> walletService.creditRecharge(USER_ID, amount, 7));
 
         verify(userMapper, never()).selectBalanceForUpdate(anyInt());
         verify(fundFlowMapper, never()).insert(any());
