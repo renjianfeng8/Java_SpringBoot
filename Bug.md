@@ -1011,5 +1011,5 @@
   6. 用户复查时发现「元」上下跳，定位到 ③：`.today-box__row` 拆成 `.today-box__amount`（独占整行）+ `.today-box__foot`（时间戳 `flex: 1` / 按钮 `flex-shrink: 0`），数字补 `white-space: nowrap`。数字不再与按钮争同一行的 208px，按钮宽度怎么变都挤不到它
 - 验证: `npm run build` 通过；构建产物核对 `Home-*.css` 含 `@keyframes today-amount-flash` 与 `white-space:nowrap`、`Home-*.js` 含 `MIN_REFRESH_MS` / 「刷新中」 / 失败文案。未做浏览器渲染验证（UI 目视由用户自查）
 - 相关文件: `xm_film/vue/src/views/front/Home.vue`
-- 提交记录: 未提交
+- 提交记录: `ce596c0f`
 - 状态: 已修复
