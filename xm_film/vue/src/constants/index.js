@@ -167,6 +167,17 @@ export const FILM_STATUS_MAP = {
   '停止上映': 'danger',
 }
 
+/** 角色 → el-tag type，取值与后端 RoleEnum 一致。缺省 success 与原内联三元式的兜底分支保持一致 */
+export const ROLE_TAG_MAP = {
+  'ADMIN': 'warning',
+  'CINEMA': 'danger',
+  'USER': 'success',
+}
+
+export function getRoleType(role) {
+  return ROLE_TAG_MAP[role] || 'success'
+}
+
 /** 放映场次的售卖状态；未开始/放映中/已结束由 start 派生，不落库 */
 export const RECORD_STATUS_MAP = {
   '正常': 'success',

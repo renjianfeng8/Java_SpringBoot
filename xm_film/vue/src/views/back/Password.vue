@@ -24,10 +24,16 @@
 <script setup>
 
 import { reactive, ref } from "vue";
+import { useRouter } from "vue-router";
 import request from "@/utils/request.js";
 import { ElMessage } from "element-plus";
 import { AUTH_API } from "@/constants";
-import { clearStoredUser, getStoredUser } from "@/utils/authStorage";
+import { getStoredUser } from "@/utils/authStorage";
+import { useAuth } from "@/composables/useAuth";
+
+const router = useRouter()
+// 登录态的唯一来源是 useAuth 的模块级 ref（规则 76），storage 只是它的持久化副本
+const { logout } = useAuth()
 
 const formRef = ref()
 
@@ -65,10 +71,12 @@ const updatePassword = () => {
       request.put(AUTH_API.PASSWORD, data.form).then(res => {
         if (res.code === '200') {
           ElMessage.success('修改成功')
-          clearStoredUser()
-          setTimeout(() => {
-            location.href = '/login'
-          }, 500)
+          // 改密后必须走 useAuth.logout()：它同时清单例与 storage 副本。只调
+          // clearStoredUser() 的话内存里仍持 token、外壳继续渲染成已登录 —— 原写法
+          // 那句 location.href 整页重载正是用来盖住这一点的（规则 76）。站内跳转一律
+          // router.push，不用 window.location.href（规则 77）。
+          logout()
+          router.push('/login')
         } else {
           ElMessage.error(res.msg)
         }

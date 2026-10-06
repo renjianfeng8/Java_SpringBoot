@@ -1,27 +1,24 @@
-﻿<template>
+<template>
 
   <div class="profile-wrapper">
     <div class="card profile-card">
 
-      <el-form ref="formRef" :rules="data.rules" :model="data.form" class="dialog-form" label-width="80px">
+      <el-form ref="formRef" :rules="data.rules" :model="data.form" class="dialog-form" label-width="80px"
+               status-icon @submit.prevent>
 
         <el-form-item label="用户名" prop="username">
           <el-input disabled v-model="data.form.username" autocomplete="off" placeholder="请输入用户名"/>
         </el-form-item>
 
         <el-form-item label="名称" prop="name">
-          <el-input v-model="data.form.name" autocomplete="off" placeholder="请输入名称"/>
+          <el-input v-model="data.form.name" autocomplete="off" placeholder="请输入名称" @keyup.enter="updateUser"/>
         </el-form-item>
 
-        <el-form-item label="电话" >
-          <el-input v-model="data.form.phone" autocomplete="off" placeholder="请输入电话"/>
+        <el-form-item label="电话" prop="phone">
+          <el-input v-model="data.form.phone" autocomplete="off" placeholder="请输入电话" @keyup.enter="updateUser"/>
         </el-form-item>
-        <el-form-item label="邮箱" >
-          <el-input v-model="data.form.email" autocomplete="off" placeholder="请输入邮箱"/>
-        </el-form-item>
-
-        <el-form-item label="个人介绍">
-          <el-input type="textarea" :rows="3" v-model="data.form.description" autocomplete="off" placeholder="请输入个人介绍"/>
+        <el-form-item label="邮箱" prop="email">
+          <el-input v-model="data.form.email" autocomplete="off" placeholder="请输入邮箱" @keyup.enter="updateUser"/>
         </el-form-item>
 
         <div class="form-actions">
@@ -35,19 +32,17 @@
 
 <script setup>
 
-import {reactive , ref} from "vue";
+import { reactive, ref } from "vue";
 import request from "@/utils/request.js";
 import { ElMessage } from "element-plus";
-import { API_PATHS, apiById } from '@/constants';
-import { getStoredUser, setStoredUser } from "@/utils/authStorage";
+import { API_PATHS } from '@/constants';
+import { useAuth } from "@/composables/useAuth";
 
+const { user, setUser } = useAuth()
 
 const formRef = ref()
-const data = reactive ({
-  form: {
-    sex: '男'
-  },
-  user: getStoredUser() || {},
+const data = reactive({
+  form: { ...user.value },
   rules: {
     username: [
       { required: true ,message: '请输入账号', trigger: 'blur'}
@@ -61,42 +56,26 @@ const data = reactive ({
   }
 })
 
-const emit = defineEmits(['updateUser'])
-
-if (data.user.role === 'USER') {
-  request.get(apiById(API_PATHS.USERS, data.user.id)).then(res => {
-    data.form = res.data
-  })
-} else {
-  data.form = data.user
-}
-
-const updateUser = () => {
-  if (data.user.role === 'USER') {
-    request.put(API_PATHS.USERS,data.form).then(res =>{
-      if (res.code === '200') {
-        ElMessage.success('更新成功')
-        //更新缓存数据
-        setStoredUser({ ...data.user, ...data.form })
-        //触发父级从缓存里面取到最新的数据
-        emit('updateUser', data.form)
-      } else {
-        ElMessage.error(res.msg)
-      }
-    })
-  } else {
-    request.put(API_PATHS.ADMINS,data.form).then(res =>{
-      if (res.code === '200') {
-        ElMessage.success('更新成功')
-        //更新缓存数据
-        setStoredUser({ ...data.user, ...data.form })
-        //触发父级从缓存里面取到最新的数据
-        emit('updateUser', data.form)
-      } else {
-        ElMessage.error(res.msg)
-      }
-    })
+/* /manage 的路由 meta.roles 只有 ADMIN（router/index.js），所以这里不存在原写法里
+   那个 role === 'USER' 分支 —— 它永远不可达，且请求目标恒为 ADMINS。
+   原先的 defineEmits(['updateUser']) 也没有任何消费方（外壳未监听），一并删除。 */
+const updateUser = async () => {
+  try {
+    await formRef.value.validate()
+  } catch {
+    ElMessage.warning('请完成必填字段')
+    return
   }
+  request.put(API_PATHS.ADMINS, data.form).then(res => {
+    if (res.code === '200') {
+      ElMessage.success('更新成功')
+      // 登录态只能经 useAuth 变更（规则 76）：只写 storage 副本不会更新内存里的
+      // user，顶栏的用户名与头像要等整页刷新才变。
+      setUser({ ...user.value, ...data.form })
+    } else {
+      ElMessage.error(res.msg)
+    }
+  })
 }
 
 </script>

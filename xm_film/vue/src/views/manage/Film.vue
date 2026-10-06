@@ -1,18 +1,27 @@
 <template>
-  <div>
-    <div class="card page-card">
-      <el-input v-model="searchForm.title" placeholder="请输入电影名称查询" class="search-input" :prefix-icon="Search"/>
-      <el-button type="primary" @click="onSearch">查 询</el-button>
-      <el-button type="warning" @click="onReset">重 置</el-button>
+  <div class="crud-page">
+    <div class="page-head">
+      <h2 class="page-head__title">电影信息</h2>
+      <div class="page-head__action">
+        <el-button type="primary" :icon="Plus" @click="openAdd">新 增</el-button>
+      </div>
     </div>
 
-    <div class="card page-card">
-      <el-button type="info" @click="openAdd">新 增</el-button>
-      <el-button type="danger" @click="handleDelBatch">批量删除</el-button>
+    <div class="card list-toolbar">
+      <div class="list-toolbar__filters">
+        <el-input v-model="searchForm.title" placeholder="请输入电影名称查询" aria-label="电影名称"
+                  class="search-input" :prefix-icon="Search" @keyup.enter="onSearch"/>
+        <el-button type="primary" @click="onSearch">查 询</el-button>
+        <el-button type="warning" @click="onReset">重 置</el-button>
+      </div>
+      <div class="list-toolbar__actions">
+        <span v-if="selectedIds.length" class="selection-count" aria-live="polite">已选 {{ selectedIds.length }} 项</span>
+        <el-button type="danger" :disabled="!selectedIds.length" @click="confirmDelBatch">批量删除</el-button>
+      </div>
     </div>
 
-    <div class="card page-card">
-      <el-table v-loading="loading" stripe :data="dataList" @selection-change="onSelectionChange">
+    <div class="card table-card">
+      <el-table v-loading="loading" stripe size="small" :data="dataList" @selection-change="onSelectionChange">
         <el-table-column type="selection" width="55"/>
         <el-table-column type="expand">
           <template #default="props">
@@ -82,32 +91,35 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="操作">
+        <el-table-column label="操作" width="110">
           <template #default="scope">
             <el-button class="row-action" link :icon="Edit" aria-label="编辑" @click="openEdit(scope.row)" type="primary"></el-button>
-            <el-button class="row-action" link :icon="Delete" @click="() => handleDel(scope.row.id)" type="danger"></el-button>
+            <el-button class="row-action" link :icon="Delete" aria-label="删除" @click="confirmDel(scope.row.id)" type="danger"></el-button>
           </template>
         </el-table-column>
+        <template #empty>
+          <div class="empty-hint">{{ error ? '数据加载失败，请稍后重试' : '暂无数据' }}</div>
+        </template>
       </el-table>
-    </div>
-
-    <div class="card page-card">
-      <el-pagination
-          @size-change="onSizeChange"
-          @current-change="onPageChange"
-          v-model:current-page="pageNum"
-          v-model:page-size="pageSize"
-          :page-sizes="[5, 10, 15, 20]"
-          background
-          layout="total, sizes, prev, pager, next, jumper"
-          :total="total"
-      />
+      <div class="table-foot">
+        <el-pagination
+            @size-change="onSizeChange"
+            @current-change="onPageChange"
+            v-model:current-page="pageNum"
+            v-model:page-size="pageSize"
+            :page-sizes="[5, 10, 15, 20]"
+            background
+            layout="total, sizes, prev, pager, next, jumper"
+            :total="total"
+        />
+      </div>
     </div>
 
     <el-dialog v-model="dialogVisible" title="电影信息" width="500" destroy-on-close>
-      <el-form ref="formRef" :rules="rules" :model="form" class="dialog-form" label-width="85px">
+      <el-form ref="formRef" :rules="rules" :model="form" class="dialog-form" label-width="85px"
+               status-icon @submit.prevent>
         <el-form-item label="电影名称" prop="title">
-          <el-input v-model="form.title" autocomplete="off" placeholder="请输入电影名称"/>
+          <el-input v-model="form.title" autocomplete="off" placeholder="请输入电影名称" @keyup.enter="submit"/>
         </el-form-item>
         <el-form-item label="电影封面" prop="img">
           <el-upload :action="FILE_UPLOAD_URL" :on-success="handleFileUpload"
@@ -116,7 +128,7 @@
           </el-upload>
         </el-form-item>
         <el-form-item label="英文名称" prop="english">
-          <el-input v-model="form.english" autocomplete="off" placeholder="请输入英文名称"/>
+          <el-input v-model="form.english" autocomplete="off" placeholder="请输入英文名称" @keyup.enter="submit"/>
         </el-form-item>
         <el-form-item label="上映日期" prop="start">
           <el-date-picker v-model="form.start" type="date" value-format="YYYY-MM-DD"></el-date-picker>
@@ -151,7 +163,7 @@
           <el-input type="textarea" :rows="4" v-model="form.content" autocomplete="off" placeholder="请输入电影简介"/>
         </el-form-item>
         <el-form-item label="制作公司" prop="employee">
-          <el-input v-model="form.employee" autocomplete="off" placeholder="请输入制作公司"/>
+          <el-input v-model="form.employee" autocomplete="off" placeholder="请输入制作公司" @keyup.enter="submit"/>
         </el-form-item>
         <el-form-item label="电影区域" prop="areaId">
           <el-select v-model="form.areaId" placeholder="请选择制作区域" class="field-lg">
@@ -173,22 +185,21 @@
         </div>
       </template>
     </el-dialog>
-
   </div>
 </template>
 
 <script setup>
 import { ref } from 'vue'
-import { Delete, Edit, Search } from '@element-plus/icons-vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { Delete, Edit, Plus, Search } from '@element-plus/icons-vue'
+import { ElMessage } from 'element-plus'
 import { useCrud } from '@/composables/useCrud'
 import { useFormDialog } from '@/composables/useFormDialog'
 import { API_PATHS, FILE_UPLOAD_URL, getFilmStatusType as getStatusType } from '@/constants'
 import request from '@/utils/request'
 
 const crud = useCrud(API_PATHS.FILMS)
-const { dataList, total, pageNum, pageSize, searchForm, selectedIds,
-        loading, del, delBatch, onSearch, onReset, onPageChange, onSizeChange, onSelectionChange } = crud
+const { dataList, total, pageNum, pageSize, searchForm, selectedIds, loading, error,
+        confirmDel, confirmDelBatch, onSearch, onReset, onPageChange, onSizeChange, onSelectionChange } = crud
 const { dialogVisible, formRef, form, rules, openAdd, openEdit, submit, close } = useFormDialog(crud, {
   defaultForm: {
     title: '', english: '', img: '', start: '', time: undefined,
@@ -225,17 +236,6 @@ crud.load()
 loadType()
 loadArea()
 
-function handleDel(id) {
-  ElMessageBox.confirm('删除数据后无法恢复,您确认删除吗?', '删除确认', { type: 'warning' })
-    .then(() => del(id)).catch()
-}
-
-function handleDelBatch() {
-  if (!selectedIds.value.length) { ElMessage.warning('请选择数据'); return }
-  ElMessageBox.confirm(`确定删除选中的 ${selectedIds.value.length} 条数据吗？`, '删除确认', { type: 'warning' })
-    .then(() => delBatch(selectedIds.value)).catch()
-}
-
 function handleFileUpload(res) {
   if (res.code === '200') { form.img = res.data; ElMessage.success('电影封面上传成功') }
   else { ElMessage.error(res.msg || '电影封面上传失败') }
@@ -255,13 +255,4 @@ function getTypeTagType(type) {
   const seed = type?.id ?? String(type?.title || '').charCodeAt(0) ?? 0
   return tagTypes[Math.abs(seed) % tagTypes.length]
 }
-
 </script>
-
-<style scoped>
-.line {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-</style>

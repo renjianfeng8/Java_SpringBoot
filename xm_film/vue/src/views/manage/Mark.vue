@@ -1,15 +1,24 @@
 <template>
-  <div>
-    <div class="card page-card">
-      <el-input v-model="searchForm.filmName" placeholder="请输入电影名称查询" class="search-input" :prefix-icon="Search" />
-      <el-button type="primary" @click="onSearch">查 询</el-button>
-      <el-button type="warning" @click="onReset">重 置</el-button>
+  <div class="crud-page">
+    <div class="page-head">
+      <h2 class="page-head__title">用户评价</h2>
     </div>
-    <div class="card page-card">
-      <el-button type="danger" @click="handleDelBatch">批量删除</el-button>
+
+    <div class="card list-toolbar">
+      <div class="list-toolbar__filters">
+        <el-input v-model="searchForm.filmName" placeholder="请输入电影名称查询" aria-label="电影名称"
+                  class="search-input" :prefix-icon="Search" @keyup.enter="onSearch" />
+        <el-button type="primary" @click="onSearch">查 询</el-button>
+        <el-button type="warning" @click="onReset">重 置</el-button>
+      </div>
+      <div class="list-toolbar__actions">
+        <span v-if="selectedIds.length" class="selection-count" aria-live="polite">已选 {{ selectedIds.length }} 项</span>
+        <el-button type="danger" :disabled="!selectedIds.length" @click="confirmDelBatch">批量删除</el-button>
+      </div>
     </div>
-    <div class="card page-card">
-      <el-table v-loading="loading" stripe :data="dataList" @selection-change="onSelectionChange">
+
+    <div class="card table-card">
+      <el-table v-loading="loading" stripe size="small" :data="dataList" @selection-change="onSelectionChange">
         <el-table-column type="selection" width="55" />
         <el-table-column label="用户名称" prop="userName" />
         <el-table-column label="电影名称" prop="filmName" show-overflow-tooltip />
@@ -20,44 +29,38 @@
         </el-table-column>
         <el-table-column label="用户评分" prop="score" width="90" />
         <el-table-column label="用户评语" prop="mark" show-overflow-tooltip />
-        <el-table-column label="操作">
+        <el-table-column label="操作" width="80">
           <template #default="scope">
-            <el-button class="row-action" link :icon="Delete" @click="() => handleDel(scope.row.id)" type="danger" />
+            <el-button class="row-action" link :icon="Delete" aria-label="删除" @click="confirmDel(scope.row.id)" type="danger" />
           </template>
         </el-table-column>
+        <template #empty>
+          <div class="empty-hint">{{ error ? '数据加载失败，请稍后重试' : '暂无数据' }}</div>
+        </template>
       </el-table>
-    </div>
-    <div class="card page-card">
-      <el-pagination @size-change="onSizeChange" @current-change="onPageChange" v-model:current-page="pageNum" v-model:page-size="pageSize" :page-sizes="[5, 10, 15, 20]" background layout="total, sizes, prev, pager, next, jumper" :total="total" />
+      <div class="table-foot">
+        <el-pagination
+            @size-change="onSizeChange"
+            @current-change="onPageChange"
+            v-model:current-page="pageNum"
+            v-model:page-size="pageSize"
+            :page-sizes="[5, 10, 15, 20]"
+            background
+            layout="total, sizes, prev, pager, next, jumper"
+            :total="total"
+        />
+      </div>
     </div>
   </div>
 </template>
 
 <script setup>
 import { Delete, Search } from '@element-plus/icons-vue'
-import { ElMessageBox } from 'element-plus'
 import { useCrud } from '@/composables/useCrud'
 import { API_PATHS } from '@/constants'
 
-const { dataList, total, pageNum, pageSize, searchForm, selectedIds, loading, load, del, delBatch, onSearch, onReset, onPageChange, onSizeChange, onSelectionChange } = useCrud(API_PATHS.MARKS)
+const { dataList, total, pageNum, pageSize, searchForm, selectedIds, loading, error,
+        confirmDel, confirmDelBatch, load, onSearch, onReset, onPageChange, onSizeChange, onSelectionChange } = useCrud(API_PATHS.MARKS)
 
 load()
-
-function handleDel(id) {
-  ElMessageBox.confirm('删除数据后无法恢复，您确认删除吗?', '删除确认', { type: 'warning' }).then(() => del(id)).catch()
-}
-
-function handleDelBatch() {
-  if (!selectedIds.value.length) return
-  ElMessageBox.confirm(`确定删除选中的 ${selectedIds.value.length} 条数据吗？`, '删除确认', { type: 'warning' }).then(() => delBatch(selectedIds.value)).catch()
-}
 </script>
-
-<style scoped>
-.card {
-  padding: var(--space-12);
-  border-radius: var(--el-border-radius-base);
-  background-color: var(--el-bg-color);
-  box-shadow: var(--el-box-shadow-lighter);
-}
-</style>

@@ -1,22 +1,30 @@
 <template>
-  <div>
-    <div class="card page-card">
-      <el-input v-model="searchForm.title"  placeholder="请输入电影名称查询" class="search-input" :prefix-icon="Search"/>
-      <el-input  v-model="searchForm.start"  placeholder="按放映日期查询 (YYYY-MM-DD)" class="search-input" :prefix-icon="Search"/>
-      <el-select v-model="searchForm.status" placeholder="请选择放映状态" class="search-input">
-        <el-option label="正常" value="正常" />
-        <el-option label="停售" value="停售" />
-      </el-select>
-      <el-button type="primary" @click="onSearch">查 询</el-button>
-      <el-button type="warning" @click="onReset">重 置</el-button>
+  <div class="crud-page">
+    <div class="page-head">
+      <h2 class="page-head__title">放映记录</h2>
     </div>
 
-    <div class="card page-card">
-      <el-button type="danger" @click="handleDelBatch">批量删除</el-button>
+    <div class="card list-toolbar">
+      <div class="list-toolbar__filters">
+        <el-input v-model="searchForm.title" placeholder="请输入电影名称查询" aria-label="电影名称"
+                  class="search-input" :prefix-icon="Search" @keyup.enter="onSearch"/>
+        <el-input v-model="searchForm.start" placeholder="按放映日期查询 (YYYY-MM-DD)" aria-label="放映日期"
+                  class="search-input" :prefix-icon="Search" @keyup.enter="onSearch"/>
+        <el-select v-model="searchForm.status" placeholder="请选择放映状态" aria-label="放映状态" class="field-md">
+          <el-option label="正常" value="正常" />
+          <el-option label="停售" value="停售" />
+        </el-select>
+        <el-button type="primary" @click="onSearch">查 询</el-button>
+        <el-button type="warning" @click="onReset">重 置</el-button>
+      </div>
+      <div class="list-toolbar__actions">
+        <span v-if="selectedIds.length" class="selection-count" aria-live="polite">已选 {{ selectedIds.length }} 项</span>
+        <el-button type="danger" :disabled="!selectedIds.length" @click="confirmDelBatch">批量删除</el-button>
+      </div>
     </div>
 
-    <div class="card page-card">
-      <el-table v-loading="loading" stripe :data="dataList" @selection-change="onSelectionChange">
+    <div class="card table-card">
+      <el-table v-loading="loading" stripe size="small" :data="dataList" @selection-change="onSelectionChange">
         <el-table-column type="selection" width="55"/>
         <el-table-column label="影院名称" prop="cinemaName"/>
         <el-table-column label="影厅名称" prop="roomName"/>
@@ -30,77 +38,40 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="操作">
+        <el-table-column label="操作" width="80">
           <template #default="scope">
-            <el-button class="row-action" link :icon="Delete" @click="() => handleDel(scope.row.id)" type="danger"></el-button>
+            <el-button class="row-action" link :icon="Delete" aria-label="删除" @click="confirmDel(scope.row.id)" type="danger"></el-button>
           </template>
         </el-table-column>
+        <template #empty>
+          <div class="empty-hint">{{ error ? '数据加载失败，请稍后重试' : '暂无数据' }}</div>
+        </template>
       </el-table>
-    </div>
-
-    <div class="card page-card">
-      <el-pagination
-          @size-change="onSizeChange"
-          @current-change="onPageChange"
-          v-model:current-page="pageNum"
-          v-model:page-size="pageSize"
-          :page-sizes="[5, 10, 15, 20]"
-          background
-          layout="total, sizes, prev, pager, next, jumper"
-          :total="total"
-      />
+      <div class="table-foot">
+        <el-pagination
+            @size-change="onSizeChange"
+            @current-change="onPageChange"
+            v-model:current-page="pageNum"
+            v-model:page-size="pageSize"
+            :page-sizes="[5, 10, 15, 20]"
+            background
+            layout="total, sizes, prev, pager, next, jumper"
+            :total="total"
+        />
+      </div>
     </div>
   </div>
 </template>
 
 <script setup>
 import { Delete, Search } from '@element-plus/icons-vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
 import { useCrud } from '@/composables/useCrud'
-import { API_PATHS, apiBatch, apiById, apiPage, getRecordStatusType as getStatusType } from '@/constants'
-import request from '@/utils/request'
+import { API_PATHS, getRecordStatusType as getStatusType } from '@/constants'
 
-// 仅使用 useCrud 的响应式状态（后端 selectAll 已 JOIN 出 cinemaName / roomName）
-const crud = useCrud(API_PATHS.RECORDS)
-const { dataList, total, pageNum, pageSize, searchForm, selectedIds, loading, onSelectionChange } = crud
+// 后端 selectAll 已 JOIN 出 cinemaName / roomName，前端不再自行拼接。
+// 本页没有弹窗表单，用不到 crud 对象本身，直接解构（与 Room / Mark 同形）。
+const { dataList, total, pageNum, pageSize, searchForm, selectedIds, loading, error,
+        confirmDel, confirmDelBatch, load, onSearch, onReset, onPageChange, onSizeChange, onSelectionChange } = useCrud(API_PATHS.RECORDS)
 
-function load() {
-  const params = { pageNum: pageNum.value, pageSize: pageSize.value, ...searchForm }
-  // 本页自带 load()，需自行驱动 useCrud 暴露的 loading，否则表格的加载态永远不亮
-  loading.value = true
-  request.get(apiPage(API_PATHS.RECORDS), { params }).then(res => {
-    if (res && res.data) {
-      dataList.value = res.data.list || []
-      total.value = res.data.total || 0
-    }
-  }).catch(() => ElMessage.error('加载数据失败，请重试'))
-    .finally(() => { loading.value = false })
-}
-
-function onSearch() { pageNum.value = 1; load() }
-function onReset() { Object.keys(searchForm).forEach(k => { searchForm[k] = undefined }); pageNum.value = 1; load() }
-function onPageChange(p) { pageNum.value = p; load() }
-function onSizeChange(s) { pageSize.value = s; pageNum.value = 1; load() }
-
-function handleDel(id) {
-  ElMessageBox.confirm('删除数据后无法恢复,您确认删除吗?', '删除确认', { type: 'warning' })
-    .then(() => request.delete(apiById(API_PATHS.RECORDS, id)))
-    .then(res => { if (res.code === '200') { ElMessage.success('操作成功'); load() } })
-    .catch(() => {})
-}
-
-function handleDelBatch() {
-  if (!selectedIds.value.length) { ElMessage.warning('请选择数据'); return }
-  ElMessageBox.confirm(`确定删除选中的 ${selectedIds.value.length} 条数据吗？删除后无法恢复`, '删除确认', { type: 'warning' })
-    .then(() => request.delete(apiBatch(API_PATHS.RECORDS), { data: selectedIds.value }))
-    .then(res => { if (res.code === '200') { ElMessage.success('操作成功'); load() } })
-    .catch(() => {})
-}
-
-// 初始加载
 load()
-
 </script>
-
-<style scoped>
-</style>
