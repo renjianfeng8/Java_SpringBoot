@@ -119,6 +119,7 @@
 82. 导航高亮由路由归属派生，不要手工同步: 用一个 `activePath` 字符串逐段 `if-else` 的写法，漏掉一段就点错项 —— `/front/pickup` 曾落到兜底分支点亮「首页」，而它自己的高亮条件（`activePath === '/front/pickup'`）永远不成立。改成"每个导航段拥有哪些路由前缀"的映射，从 `route.path` 现算；不属于任何段的页面（只在头像下拉里的个人中心 / 修改密码）保持无高亮，而不是把「首页」点亮
 83. `window.location.href` 换成 `router.push` 会改变组件复用语义，同页换 query 不再重新挂载: 改之前是整页重载，目标组件必然重建；改之后同一路由记录只换 query 时组件被复用，只写在 `onMounted` 里的取数**不会**再触发。搜索页因此会一直显示上一次的关键词与结果（`Front.vue` 的顶栏搜索正是同路由换 `?title=`）。凡"同路径不同参数"的取数入口都要 `watch` 参数本身，不能只靠 `onMounted` —— 把"整页重载"改成"站内跳转"时，必须回头检查目标页是不是靠重载来刷新的（见 BUG-055）
 84. `opacity: 0` 的叠放层仍然接收点击、也仍然可聚焦: 轮播把多张 slide 都设成 `position: absolute; inset: 0; opacity: 0` 时，后置兄弟节点绘制在上层并照常命中测试 —— 点可见那张的按钮，实际命中的是最后一张透明层的链接，跳到错的条目；同时它们仍在 Tab 顺序与无障碍树里，配上 `aria-hidden` 就成了"可聚焦但不可见不可读"的焦点陷阱。用 `visibility: hidden` 一次解决两件事（既不接收指针事件、也不进 Tab 顺序），过渡写成 `opacity …, visibility …` 即可保留淡入淡出（见 BUG-055）
+85. 表单字段必须有数据落点: 绑定到 `v-model` 并随整表单提交的字段，后端必须有对应列（或对应的处理分支）承接它。`manage/Person.vue` 的「个人介绍」曾绑 `data.form.description` 并 PUT 给 `/api/v1/admins`，而 `admin` 表没有 `description` 列（`cinema` 表有 —— 该页是从影院端复制改写的，字段跟着文本一起搬了过来）。用户填了、点保存、看到「更新成功」，内容静默丢弃：比字段不存在更有害，因为它让人以为填过了。该字段已按本条删除（见 BUG-056）。判断方法同规则 32 的反向 —— 规则 32 问"这个字段该不该由前端给"，本条问"前端给了之后谁接"。加字段前先 `grep` 一次 schema，跨端复制表单时要逐个字段核对目标表
 
 ## 案例篇
 
@@ -917,4 +918,80 @@
   - `CinemaDetail.vue` 的 `.status-tag--upcoming/playing/ended` 三态**未**收进 `constants/index.js`：它们是"未开始 / 放映中 / 已结束"这类**派生**状态（由 `start` 现算，不落库），与 `constants` 里那些落库状态词表不同源；且三个配色（primary / success / info 的基色压各自 `light-9` 底）实测均在 4.5:1 以上，合规。单消费点的派生状态放本地是合理的，强行搬进 `constants` 只会造出一个只有一个读者的映射。
 - 相关文件: `xm_film/vue/src/components/{FilmPosterCard.vue,DetailSkeleton.vue}`（均新增）、`xm_film/vue/src/utils/format.js`、`xm_film/vue/src/router/index.js`、`xm_film/vue/src/assets/css/{front-pages.scss,global.css,auth-layout.scss}`、`xm_film/vue/src/views/{Front.vue,Login.vue,Register.vue}`、`xm_film/vue/src/constants/index.js`、`xm_film/vue/src/views/front/{Home,Movie,Search,FilmDetail,CinemaDetail,BuyTicket,Rank,Cinema,FilmCinema,Orders,Account,Person,Password}.vue`
 - 提交记录: `e09701dc`
+- 状态: 已修复
+
+### BUG-056: 第二轮视觉重构 · 管理后台（16 页）—— 两代写法收敛，与同形缺陷的最后一处清理
+
+- 日期: 2026-10-06
+- Bug 描述: 三端里前台 15 页（BUG-055）与影院后台 7 页（`9275859e`）都已整理过，`views/manage` 的 16 页是最后一块 —— 它同时背着版式债（两代写法并存）与语义债（与 BUG-055 同形、但从未被清理的缺陷）。本轮以「严格令牌内：不新增色相、字号档、字体族、阴影档」为约束，把它收敛为与前台对称的单一共享骨架，并逐文件核对，查出 5 处实际缺陷、5 类规范偏差，另有一处文档错位。逐条如下。
+- 缺陷与根因:
+
+  1. **改密后是幽灵登录态**（`manage/Password.vue:69-72`、`back/Password.vue:68-71` 同形）。成功分支走 `clearStoredUser()` + `location.href = '/login'`。`clearStoredUser` 只清 localStorage 副本，而登录态的唯一依据是 `useAuth` 的模块级 ref —— 内存仍持 token，`isLoggedIn` 继续为真、外壳继续渲染成已登录；那一句整页重载正是用来盖住这一点的。同时违反规则 76（登录态只经 `useAuth` 变更）与规则 77（站内跳转用 `router.push`）。BUG-055 修掉了前台的同一实例（`front/Password.vue`），两处后台实例都漏了。改为 `useAuth().logout()` + `router.push('/login')`。
+
+  2. **改完资料顶栏不刷新**（`manage/Person.vue:80,92`，`back/Person.vue` 同形）。直接 `setStoredUser(...)` 而不经 `useAuth.setUser`，只更新存储副本、不动那个 ref，顶栏的用户名与头像要等整页刷新才变（规则 76）。改走 `setUser({ ...user.value, ...data.form })`。
+
+  3. **一次失败弹两次提示**（`manage/Record.vue:76`）。`catch` 里再弹一次 `ElMessage.error('加载数据失败，请重试')`，而 `utils/request.js:86-92` 的拦截器已经弹过（§11.2 明令页面内 `catch` 只落错误态、不再重复弹提示）。根因是该页把 `useCrud` 只当状态容器用，手写了一套 `load` / `onSearch` / `onReset` / `onPageChange` / `onSizeChange` / `handleDel` / `handleDelBatch` —— 逐字等价于 `useCrud` 自己的实现（`apiPage(RECORDS)` 就是 `${apiBase}/page`），只有错误处理多了一句。整段删掉改回 `useCrud` 自带方法：消掉双重弹错、顺带获得此前拿不到的 `error` 态、减约 35 行。
+
+  4. **内容页把页脚顶出视口**（`manage/Home.vue:302-305`）。`.home-container` 声明 `min-height: 100vh` + `padding: 20px`，而它挂在外壳 `.manage-content` 之内 —— 凭空多出外壳头部与页脚的高度（规则 81，BUG-055 在 `front/Person.vue` 修过同一形状）。`100vh` 与那层 padding 一并删除（外壳内容区已有 16px 内边距）。
+
+  5. **表单字段没有数据落点**（`manage/Person.vue` 的「个人介绍」）。模板绑 `data.form.description` 并随整表单 PUT 给 `/api/v1/admins`，但 `sql/schema.sql` 的 `admin` 表**没有** `description` 列（`cinema` 表有，所以 `back/Person.vue` 的「影院介绍」是有效的）—— 管理端这页是从影院端复制改写的，字段跟着文案一起搬了过来。用户填了介绍、点保存、看到「更新成功」，内容是丢的。修法二选一：补 `admin.description` 列，或删掉该字段。**处置：删字段**（用户决断）—— 补列属后端 + schema 变更，而该属性 `admin` 从未有过、`data.sql` 也没有它的种子值，字段本身没有存在理由。删掉整块 `<el-form-item>` 后 `description` 与该文案在本文件内不再出现。
+
+- 规范偏差与处置:
+
+  1. **内容区底色不符 §6.2**（`admin-layout.scss:99`）。`.manage-content` 取的是 `--el-bg-color`（白），而 §6.2 规定管理端页面背景是 `--el-bg-color-page`（`#f2f3f5`）。后果是卡片与页面底同色，表格卡与图表卡失去"面"的层次、只靠阴影分隔 —— 这是本轮单点视觉收益最大的一处。改为 `--el-bg-color-page`。**外溢**：`.manage-container` 是 manage 与 back 共用外壳，back 的 7 页随之变灰；两者同属管理端，§6.2 对两端同等成立，故一并修正（已事先向用户声明并获准）。
+
+  2. **行操作图标超档**（`admin-pages.scss` 的 `.row-action`）。原值 `font-size: var(--fs-lg)`（18px），不在 §五 的 12 / 16 / 20 / 24 四档内。已核实 EP 的 `.el-icon { font-size: inherit }`（`theme-chalk/src/icon.scss:31`）且内嵌 svg 是 `1em`，故 18px 确实落在图标上。改为 `--fs-md`（16px，§五「常规功能」档）；原注释「便于点击」的意图由 16px + EP link 按钮自带的内边距承担。**外溢**：back 的 4 个表格页同步变小。**同形未修**：`front-pages.scss:164` 的 `.front-content .row-action` 仍是 18px（消费方 `front/Orders.vue`），那是 BUG-055 已交付的范围，见下「未做但记录备查」。
+
+  3. **表格操作列缺 `width`**（规则 61）。13 个表格页的操作列**全部**没写 `width` —— `el-table` 对未指定宽度的列按「`minWidth || 80`、再均分富余空间」起算，列多的表操作列只会分到约 80px；多按钮格必然折行，而 EP 的 `.el-button + .el-button { margin-left: 12px }` 会把折行后的第二个按钮右推、两行左右错开（BUG-049 的原形）。13 页逐页定宽（单图标 80 / 双图标 110 / Cinema 的「审核通过 + 双图标」160），并把 `Cinema.vue` 的三按钮格套上 `.row-actions`（此前只有前台有这个类，本轮给管理端补了一份）。
+
+  4. **选择列宽三种取值**。50（Cinema）/ 55（多数）/ 70（Video）→ 统一 55。
+
+  5. **T-1 §9.3 收口（manage 部分）**。11 页（9 个弹窗表单 + `Person` + `Password`）补 `status-icon`（错误反馈三件套的第三件）、输入框 `@keyup.enter` 与 `el-form` 的 `@submit.prevent`（只挂一处，避免一次回车发两次请求）；`manage/Person.vue` 的「电话」「邮箱」补 `prop`（「个人介绍」见缺陷 5 —— 那个字段已删除，故不在补 `prop` 之列）。**行为变更**：「邮箱」补 `prop="email"` 后首次激活 `rules.email` 的 `type: 'email'`（原先无 `prop` 故永不校验），且该页新增了提交前的 `validate()` 闸门 —— 存量邮箱格式非法的管理员改资料时会被挡住。已记入《前端规范待办》。
+
+  6. **原始值工具类与重复声明**。`Area` / `Type` / `Notice` 三页带着 `.mb-2 { margin-bottom: 8px }` / `.mr-2 { margin-right: 8px }` / `.w-72 { width: 18rem }` / `.pt-5 { padding-top: 1.25rem }` / `.pr-12 { padding-right: 3rem }` 五个直写数值的工具类（§11.2 要求一切经类名 + 令牌表达；18rem = 288px 也不在 4px 网格上，同一个「搜索框」在另外 10 页是 300px）。另有 8 个文件的 scoped 块各自重声明一遍 `.card` 的底色 / 圆角 / 阴影（`global.css` 已提供），以及 `Cinema.vue` / `Film.vue` / `back/Film.vue` 三处各写一份逐字相同的 `.line` 截断基类。全部收敛进共享层。
+
+- 本轮重构的落地口径:
+
+  - **`admin-pages.scss` 扩为管理端唯一骨架层**，与 `front-pages.scss` 对称：新增 `.crud-page`（页面根堆叠，模块间距的唯一出处，取代每页各写的 `margin-bottom`）、`.page-head`（标题带 + 右侧主操作 + 品牌短线）、`.list-toolbar`（筛选区与操作区合并成一张卡）、`.selection-count`、`.table-card` / `.table-foot`（表格与其卡内分页条）、`.empty-hint`（空态 / 失败态占位）、`.row-actions`、`.line`、`.section-head`。`.page-head` 与 `.section-head` 的几何合成一条选择器（两者只差标题的字号与颜色）。
+
+  - **13 个表格页从 4 张卡收敛为 2 张**：搜索卡与操作卡合并为 `.list-toolbar`，分页从独立卡折进 `.table-foot`。「新增」从 `type="info"`（灰）升为 `type="primary"` 并移进标题带（§9.2：页面主操作应是主按钮）；「批量删除」在未选中时 `disabled`，旁边显示「已选 N 项」（带 `aria-live="polite"`），随之删掉各页那句已不可达的「请选择数据」守卫。表格加 `size="small"`（§6.2 管理端密集档）。筛选控件与纯图标按钮补 `aria-label`（placeholder 不构成可访问名称，§9.3）。行操作按钮统一 16px（§五）。
+
+  - **`el-table` 的 `#empty` 槽区分空态与失败态**（§11.2）。此前没有任何一页读 `crud.error`，所以「请求失败」与「库里确实没有」渲染成同一句 EP 默认文案。
+
+  - **`Home.vue` 大盘重写**。两个区块标题统一走 `.section-head`（此前一处是光杆标题、一处是品牌色竖条，两种语言）；`el-row :span` 换成 `.chart-grid` / `.entry-grid` 两个 CSS grid —— `.chart-grid` 用 `repeat(2, minmax(0, 1fr))`，`minmax` 的 0 下限是承重件（裸 `1fr` 的 `min-width: auto` 会被 ECharts 画布撑破），顺带消掉「卡里套卡」；四个功能入口由 `<el-card @click>`（div + 点击处理器，不可聚焦、键盘不可达）改为 `<router-link>`（真 `<a href>`，天然进 Tab 序、回车可激活，与前台榜单行同手法）；hover 用边框与标题色而非叠阴影（全局 `.card` 已常驻 `--el-box-shadow-lighter`，再叠一层阴影得先把全部 `.card` 降档，会外溢到其他端）。ECharts 的 `cssVar()` / `getComputedStyle(documentElement)` / `ref` / resize / `v-if` 数据门控全部保留。
+
+  - **`useCrud` 收拢删除确认**。13 页各写一份的「确认框 + `del`」与「确认框 + `delBatch`」（文案逐页有出入：「删除后无法恢复」半数缺、两处用的是半角逗号）收进 `confirmDel(id)` / `confirmDelBatch()`。同轮删掉零消费者的 `loadAll`（`front/Account.vue` 有自己的同名本地函数，全仓无人解构它）。
+
+  - **`ROLE_TAG_MAP` / `getRoleType` 收进 `constants/index.js`**。`Admin` 与 `User` 两页各写一份的 `role === 'ADMIN' ? 'warning' : ...` 嵌套三元式收敛为查表，符合规则 22 与 §9.5「状态列必须走 constants 的映射」；缺省分支保持 `'success'`，与原三元式的兜底一致。
+
+  - **不新建共享组件**。13 页的骨架标记仍各写一份。判据同 BUG-055 —— 立组件需要「CSS 表达不了的行为」加上「已经漂移的取值」两样都占，这里两样都不具备：行为已在 `useCrud` / `useFormDialog` 里，页面之间的差异（列、筛选项、弹窗字段）本身就是内容。包成一个槽位比内容还多的组件壳没有收益。
+
+  - **`el-row` / `el-col` 至此零消费者**。BUG-055 把前台的 `:span="6"` 换成 `.poster-grid`，本轮把大盘最后两处换成 CSS grid；全仓已无 `<el-row>` / `<el-col>`，产物中也不再包含这两个组件。附注：`components.d.ts` 在多次构建之间反复增删 `ElRow` / `ElCol`（一次构建去掉了、之后又回到含它们的版本），最终与提交前一致，故该文件不进本提交 —— 可核对的事实是「零消费者 + 不打包」，不是那个生成文件的当下内容。
+
+- 验证: `npm run build` 通过（每个工作包各跑一次）。产物核对：新骨架类全部进了 `index-*.css`；`.manage-content[data-v-*]` 为 `background-color:var(--el-bg-color-page)`、`.manage-container .row-action` 为 `font-size:var(--fs-md)`；`ADMIN:"warning",CINEMA:"danger",USER:"success"` 进了产物（`getRoleType` 的标识符被压缩，故按映射字面量核对）；已删的 `.mb-2` / `.mr-2` / `.w-72` / `.pt-5` / `.pr-12` / `.chart-empty` / `.title-tag` / `.video-wrapper` 在产物中 0 命中，`.section-title--spaced` 仅剩 `front/FilmDetail.vue` 自己那个带 `[data-v]` 的 scoped 定义。back 外溢审计：本轮新增的类名在 `back/*` 模板中 0 引用，外溢仅限上述两处已声明的取值修正。行尾：本轮改动的 27 个文件逐文件比对 `git diff --stat` 与 `git diff --ignore-cr-at-eol --stat`，完全一致，无幻影行尾变更。**未做浏览器渲染验证** —— UI 目视由用户自查，本轮不声称验过界面。
+
+- 评审后追加修复（同一轮，`code-review` 复用 / 简化 / 正确性三角度 + `code-simplifier` 并行复审查出）:
+
+  1. **`.line` 的共享化差点踩规则 79**。把 `.line` 加进共享层时，`back/Film.vue` 的 scoped 块里还留着一份同名定义 —— 两份特异性都是 0-2-0，胜负交给产物里的先后顺序。两份声明当前逐字等价，故无可见差异，但仍按规则 79 删掉 back 那份（宽度档 `.line--*` 本就在共享层）。
+  2. **`.page-head` 与 `.section-head` 同文件内重复**。两者几何逐字相同（9 条声明，`::after` 完全一样），只有标题档不同。合成一条选择器，免得同一组声明在一个文件里写两遍。
+  3. **大盘图表实例泄漏**。`onUnmounted` 只摘了 resize 监听、没有 `dispose()` —— ECharts 内部注册表仍持有画布 DOM 与 canvas。补上卸载时销毁两个实例。
+  4. **`manage/Record.vue` 留了个没人用的 `crud` 绑定**（该页无弹窗表单，与 `Room` / `Mark` 同形却没照那样直接解构）。改为直接解构。
+  5. **分页标记两种写法**。`Room` / `Mark` / `Video` 的 `el-pagination` 挤在一行，其余 10 页分 7 行（属性完全相同）。统一为多行式。
+
+- 侦察报告的更正（子代理结论不当作事实，逐条核对后推翻或修正的）:
+
+  - **子代理提出的「`.section-head__title` 在两套骨架层之间是漂移」不成立**。前台那份没有 `margin: 0`、管理端有，是因为前台用在 `<div>` / `<span>` 上（无默认外边距）、管理端用在 `<h2>` 上（有默认外边距）—— 差异由承载元素决定，不是漂移。
+  - **子代理建议把两套骨架层里字节相同的规则（`.section-head` / `.empty-hint` / `.row-actions` / `.search-input` / `.field-full`）上提到 `global.css`** —— 本轮不采纳。上提会丢掉 `.manage-container` / `.front-content` 这层作用域，特异性从 0-2-0 降到 0-1-0；而后台蓝与前台红是靠 `html.theme-front` 换令牌值实现的，作用域一打开，任何页面都能盖掉骨架。本仓库刻意维持「一端的骨架层一个文件」（§11.3），重复是这套结构的已知代价，已记入《前端规范待办》备查。
+  - **本轮的 EOL 检测脚本一度是空转的**。首版用 `grep -c $'\r$'` 计数，该模式在本环境下退化成 `$`（匹配每一行），于是「CR 行数 == 总行数」恒成立，把 LF 文件全报成 CRLF。改用 `tr -cd '\r' | wc -c` 逐字节计数才看到真相：本轮改动的 27 个文件里，22 个是纯 LF，5 个是「CRLF 为主、夹几行 LF」的混合行尾。据此把那 5 个文件按 HEAD 的逐行行尾还原，最终 `--ignore-cr-at-eol` 前后的 numstat 完全一致。
+
+- 未做但记录备查:
+  - **`back/Person.vue` 只做了同源的两行修复，未跟随 manage 侧一起清理**：`role === 'USER'` 分支在 `/back`（`meta.roles: ['CINEMA']`）下不可达，`defineEmits(['updateUser'])` 无消费方，`apiById` 仅为那个分支而导入，`data.user` 仍读 `getStoredUser()`。刻意不扩大本轮范围。
+  - **规则 76 的清理在前台仍未完成**：`front/Person.vue:84` 直接 `setStoredUser(...)`（与 ①② 同形，顶栏不刷新）、`front/BuyTicket.vue:198,206` 直接 `clearStoredUser()`、`router/index.js:88` 直接 `clearStoredUser()`。BUG-055 只修了 `front/Password.vue` 一处。
+  - **前台的行操作图标仍是 18px**（`front-pages.scss:164`，消费方 `front/Orders.vue`），与 §五 不符；本轮改了管理端的同名类，前台那半属于 BUG-055 已交付的范围，不静默改动。
+  - **`confirmDel` / `confirmDelBatch` 只覆盖 manage**：`back/Ordered.vue` / `back/Record.vue` / `back/Room.vue` 仍各自内联确认框（其中两处是半角逗号），但它们不经过 `useCrud`（用裸 `request`），迁移是另一件事。
+  - **`.manage-content` 的 `min-height: calc(100vh - 160px)` 与 `.manage-main` 的 `overflow: hidden` 是联动魔法数**，本轮不动（Home 删掉自己的 `100vh` 已足够）。
+  - **`manage/Home.vue` 的图表每次加载初始化两次**（`initData()` 内显式初始化一次，`watch` 又初始化一次；因为每次都先 `dispose` 旧实例，所以只是冗余不是错误）。该 `watch` 服务于后续数据更新，未动。
+  - **「重置」按钮沿用 `type="warning"`**：按 §3.7 功能色不得用于装饰，橙色「重置」站不住；但这是全站既有约定（前台 1 页 + back 4 页 + manage 13 页共 18 处，含 BUG-055 已审的前台页），不静默分叉，留待一次性统一。
+- 相关文件: `xm_film/vue/src/assets/css/{admin-pages.scss,admin-layout.scss}`、`xm_film/vue/src/views/manage/`（16 页）、`xm_film/vue/src/views/back/{Film.vue,Person.vue,Password.vue}`、`xm_film/vue/src/composables/useCrud.js`、`xm_film/vue/src/constants/index.js`、`CLAUDE.md`、`Bug.md`、`前端规范待办.md`
+- 提交记录: 未提交
 - 状态: 已修复

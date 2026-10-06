@@ -115,7 +115,8 @@ project_02/
 | 热评 | 即 `GET /api/v1/marks/by-film`（`likeCount DESC, id DESC`）前 3 行，不另开查询 |
 | 点赞表 | `mark_like` 纯关系表（`PRIMARY KEY (mark_id, user_id)`），赞数 `COUNT(*)`，无计数列 |
 | 前台共享骨架 | `assets/css/front-pages.scss`，全部挂在 `.front-content` 下（`.page-card` / `.section-head` / `.poster-grid` / `.filter-chip` / `.service-tag--*` / `.detail-skeleton` / `.empty-hint`）。前台页面不再各写一份。`.detail-skeleton` 的标记收在 `components/DetailSkeleton.vue`；`.empty-hint` 是单行占位，带标题与说明的虚线面板叫 `.empty-panel`（组件内本地写） |
-| 卡片外观分工 | `global.css` 的 `.card` 提供底色 / 圆角 / 阴影（全局，manage·back 亦用），前台 `.page-card` 只覆写消费端内边距。`.page-card` 在 `admin-pages.scss` 另有一份管理端内边距，是 §6.2 的密度分端 |
+| 管理端共享骨架 | `assets/css/admin-pages.scss`，全部挂在 `.manage-container` 下（`.crud-page` / `.page-head` / `.list-toolbar` / `.table-card` / `.table-foot` / `.selection-count` / `.empty-hint` / `.row-actions` / `.line` / `.section-head`）。manage 的 13 个表格页共用「标题带 + 工具条 + 表格卡」两卡骨架，不再各写一份。`.section-head` 的几何与前台同名类一致 —— 两端各自是所在端的唯一骨架层，刻意不做一份全局层（§11.3 文件职责） |
+| 卡片外观分工 | `global.css` 的 `.card` 提供底色 / 圆角 / 阴影（三端共用），`.page-card` 只负责堆叠间距与消费端内边距（前台 `--space-24`，即 §6.2 的密度分端）。manage 页已不用 `.page-card`，改用 `.list-toolbar` / `.table-card` 各自声明内边距；`back/*` 仍用 `.page-card`，其内边距取 `.card` 的 `--space-8` |
 | 海报卡 | 唯一 `components/FilmPosterCard.vue`（2:3 海报 + 破图兜底 + 评分角标 + 元信息插槽），消费方 `front/Home.vue` · `front/Movie.vue`。`Search.vue` 横向卡与 `Rank.vue` 榜单行是另两种形状，不并入 |
 | 导航高亮 | `Front.vue` 由 `NAV_ITEMS`（各项自带的 `sections` 路由前缀）从 `route.path` 现算，不手工同步 `activePath` 字符串 |
 | 表单页跳转 | 登录回跳等站内跳转一律 `router.push`（`window.location.href` 既整页重载，又会把 `//host` 这类路径解析成外站） |
@@ -199,19 +200,19 @@ project_02/
 
 | 硬约束 | Bug 规则 |
 |--------|----------|
-| 金额 / 计数 / 比率用包装类型 | [27](Bug.md#规则篇) |
-| 事务方法内不得先写后抛异常 | [28](Bug.md#规则篇) |
-| 父数据禁止物理删除 | [23](Bug.md#规则篇) |
-| `excludePathPatterns` 是角色盲区 | [32](Bug.md#规则篇) |
-| 令牌失效公开只读按匿名放行 | [33](Bug.md#规则篇) |
-| 余额变更只走 `WalletService` | [38](Bug.md#规则篇) |
-| 余额扣减用行锁 + 条件更新 | [40](Bug.md#规则篇) |
-| 资金字段 `BigDecimal` 且 > 0 | [41](Bug.md#规则篇) |
-| 充值回调幂等，复用 `handleCallback` | [42](Bug.md#规则篇) |
-| 订单物理删除仅 `已取消` / `已退票` | [44](Bug.md#规则篇) |
-| 同步写库测试用临时库 + 备用端口 | [46](Bug.md#规则篇) |
-| 只读视图回投影、不回实体；归属只认 `mine` | [47](Bug.md#规则篇) · [48](Bug.md#规则篇) |
-| 表格操作列显式写 `width` | [60](Bug.md#规则篇) |
+| 金额 / 计数 / 比率用包装类型 | [28](Bug.md#规则篇) |
+| 事务方法内不得先写后抛异常 | [29](Bug.md#规则篇) |
+| 父数据禁止级联删除（下架用 `status`） | [24](Bug.md#规则篇) |
+| `excludePathPatterns` 是角色盲区 | [33](Bug.md#规则篇) |
+| 令牌失效公开只读按匿名放行 | [34](Bug.md#规则篇) |
+| 余额变更只走 `WalletService` | [39](Bug.md#规则篇) |
+| 余额扣减用行锁 + 条件更新 | [41](Bug.md#规则篇) |
+| 资金字段 `BigDecimal` 且 > 0 | [42](Bug.md#规则篇) |
+| 充值回调幂等，复用 `handleCallback` | [43](Bug.md#规则篇) |
+| 订单物理删除仅 `已取消` / `已退票` | [45](Bug.md#规则篇) |
+| 同步写库测试用临时库 + 备用端口 | [47](Bug.md#规则篇) |
+| 只读视图回投影、不回实体；归属按 JWT 判定 | [48](Bug.md#规则篇) · [49](Bug.md#规则篇) |
+| 表格操作列显式写 `width`，多按钮格套 `.row-actions` | [61](Bug.md#规则篇) |
 | 柜台取票仅 `CINEMA` 白名单 | [62](Bug.md#规则篇) |
 | 点赞写后回读需 `READ_COMMITTED` | [63](Bug.md#规则篇) |
 | 派生指标列唯一写者、不收客户端入参 | [65](Bug.md#规则篇) |
@@ -234,6 +235,7 @@ project_02/
 | 导航高亮从路由归属派生 | [82](Bug.md#规则篇) |
 | 站内跳转后同页换参不再重挂，取数须 `watch` 参数 | [83](Bug.md#规则篇) |
 | `opacity: 0` 叠放层仍可点击可聚焦，用 `visibility` | [84](Bug.md#规则篇) |
+| 表单字段必须有数据落点（后端有列或分支承接） | [85](Bug.md#规则篇) |
 
 ## 开发守则
 

@@ -1,7 +1,11 @@
-/* 管理端「表格 CRUD 页」的共用骨架样式
+/* 管理端页面的共用骨架样式
  *
- * 影院后台与管理后台的十几个列表页是同一套骨架：搜索卡片 + 表格卡片 + 分页 + 弹窗表单。
- * 这些内联样式在项目里重复了几十次（`margin-bottom: 5px` 单值就 56 处），因此统一抽到本文件。
+ * 与 front-pages.scss 对称：前台是「列表页 / 筛选页」共用一套骨架（挂在 .front-content 下），
+ * 管理端是「表格 CRUD 页 / 大盘」共用一套（挂在本文件）。两边各自是所在端的唯一骨架层。
+ *
+ * 骨架分两组：
+ *   · .page-head / .list-toolbar / .table-card / .table-foot —— 页面级（标题带 + 工具条 + 表格卡）
+ *   · .section-head —— 页内区块标题（大盘的两个区块），几何与前台同名类一致
  *
  * 全部挂在 .manage-container 下 —— 这些页面都渲染在 Manage.vue / Back.vue 的外壳内，
  * 加这一层即把作用域限制在管理端，既不会外泄到前台，也无需给每个类名加前缀。
@@ -19,9 +23,11 @@
     margin-right: var(--space-12);
   }
 
-  /* 表格行内的操作按钮（编辑 / 删除）——放大图标便于点击 */
+  /* 表格行内的操作按钮（编辑 / 删除）。字号即图标尺寸（EP 的 .el-icon 是 font-size: inherit，
+     内嵌 svg 是 1em），故取 §五「常规功能」档 16px。原值 --fs-lg（18px）不在 §五 的
+     12 / 16 / 20 / 24 四档内；"便于点击"由 EP link 按钮自带的内边距承担。 */
   .row-action {
-    font-size: var(--fs-lg);
+    font-size: var(--fs-md);
   }
 
   /* 表格单元格里的方形缩略图（影片海报、视频封面） */
@@ -61,11 +67,6 @@
     width: 350px;
   }
 
-  /* 与下方内容拉开距离的区块标题 */
-  .section-title--spaced {
-    margin-bottom: var(--space-12);
-  }
-
   /* 个人资料 / 修改密码页：居中卡片 */
   .profile-wrapper {
     display: flex;
@@ -94,6 +95,14 @@
     margin-bottom: var(--space-4);
   }
 
+  /* 单元格单行截断基类（宽度档见下）。此前在 manage/Cinema.vue、manage/Film.vue、
+     back/Film.vue 三处各写一份逐字相同的副本，此处收敛为一处。 */
+  .line {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
   /* 表格单元格的文字截断宽度（按内容角色分档，避免写死 px） */
   .line--code {
     width: 50px;
@@ -105,5 +114,141 @@
 
   .line--employee {
     width: 100px;
+  }
+
+  /* 页面根堆叠。模块间距的唯一出处（§6.2 管理端模块间距 16 / 24px）——
+     此前靠每页各写一次 `margin-bottom: 8px` / `.mb-2` 工具类。 */
+  .crud-page {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-16);
+  }
+
+  /* 标题带：页面级 .page-head 与页内区块级 .section-head 共用同一套几何 ——
+     下边缘一条淡分隔线压一段品牌短线，与前台 .section-head 是同一套装饰语言，
+     两端读起来是一家。两者只差标题的字号与颜色，故几何合成一条选择器，
+     免得同一组声明在本文件里写两遍。
+     短线是装饰元素（不承载文字），用 --color-brand（后台即 #165DFF，仅需 ≥3:1）。 */
+  .page-head,
+  .section-head {
+    position: relative;
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-12);
+    padding-bottom: var(--space-8);
+    border-bottom: 1px solid var(--el-border-color-lighter);
+  }
+
+  .page-head::after,
+  .section-head::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    bottom: -1px;
+    width: var(--space-40);
+    height: 2px;
+    background-color: var(--color-brand);
+  }
+
+  /* 标题含中文，字重只能用 400 / 700（§4.4）。页面级取 §4.2 的「页面主标题」档，
+     用中性色 —— 品牌感已由短线承载，管理端密度下标题保持克制。 */
+  .page-head__title {
+    margin: 0;
+    font-size: var(--fs-2xl);
+    font-weight: var(--fw-bold);
+    color: var(--el-text-color-primary);
+  }
+
+  .page-head__action {
+    margin-left: auto;
+  }
+
+  /* 页内区块标题（大盘的两个区块）取 §4.2 的「区块大标题」档，与前台同名类同色。
+     这里没有「全部 ›」消费者，故不带 __more 档（原则七：只保留有消费者的刻度）。 */
+  .section-head__title {
+    margin: 0;
+    font-size: var(--fs-xl);
+    font-weight: var(--fw-bold);
+    color: var(--el-color-primary);
+  }
+
+  /* 列表页工具条：筛选区与操作区合并成一张卡（此前是两张）。
+     筛选区用 gap 排布，故把 .search-input 自带的 margin-right 归零，避免间距翻倍。 */
+  .list-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-12);
+    padding: var(--space-12) var(--space-16);
+  }
+
+  .list-toolbar__filters {
+    display: flex;
+    flex: 1;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-12);
+    min-width: 0;
+  }
+
+  .list-toolbar__filters .search-input {
+    margin-right: 0;
+  }
+
+  .list-toolbar__actions {
+    display: flex;
+    align-items: center;
+    gap: var(--space-8);
+    margin-left: auto;
+  }
+
+  /* 「已选 N 项」随选中数出现，用 aria-live 把变化播报给读屏。
+     文字用 --el-text-color-regular（6.11:1）而非 secondary —— 13px 属正文尺寸，
+     §3.4 明令 secondary（3.08:1）只可用于 ≥18px 或纯装饰。 */
+  .selection-count {
+    font-size: var(--fs-sm);
+    color: var(--el-text-color-regular);
+    white-space: nowrap;
+  }
+
+  /* 表格容器：去掉 .card 的内边距让表格贴边，由 4px 圆角裁切边角。
+     注意不要把 overflow: hidden 加在 EP 的 .el-table__body-wrapper 上 —— 那是它的
+     横向滚动容器，裁掉就等于禁掉宽表（购票订单 13 列）的横向滚动。 */
+  .table-card {
+    padding: 0;
+    overflow: hidden;
+  }
+
+  /* 卡内分页条：与表格之间一条分隔线 */
+  .table-foot {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    padding: var(--space-12) var(--space-16);
+    border-top: 1px solid var(--el-border-color-lighter);
+  }
+
+  /* 表格空态 / 失败态占位（§11.2：两者文案不同、必须区分）。
+     挂 el-table 的 #empty 槽 —— EP 的默认空文案分不出「库里确实没有」与「请求失败」。 */
+  .empty-hint {
+    padding: var(--space-40) 0;
+    font-size: var(--fs-base);
+    color: var(--el-text-color-regular);
+    text-align: center;
+  }
+
+  /* 一格放多个操作按钮：一律从同一左边缘起排。
+     EP 的按钮间距是 `.el-button + .el-button { margin-left: 12px }`，列宽不够折行时
+     第二个按钮会被这 12px 右推、两行左右错开（BUG-049）。flex + gap 让间距与
+     「是否折行」解耦。 */
+  .row-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-8);
+
+    .el-button + .el-button {
+      margin-left: 0;
+    }
   }
 }

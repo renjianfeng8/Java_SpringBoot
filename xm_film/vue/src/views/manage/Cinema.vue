@@ -1,19 +1,28 @@
 <template>
-  <div>
-    <div class="card page-card">
-      <el-input v-model="searchForm.name" placeholder="请输入影院名称查询" class="search-input" :prefix-icon="Search"/>
-      <el-button type="primary" @click="onSearch">查 询</el-button>
-      <el-button type="warning" @click="onReset">重 置</el-button>
+  <div class="crud-page">
+    <div class="page-head">
+      <h2 class="page-head__title">影院信息</h2>
+      <div class="page-head__action">
+        <el-button type="primary" :icon="Plus" @click="openAdd">新 增</el-button>
+      </div>
     </div>
 
-    <div class="card page-card">
-      <el-button type="info" @click="openAdd">新 增</el-button>
-      <el-button type="danger" @click="handleDelBatch">批量删除</el-button>
+    <div class="card list-toolbar">
+      <div class="list-toolbar__filters">
+        <el-input v-model="searchForm.name" placeholder="请输入影院名称查询" aria-label="影院名称"
+                  class="search-input" :prefix-icon="Search" @keyup.enter="onSearch" />
+        <el-button type="primary" @click="onSearch">查 询</el-button>
+        <el-button type="warning" @click="onReset">重 置</el-button>
+      </div>
+      <div class="list-toolbar__actions">
+        <span v-if="selectedIds.length" class="selection-count" aria-live="polite">已选 {{ selectedIds.length }} 项</span>
+        <el-button type="danger" :disabled="!selectedIds.length" @click="confirmDelBatch">批量删除</el-button>
+      </div>
     </div>
 
-    <div class="card page-card">
-      <el-table v-loading="loading" stripe :data="dataList" @selection-change="onSelectionChange">
-        <el-table-column type="selection" width="50"/>
+    <div class="card table-card">
+      <el-table v-loading="loading" stripe size="small" :data="dataList" @selection-change="onSelectionChange">
+        <el-table-column type="selection" width="55"/>
         <el-table-column type="expand">
           <template #default="props">
             <el-descriptions title="影院信息" :column="4" border>
@@ -65,34 +74,39 @@
             <el-tag>{{scope.row.role}}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="操作">
+        <el-table-column label="操作" width="160">
           <template #default="scope">
-            <el-button v-if="scope.row.status !== CINEMA_STATUS.APPROVED" link type="success"
-                       @click="approve(scope.row)">审核通过</el-button>
-            <el-button class="row-action" link :icon="Edit" aria-label="编辑" @click="openEdit(scope.row)" type="primary"></el-button>
-            <el-button class="row-action" link :icon="Delete" @click="() => handleDel(scope.row.id)" type="danger"></el-button>
+            <div class="row-actions">
+              <el-button v-if="scope.row.status !== CINEMA_STATUS.APPROVED" link type="success"
+                         @click="approve(scope.row)">审核通过</el-button>
+              <el-button class="row-action" link :icon="Edit" aria-label="编辑" @click="openEdit(scope.row)" type="primary"></el-button>
+              <el-button class="row-action" link :icon="Delete" aria-label="删除" @click="confirmDel(scope.row.id)" type="danger"></el-button>
+            </div>
           </template>
         </el-table-column>
+        <template #empty>
+          <div class="empty-hint">{{ error ? '数据加载失败，请稍后重试' : '暂无数据' }}</div>
+        </template>
       </el-table>
-    </div>
-
-    <div class="card page-card">
-      <el-pagination
-          @size-change="onSizeChange"
-          @current-change="onPageChange"
-          v-model:current-page="pageNum"
-          v-model:page-size="pageSize"
-          :page-sizes="[5, 10, 15, 20]"
-          background
-          layout="total, sizes, prev, pager, next, jumper"
-          :total="total"
-      />
+      <div class="table-foot">
+        <el-pagination
+            @size-change="onSizeChange"
+            @current-change="onPageChange"
+            v-model:current-page="pageNum"
+            v-model:page-size="pageSize"
+            :page-sizes="[5, 10, 15, 20]"
+            background
+            layout="total, sizes, prev, pager, next, jumper"
+            :total="total"
+        />
+      </div>
     </div>
 
     <el-dialog v-model="dialogVisible" title="影院信息" width="500" destroy-on-close>
-      <el-form ref="formRef" :rules="rules" :model="form" class="dialog-form" label-width="85px">
+      <el-form ref="formRef" :rules="rules" :model="form" class="dialog-form" label-width="85px"
+               status-icon @submit.prevent>
         <el-form-item label="账号" prop="username">
-          <el-input v-model="form.username" autocomplete="off" placeholder="请输入账号"/>
+          <el-input v-model="form.username" autocomplete="off" placeholder="请输入账号" @keyup.enter="submit"/>
         </el-form-item>
         <el-form-item label="头像" prop="avatar">
           <el-upload :action="FILE_UPLOAD_URL" :on-success="handleFileUpload"
@@ -101,22 +115,22 @@
           </el-upload>
         </el-form-item>
         <el-form-item label="影院名称" prop="name">
-          <el-input v-model="form.name" autocomplete="off" placeholder="请输入影院名称"/>
+          <el-input v-model="form.name" autocomplete="off" placeholder="请输入影院名称" @keyup.enter="submit"/>
         </el-form-item>
         <el-form-item label="电话" prop="phone">
-          <el-input v-model="form.phone" autocomplete="off" placeholder="请输入电话"/>
+          <el-input v-model="form.phone" autocomplete="off" placeholder="请输入电话" @keyup.enter="submit"/>
         </el-form-item>
         <el-form-item label="邮箱" prop="email">
-          <el-input v-model="form.email" autocomplete="off" placeholder="请输入邮箱"/>
+          <el-input v-model="form.email" autocomplete="off" placeholder="请输入邮箱" @keyup.enter="submit"/>
         </el-form-item>
         <el-form-item label="地址" prop="address">
           <el-input type="textarea" v-model="form.address" autocomplete="off" placeholder="请输入影院地址"/>
         </el-form-item>
         <el-form-item label="负责人" prop="leader">
-          <el-input v-model="form.leader" autocomplete="off" placeholder="请输入负责人姓名"/>
+          <el-input v-model="form.leader" autocomplete="off" placeholder="请输入负责人姓名" @keyup.enter="submit"/>
         </el-form-item>
         <el-form-item label="身份证号" prop="code">
-          <el-input v-model="form.code" autocomplete="off" placeholder="请输入负责人身份证号"/>
+          <el-input v-model="form.code" autocomplete="off" placeholder="请输入负责人身份证号" @keyup.enter="submit"/>
         </el-form-item>
         <el-form-item label="营业执照" prop="certificate">
           <el-upload :action="FILE_UPLOAD_URL" :on-success="handleCertificateUpload" list-type="picture">
@@ -137,12 +151,11 @@
         </div>
       </template>
     </el-dialog>
-
   </div>
 </template>
 
 <script setup>
-import { Delete, Edit, Search } from '@element-plus/icons-vue'
+import { Delete, Edit, Plus, Search } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useCrud } from '@/composables/useCrud'
 import { useFormDialog } from '@/composables/useFormDialog'
@@ -153,8 +166,8 @@ import {
 } from '@/constants'
 
 const crud = useCrud(API_PATHS.CINEMAS)
-const { dataList, total, pageNum, pageSize, searchForm, selectedIds,
-        loading, del, delBatch, onSearch, onReset, onPageChange, onSizeChange, onSelectionChange } = crud
+const { dataList, total, pageNum, pageSize, searchForm, selectedIds, loading, error,
+        confirmDel, confirmDelBatch, onSearch, onReset, onPageChange, onSizeChange, onSelectionChange } = crud
 const { dialogVisible, formRef, form, rules, openAdd, openEdit, submit, close } = useFormDialog(crud, {
   defaultForm: { username: '', name: '', phone: '', email: '', address: '', leader: '', code: '', certificate: '', avatar: '', status: CINEMA_STATUS.UNAUDITED },
   rules: {
@@ -169,17 +182,6 @@ const { dialogVisible, formRef, form, rules, openAdd, openEdit, submit, close } 
 })
 
 crud.load()
-
-function handleDel(id) {
-  ElMessageBox.confirm('删除数据后无法恢复,您确认删除吗?', '删除确认', { type: 'warning' })
-    .then(() => del(id)).catch()
-}
-
-function handleDelBatch() {
-  if (!selectedIds.value.length) { ElMessage.warning('请选择数据'); return }
-  ElMessageBox.confirm(`确定删除选中的 ${selectedIds.value.length} 条数据吗？`, '删除确认', { type: 'warning' })
-    .then(() => delBatch(selectedIds.value)).catch()
-}
 
 function handleFileUpload(res) {
   if (res.code === '200') { form.avatar = res.data; ElMessage.success('头像上传成功') }
@@ -210,11 +212,3 @@ function approve(row) {
     .catch(() => {})
 }
 </script>
-
-<style scoped>
-.line {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-</style>

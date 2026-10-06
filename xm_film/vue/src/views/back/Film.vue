@@ -158,13 +158,3 @@ const reset = () => {
 load()
 </script>
 
-<style scoped>
-.line {
-  white-space: nowrap;        /* 禁止文本换行，强制单行显示 */
-  overflow: hidden;           /* 超出容器的内容隐藏 */
-  text-overflow: ellipsis;    /* 超出部分显示省略号 */
-}
-
-</style>
-
-

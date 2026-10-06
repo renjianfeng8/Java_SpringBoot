@@ -1,20 +1,27 @@
 <template>
-  <div>
-    <div class="card page-card">
-      <el-input v-model="searchForm.orders" placeholder="请输入订单号" class="search-input" :prefix-icon="Search"/>
-      <el-select v-model="searchForm.status" placeholder="请选择订单状态" class="search-input">
-        <el-option v-for="status in ORDER_STATUS_OPTIONS" :key="status" :label="status" :value="status" />
-      </el-select>
-      <el-button type="primary" @click="onSearch">查 询</el-button>
-      <el-button type="warning" @click="onReset">重 置</el-button>
+  <div class="crud-page">
+    <div class="page-head">
+      <h2 class="page-head__title">购票订单</h2>
     </div>
 
-    <div class="card page-card">
-      <el-button type="danger" @click="handleDelBatch">批量删除</el-button>
+    <div class="card list-toolbar">
+      <div class="list-toolbar__filters">
+        <el-input v-model="searchForm.orders" placeholder="请输入订单号" aria-label="订单号"
+                  class="search-input" :prefix-icon="Search" @keyup.enter="onSearch"/>
+        <el-select v-model="searchForm.status" placeholder="请选择订单状态" aria-label="订单状态" class="field-md">
+          <el-option v-for="status in ORDER_STATUS_OPTIONS" :key="status" :label="status" :value="status" />
+        </el-select>
+        <el-button type="primary" @click="onSearch">查 询</el-button>
+        <el-button type="warning" @click="onReset">重 置</el-button>
+      </div>
+      <div class="list-toolbar__actions">
+        <span v-if="selectedIds.length" class="selection-count" aria-live="polite">已选 {{ selectedIds.length }} 项</span>
+        <el-button type="danger" :disabled="!selectedIds.length" @click="confirmDelBatch">批量删除</el-button>
+      </div>
     </div>
 
-    <div class="card page-card">
-      <el-table v-loading="loading" stripe :data="dataList" @selection-change="onSelectionChange">
+    <div class="card table-card">
+      <el-table v-loading="loading" stripe size="small" :data="dataList" @selection-change="onSelectionChange">
         <!-- 不可删除的订单（待支付/待取票/已取票）连勾选都不允许，批量删除自然不会带上它们 -->
         <el-table-column type="selection" width="55" :selectable="(row) => isOrderDeletable(row.status)"/>
         <el-table-column type="expand">
@@ -80,44 +87,45 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="操作">
+        <el-table-column label="操作" width="80">
           <template #default="scope">
             <!-- 管理员刻意没有取票入口：取票是影院柜台的物理交付动作，只有放映该场次的影院能
                  如实断言，故后端 pickupOrder 只放行 CINEMA。服务端才是权限落点，这里删按钮
                  不是"以藏代守"；用户侧的取票走前台取票大厅凭码核销。 -->
             <!-- 只有终态废单可删除，与后端删除守卫同构 -->
             <el-button v-if="isOrderDeletable(scope.row.status)" class="row-action" link :icon="Delete"
-                       @click="() => handleDel(scope.row.id)" type="danger"></el-button>
+                       aria-label="删除" @click="confirmDel(scope.row.id)" type="danger"></el-button>
           </template>
         </el-table-column>
+        <template #empty>
+          <div class="empty-hint">{{ error ? '数据加载失败，请稍后重试' : '暂无数据' }}</div>
+        </template>
       </el-table>
-    </div>
-
-    <div class="card page-card">
-      <el-pagination
-          @size-change="onSizeChange"
-          @current-change="onPageChange"
-          v-model:current-page="pageNum"
-          v-model:page-size="pageSize"
-          :page-sizes="[5, 10, 15, 20]"
-          background
-          layout="total, sizes, prev, pager, next, jumper"
-          :total="total"
-      />
+      <div class="table-foot">
+        <el-pagination
+            @size-change="onSizeChange"
+            @current-change="onPageChange"
+            v-model:current-page="pageNum"
+            v-model:page-size="pageSize"
+            :page-sizes="[5, 10, 15, 20]"
+            background
+            layout="total, sizes, prev, pager, next, jumper"
+            :total="total"
+        />
+      </div>
     </div>
   </div>
 </template>
 
 <script setup>
 import { Delete, Search } from '@element-plus/icons-vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
 import { useCrud } from '@/composables/useCrud'
 import { API_PATHS, ORDER_STATUS_OPTIONS, getOrderStatusType as getStatusType, isOrderDeletable } from '@/constants'
 import request from '@/utils/request'
 
 const crud = useCrud(API_PATHS.ORDERS)
-const { dataList, total, pageNum, pageSize, searchForm, selectedIds,
-        loading, del, delBatch, onSearch, onReset, onPageChange, onSizeChange, onSelectionChange } = crud
+const { dataList, total, pageNum, pageSize, searchForm, selectedIds, loading, error,
+        confirmDel, confirmDelBatch, onSearch, onReset, onPageChange, onSizeChange, onSelectionChange } = crud
 
 const roomData = []
 
@@ -132,20 +140,6 @@ function getRoomName(roomId) {
   return roomData.find(r => r.id === roomId)?.name || '暂未关联影厅'
 }
 
-function handleDel(id) {
-  ElMessageBox.confirm('删除数据后无法恢复,您确认删除吗?', '删除确认', { type: 'warning' })
-    .then(() => del(id)).catch()
-}
-
-function handleDelBatch() {
-  if (!selectedIds.value.length) { ElMessage.warning('请选择数据'); return }
-  ElMessageBox.confirm(`确定删除选中的 ${selectedIds.value.length} 条数据吗？`, '删除确认', { type: 'warning' })
-    .then(() => delBatch(selectedIds.value)).catch()
-}
-
 crud.load()
 loadRoom()
 </script>
-
-<style scoped>
-</style>
