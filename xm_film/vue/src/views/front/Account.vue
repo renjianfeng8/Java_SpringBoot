@@ -21,7 +21,7 @@
     </el-card>
 
     <el-card shadow="never" class="section">
-      <template #header><span class="section-title">账户充值</span></template>
+      <template #header><h2 class="section-title">账户充值</h2></template>
 
       <div class="tier-row">
         <el-button v-for="tier in TIERS"
@@ -34,7 +34,9 @@
 
       <div class="amount-row">
         <span class="amount-label">充值金额</span>
+        <!-- 旁边的「充值金额」是普通 span，与控件没有 for/aria-labelledby 关联，故补 aria-label -->
         <el-input-number v-model="amount"
+                         aria-label="充值金额"
                          :min="0.01"
                          :max="50000"
                          :precision="2"
@@ -47,7 +49,7 @@
     </el-card>
 
     <el-card shadow="never" class="section">
-      <template #header><span class="section-title">我的充值单据</span></template>
+      <template #header><h2 class="section-title">我的充值单据</h2></template>
 
       <el-table v-loading="loadingRecharges" stripe :data="recharges">
         <el-table-column label="充值单号" prop="rechargeNo" show-overflow-tooltip />
@@ -76,7 +78,7 @@
     </el-card>
 
     <el-card shadow="never" class="section">
-      <template #header><span class="section-title">资金流水</span></template>
+      <template #header><h2 class="section-title">资金流水</h2></template>
 
       <el-table v-loading="loadingFlows" stripe :data="flows">
         <el-table-column label="发生时间" prop="createTime" show-overflow-tooltip />
@@ -251,6 +253,9 @@ onMounted(loadAll);
 }
 
 .section-title {
+  /* 板块标题现在是 h2，要显式清掉浏览器默认外边距 */
+  margin: 0;
+  font-size: var(--fs-md);
   font-weight: var(--fw-bold);
 }
 

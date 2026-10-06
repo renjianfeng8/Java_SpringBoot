@@ -25,6 +25,19 @@ body {
   box-shadow: var(--el-box-shadow-lighter);
 }
 
+/* 加载转圈的共享关键帧（影院详情的排片占位、购票页的座位图都用到）。
+ * 放在全局而非某个组件的 scoped 块里：scoped 样式会把 @keyframes 名改写为
+ * 带组件哈希的名字，只能被同一个块引用，另一个组件引用它就找不到定义。 */
+@keyframes rotating {
+  from {
+    transform: rotate(0);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 /* §10.2 尊重系统「减少动态效果」设置 */
 @media (prefers-reduced-motion: reduce) {
   *,

@@ -1,7 +1,7 @@
 <template>
   <div class="auth-container">
     <div class="auth-card">
-      <div class="auth-title">欢迎注册账号</div>
+      <h1 class="auth-title">欢迎注册账号</h1>
       <el-form
         ref="formRef"
         :rules="data.rules"
@@ -51,7 +51,7 @@
           >注 册</el-button>
         </div>
         <div class="auth-hint">
-          已有账号? 请<a href="/login" class="auth-hint__link">登 录</a>
+          已有账号? 请<router-link to="/login" class="auth-hint__link">登 录</router-link>
         </div>
       </el-form>
     </div>
@@ -60,10 +60,13 @@
 
 <script setup>
 import {reactive, ref} from "vue";
+import { useRouter } from 'vue-router';
 import { User, Lock } from '@element-plus/icons-vue';
 import request from "@/utils/request.js";
 import {ElMessage} from "element-plus";
 import { AUTH_API } from "@/constants";
+
+const router = useRouter();
 
 const validatePass = (value, callback) => {
   if (!value) {
@@ -93,8 +96,10 @@ const register = () => {
       request.post(AUTH_API.REGISTER, data.form).then((res) => {
         if (res.code === '200') {
           ElMessage.success('注册成功');
+          // 走 router.push 而非 location.href：注册后没有需要重置的运行态，
+          // 整页重载只是白白把应用再下载一遍
           setTimeout(() => {
-            location.href = '/login';
+            router.push('/login');
           }, 1000);
         } else {
           ElMessage.error(res.msg || '注册失败，请检查信息');

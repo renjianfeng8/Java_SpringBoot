@@ -1,9 +1,7 @@
 ﻿<template>
   <div class="film-detail">
-    <!-- 1. 加载状态提示 -->
-    <div v-if="loading" class="page-hint page-hint--loading">
-      正在加载电影详情...
-    </div>
+    <!-- 1. 加载骨架：与头图同形，避免数据到位时页面跳高 -->
+    <DetailSkeleton v-if="loading" />
 
     <!-- 2. 错误提示 -->
     <div v-else-if="errorMsg" class="page-hint page-hint--error">
@@ -15,27 +13,31 @@
     <div v-else>
       <!-- 3.1 电影头部信息区域 -->
       <div class="film-hero">
+        <!-- 模糊剧照铺底给纯色头图做出层次。纯装饰，故 alt 留空并 aria-hidden -->
+        <img v-if="film.img" :src="film.img" alt="" aria-hidden="true" class="film-hero__backdrop">
+        <!-- 叠影层：压在铺底之上、内容之下。三者都是定位元素且 z-index 为 auto，
+             因此按 DOM 顺序绘制，不需要为了层次自定义 z-index（§7.3） -->
+        <div class="film-hero__scrim" aria-hidden="true"></div>
+
         <div class="film-hero__inner">
-          <!-- 电影海报 -->
-          <div>
-            <img :src="film.img" alt="电影海报" class="film-hero__img">
-          </div>
+          <img :src="film.img" :alt="`《${film.title}》海报`" class="film-hero__img">
 
           <!-- 电影基本信息 -->
           <div class="film-hero__info">
-            <div class="film-hero__title">{{ film.title || '未知电影' }}</div>
-            <div class="film-hero__meta">{{ film.english || '无英文标题' }}</div>
-            <div class="film-hero__meta">{{ film.types.join(' / ') || '未知类型' }}</div>
-            <div class="film-hero__meta">{{ film.area || '未知地区' }} / {{ film.time || '未知时长' }}</div>
-            <div class="film-hero__meta">{{ film.language || '未知语言' }} / {{ film.resolution || '未知格式' }}</div>
-            <div class="film-hero__meta">{{ film.start || '未知上映时间' }} 开始上映</div>
-            <!-- 新增：显示单个演员的基础信息（从film.actorInfo获取） -->
-            <div class="film-hero__meta" v-if="film.actorInfo">
+            <h1 class="film-hero__title">{{ film.title || '未知电影' }}</h1>
+            <p class="film-hero__meta">{{ film.english || '无英文标题' }}</p>
+            <p class="film-hero__meta">{{ film.types.join(' / ') || '未知类型' }}</p>
+            <p class="film-hero__meta">{{ film.area || '未知地区' }} / {{ film.time || '未知时长' }}</p>
+            <p class="film-hero__meta">{{ film.language || '未知语言' }} / {{ film.resolution || '未知格式' }}</p>
+            <p class="film-hero__meta">{{ film.start || '未知上映时间' }} 开始上映</p>
+            <p class="film-hero__meta" v-if="film.actorInfo">
               主演：{{ film.actorInfo.split(':')[1] || '未知演员' }}
-            </div>
+            </p>
 
             <el-button
                 class="film-hero__action"
+                type="primary"
+                size="large"
                 :disabled="film.status !== '已上映'"
                 @click="goToFilmCinema(film.id)"
             >
@@ -43,14 +45,14 @@
             </el-button>
           </div>
 
-          <!-- 评分和票房 -->
+          <!-- 评分和票房：前台数据大字，§4.2 指定 --fs-5xl 给「评分 / 票房」 -->
           <div class="film-hero__stats">
-            <div>
-              <div>影片口碑</div>
+            <div class="film-hero__stat">
+              <div class="film-hero__stat-label">影片口碑</div>
               <div class="film-hero__stat-value">{{ formatScore(film.score) }}</div>
             </div>
-            <div class="film-hero__stat-spacer">
-              <div>累计票房</div>
+            <div class="film-hero__stat">
+              <div class="film-hero__stat-label">累计票房</div>
               <div class="film-hero__stat-value">{{ formatBoxOffice(film.boxOffice) }}</div>
             </div>
           </div>
@@ -439,14 +441,10 @@ onMounted(() => {
   margin: 0 auto;
 }
 
-/* 加载 / 错误提示 */
+/* 错误提示（加载态已改为骨架屏，见 front-pages.scss 的 .detail-skeleton） */
 .page-hint {
   text-align: center;
   color: var(--el-text-color-regular);
-}
-
-.page-hint--loading {
-  padding: var(--space-48);
 }
 
 .page-hint--error {
@@ -460,47 +458,77 @@ onMounted(() => {
 
 /* ---------- 3.1 电影头部（深色表面，规范 §3.5） ---------- */
 .film-hero {
+  position: relative;
+  overflow: hidden;
   background-color: var(--dark-bg-hero);
 }
 
+/* 模糊剧照铺底：把纯色块做出纵深。只做装饰，不承载文字 */
+.film-hero__backdrop {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: blur(24px);
+  opacity: 0.3;
+}
+
+/* 叠影：左侧压暗保证文字底色稳定，右侧透出剧照。
+   渐变只含令牌与 transparent 关键字，无硬编码色值（§3.7） */
+.film-hero__scrim {
+  position: absolute;
+  inset: 0;
+  background-image: linear-gradient(
+      90deg,
+      var(--dark-bg-hero) 0%,
+      var(--dark-bg-hero) 30%,
+      transparent 100%
+  );
+}
+
 .film-hero__inner {
+  position: relative;
   display: flex;
   width: 60%;
   max-width: 1200px;
   margin: 0 auto;
+  padding: var(--space-32) 0;
 }
 
 .film-hero__img {
-  width: 250px;
-  height: 300px;
+  flex-shrink: 0;
+  width: 220px;
+  aspect-ratio: 2 / 3;
+  border-radius: var(--el-border-radius-base);
   object-fit: cover;
+  background-color: var(--el-fill-color-light);
 }
 
 .film-hero__info {
   flex: 2;
-  margin-top: var(--space-16);
-  margin-left: var(--space-20);
+  min-width: 0;
+  margin-left: var(--space-24);
   color: var(--dark-text);
 }
 
 .film-hero__title {
-  font-size: var(--fs-2xl);
+  margin: 0 0 var(--space-12);
+  font-size: var(--fs-3xl);
   font-weight: var(--fw-bold);
 }
 
+/* 次级说明用 --dark-text-secondary（10.84:1）与标题的白拉开层级，
+   而不是靠降低字号对比度 */
 .film-hero__meta {
   margin: var(--space-4) 0;
+  color: var(--dark-text-secondary);
 }
 
-/* 深底上的 CTA：实底主色 + 白字（白字压 #BF352D 为 5.58:1） */
+/* CTA 走 EP 的 type="primary" + size="large"：hover / active / disabled 五态由组件库给出（§9.1） */
 .film-hero__action {
   width: 70%;
-  height: 45px;
   margin-top: var(--space-20);
-  border: none;
-  background-color: var(--el-color-primary);
-  color: var(--color-on-accent);
-  font-size: var(--fs-lg);
 }
 
 .film-hero__stats {
@@ -512,13 +540,19 @@ onMounted(() => {
   text-align: center;
 }
 
-.film-hero__stat-value {
-  margin: var(--space-12) 0;
-  font-size: var(--fs-3xl);
+.film-hero__stat + .film-hero__stat {
+  margin-top: var(--space-32);
 }
 
-.film-hero__stat-spacer {
-  margin-top: var(--space-32);
+.film-hero__stat-label {
+  font-size: var(--fs-sm);
+  color: var(--dark-text-secondary);
+}
+
+.film-hero__stat-value {
+  margin-top: var(--space-8);
+  font-size: var(--fs-5xl);
+  font-weight: var(--fw-bold);
 }
 
 /* ---------- 3.2 详细信息 ---------- */

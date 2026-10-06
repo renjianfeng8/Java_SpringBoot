@@ -2,17 +2,23 @@
   <div class="password-wrapper">
 
     <div class="card password-card">
-      <div class="password-title">修改密码</div>
+      <h1 class="password-title">修改密码</h1>
 
-      <el-form ref="formRef" :rules="data.rules" :model="data.form" class="password-form" label-width="100px">
+      <!-- status-icon 打开「错误反馈三件套」的图标那一件；@submit.prevent 兜住原生提交，
+           回车由输入框上的 @keyup.enter 触发（只挂一处，避免一次回车发两次请求，规范 §9.3） -->
+      <el-form ref="formRef" :rules="data.rules" :model="data.form" class="password-form" label-width="100px"
+               status-icon @submit.prevent>
         <el-form-item label="原密码" prop="password">
-          <el-input show-password v-model="data.form.password" autocomplete="off" placeholder="请输入原密码"/>
+          <el-input show-password v-model="data.form.password" autocomplete="off" placeholder="请输入原密码"
+                    @keyup.enter="updatePassword"/>
         </el-form-item>
         <el-form-item label="新密码" prop="newPassword">
-          <el-input show-password v-model="data.form.newPassword" autocomplete="off" placeholder="请输入新密码"/>
+          <el-input show-password v-model="data.form.newPassword" autocomplete="off" placeholder="请输入新密码"
+                    @keyup.enter="updatePassword"/>
         </el-form-item>
         <el-form-item label="确认新密码" prop="confirmPassword" required>
-          <el-input show-password v-model="data.form.confirmPassword" autocomplete="off" placeholder="请再次确认新密码"/>
+          <el-input show-password v-model="data.form.confirmPassword" autocomplete="off" placeholder="请再次确认新密码"
+                    @keyup.enter="updatePassword"/>
         </el-form-item>
         <div class="password-actions">
           <el-button @click="updatePassword" type="primary" class="password-submit">立即修改</el-button>
@@ -26,11 +32,15 @@
 <script setup>
 
 import {reactive, ref} from "vue";
+import { useRouter } from "vue-router";
 import request from "@/utils/request.js";
 import { ElMessage } from "element-plus";
 import { API_PATHS } from '@/constants';
-import { clearStoredUser, getStoredUser } from "@/utils/authStorage";
+import { getStoredUser } from "@/utils/authStorage";
+import { useAuth } from "@/composables/useAuth";
 
+const router = useRouter();
+const { logout: authLogout } = useAuth();
 
 const formRef = ref()
 
@@ -68,10 +78,13 @@ const updatePassword = () => {
       request.put(`${API_PATHS.AUTH}/password`,data.form).then(res => {
         if (res.code === '200') {
           ElMessage.success('修改成功')
-          clearStoredUser()
+          // 必须走 useAuth 的 logout 而不是只清 storage：登录态的唯一来源是 useAuth 里
+          // 那个模块级 ref，只清 storage 的话内存里仍留着 token，界面会继续当作已登录
+          // （那正是这里原先要整页重载的原因）。清干净后就是一次普通的站内跳转。
+          authLogout()
           setTimeout(() => {
-            location.href = '/login'
-          },500)
+            router.push('/login')
+          }, 500)
         } else {
           ElMessage.error(res.msg)
         }
@@ -101,8 +114,9 @@ const updatePassword = () => {
 }
 
 .password-title {
-  margin: var(--space-4);
-  font-size: var(--fs-md);
+  /* 标题现在是 h1，要显式清掉浏览器默认外边距 */
+  margin: 0 0 var(--space-4);
+  font-size: var(--fs-lg);
   font-weight: var(--fw-bold);
 }
 

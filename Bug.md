@@ -110,6 +110,15 @@
 73. shell 渲染的入口必须匹配该路由的 `meta.roles`: 能通向某角色的入口就要保证该角色真能进；后端确实不服务的角色，做法是藏入口而不是放开权限（`Front.vue` 的 `showUserEntries` 只对 `!isAdmin && !isCinema` 显示 USER 专属入口）。反向的例外也要显式：免登录的自助通路（取票大厅）刻意不挂在 `showUserEntries` 之下，加上 `v-if` 就等于把唯一通路藏起来
 74. 改密只认 JWT 里的角色，不认请求体: 后端改密信任 JWT 派生的请求角色，忽略 body 里的同名 role 字段，防止 `@RequestBody` 篡改越权
 75. "是否已支付/占座"的状态集合有多个消费点，改动必须同源: 票房聚合（`FilmMapper.xml` 的 `filmRevenueJoin`，只统计 `待取票/已取票`）、占座判定（`OrderedMapper.countSeatInUse` / `selectActiveByRecordId`）与「今日票房」（`selectTodayPaidRevenue`，按 `pay_time` 取日）共享同一状态集合。新增或改变任一状态时这几处必须同步，否则某个口径会漏算或把座位永久锁死
+76. 登录态只能经 `useAuth` 变更，不要直接动 storage: `useAuth` 用模块级 `ref` 持有当前用户（`globalUser`），storage 只是它的持久化副本。只清 storage 而不同步那个 `ref`，内存里仍留着 token，`isLoggedIn` 继续为真、外壳继续渲染成已登录 —— 幽灵登录态。凡是"模块级单例状态 + 持久化副本"的组合都有这个形状：改状态走单例的 API（`login` / `logout` / `setUser`），不要绕过去写副本（见 BUG-055）
+77. `window.location.href = <来自 URL 的路径>` 是开放重定向: `'//evil.com'` 也以 `/` 开头，`startsWith('/')` 判不出来，赋值后浏览器按协议相对 URL 跳到外站。站内跳转一律走 `router.push` —— 它只解析站内路径，顺带免掉整页重载。确实要拼绝对地址时，显式排掉 `//` 前缀（见 BUG-055）
+78. 组件 `scoped` 里的 `@keyframes` 会被改名，跨组件引用不到: `@vitejs/plugin-vue` 把 scoped 块里的 `@keyframes rotating` 改写成 `rotating-<组件哈希>`，只有同一个块里的 `animation` 引用能命中。另一个组件写 `animation: rotating ...` 引用它，编译与构建都不报错，动画静默失效。共享关键帧放 `global.css`；引用它的 scoped 块因为块内没有同名定义，名字不会被改写，正好命中全局那一条（见 BUG-055）
+79. 共享层与组件 `scoped` 块不要用同一个类名装不同样式: `.front-content .empty-hint`（0-2-0）与 `.empty-hint[data-v-xxxx]`（0-2-0）特异性完全相同，胜负交给产物里的先后顺序 —— 换个构建顺序就换一套观感，且不报错。名字相同就该样式相同；形状不同就换名（带标题与说明的虚线面板叫 `.empty-panel`，单行占位才叫 `.empty-hint`）（见 BUG-055）
+80. 压淡文字用令牌，不用 `opacity`: `opacity: .7` / `.8` 是对比度的隐性扣减，既不可核对也不达 §10.1。深底次级文字用 `--dark-text-secondary`（10.84:1），浅底次级文字用 `--el-text-color-regular`（6.11:1）。`opacity` 只用于纯装饰块（见 BUG-055）
+81. 页面底色与最小高度归外壳，内容页不要再写 `min-height: 100vh`: 内容页挂在外壳内容区之内，自己再声明一次 `100vh` 会把页脚顶到视口之外（外壳头部的高度是凭空多出来的）。前台底色 `#ffffff` 由 `Front.vue` 的外壳铺（规范 §6.2），`body` 默认取的是 `--el-bg-color-page` 灰，所以外壳不铺就整个前台是灰的（见 BUG-055）
+82. 导航高亮由路由归属派生，不要手工同步: 用一个 `activePath` 字符串逐段 `if-else` 的写法，漏掉一段就点错项 —— `/front/pickup` 曾落到兜底分支点亮「首页」，而它自己的高亮条件（`activePath === '/front/pickup'`）永远不成立。改成"每个导航段拥有哪些路由前缀"的映射，从 `route.path` 现算；不属于任何段的页面（只在头像下拉里的个人中心 / 修改密码）保持无高亮，而不是把「首页」点亮
+83. `window.location.href` 换成 `router.push` 会改变组件复用语义，同页换 query 不再重新挂载: 改之前是整页重载，目标组件必然重建；改之后同一路由记录只换 query 时组件被复用，只写在 `onMounted` 里的取数**不会**再触发。搜索页因此会一直显示上一次的关键词与结果（`Front.vue` 的顶栏搜索正是同路由换 `?title=`）。凡"同路径不同参数"的取数入口都要 `watch` 参数本身，不能只靠 `onMounted` —— 把"整页重载"改成"站内跳转"时，必须回头检查目标页是不是靠重载来刷新的（见 BUG-055）
+84. `opacity: 0` 的叠放层仍然接收点击、也仍然可聚焦: 轮播把多张 slide 都设成 `position: absolute; inset: 0; opacity: 0` 时，后置兄弟节点绘制在上层并照常命中测试 —— 点可见那张的按钮，实际命中的是最后一张透明层的链接，跳到错的条目；同时它们仍在 Tab 顺序与无障碍树里，配上 `aria-hidden` 就成了"可聚焦但不可见不可读"的焦点陷阱。用 `visibility: hidden` 一次解决两件事（既不接收指针事件、也不进 Tab 顺序），过渡写成 `opacity …, visibility …` 即可保留淡入淡出（见 BUG-055）
 
 ## 案例篇
 
@@ -860,3 +869,52 @@
 - 提交记录: 未提交
 - 状态: 已修复
 - 同族未修（记录备查）: 开发环境的 `file.access-prefix` 是绝对值（`fileBaseUrl = http://localhost:${server.port}`），所以在开发环境上传的文件会在库里存成绝对 URL；把这样一个开发库直接部署到生产，图片会指向 localhost。生产 profile 的 `FILE_ACCESS_PREFIX` 默认 `/files/`，故生产环境产生的数据不受影响。要不要让开发环境也返回相对路径，属另一件事。
+
+### BUG-055: 第二轮前台视觉重构 — 顺带查出的一批前端缺陷（导航高亮错项 / 开放重定向 / 动画静默失效 / 幽灵登录态）
+
+- 日期: 2026-10-06
+- Bug 描述: 本轮以「前台 15 页 + 三端外壳 + 认证两页」为范围做视觉重构（明亮猫眼方向）。重构过程中逐文件核对，除观感问题外还查出 6 个功能/安全缺陷与 3 类规范偏差，全部一并处置。逐条如下。
+- 缺陷与根因:
+
+  1. **导航高亮点错项**（`Front.vue`）。`updateActivePath` 用一串 `path.startsWith('/front/xxx')` 逐段赋值给 `activePath` 字符串，兜底分支是 `path.startsWith('/front')` → `'/home'`。`/front/pickup` 不匹配前面任何一段、落进兜底，于是「取票大厅」页把「首页」点亮；而导航里「取票大厅」项的高亮条件 `activePath === '/front/pickup'` 永远不会成立。根因是"手写同步一份路由→高亮映射"这种写法漏一段就静默出错，且没有任何检查能发现。改为数据驱动的 `NAV_ITEMS` + `NAV_SECTIONS`（每个导航段声明自己拥有哪些路由前缀），高亮从 `route.path` 现算，`activePath` / `updateActivePath` / 对应的 `watch` 一并删除。影片详情 / 选择影院 / 影评归「电影」，影院详情归「影院」；只在头像下拉里的个人中心与修改密码不属于任何段，保持无高亮。
+
+  2. **登录回跳是开放重定向**（`Login.vue`）。`const redirect = redirectParam.startsWith('/') ? redirectParam : getDefaultPath(role)` 之后 `window.location.href = redirect`。`'//evil.com'` 同样以 `/` 开头，通过 `startsWith('/')` 后按协议相对 URL 解析，直接跳到外站。改为 `router.push`（Vue Router 只解析站内路径）并显式排除 `//` 前缀；顺带免掉登录后的整页重载。`Register.vue` 的注册成功跳登录同样由 `location.href` 改为 `router.push`。
+
+  3. **转圈动画静默失效**（`CinemaDetail.vue`）。`.record-placeholder__icon { animation: rotating 2s linear infinite }` 引用的 `@keyframes rotating` 只在 `BuyTicket.vue` 的 `<style scoped>` 里定义过。scoped 块的关键帧会被改写成 `rotating-<组件哈希>`，CinemaDetail 引用不到，动画不生效 —— 编译、构建、产物核对全都不报错。修法：关键帧移到 `global.css`（引用它的 scoped 块因块内无同名定义而保留原名，正好命中全局那条），并删掉 BuyTicket 的本地副本，全站一处定义。
+
+  4. **幽灵登录态被整页重载掩盖**（`front/Password.vue`）。改密成功后是 `clearStoredUser()` + `location.href = '/login'`。`clearStoredUser` 只清 localStorage，而登录态的唯一依据是 `useAuth` 里那个模块级 `globalUser` ref —— 内存仍持 token，`isLoggedIn` 继续为真、外壳继续渲染成已登录。整页重载正是为了盖住这一点。改为 `useAuth().logout()`（同时清单例与副本）+ `router.push('/login')`。**这一条是"用重载绕过状态同步缺陷"的典型**，同一形状还出现在 `Front.vue` 的搜索跳转上（`window.location.href` 做站内跳转，纯属多余）。
+
+  5. **共享类名与组件 scoped 同名冲突**。`.empty-hint` 在 `front-pages.scss`（`.front-content .empty-hint`，0-2-0，单行「暂无数据」占位）与 `CinemaDetail.vue` / `FilmCinema.vue` 的 scoped 块（`.empty-hint[data-v-xxx]`，同为 0-2-0，带标题与说明的虚线面板）里各有一套样式。特异性相同，胜负只取决于产物里的先后顺序。两条虚线面板改名为 `.empty-panel`（含 `__title` / `__desc`）。
+
+  6. **`min-height: 100vh` 把页脚顶出视口**（`front/Person.vue`）。`.front-person-container` 挂在外壳 `.front-content` 之内，再声明一次 `100vh` 就凭空多出外壳头部（60px）的高度，页脚被推到视口之外。页面底色（`--el-fill-color-light`）也一并去掉 —— 前台底色由外壳统一定，见下条。
+- 规范偏差与处置:
+
+  1. **前台底色不符 §6.2**。`body` 取的是 `--el-bg-color-page`（`#f2f3f5` 灰），而 `.front-container` / `.front-content` 此前没有任何样式，所以整个前台其实是灰的，与「前台页面背景 `#ffffff`」相悖。改在 `Front.vue` 的外壳上铺白，并加 flex 纵向布局 + `min-height: 100vh`，内容区 `flex: 1`，短页面时页脚贴底。
+  2. **两处硬编码色值**（§3.7）。`CinemaDetail.vue` 影院服务卡的 `rgba(255,255,255,.1)` —— §3.5 的深色表面族里没有"深底上的浅色面层"这一类令牌（`--surface-glass` 是 80% 白，专供压在照片上，用这里会过亮），改为不设底色，分组感由彩色标题片与间距提供；`Search.vue` 评分上的 `text-shadow: 0 1px 2px rgba(0,0,0,.6)` —— 改为把评分放进 `--overlay-mask` 衬底的小胶囊（与海报卡同一语言），不再需要给文字描边，也就没有手写阴影（§7.2）。
+  3. **`opacity` 当文字对比度调节器**（§10.1）。服务卡说明 `opacity: .9`、面板说明 `opacity: .7`、统计标签 `opacity: .8` 一律换成令牌：深底次级文字用 `--dark-text-secondary`（10.84:1），说明文字用 `--el-text-color-regular`（6.11:1）。`opacity` 只保留给纯装饰块。
+- 本轮重构的落地口径:
+
+  - **新增共享单元 `components/FilmPosterCard.vue`**：2:3 `aspect-ratio` 海报 + 片名 + 破图兜底（取片名首字，与 `.mark-item__avatar` 同手法）+ 评分角标 + hover 品牌色购票提示 + 默认插槽给各页放元信息。消费方 `Home.vue`（正在热映 / 即将上映）与 `Movie.vue`。**为什么立组件而不是共享 SCSS**：共享部分含 CSS 表达不了的行为（破图要 `@error` 改状态、点击进详情、骨架），且三处的海报高度已经漂移到 260px / 240px 两档。`Search.vue` 的横向卡与 `Rank.vue` 的榜单行是另外两种形状，刻意不并入，避免给组件堆开关。
+  - **`front-pages.scss` 扩为前台唯一骨架层**：新增 `.section-head`（标题 + 品牌短线 + 「全部 ›」）、`.poster-grid`（`auto-fill minmax(180px,1fr)` 自适应列数，取代写死的 `el-row :span="6"`）、`.filter-chip`（筛选项改 `<button>`）、`.service-tag--*`（影院服务配色三处共用一份）、`.detail-skeleton`（两个详情页共用的首屏骨架）、`.empty-hint`。前台 4 处重复的 `.empty-hint` 收敛到这里。
+  - **卡片分工落定**：`global.css` 的 `.card` 提供外观（底色 / 圆角 / 阴影），`front-pages.scss` 的 `.page-card` 只覆写消费端的内边距（`--space-24`）与堆叠间距。不删全局 `.card` —— 它被 9 个范围外的 manage/back 文件引用，且它本就是"外观层"而非重复实现。同名 `.page-card` 在 `admin-pages.scss` 里另有一份（管理端内边距更紧），这是规范 §6.2「密度分端是有意决策」的落地。
+  - **键盘可达性**：`BuyTicket.vue` 的 64 个座位格由 `div @click` 改为 `<button>`（不可选座位用 `disabled`，`aria-label` 报出「3排5座，已售」这类编号与状态，`focus-visible` 显式描边，悬停放大只给 `:not(:disabled)`）；座位胶囊的 `×` 由 `span @click` 改为 `<button aria-label="移除 X排X座">`；`Home.vue` / `Rank.vue` 的榜单行改 `<router-link>`；`Movie.vue` 的筛选片改 `<button>`；搜索框与下拉补 `aria-label`（placeholder 不构成可访问名称）；纯图标按钮补 `aria-label`；`h1` / `h2` 语义化（购买页标题、账户板块标题、认证页标题、个人中心标题）。
+  - **空态与失败态分离（§11.2）**：`Rank.vue` 此前失败时渲染「暂无票房数据」，与"库里确实没有"不可区分，且完全没有错误态 —— 两份榜单各加 `error` 标志并渲染「数据加载失败，请稍后重试」；`Search.vue` 同样补上（此前 catch 后落回"没有找到匹配的电影"）。`Cinema.vue` 的 `catch` 里重复弹的 `ElMessage` 删除（拦截器已弹过），非 200 业务码仍保留提示（拦截器只管网络 / 超时 / HTTP 状态，不管 `code`）。
+  - **死代码**：删 `constants/index.js` 的 `AUTH_API.YEARS`（与 `API_PATHS.YEARS` 同值且零引用）；删 `Movie.vue` 的 `data.cinemaData` / `data.status` 与永远为 `null` 的 `cinemaId` 查询参数；`Cinema.vue` 补上影院卡到 `CinemaDetail` 的跳转（此前整页没有任何入口，影院详情只能从「选择影院」页进）。`front/Person.vue` / `front/Password.vue` 按规范 §9.3 补 `status-icon` 与回车提交（含输入框的表单在输入框上挂 `@keyup.enter`，`el-form` 上挂 `@submit.prevent` 兜原生提交，只挂一处），`front/Person.vue` 的「电话」补 `prop`。
+- 验证: `npm run build` 通过（每完成一个工作流各跑一次，共 8 次）。产物核对：`aspect-ratio` 已按 2/3、16/7、5/4、10/7 四档进各页 CSS；`FilmPosterCard` 已自动注册进 `components.d.ts` 并产出独立 CSS 块；共享层的 `section-head__title` / `filter-chip--active` / `detail-skeleton__poster` / `service-tag--*` / `poster-grid` / `empty-hint` 均在 `index-*.css` 中；已删除的 `.empty-hint__title` / `.empty-hint__desc` / `.seat-item--clickable` / `.seat-item--locked` 在全部产物中 0 命中；`@keyframes rotating` 全局只有 1 处定义，而 `BuyTicket` 与 `CinemaDetail` 两个分块都以未改写名 `animation:rotating` 引用它（改动前 CinemaDetail 引用的是不存在的名字）。**未做浏览器渲染验证** —— UI 目视由用户自查，本轮不声称验过界面。
+- 评审后追加修复（同一轮，`code-review` 三角度并行复审查出）:
+  1. **搜索页不再刷新——本轮的回归**。把顶栏搜索由 `window.location.href` 改成 `router.push` 之后，"已在搜索页再搜一次"变成同路由换 `?title=`，`Search.vue` 组件被复用、只写在 `onMounted` 里的取数不再触发，页面一直显示上一次的关键词与结果。旧写法靠整页重载掩盖了这一点。修法：`Search.vue` 加 `watch(() => route.query.title, fetchSearchResults)`（规则 83）。
+  2. **轮播点错片**。五张 slide 都是 `position: absolute; inset: 0; opacity: 0`，后置兄弟节点绘制在上层，点可见那张的「购票」命中的是最后一张透明层的链接 —— 跳到第 5 部而不是当前展示的那部；同时五张都还在 Tab 顺序里，配 `aria-hidden` 构成"可聚焦但不可见不可读"的焦点陷阱。修法：非激活页 `visibility: hidden`（规则 84），一处改动同时解决命中测试与焦点两件事。
+  3. **登录回跳丢参数**。`router/index.js` 的路由守卫用 `to.path` 拼 `redirect`，把 query 丢了；购票页的场次由 `cinemaId/filmId/recordId/roomId` 决定，登录后落在一个无参数的 `/front/buyTicket` 上只能报"参数无效"。改为 `encodeURIComponent(to.fullPath)` —— 这正是 `utils/request.js:24` 与 `FilmMarks.vue:232` 已有的写法，守卫是三者里唯一的例外，改完三处口径一致。（此条非本轮引入，但本轮重写了该守卫的下游消费方，顺带补齐。）
+  4. **暂停中翻页又被自动播放**。`goHero` 无条件调 `startHero()`，用户鼠标悬停在 hero 上（已 `pauseHero`）点圆点换一张后，计时器被重启，5 秒后画面在他眼皮底下自己跳走 —— 与"悬停即暂停"的约定相矛盾。修法：加 `heroPaused` 标志，`startHero` 在暂停时直接返回。
+  5. **深底次级文字的令牌不一致**。同一语义槽位（深色 hero 上的说明文字）在首页用 `--dark-text-muted`、在两个详情页用 `--dark-text-secondary`。统一为 `--dark-text-secondary`；这也让此前零消费者的 `--dark-text-secondary` 真正落到了它被定义时的用途上。
+  6. **首页「全部」带了一个没人消费的 `?type=`**。影片列表页只支持 类型/年代/区域 三个筛选，从不读 query；`/films/page` 是否支持按上映状态筛无法从前端确认（后端本轮不在范围内）。与其留一个"看起来筛过其实没筛"的参数，不如去掉它并在原处注释说明缺口 —— 需要真正按上映状态筛时，先确认后端有无该口径。
+  7. **复核出的两处重复**（`code-review` 的 reuse/simplification 角度）：`typeText`（类型文案）与 `scoreText`（角标评分）各在 2 个文件里逐字重复，且后者承载着"只有 null 表示无评分、0 是真实评分"这条关键判定 —— 收进 `utils/format.js` 的 `formatFilmTypes` / `formatScoreBadge`；三份逐字相同的 `.detail-skeleton` 标记收进 `components/DetailSkeleton.vue`（样式本就在共享层，标记却各写一份）；`Front.vue` 里与 `NAV_ITEMS` 一一对应、改一处必须同步改另一处的 `NAV_SECTIONS` 折进 `NAV_ITEMS[].sections`，消除"加了导航项忘了加段就永远不高亮"的隐患。
+  8. **未做但记录备查**：`.film-hero__backdrop` + `__scrim` + `__inner` 这一组深色头图样式在 `FilmDetail.vue` / `FilmCinema.vue` / `CinemaDetail.vue` 三个 scoped 块里各写一份（约 55 行 ×3），且已经出现漂移（`__inner` 的 `align-items: flex-start` 只有两个文件有）。它们是纯视觉原语、无 per-page 行为，理应提升到 `front-pages.scss`；本轮未做，因为这需要把 `CinemaDetail` 的 `.cinema-hero` 前缀一并改名，属跨 3 个文件的版式改动，而浏览器目视验证不在本轮自证范围内 —— 留作下一轮的条目。
+- 侦察报告的更正（子代理结论不当作事实，逐条核对后推翻的）:
+  - `Orders.vue` 的 `lang="ts"` **不是**漂移：该文件真的含 TS 语法（`interface MarkRow`）。按"统一为 js"改掉后构建当场失败（`Unexpected reserved word 'interface'`），已回退。据此，把 manage/back 那 6 个同类文件也一并断言为"JS 却写了 ts"是不成立的，该条整条作废。
+  - `FilmDetail.vue` 的 `film.types` / `film.area` **不是**字段名错误：CLAUDE.md 说 `Film` 无 `types` 是对的，但该页在第 301-302 行把 `typeList` / `areaName` 本地归一成了 `types` / `area`，两者一致。`FilmCinema.vue` 同样处理。差点误改。
+  - `front/FilmMarks.vue` 写评价弹窗里 `el-form-item label="影片"` **不需要** `prop`：那是一行只读展示（`<span>{{ film.title }}</span>`），没有输入、没有校验规则，`prop` 也无处生效。规范 §9.3 的"每个 `el-form-item` 有 `prop`"只对参与校验的字段成立，待办里把只读展示行计入违规数是口径错误。
+  - `CinemaDetail.vue` 的 `.status-tag--upcoming/playing/ended` 三态**未**收进 `constants/index.js`：它们是"未开始 / 放映中 / 已结束"这类**派生**状态（由 `start` 现算，不落库），与 `constants` 里那些落库状态词表不同源；且三个配色（primary / success / info 的基色压各自 `light-9` 底）实测均在 4.5:1 以上，合规。单消费点的派生状态放本地是合理的，强行搬进 `constants` 只会造出一个只有一个读者的映射。
+- 相关文件: `xm_film/vue/src/components/{FilmPosterCard.vue,DetailSkeleton.vue}`（均新增）、`xm_film/vue/src/utils/format.js`、`xm_film/vue/src/router/index.js`、`xm_film/vue/src/assets/css/{front-pages.scss,global.css,auth-layout.scss}`、`xm_film/vue/src/views/{Front.vue,Login.vue,Register.vue}`、`xm_film/vue/src/constants/index.js`、`xm_film/vue/src/views/front/{Home,Movie,Search,FilmDetail,CinemaDetail,BuyTicket,Rank,Cinema,FilmCinema,Orders,Account,Person,Password}.vue`
+- 提交记录: 未提交
+- 状态: 已修复

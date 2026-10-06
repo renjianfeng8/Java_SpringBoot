@@ -2,22 +2,25 @@
   <div class="front-person-container">
     <div class="person-wrapper">
       <div class="card person-card">
-        <div class="person-title">个人中心</div>
-        <el-form ref="formRef" :rules="rules" :model="formData" class="person-form" label-width="80px">
+        <h1 class="person-title">个人中心</h1>
+        <!-- status-icon 打开「错误反馈三件套」的图标那一件；@submit.prevent 兜住原生提交，
+             回车由输入框上的 @keyup.enter 触发（只挂一处，避免一次回车发两次请求，规范 §9.3） -->
+        <el-form ref="formRef" :rules="rules" :model="formData" class="person-form" label-width="80px"
+                 status-icon @submit.prevent>
           <el-form-item label="用户名" prop="username">
             <el-input disabled v-model="formData.username" autocomplete="off" placeholder="请输入用户名" />
           </el-form-item>
 
           <el-form-item label="名称" prop="name">
-            <el-input v-model="formData.name" autocomplete="off" placeholder="请输入名称" />
+            <el-input v-model="formData.name" autocomplete="off" placeholder="请输入名称" @keyup.enter="updateUser" />
           </el-form-item>
 
-          <el-form-item label="电话">
-            <el-input v-model="formData.phone" autocomplete="off" placeholder="请输入电话" />
+          <el-form-item label="电话" prop="phone">
+            <el-input v-model="formData.phone" autocomplete="off" placeholder="请输入电话" @keyup.enter="updateUser" />
           </el-form-item>
 
-          <el-form-item label="邮箱">
-            <el-input v-model="formData.email" autocomplete="off" placeholder="请输入邮箱" />
+          <el-form-item label="邮箱" prop="email">
+            <el-input v-model="formData.email" autocomplete="off" placeholder="请输入邮箱" @keyup.enter="updateUser" />
           </el-form-item>
 
           <div class="person-actions">
@@ -89,15 +92,10 @@ const updateUser = () => {
 </script>
 
 <style scoped>
-.front-person-container {
-  min-height: 100vh;
-  background-color: var(--el-fill-color-light);
-}
-
+/* 底色与最小高度都交给外壳：这里再写一次 min-height: 100vh 会把页脚顶到视口之外 */
 .person-wrapper {
   display: flex;
   justify-content: center;
-  min-height: 50vh;
   padding: var(--space-40);
 }
 
@@ -111,8 +109,9 @@ const updateUser = () => {
 }
 
 .person-title {
-  margin: var(--space-4);
-  font-size: var(--fs-md);
+  /* 标题现在是 h1，要显式清掉浏览器默认外边距 */
+  margin: 0 0 var(--space-4);
+  font-size: var(--fs-lg);
   font-weight: var(--fw-bold);
 }
 

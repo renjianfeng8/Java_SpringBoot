@@ -39,7 +39,7 @@ project_02/
     │   └── src/
     │       ├── main.js · App.vue
     │       ├── router/index.js
-    │       ├── components/            # ErrorBoundary · OrderPayDialog
+    │       ├── components/            # DetailSkeleton · ErrorBoundary · FilmPosterCard · OrderPayDialog
     │       ├── composables/           # useAuth · useCrud · useFormDialog
     │       ├── constants/index.js
     │       ├── types/axios.d.ts · env.d.ts · auto-imports.d.ts · components.d.ts
@@ -109,11 +109,16 @@ project_02/
 
 | 项 | 事实 |
 |----|------|
-| 认证状态 | 集中 `utils/authStorage.js` |
+| 认证状态 | 唯一来源 `composables/useAuth.js` 的模块级 `user` ref；`utils/authStorage.js` 只是它的持久化副本。改状态走 `login` / `logout` / `setUser`，不要只动 storage |
 | 状态色 | 集中 `constants/index.js`（`*_STATUS_MAP`） |
 | 跨端入口 | 各外壳右上角显式按钮；`/front/home` 不用 `router.back()` |
 | 热评 | 即 `GET /api/v1/marks/by-film`（`likeCount DESC, id DESC`）前 3 行，不另开查询 |
 | 点赞表 | `mark_like` 纯关系表（`PRIMARY KEY (mark_id, user_id)`），赞数 `COUNT(*)`，无计数列 |
+| 前台共享骨架 | `assets/css/front-pages.scss`，全部挂在 `.front-content` 下（`.page-card` / `.section-head` / `.poster-grid` / `.filter-chip` / `.service-tag--*` / `.detail-skeleton` / `.empty-hint`）。前台页面不再各写一份。`.detail-skeleton` 的标记收在 `components/DetailSkeleton.vue`；`.empty-hint` 是单行占位，带标题与说明的虚线面板叫 `.empty-panel`（组件内本地写） |
+| 卡片外观分工 | `global.css` 的 `.card` 提供底色 / 圆角 / 阴影（全局，manage·back 亦用），前台 `.page-card` 只覆写消费端内边距。`.page-card` 在 `admin-pages.scss` 另有一份管理端内边距，是 §6.2 的密度分端 |
+| 海报卡 | 唯一 `components/FilmPosterCard.vue`（2:3 海报 + 破图兜底 + 评分角标 + 元信息插槽），消费方 `front/Home.vue` · `front/Movie.vue`。`Search.vue` 横向卡与 `Rank.vue` 榜单行是另两种形状，不并入 |
+| 导航高亮 | `Front.vue` 由 `NAV_ITEMS`（各项自带的 `sections` 路由前缀）从 `route.path` 现算，不手工同步 `activePath` 字符串 |
+| 表单页跳转 | 登录回跳等站内跳转一律 `router.push`（`window.location.href` 既整页重载，又会把 `//host` 这类路径解析成外站） |
 
 ## API 接口清单
 
@@ -220,6 +225,15 @@ project_02/
 | shell 入口匹配 `meta.roles` | [73](Bug.md#规则篇) |
 | 改密只认 JWT 角色 | [74](Bug.md#规则篇) |
 | "是否已支付 / 占座"集合多消费点同源 | [75](Bug.md#规则篇) |
+| 登录态只经 `useAuth` 变更，不直接动 storage | [76](Bug.md#规则篇) |
+| 站内跳转用 `router.push`，不用 `window.location.href` | [77](Bug.md#规则篇) |
+| 共享 `@keyframes` 放 `global.css` | [78](Bug.md#规则篇) |
+| 共享层与组件 scoped 块不同名装不同样式 | [79](Bug.md#规则篇) |
+| 压淡文字用令牌，不用 `opacity` | [80](Bug.md#规则篇) |
+| 内容页不写 `min-height: 100vh` | [81](Bug.md#规则篇) |
+| 导航高亮从路由归属派生 | [82](Bug.md#规则篇) |
+| 站内跳转后同页换参不再重挂，取数须 `watch` 参数 | [83](Bug.md#规则篇) |
+| `opacity: 0` 叠放层仍可点击可聚焦，用 `visibility` | [84](Bug.md#规则篇) |
 
 ## 开发守则
 

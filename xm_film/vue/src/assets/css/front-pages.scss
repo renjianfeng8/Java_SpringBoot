@@ -22,6 +22,124 @@
   /* 成叠的卡片 */
   .page-card {
     margin-bottom: var(--space-8);
+    /* 前台是消费端，卡片内边距取宽松档（规范 §6.2：密度分端是有意决策）。
+       只覆写这一处有分歧的属性 —— 底色 / 圆角 / 阴影仍由 global.css 的 .card 单点提供，
+       不在这里重写一套，否则「卡片长什么样」就有了两个出处。 */
+    padding: var(--space-24);
+  }
+
+  /* 区块标题行：标题 + 右侧「全部 >」链接，下面一条通栏淡分隔线压一段品牌短线 */
+  .section-head {
+    position: relative;
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-12);
+    padding-bottom: var(--space-8);
+    border-bottom: 1px solid var(--el-border-color-lighter);
+  }
+
+  /* 品牌短线是装饰元素（不承载文字），按 §3.2 用 --color-brand（前台 #ef4238，仅需 ≥3:1）；
+     标题文字用 --el-color-primary（前台 #BF352D，5.58:1），两者不可互换 */
+  .section-head::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    bottom: -1px;
+    width: var(--space-40);
+    height: 2px;
+    background-color: var(--color-brand);
+  }
+
+  /* 区块标题承载文字，含中文故字重只能用 400 / 700（§4.4） */
+  .section-head__title {
+    font-size: var(--fs-xl);
+    font-weight: var(--fw-bold);
+    color: var(--el-color-primary);
+  }
+
+  /* 文字型链接：默认常规文字色 6.11:1，hover 到主色 5.58:1，两端都达 AA（§3.7） */
+  .section-head__more {
+    margin-left: auto;
+    font-size: var(--fs-sm);
+    color: var(--el-text-color-regular);
+    transition: color 100ms ease-out;
+
+    &:hover {
+      color: var(--el-color-primary);
+    }
+  }
+
+  /* 海报墙：按容器宽度自适应列数，不写死每行几张。
+     列宽下限 180px 是海报的可用最小宽度，上限交给 1fr 分配。 */
+  .poster-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: var(--space-20);
+    margin-top: var(--space-20);
+  }
+
+  /* 无数据的占位（规范 §11.2：接口成功但结果为空 → 「暂无数据」；
+     请求失败 → 「数据加载失败，请稍后重试」。两者文案不同，样式相同） */
+  .empty-hint {
+    padding: var(--space-40) 0;
+    font-size: var(--fs-base);
+    color: var(--el-text-color-regular);
+    text-align: center;
+  }
+
+  /* 影院服务的统一配色：同一组服务在「影院列表」与「影院详情横幅」两处必须同色（§3.6）。
+     只共享底色 —— 两页的形状不同（列表是普通标签、详情是带图标的片），各自随页面写。
+     底色一律取功能色基色并配 --color-on-accent 白字：该组合在浅底与深底上都达 AA。 */
+  .service-tag--refund {
+    background-color: var(--el-color-primary);
+  }
+
+  .service-tag--promo {
+    background-color: var(--el-color-warning);
+  }
+
+  .service-tag--wifi {
+    background-color: var(--el-color-info);
+  }
+
+  /* 详情页首屏骨架：影片详情与影院详情共用，形状与真实头图一致，
+     数据到位时不会跳高。灰块不是数据，不违反「禁止用假数据填充」（§11.2）。 */
+  .detail-skeleton {
+    display: flex;
+    width: 60%;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: var(--space-32);
+  }
+
+  .detail-skeleton__poster {
+    flex-shrink: 0;
+    width: 220px;
+    aspect-ratio: 2 / 3;
+    border-radius: var(--el-border-radius-base);
+    background-color: var(--el-fill-color-dark);
+  }
+
+  .detail-skeleton__lines {
+    flex: 1;
+    margin-left: var(--space-24);
+    padding-top: var(--space-8);
+  }
+
+  .detail-skeleton__line {
+    height: 16px;
+    margin-bottom: var(--space-12);
+    border-radius: var(--el-border-radius-base);
+    background-color: var(--el-fill-color-dark);
+  }
+
+  .detail-skeleton__line--title {
+    width: 40%;
+    height: 28px;
+  }
+
+  .detail-skeleton__line--short {
+    width: 25%;
   }
 
   /* 列表页搜索框 */
@@ -90,7 +208,44 @@
   }
 
   .filter-options {
+    display: flex;
     flex: 1;
+    flex-wrap: wrap;
+    gap: var(--space-8);
+  }
+
+  /* 筛选项是 <button> 而非 div —— 原生可 Tab 聚焦、可回车/Space 触发，
+     不需要额外补 role / tabindex / keydown（规范 §10.2：所有交互支持键盘） */
+  .filter-chip {
+    padding: var(--space-4) var(--space-12);
+    border: 1px solid var(--el-border-color);
+    border-radius: var(--el-border-radius-base);
+    background-color: var(--el-bg-color);
+    color: var(--el-text-color-regular);
+    font-family: inherit;
+    font-size: var(--fs-base);
+    cursor: pointer;
+    transition: color 100ms ease-out, border-color 100ms ease-out, background-color 100ms ease-out;
+
+    &:hover {
+      border-color: var(--el-color-primary);
+      color: var(--el-color-primary);
+    }
+  }
+
+  /* 选中态不仅要换色，还要加粗 —— 禁止仅靠颜色传递状态（§3.7）。
+     底色用主色基色承载白字（前台 5.58:1 达 AA）。 */
+  .filter-chip--active {
+    border-color: var(--el-color-primary);
+    background-color: var(--el-color-primary);
+    color: var(--color-on-accent);
+    font-weight: var(--fw-bold);
+  }
+
+  .filter-chip--active:hover {
+    border-color: var(--el-color-primary-dark-2);
+    background-color: var(--el-color-primary-dark-2);
+    color: var(--color-on-accent);
   }
 
   /* 评价条目（影片详情页「用户热评」与影评页共用，因此收在这里，两页不再各写一份） */
