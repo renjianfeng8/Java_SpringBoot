@@ -30,8 +30,9 @@
   box-shadow: var(--el-box-shadow-light);
 }
 
+/* 标题是 h1，要显式清掉浏览器默认外边距 */
 .auth-title {
-  margin-bottom: var(--space-20);
+  margin: 0 0 var(--space-20);
   font-size: var(--fs-xl);
   font-weight: var(--fw-bold);
   text-align: center;

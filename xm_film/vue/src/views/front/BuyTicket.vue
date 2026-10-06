@@ -3,9 +3,9 @@
   <div class="buy-page">
     <div class="buy-panel">
       <!-- 标题：居中加粗放大 -->
-      <div class="buy-title">
+      <h1 class="buy-title">
         座位选择
-      </div>
+      </h1>
 
       <!-- 主体布局：左右分栏 -->
       <div class="buy-layout">
@@ -51,14 +51,19 @@
             </el-button>
           </div>
 
-          <!-- 座位矩阵：行列数取自所属影厅的 seat_rows / seat_cols 配置 -->
-          <div v-else class="seat-map">
+          <!-- 座位矩阵：行列数取自所属影厅的 seat_rows / seat_cols 配置。
+               每格是 <button> 而非 div —— 键盘用户才能 Tab 到可选座位并用回车选定；
+               不可选的座位用 disabled，读屏软件据此报出状态（§10.2）。 -->
+          <div v-else class="seat-map" role="group" aria-label="座位图">
             <div v-for="row in seatRows" :key="'row' + row" class="seat-map__row">
-              <div v-for="col in seatCols" :key="`seat-${row}-${col}`"
-                   :class="[getSeatClass(row, col), isSeatAvailable(row, col) ? 'seat-item--clickable' : 'seat-item--locked']"
-                   class="seat-item"
-                   @click="selectSeat(row, col)"
-              ></div>
+              <button v-for="col in seatCols" :key="`seat-${row}-${col}`"
+                      type="button"
+                      :class="getSeatClass(row, col)"
+                      class="seat-item"
+                      :disabled="!isSeatAvailable(row, col)"
+                      :aria-label="seatAriaLabel(row, col)"
+                      @click="selectSeat(row, col)"
+              ></button>
             </div>
           </div>
 
@@ -81,7 +86,12 @@
                 <div v-if="selectedSeats.length === 0" class="selected-seats__empty">未选择座位</div>
                 <div v-else class="selected-seats__list">
                    <span v-for="seat in selectedSeats" :key="seat" class="seat-chip"> {{ seat }}
-                     <span class="seat-chip__remove" @click="removeSeat(seat)">×</span>
+                     <button
+                         type="button"
+                         class="seat-chip__remove"
+                         :aria-label="`移除 ${seat}`"
+                         @click="removeSeat(seat)"
+                     >×</button>
                    </span>
                 </div>
               </div>
@@ -103,14 +113,14 @@
         <div class="film-aside">
           <!-- 电影海报 -->
           <div class="film-aside__poster-wrap">
-            <img :src="filmInfo.img " alt="电影海报" class="film-aside__poster">
+            <img :src="filmInfo.img" :alt="`《${filmInfo.title || '影片'}》海报`" class="film-aside__poster">
           </div>
 
           <hr class="divider">
 
           <!-- 场次信息 -->
           <div class="info-block">
-            <div class="info-block__title">场次信息</div>
+            <h2 class="info-block__title">场次信息</h2>
             <div class="info-row">
               <span class="info-row__label">影院：</span>
               <span class="info-row__value">{{ cinemaInfo.name || '未知' }}</span>
@@ -129,7 +139,7 @@
 
           <!-- 订单汇总 -->
           <div class="total-box">
-            <div class="info-block__title">订单汇总</div>
+            <h2 class="info-block__title">订单汇总</h2>
             <div class="info-row">
               <span class="info-row__label">座位数：</span>
               <span class="info-row__value">{{ selectedSeats.length }} 张</span>
@@ -429,6 +439,16 @@ const isSeatAvailable = (row, col) => {
   return seats.value[r] && seats.value[r][c] === 0;
 };
 
+// 座位状态码 → 可访问名称用的中文（0 可选，1 他人占用，2 已选，3 本人未支付锁座）
+const SEAT_STATE_TEXT = { 1: '已售', 2: '已选', 3: '我的未支付' };
+
+/** 读屏软件只报出网格里的一串按钮，必须带上编号与状态才可用 */
+const seatAriaLabel = (row, col) => {
+  const state = seats.value[row - 1]?.[col - 1];
+  if (state === undefined) return `${row}排${col}座，无座位`;
+  return `${row}排${col}座，${SEAT_STATE_TEXT[state] || '可选'}`;
+};
+
 const selectSeat = (row, col) => {
   // 未登录时禁止选座
   if (!isLogin.value) {
@@ -524,7 +544,8 @@ const confirmBooking = async () => {
 }
 
 .buy-title {
-  margin-bottom: var(--space-24);
+  /* 标题现在是 h1，要显式清掉浏览器默认外边距 */
+  margin: 0 0 var(--space-24);
   padding-bottom: var(--space-16);
   border-bottom: 1px solid var(--el-border-color-lighter);
   font-size: var(--fs-3xl);
@@ -612,16 +633,26 @@ const confirmBooking = async () => {
   gap: var(--space-12);
 }
 
+/* 座位格是 <button>，先清掉浏览器默认的按钮外观（内边距 / 边框 / 字体），
+   只保留图形本身；圆角与图例色块（.seat-swatch）取同一档，避免"图例圆、座位方" */
 .seat-item {
   width: 22px;
   height: 22px;
-}
-
-.seat-item--clickable {
+  padding: 0;
+  border: none;
+  border-radius: var(--el-border-radius-base);
   cursor: pointer;
+  transition: transform 100ms ease-out;
 }
 
-.seat-item--locked {
+/* 键盘焦点必须可见（§9.1 Focus）。按钮被清了默认外观，所以要显式给描边 */
+.seat-item:focus-visible {
+  outline: 2px solid var(--el-color-primary);
+  outline-offset: 2px;
+}
+
+/* 不可选的座位由 :disabled 承载状态，不再靠 cursor 类区分 */
+.seat-item:disabled {
   cursor: not-allowed;
 }
 
@@ -645,8 +676,8 @@ const confirmBooking = async () => {
   background-color: var(--el-fill-color);
 }
 
-/* 座位悬停效果 */
-.seat-item:hover {
+/* 悬停放大只给可选座位：已售/已选座位跟着放大会让人以为还能点 */
+.seat-item:not(:disabled):hover {
   transform: scale(1.2);
 }
 
@@ -666,6 +697,7 @@ const confirmBooking = async () => {
   margin-bottom: var(--space-8);
 }
 
+/* 关键帧定义在 global.css —— scoped 块里定义会带上组件哈希，只有本组件能引用 */
 .seat-hint__icon--spin {
   animation: rotating 2s linear infinite;
 }
@@ -736,10 +768,20 @@ const confirmBooking = async () => {
   background: var(--el-color-primary-light-9);
 }
 
+/* 移除按钮同样清掉默认外观，只留 × 字形本身；底色 danger 是「移除」这个动作的语义色 */
 .seat-chip__remove {
   margin-left: var(--space-4);
+  padding: 0;
+  border: none;
+  background: none;
   color: var(--el-color-danger);
+  font: inherit;
   cursor: pointer;
+  transition: color 100ms ease-out;
+}
+
+.seat-chip__remove:hover {
+  color: var(--el-color-danger-dark-2);
 }
 
 /* ---------- 提交 ---------- */
@@ -793,7 +835,8 @@ const confirmBooking = async () => {
 }
 
 .info-block__title {
-  margin-bottom: var(--space-8);
+  /* 标题现在是 h2，要显式清掉浏览器默认外边距 */
+  margin: 0 0 var(--space-8);
   font-weight: var(--fw-bold);
   color: var(--el-text-color-primary);
 }
@@ -840,11 +883,5 @@ const confirmBooking = async () => {
 
 .total-box__value {
   color: var(--el-color-primary);
-}
-
-/* 加载动画（兼容Element Plus） */
-@keyframes rotating {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
 }
 </style>

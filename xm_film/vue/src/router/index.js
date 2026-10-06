@@ -91,7 +91,9 @@ router.beforeEach((to, from, next) => {
         cancelButtonText: '取消',
         type: 'warning'
       }).then(() => {
-        next(`/login?redirect=${to.path}`)
+        // 必须带上 query 并编码：购票页的场次由 cinemaId/filmId/recordId/roomId 四个参数决定，
+        // 只回跳 to.path 会让登录后落在一个没有参数的 /front/buyTicket 上（页面只能报"参数无效"）
+        next(`/login?redirect=${encodeURIComponent(to.fullPath)}`)
       }).catch(() => {
         next(false)
       })

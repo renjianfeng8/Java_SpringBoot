@@ -1,79 +1,95 @@
-﻿<template>
-  <div class="home-page">
+<template>
+  <div class="page-wide home-page">
 
-    <!-- 左侧内容（完善跳转逻辑） -->
+    <!-- 左侧内容 -->
     <div class="home-main">
-      <!-- 正在热播区域 -->
-      <div class="section-head">
-        <div class="section-head__title">正在热播 ({{data.data1.length}}) 部</div>
-        <!-- 「全部」按钮：跳转到电影列表页（展示所有已上映电影） -->
-        <div
-            class="section-head__more"
-            @click="goToMovieList('playing')"
-        >
-          全部 >
-        </div>
-      </div>
 
-      <div class="film-grid">
-        <el-row :gutter="15">
-          <!-- 正在热播电影：海报和购票按钮均跳转详情页 -->
-          <el-col :span="6" v-for="item in data.playingData" :key="item.id" class="film-grid__col">
-            <!-- 海报点击跳转详情 -->
-            <div
-                class="film-card__poster-link"
-                @click="goToFilmDetail(item.id)"
-            >
-              <img :src="item.img" alt="电影海报" class="film-card__poster">
-            </div>
-            <!-- 购票按钮：跳转到详情页（后续可在详情页跳转选座） -->
-            <el-button
-                class="film-card__buy"
-                @click="goToFilmDetail(item.id)"
-            >
-              购票
-            </el-button>
-          </el-col>
-        </el-row>
-        <div v-if="data.error" class="empty-hint">数据加载失败，请稍后重试</div>
-        <div v-else-if="!data.playingData.length" class="empty-hint">暂无数据</div>
-      </div>
-
-      <!-- 即将上映区域 -->
-      <div class="home-main__upcoming">
-        <div class="section-head">
-          <div class="section-head__title section-head__title--upcoming">即将上映 ({{data.data2.length}}) 部</div>
-          <!-- 「全部」按钮：跳转到电影列表页（展示所有待上映电影） -->
+      <!-- Hero 轮播：取正在热映的影片。鼠标悬停或键盘聚焦时暂停自动切换，
+           免得用户正在看/正要点击时内容被换走 -->
+      <section
+          v-if="heroFilms.length"
+          class="hero"
+          aria-label="热门影片"
+          @mouseenter="pauseHero"
+          @mouseleave="resumeHero"
+          @focusin="pauseHero"
+          @focusout="resumeHero"
+      >
+        <div class="hero__stage">
           <div
-              class="section-head__more section-head__more--upcoming"
-              @click="goToMovieList('upcoming')"
+              v-for="(film, index) in heroFilms"
+              :key="film.id"
+              class="hero__slide"
+              :class="{ 'hero__slide--active': index === heroIndex }"
+              :aria-hidden="index !== heroIndex"
           >
-            全部 >
+            <img class="hero__img" :src="film.img" :alt="`《${film.title}》剧照`" loading="lazy">
+            <div class="hero__scrim" aria-hidden="true"></div>
+            <div class="hero__body">
+              <h2 class="hero__title">{{ film.title }}</h2>
+              <p class="hero__meta">{{ typeText(film) }}</p>
+              <p v-if="scoreOf(film)" class="hero__score">{{ scoreOf(film) }}</p>
+              <router-link class="hero__cta" :to="`/front/filmDetail/${film.id}`">购票</router-link>
+            </div>
           </div>
         </div>
 
-        <div class="film-grid">
-          <el-row :gutter="15">
-            <!-- 即将上映电影：整卡片点击跳转详情页 -->
-            <el-col :span="6" v-for="item in data.noPlayData" :key="item.id" class="film-grid__col film-grid__col--clickable">
-              <div @click="goToFilmDetail(item.id)" class="film-card__upcoming">
-                <img :src="item.img" alt="电影海报" class="film-card__poster">
-                <div class="film-card__title">{{item.title}}</div>
-                <div class="film-card__time">{{item.start}} 上映</div>
-              </div>
-            </el-col>
-          </el-row>
-          <div v-if="data.error" class="empty-hint">数据加载失败，请稍后重试</div>
-          <div v-else-if="!data.noPlayData.length" class="empty-hint">暂无数据</div>
+        <div v-if="heroFilms.length > 1" class="hero__dots">
+          <button
+              v-for="(film, index) in heroFilms"
+              :key="film.id"
+              class="hero__dot"
+              :class="{ 'hero__dot--active': index === heroIndex }"
+              :aria-label="`切换到第 ${index + 1} 张：${film.title}`"
+              :aria-current="index === heroIndex"
+              @click="goHero(index)"
+          ></button>
         </div>
+      </section>
+
+      <!-- 正在热映 -->
+      <div class="section-head">
+        <h2 class="section-head__title">正在热映（{{ data.data1.length }} 部）</h2>
+        <!-- 「全部」不带筛选参数：影片列表页目前只支持 类型/年代/区域 三个筛选，
+             没有按上映状态筛的口径（`/front/movie` 也从不读 query），
+             带上一个没人消费的 ?type= 只会让人以为这里真的筛过 -->
+        <router-link class="section-head__more" to="/front/movie">
+          全部 ›
+        </router-link>
       </div>
+
+      <div class="poster-grid">
+        <FilmPosterCard v-for="item in data.playingData" :key="item.id" :film="item">
+          <el-button class="poster-buy" size="small" plain type="primary" @click="goToFilmDetail(item.id)">
+            购票
+          </el-button>
+        </FilmPosterCard>
+      </div>
+      <div v-if="data.error" class="empty-hint">数据加载失败，请稍后重试</div>
+      <div v-else-if="!data.playingData.length" class="empty-hint">暂无数据</div>
+
+      <!-- 即将上映 -->
+      <div class="section-head home-main__upcoming">
+        <h2 class="section-head__title">即将上映（{{ data.data2.length }} 部）</h2>
+        <router-link class="section-head__more" to="/front/movie">
+          全部 ›
+        </router-link>
+      </div>
+
+      <div class="poster-grid">
+        <FilmPosterCard v-for="item in data.noPlayData" :key="item.id" :film="item" :cta="''">
+          <div class="upcoming-date">{{ item.start }} 上映</div>
+        </FilmPosterCard>
+      </div>
+      <div v-if="data.error" class="empty-hint">数据加载失败，请稍后重试</div>
+      <div v-else-if="!data.noPlayData.length" class="empty-hint">暂无数据</div>
     </div>
 
-    <!-- 右侧内容（完善票房/评分列表跳转） -->
-    <div class="home-aside">
-      <!-- 0. 今日票房：GET /api/v1/films/box-office/today（匿名可读，游客也看得到） -->
+    <!-- 右侧栏 -->
+    <aside class="home-aside">
+      <!-- 今日票房：GET /api/v1/films/box-office/today（匿名可读，游客也看得到） -->
       <div class="today-box">
-        <div class="today-box__strip">
+        <div class="today-box__strip" aria-hidden="true">
           <span>今</span><span>日</span><span>票</span><span>房</span>
         </div>
         <div class="today-box__body">
@@ -102,156 +118,172 @@
         </div>
       </div>
 
-      <!-- 1. 总票房Top 10（添加电影标题跳转详情） -->
-      <div>
-        <div class="aside-title">总票房Top 10</div>
+      <!-- 总票房 Top 10 -->
+      <section aria-label="总票房榜">
+        <div class="section-head">
+          <h2 class="section-head__title">总票房 Top 10</h2>
+        </div>
         <div class="rank-box">
           <div v-if="loading.boxOffice" class="rank-box__loading">
             <el-skeleton :rows="10" :columns="3" avatar class="skeleton--sm" />
           </div>
-          <div v-else-if="boxOfficeTop10.length">
-            <div v-for="(movie, index) in boxOfficeTop10" :key="movie.id" class="rank-row" @click="goToFilmDetail(movie.id)">
-              <!-- 排名标识 -->
-              <div
-                :class="index < 3 ? `rank-badge--top${index + 1}` : 'rank-badge--plain'"
-                class="rank-badge">
-              {{ index + 1 }}
-            </div>
-
+          <template v-else-if="boxOfficeTop10.length">
+            <router-link
+                v-for="(movie, index) in boxOfficeTop10"
+                :key="movie.id"
+                class="rank-row"
+                :to="`/front/filmDetail/${movie.id}`"
+            >
+              <div class="rank-badge" :class="rankBadgeClass(index)">{{ index + 1 }}</div>
               <div class="rank-row__body">
-                <!-- 电影标题点击跳转 -->
                 <div class="rank-row__title">{{ movie.title }}</div>
-                <div class="rank-row__meta">
-                  {{ movie.typeList?.map(t => t.title).join(' / ') || '未知类型' }} | {{ movie.start || '未知时间' }}
-                </div>
+                <div class="rank-row__meta">{{ typeText(movie) }}</div>
               </div>
-
               <div class="rank-row__value">{{ formatBoxOffice(movie.boxOffice) }}</div>
-            </div>
-          </div>
+            </router-link>
+          </template>
           <div v-else class="empty-hint">暂无数据</div>
         </div>
-      </div>
+      </section>
 
-      <!-- 2. 评分Top 5（添加电影标题/海报跳转详情，星级改为分数） -->
-      <div class="home-aside__section">
+      <!-- 评分 Top 5 -->
+      <section class="home-aside__section" aria-label="评分榜">
         <div class="section-head">
-          <div class="section-head__title">评分Top 5</div>
-          <!-- 「查看完整榜单」跳转排行榜页 -->
-          <div
-              class="section-head__more section-head__more--wide"
-              @click="goToRankPage()"
-          >
-            查看完整榜单>
-          </div>
+          <h2 class="section-head__title">评分 Top 5</h2>
+          <router-link class="section-head__more" to="/front/rank">查看完整榜单 ›</router-link>
         </div>
-        <div class="rank-box rank-box--spaced">
+        <div class="rank-box">
           <div v-if="loading.mark" class="rank-box__loading">
             <el-skeleton :rows="5" :columns="3" avatar class="skeleton--lg" />
           </div>
-          <div v-else-if="ratingTop5.length">
-            <div v-for="(movie, index) in ratingTop5" :key="movie.id" class="rank-row rank-row--divided" @click="goToFilmDetail(movie.id)">
-              <!-- 排名标识 -->
-              <div
-                :class="index < 3 ? `rank-badge--top${index + 1}` : 'rank-badge--plain'"
-                class="rank-badge">
-              {{ index + 1 }}
-            </div>
-
-              <!-- 海报点击跳转 -->
+          <template v-else-if="ratingTop5.length">
+            <router-link
+                v-for="(movie, index) in ratingTop5"
+                :key="movie.id"
+                class="rank-row rank-row--divided"
+                :to="`/front/filmDetail/${movie.id}`"
+            >
+              <div class="rank-badge" :class="rankBadgeClass(index)">{{ index + 1 }}</div>
               <div class="rank-row__poster">
-                <img :src="movie.img" alt="电影海报" class="rank-row__img">
+                <img :src="movie.img" :alt="`《${movie.title}》海报`" class="rank-row__img">
               </div>
-
               <div class="rank-row__body">
-                <!-- 电影标题点击跳转 -->
                 <div class="rank-row__title">{{ movie.title }}</div>
-                <div class="rank-row__meta">{{ movie.typeList?.map(t => t.title).join(' / ') || '未知类型' }}</div>
-                <!-- 评分：移除el-rate星级，改为分数显示 -->
-                <div class="rank-row__score">
-                  {{ formatScore(movie.score) }}
-                </div>
+                <div class="rank-row__meta">{{ typeText(movie) }}</div>
+                <div class="rank-row__score">{{ formatScore(movie.score) }}</div>
               </div>
-            </div>
-          </div>
+            </router-link>
+          </template>
           <div v-else class="empty-hint">暂无数据</div>
         </div>
-      </div>
-
-    </div>
+      </section>
+    </aside>
   </div>
 </template>
 
 <script setup>
-import { reactive } from 'vue';
+import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import { Refresh } from '@element-plus/icons-vue';
 import request from "@/utils/request.js";
 import { API_PATHS, FILM_API } from '@/constants';
-import { formatBoxOffice, formatYuan, formatScore } from '@/utils/format.js';
-// 引入Element Plus样式（移除el-rate相关样式）
+import { formatBoxOffice, formatYuan, formatScore, formatFilmTypes } from '@/utils/format.js';
 import 'element-plus/theme-chalk/el-skeleton.css';
 import 'element-plus/theme-chalk/el-button.css';
 
-// 路由实例初始化
 const router = useRouter();
 
-// 左侧正在热播/即将上映数据（保持不变）
+const HERO_LIMIT = 5;
+const HERO_INTERVAL = 5000;
+
 const data = reactive({
-  data1: [], // 已上映电影
-  data2: [], // 待上映电影
-  playingData: [], // 正在热播展示数据（前8条）
-  noPlayData: [], // 即将上映展示数据（前8条）
-  error: false // 电影列表加载失败：与"暂无数据"区分，避免把网络错误显示成没有影片
+  data1: [],        // 已上映电影
+  data2: [],        // 待上映电影
+  playingData: [],  // 正在热映展示数据（前 8 条）
+  noPlayData: [],   // 即将上映展示数据（前 8 条）
+  error: false      // 与「暂无数据」区分：网络失败不该显示成"没有影片"
 });
 
-// 右侧接口数据（保持不变）
-const boxOfficeTop10 = reactive([]); // 总票房Top10
-const ratingTop5 = reactive([]);     // 评分Top5
-const loading = reactive({           // 加载状态
+const boxOfficeTop10 = reactive([]);
+const ratingTop5 = reactive([]);
+const loading = reactive({
   boxOffice: false,
   mark: false,
   today: false
 });
 
-// 今日票房：后端按 ordered 实时聚合的「今天支付的售票收入」。
-// total 首屏为 null 用于区分「还没拿到数据」与「今天票房确实是 0」。
+// 今日票房：total 首屏为 null 用于区分「还没拿到数据」与「今天票房确实是 0」
 const todayBoxOffice = reactive({
   total: null,
   updatedAt: '',
   error: false
 });
 
-/**
- * 1. 跳转到电影详情页
- * @param {number} filmId - 电影ID
- */
 const goToFilmDetail = (filmId) => {
   if (!filmId) {
     ElMessage.warning('电影ID无效');
     return;
   }
-  router.push({
-    path: `/front/filmDetail/${filmId}`
-  });
+  router.push(`/front/filmDetail/${filmId}`);
 };
 
-/**
- * 2. 跳转到电影列表页（区分“正在热播”和“即将上映”）
- * @param {string} type - 类型（playing：已上映；upcoming：待上映）
- */
-const goToMovieList = (type) => {
-  // 跳转到 /front/movie，并携带查询参数（用于筛选电影类型）
-  router.push({
-    path: '/front/movie',
-    query: { type }
-  });
+// 类型文案与评分格式化都走 utils/format.js，与榜单页共用同一份口径
+const typeText = formatFilmTypes;
+const scoreOf = (film) => (film.score === null || film.score === undefined ? '' : formatScore(film.score));
+const rankBadgeClass = (index) => (index < 3 ? `rank-badge--top${index + 1}` : 'rank-badge--plain');
+
+/* ---------- Hero 轮播 ---------- */
+const heroFilms = computed(() => data.playingData.slice(0, HERO_LIMIT));
+const heroIndex = ref(0);
+let heroTimer = null;
+
+// 悬停/聚焦暂停期间必须记住"暂停过"，否则用户点圆点换一张时 startHero 会把
+// 计时器重新启动，5 秒后画面在他眼皮底下又自己跳走
+const heroPaused = ref(false);
+
+const stopHero = () => {
+  if (heroTimer) {
+    clearInterval(heroTimer);
+    heroTimer = null;
+  }
 };
 
-const goToRankPage = () => {
-  router.push('/front/rank');
+const prefersReducedMotion = () =>
+  window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/** 启动自动轮播。系统开启「减少动态效果」时不启动 —— 自动替换内容本身就是动效（§10.2） */
+const startHero = () => {
+  stopHero();
+  if (heroPaused.value || prefersReducedMotion() || heroFilms.value.length < 2) return;
+  heroTimer = setInterval(() => {
+    heroIndex.value = (heroIndex.value + 1) % heroFilms.value.length;
+  }, HERO_INTERVAL);
 };
+
+const pauseHero = () => {
+  heroPaused.value = true;
+  stopHero();
+};
+
+const resumeHero = () => {
+  heroPaused.value = false;
+  startHero();
+};
+
+const goHero = (index) => {
+  heroIndex.value = index;
+  // 未暂停时重新计时（手动翻页后不该马上又自动跳）；暂停中则由 startHero 直接返回
+  startHero();
+};
+
+// 数据是异步到达的，且 length 变化时旧的下标可能越界，故重算后归零并重启计时
+watch(heroFilms, () => {
+  heroIndex.value = 0;
+  startHero();
+});
+
+/* ---------- 数据加载 ---------- */
 
 /**
  * 加载今日票房。失败只落错误态，不弹提示 —— 网络异常/超时/5xx 的提示由 request.js
@@ -268,7 +300,6 @@ const loadTodayBoxOffice = () => {
       todayBoxOffice.error = true;
     }
   }).catch(err => {
-    // 响应体形状不符契约时也会落到这里（例如 data 缺失），此时同样按加载失败处理
     console.error('今日票房接口请求异常：', err);
     todayBoxOffice.error = true;
   }).finally(() => {
@@ -276,11 +307,10 @@ const loadTodayBoxOffice = () => {
   });
 };
 
-// 加载总票房Top10数据
 const loadFilmBoxOfficeTop = () => {
   loading.boxOffice = true;
   request.get(FILM_API.BOX_OFFICE_TOP, {
-    params: {topNum: 10}
+    params: { topNum: 10 }
   }).then(res => {
     if (res.code === '200') {
       boxOfficeTop10.length = 0;
@@ -296,11 +326,10 @@ const loadFilmBoxOfficeTop = () => {
   });
 };
 
-// 加载评分Top5数据
 const loadFilmMarkTop = () => {
   loading.mark = true;
   request.get(FILM_API.MARK_TOP, {
-    params: {topNum: 10}
+    params: { topNum: 10 }
   }).then(res => {
     if (res.code === '200') {
       ratingTop5.length = 0;
@@ -316,135 +345,186 @@ const loadFilmMarkTop = () => {
   });
 };
 
-// 电影数据加载
 const load = () => {
   request.get(API_PATHS.FILMS).then(res => {
     if (res.code === '200') {
       data.data1 = res.data.filter(v => v.status === '已上映');
       data.data2 = res.data.filter(v => v.status === '待上映');
-      // 最多展示8条数据，避免页面过长
-      data.playingData = data.data1.length > 8 ? data.data1.slice(0, 8) : data.data1;
-      data.noPlayData = data.data2.length > 8 ? data.data2.slice(0, 8) : data.data2;
+      // 最多展示 8 条，避免页面过长
+      data.playingData = data.data1.slice(0, 8);
+      data.noPlayData = data.data2.slice(0, 8);
     } else {
       data.error = true;
       ElMessage.error(res.msg);
     }
   }).catch(err => {
-    // 网络异常的统一提示由 request.js 的响应拦截器给出，这里只落错误态，
-    // 让占位显示"数据加载失败，请稍后重试"，避免同一错误弹两个提示
+    // 网络异常的统一提示由 request.js 的响应拦截器给出，这里只落错误态
     console.error('电影列表接口请求异常：', err);
     data.error = true;
   });
 };
 
-// 页面初始化加载所有数据
 load();
 loadTodayBoxOffice();
 loadFilmBoxOfficeTop();
 loadFilmMarkTop();
+
+onMounted(startHero);
+onUnmounted(stopHero);
 </script>
 
 <style scoped>
 .home-page {
   display: flex;
-  width: 75%;
-  max-width: 1200px;
-  margin: var(--space-20) auto;
+  align-items: flex-start;
 }
 
 .home-main {
   flex: 1;
+  min-width: 0;
 }
 
 .home-main__upcoming {
-  flex: 1;
-  margin-top: var(--space-24);
+  margin-top: var(--space-32);
 }
 
-/* 区块标题行 */
-.section-head {
-  display: flex;
-  align-items: center;
-}
-
-.section-head__title {
-  flex: 1;
-  font-size: var(--fs-xl);
-  color: var(--el-color-primary);
-}
-
-.section-head__title--upcoming {
-  color: var(--el-color-primary);
-}
-
-.section-head__more {
-  width: 60px;
-  color: var(--el-color-primary);
-  text-align: right;
-  cursor: pointer;
-}
-
-.section-head__more--wide {
-  width: 100px;
-}
-
-/* 电影网格 */
-.film-grid {
-  margin-top: var(--space-20);
-}
-
-.film-grid__col {
-  margin-bottom: var(--space-20);
-}
-
-.film-grid__col--clickable {
-  cursor: pointer;
-}
-
-.film-card__poster-link {
-  margin-bottom: var(--space-8);
-  cursor: pointer;
-}
-
-.film-card__poster {
+.poster-buy {
   width: 100%;
-  height: 260px;
-  border-radius: var(--el-border-radius-base);
-  object-fit: cover;
-  transition: transform 200ms ease-in-out;
 }
 
-.film-card__poster:hover {
-  transform: scale(1.02);
-}
-
-.film-card__buy {
-  width: 100%;
-  height: 35px;
-  border-color: var(--el-color-primary);
-  color: var(--el-color-primary);
-}
-
-.film-card__upcoming {
-  transition: box-shadow 200ms ease-in-out;
-}
-
-.film-card__upcoming:hover {
-  box-shadow: var(--el-box-shadow-lighter);
-}
-
-.film-card__title {
-  margin-top: var(--space-4);
-  font-size: var(--fs-xl);
-  font-weight: var(--fw-bold);
-  font-style: italic;
-}
-
-/* 上映时间承载文字，用白底评分文字色（4.68:1） */
-.film-card__time {
-  margin-top: var(--space-4);
-  font-size: var(--fs-md);
+/* 即将上映的档期：白底文字用 --color-rating-text（4.68:1），不用深底金 */
+.upcoming-date {
+  font-size: var(--fs-xs);
   color: var(--color-rating-text);
+}
+
+/* ---------- Hero 轮播 ---------- */
+.hero {
+  position: relative;
+}
+
+.hero__stage {
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: 16 / 7;
+  border-radius: var(--el-border-radius-base);
+  background-color: var(--el-fill-color-light);
+}
+
+.hero__slide {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  /* visibility 同时解决两件事，缺一不可：
+     ① 非激活页不接收指针事件 —— 五张都是 absolute + inset:0，后置兄弟节点绘制在上层，
+        只写 opacity:0 的话点击会被最后一张（透明）的链接吃掉，跳到错的影片；
+     ② 非激活页不进 Tab 顺序与无障碍树 —— 否则键盘能聚焦到看不见的「购票」上，
+        且它带着 aria-hidden，形成"可聚焦但不可见不可读"的焦点陷阱。 */
+  visibility: hidden;
+  /* 大面板过渡取 §八 的 300ms ease-in（离场缓动） */
+  transition: opacity 300ms ease-in, visibility 300ms ease-in;
+}
+
+.hero__slide--active {
+  opacity: 1;
+  visibility: visible;
+}
+
+.hero__img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* 渐变遮罩让左侧文字有稳定底色。只含令牌与 transparent 关键字，无硬编码色值（§3.7） */
+.hero__scrim {
+  position: absolute;
+  inset: 0;
+  background-image: linear-gradient(
+      90deg,
+      var(--dark-bg) 0%,
+      var(--dark-bg) 45%,
+      transparent 100%
+  );
+}
+
+.hero__body {
+  position: absolute;
+  top: 50%;
+  left: var(--space-48);
+  max-width: 45%;
+  transform: translateY(-50%);
+}
+
+/* 深色块上的文字一律用 §3.5 深色表面令牌 */
+.hero__title {
+  font-size: var(--fs-4xl);
+  font-weight: var(--fw-bold);
+  color: var(--dark-text);
+}
+
+/* 深底上的次级说明统一用 --dark-text-secondary（10.84:1），
+   与两个详情页的 hero 取同一个令牌 —— 同一个语义槽位只应有一个答案 */
+.hero__meta {
+  margin-top: var(--space-8);
+  font-size: var(--fs-base);
+  color: var(--dark-text-secondary);
+}
+
+/* 深色底上的评分用 --color-rating（金），12.41:1 达 AA（§3.6） */
+.hero__score {
+  margin-top: var(--space-8);
+  font-size: var(--fs-5xl);
+  font-weight: var(--fw-bold);
+  color: var(--color-rating);
+  line-height: var(--lh-loose);
+}
+
+/* CTA 是 <a>（router-link），白字压主色 5.58:1 达 AA。
+   hover / active 取 §3.7 状态映射：背景 light-3 / dark-2。 */
+.hero__cta {
+  display: inline-block;
+  margin-top: var(--space-16);
+  padding: var(--space-8) var(--space-24);
+  border-radius: var(--el-border-radius-round);
+  background-color: var(--el-color-primary);
+  color: var(--color-on-accent);
+  font-weight: var(--fw-bold);
+  text-decoration: none;
+  transition: background-color 100ms ease-out;
+}
+
+.hero__cta:hover {
+  background-color: var(--el-color-primary-light-3);
+}
+
+.hero__cta:active {
+  background-color: var(--el-color-primary-dark-2);
+}
+
+.hero__dots {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-8);
+  margin-top: var(--space-12);
+}
+
+/* 圆点用 --el-border-color-dark 作默认、主色作选中；同时靠尺寸区分，
+   不只靠颜色传递「当前是哪一张」（§3.7） */
+.hero__dot {
+  width: 24px;
+  height: 4px;
+  padding: 0;
+  border: none;
+  border-radius: var(--el-border-radius-small);
+  background-color: var(--el-border-color-dark);
+  cursor: pointer;
+  transition: background-color 100ms ease-out;
+}
+
+.hero__dot--active {
+  background-color: var(--el-color-primary);
 }
 
 /* ---------- 右侧栏 ---------- */
@@ -454,20 +534,20 @@ loadFilmMarkTop();
 }
 
 .home-aside__section {
-  margin-top: var(--space-40);
+  margin-top: var(--space-32);
 }
 
 /* ---------- 今日票房 ---------- */
 .today-box {
   display: flex;
-  margin-bottom: var(--space-40);
+  margin-bottom: var(--space-32);
   overflow: hidden;
   background-color: var(--el-fill-color-light);
   border-radius: var(--el-border-radius-base);
 }
 
-/* 色条上压的是白字，底色必须是「承载文字」的品牌色 --el-color-primary（前台 #BF352D，5.58:1）。
-   --color-brand（前台 #ef4238）按规范 §3.2 只用于不承载文字的图形 / 大标题 —— 白字压它仅 3.81:1，不达 AA。 */
+/* 色条上压的是白字，底色必须是「承载文字」的主色（前台 #BF352D，5.58:1）。
+   --color-brand（前台 #ef4238）按 §3.2 只用于不承载文字的图形 / 大标题 —— 白字压它仅 3.81:1。 */
 .today-box__strip {
   display: flex;
   flex-shrink: 0;
@@ -499,7 +579,7 @@ loadFilmMarkTop();
   justify-content: space-between;
 }
 
-/* 前台数据大字，规范 §4.2 指定 --fs-5xl 给「评分 / 票房」 */
+/* 前台数据大字，§4.2 指定 --fs-5xl 给「评分 / 票房」 */
 .today-box__amount {
   color: var(--el-text-color-primary);
   font-size: var(--fs-5xl);
@@ -518,20 +598,12 @@ loadFilmMarkTop();
   font-size: var(--fs-xs);
 }
 
-.aside-title {
-  margin: var(--space-8) 0;
-  font-size: var(--fs-xl);
-  color: var(--el-color-primary);
-}
-
+/* ---------- 榜单条 ---------- */
 .rank-box {
+  margin-top: var(--space-16);
   padding: var(--space-12) var(--space-4);
-  border: 1px solid var(--el-color-primary);
+  border: 1px solid var(--el-border-color-light);
   border-radius: var(--el-border-radius-base);
-}
-
-.rank-box--spaced {
-  margin-top: var(--space-20);
 }
 
 .rank-box__loading {
@@ -546,12 +618,14 @@ loadFilmMarkTop();
   --el-skeleton-avatar-size: 80px;
 }
 
+/* 整行是 router-link（原生 <a>，可 Tab 聚焦），因此不写 cursor: pointer 也不挂 @click */
 .rank-row {
   display: flex;
   align-items: center;
   padding: var(--space-8) var(--space-4);
-  cursor: pointer;
-  transition: background-color 200ms ease-in-out;
+  color: inherit;
+  text-decoration: none;
+  transition: background-color 100ms ease-out;
 }
 
 .rank-row:hover {
@@ -560,7 +634,11 @@ loadFilmMarkTop();
 
 .rank-row--divided {
   padding: var(--space-12) var(--space-4);
-  border-bottom: 1px dashed var(--el-border-color);
+  border-bottom: 1px solid var(--el-border-color-lighter);
+}
+
+.rank-row--divided:last-child {
+  border-bottom: none;
 }
 
 .rank-badge {
@@ -596,6 +674,7 @@ loadFilmMarkTop();
 
 .rank-row__body {
   flex: 1;
+  min-width: 0;
   margin-left: var(--space-12);
 }
 
@@ -632,19 +711,12 @@ loadFilmMarkTop();
   object-fit: cover;
 }
 
-/* 评分承载文字，用白底评分文字色（4.68:1） */
+/* 评分每行是「9.2 分」，含中文，故字重只能用 400 / 700（§4.4）。
+   文字色用白底评分色 --color-rating-text（4.68:1） */
 .rank-row__score {
   margin-top: var(--space-4);
   font-size: var(--fs-base);
-  font-weight: var(--fw-medium);
+  font-weight: var(--fw-bold);
   color: var(--color-rating-text);
-}
-
-/* 无数据 / 加载失败的占位（规范 §608：禁止用假数据填充，无数据渲染「暂无数据」） */
-.empty-hint {
-  padding: var(--space-20) 0;
-  font-size: var(--fs-base);
-  color: var(--el-text-color-regular);
-  text-align: center;
 }
 </style>

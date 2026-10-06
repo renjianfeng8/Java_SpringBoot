@@ -1,7 +1,7 @@
 <template>
   <div class="auth-container">
     <div class="auth-card">
-      <div class="auth-title">欢迎登录电影购票系统</div>
+      <h1 class="auth-title">欢迎登录电影购票系统</h1>
       <el-form
         ref="formRef"
         :rules="data.rules"
@@ -37,7 +37,7 @@
         <div class="auth-actions">
           <el-button @click="login" type="primary" class="auth-submit" size="large">登 录</el-button>
         </div>
-        <div class="auth-hint">还没有账号? 请<a href="/register" class="auth-hint__link">注 册</a></div>
+        <div class="auth-hint">还没有账号? 请<router-link to="/register" class="auth-hint__link">注 册</router-link></div>
       </el-form>
     </div>
   </div>
@@ -45,12 +45,13 @@
 
 <script setup>
 import { reactive, ref } from "vue"
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { User, Lock } from '@element-plus/icons-vue'
 import { useAuth } from "@/composables/useAuth"
 import { ElMessageBox } from "element-plus"
 
 const route = useRoute()
+const router = useRouter()
 const { login: authLogin } = useAuth()
 
 function getDefaultPath(role) {
@@ -80,9 +81,14 @@ const login = () => {
     if (!valid) return
     try {
       const user = await authLogin(data.form)
+      // 回跳目标只接受站内路径。必须排除 '//' —— 协议相对 URL（'//evil.com'）同样以 '/' 开头，
+      // 此前直接用 window.location.href 赋它就会跳到外站（开放重定向）。
+      // 改走 router.push：它只解析站内路径，同时也不再把应用整页重载一遍。
       const redirectParam = route.query.redirect
-      const redirect = (redirectParam && redirectParam.startsWith('/')) ? redirectParam : getDefaultPath(user.role)
-      window.location.href = redirect
+      const isSafePath = typeof redirectParam === 'string'
+        && redirectParam.startsWith('/')
+        && !redirectParam.startsWith('//')
+      router.push(isSafePath ? redirectParam : getDefaultPath(user.role))
     } catch (e) {
       ElMessageBox({
         message: e.message || '登录失败，请检查账号或密码是否正确',

@@ -31,3 +31,22 @@ export function formatScore(value) {
   if (value === null || value === undefined || value === '') return '暂无评分'
   return `${Number(value).toFixed(1)} 分`
 }
+
+/**
+ * 评分角标（压在海报上的那枚）：只出数字，不出「分」。
+ * 一是角标尺寸容不下单位，二是规范 §4.4 允许字重 500 的只有纯拉丁与数字 ——
+ * 带「分」的字符串含中文，就只能 400/700。
+ * 无评价时返回空串，调用方据此 v-if 掉整个角标（"没有评分"与"0 分"是两回事）。
+ */
+export function formatScoreBadge(value) {
+  if (value === null || value === undefined || value === '') return ''
+  return Number(value).toFixed(1)
+}
+
+/**
+ * 影片类型的展示文案。`film.typeList` 是后端派生出的只读字段（`Film` 本身没有 `types`），
+ * 消费端统一走这里，避免每页各写一遍分隔符与兜底值。
+ */
+export function formatFilmTypes(film) {
+  return film?.typeList?.map(t => t.title).join(' / ') || '未知类型'
+}

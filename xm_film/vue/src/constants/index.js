@@ -85,7 +85,6 @@ export const AUTH_API = {
   LOGIN: `${API_PATHS.AUTH}/login`,
   REGISTER: `${API_PATHS.AUTH}/register`,
   PASSWORD: `${API_PATHS.AUTH}/password`,
-  YEARS: `${API_PATHS.AUTH}/years`,
   ME: `${API_PATHS.AUTH}/me`,
 }
 

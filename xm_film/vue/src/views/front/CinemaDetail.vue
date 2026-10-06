@@ -1,9 +1,7 @@
 <template>
   <div class="cinema-detail">
-    <!-- 1. 加载状态提示 -->
-    <div v-if="loading" class="page-hint page-hint--loading">
-      正在加载影院及电影信息...
-    </div>
+    <!-- 1. 加载骨架：与头图同形，数据到位时不跳高 -->
+    <DetailSkeleton v-if="loading" />
 
     <!-- 2. 错误提示 -->
     <div v-else-if="errorMsg" class="page-hint page-hint--error">
@@ -15,19 +13,23 @@
     <div v-else>
       <!-- 3.1 影院详情头部 -->
       <div class="cinema-hero">
+        <!-- 模糊影院图铺底给纯色头图做出层次。纯装饰，故 alt 留空并 aria-hidden -->
+        <img v-if="cinema.avatar" :src="cinema.avatar" alt="" aria-hidden="true" class="cinema-hero__backdrop">
+        <div class="cinema-hero__scrim" aria-hidden="true"></div>
+
         <div class="cinema-hero__inner">
           <!-- 影院图 -->
           <div class="cinema-hero__poster">
             <img
                 :src="cinema.avatar"
-                alt="影院图片"
+                :alt="`${cinema.name || '影院'} 图片`"
                 class="cinema-hero__img"
             >
           </div>
 
           <!-- 影院基本信息 -->
           <div class="cinema-hero__info">
-            <div class="cinema-hero__name">{{ cinema.name || '未知影院' }}</div>
+            <h1 class="cinema-hero__name">{{ cinema.name || '未知影院' }}</h1>
 
             <!-- 地址信息 -->
             <div class="cinema-hero__meta">
@@ -54,7 +56,7 @@
             <div class="cinema-hero__services">
               <!-- 退票无忧 -->
               <div class="service-card">
-                <div class="service-card__title service-card__title--refund">
+                <div class="service-card__title service-tag--refund">
                   <el-icon class="service-card__icon"><RefreshLeft /></el-icon>
                   退票无忧
                 </div>
@@ -65,7 +67,7 @@
 
               <!-- 儿童优惠 -->
               <div class="service-card">
-                <div class="service-card__title service-card__title--promo">
+                <div class="service-card__title service-tag--promo">
                   <el-icon class="service-card__icon"><User /></el-icon>
                   儿童优惠
                 </div>
@@ -76,7 +78,7 @@
 
               <!-- WiFi覆盖 -->
               <div class="service-card">
-                <div class="service-card__title service-card__title--wifi">
+                <div class="service-card__title service-tag--wifi">
                   <el-icon class="service-card__icon"><Connection /></el-icon>
                   WiFi覆盖
                 </div>
@@ -99,10 +101,11 @@
 
           <!-- 电影列表内容 -->
           <div>
-            <!-- 无电影数据提示 -->
-            <div v-if="filmData.films.length === 0" class="empty-hint">
-              <div class="empty-hint__title">暂无该影院的上映电影信息</div>
-              <div class="empty-hint__desc">该影院可能暂未排片或暂无合作电影</div>
+            <!-- 无电影数据提示。类名不用 .empty-hint —— 那是共享层里「暂无数据」的单行占位，
+                 这里是带标题与说明的虚线面板，两者样式不同、同名会让编译后同特异性的规则打架 -->
+            <div v-if="filmData.films.length === 0" class="empty-panel">
+              <div class="empty-panel__title">暂无该影院的上映电影信息</div>
+              <div class="empty-panel__desc">该影院可能暂未排片或暂无合作电影</div>
             </div>
 
             <!-- 电影列表容器（纵向排列，每个电影块包含海报信息+横向扩展的放映记录） -->
@@ -514,14 +517,10 @@ watch([() => route.params.id, () => route.query.filmId], ([newCinemaId, newFilmI
   margin: 0 auto;
 }
 
-/* 加载 / 错误提示 */
+/* 错误提示（加载态已改为骨架屏，见 front-pages.scss 的 .detail-skeleton） */
 .page-hint {
   text-align: center;
   color: var(--el-text-color-regular);
-}
-
-.page-hint--loading {
-  padding: var(--space-48);
 }
 
 .page-hint--error {
@@ -535,38 +534,68 @@ watch([() => route.params.id, () => route.query.filmId], ([newCinemaId, newFilmI
 
 /* ---------- 3.1 影院详情头部（深色表面，见规范 §3.5） ---------- */
 .cinema-hero {
+  position: relative;
+  overflow: hidden;
   background-color: var(--dark-bg-hero);
 }
 
+/* 模糊影院图铺底：把纯色块做出纵深。只做装饰，不承载文字 */
+.cinema-hero__backdrop {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: blur(24px);
+  opacity: 0.3;
+}
+
+/* 叠影：左侧压暗保证文字底色稳定。渐变只含令牌与 transparent 关键字（§3.7） */
+.cinema-hero__scrim {
+  position: absolute;
+  inset: 0;
+  background-image: linear-gradient(
+      90deg,
+      var(--dark-bg-hero) 0%,
+      var(--dark-bg-hero) 30%,
+      transparent 100%
+  );
+}
+
+/* 内容层只需 position: relative 即可压在铺底与叠影之上：
+   三者 z-index 均为 auto，按 DOM 顺序绘制（§7.3 要求自定义 z-index 落在内容层） */
 .cinema-hero__inner {
+  position: relative;
   display: flex;
   align-items: flex-start;
   width: 60%;
   max-width: 1200px;
   margin: 0 auto;
-  padding: var(--space-20) 0;
+  padding: var(--space-32) 0;
 }
 
 .cinema-hero__poster {
-  margin-top: var(--space-4);
   flex-shrink: 0;
 }
 
 .cinema-hero__img {
-  width: 250px;
-  height: 300px;
+  display: block;
+  width: 220px;
+  aspect-ratio: 5 / 6;
   object-fit: cover;
   border-radius: var(--el-border-radius-base);
+  background-color: var(--el-fill-color-light);
 }
 
 .cinema-hero__info {
   flex: 2;
+  min-width: 0;
   margin-left: var(--space-24);
-  margin-top: var(--space-16);
   color: var(--dark-text);
 }
 
 .cinema-hero__name {
+  margin: 0 0 var(--space-12);
   font-size: var(--fs-3xl);
   font-weight: var(--fw-bold);
 }
@@ -595,17 +624,17 @@ watch([() => route.params.id, () => route.query.filmId], ([newCinemaId, newFilmI
   margin-bottom: var(--space-12);
 }
 
+/* 不设底色。原先就地写 rgba(255,255,255,.1) 属于硬编码色值（§3.7），
+   而 §3.5 的深色表面族里没有「深底上的浅色面层」这一类令牌（--surface-glass 是 80% 白，
+   专供压在照片上，用在这里会过亮）。分组感改由彩色标题片与间距提供，不依赖面层。 */
 .service-card {
   box-sizing: border-box;
   width: calc(50% - var(--space-4));
-  padding: var(--space-8) var(--space-12);
-  border-radius: var(--el-border-radius-base);
-  background-color: rgba(255, 255, 255, 0.1);
+  padding: var(--space-4) 0;
 }
 
-/* 服务标签：与影院列表页（front/Cinema.vue）同一套功能色。
- * 统一用「功能色作底 + 白字」—— 该组合在浅底与深底上都达 AA，
- * 两页因此可以共用一组配色，不再各写一套。 */
+/* 服务标签形状（带图标的片）。底色走共享层的 .service-tag--*，
+   与影院列表页（front/Cinema.vue）取同一组功能色，两页不再各写一套。 */
 .service-card__title {
   display: inline-flex;
   align-items: center;
@@ -617,26 +646,16 @@ watch([() => route.params.id, () => route.query.filmId], ([newCinemaId, newFilmI
   color: var(--color-on-accent);
 }
 
-.service-card__title--refund {
-  background-color: var(--el-color-primary);
-}
-
-.service-card__title--promo {
-  background-color: var(--el-color-warning);
-}
-
-.service-card__title--wifi {
-  background-color: var(--el-color-info);
-}
-
 .service-card__icon {
   margin-right: var(--space-8);
 }
 
+/* 用 --dark-text-secondary（10.84:1）而不是 opacity 压淡：
+   透明度是对比度的隐性扣减，令牌是可核对的档位 */
 .service-card__desc {
   font-size: var(--fs-xs);
   line-height: var(--lh-base);
-  opacity: 0.9;
+  color: var(--dark-text-secondary);
 }
 
 /* ---------- 3.2 上映电影列表 ---------- */
@@ -664,7 +683,7 @@ watch([() => route.params.id, () => route.query.filmId], ([newCinemaId, newFilmI
   color: var(--el-text-color-primary);
 }
 
-.empty-hint {
+.empty-panel {
   padding: var(--space-48);
   border: 1px dashed var(--el-border-color-lighter);
   border-radius: var(--el-border-radius-base);
@@ -672,14 +691,15 @@ watch([() => route.params.id, () => route.query.filmId], ([newCinemaId, newFilmI
   color: var(--el-text-color-regular);
 }
 
-.empty-hint__title {
+.empty-panel__title {
   margin-bottom: var(--space-12);
   font-size: var(--fs-md);
 }
 
-.empty-hint__desc {
+/* 说明文字承载文字，用常规文字色（6.11:1）；原来靠 opacity: .7 压淡，
+   那会把对比度降到 4.0:1 以下（§10.1） */
+.empty-panel__desc {
   font-size: var(--fs-base);
-  opacity: 0.7;
 }
 
 /* 电影容器：纵向排列每个电影块 */

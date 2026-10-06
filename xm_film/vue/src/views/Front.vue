@@ -8,47 +8,26 @@
       </div>
 
       <div class="front-header-center">
+        <!-- 导航项由 NAV_ITEMS 驱动：高亮态按「当前路由归属哪个导航段」算，
+             不靠一个手工同步的 activePath 字符串（那种写法漏掉一段就会点错项） -->
         <nav class="main-nav">
           <router-link
-              to="/front/home"
+              v-for="item in visibleNavItems"
+              :key="item.path"
+              :to="item.path"
               class="nav-item"
-              :class="{ 'active': activePath === '/home' }"
+              :class="{ 'active': isNavActive(item) }"
+              :aria-current="isNavActive(item) ? 'page' : undefined"
           >
-            首页
-          </router-link>
-          <router-link
-              to="/front/movie"
-              class="nav-item"
-              :class="{ 'active': activePath === '/front/movie' }"
-          >
-            电影
-          </router-link>
-          <router-link to="/front/cinema" class="nav-item" :class="{ 'active': activePath === '/front/cinema' }">影院</router-link>
-          <router-link to="/front/rank" class="nav-item" :class="{ 'active': activePath === '/front/rank' }">排行榜</router-link>
-          <!-- 取票大厅刻意不挂在 showUserEntries 下：它是自助机口径，游客也必须能进 -->
-          <router-link to="/front/pickup" class="nav-item" :class="{ 'active': activePath === '/front/pickup' }">取票大厅</router-link>
-          <router-link
-              v-if="showUserEntries"
-              to="/front/orders"
-              class="nav-item"
-              :class="{ 'active': activePath === '/front/orders' }"
-          >
-            购票记录
-          </router-link>
-          <router-link
-              v-if="showUserEntries"
-              to="/front/account"
-              class="nav-item"
-              :class="{ 'active': activePath === '/front/account' }"
-          >
-            我的账户
+            {{ item.label }}
           </router-link>
         </nav>
       </div>
 
       <div class="front-header-right">
-        <!-- 搜索框提示文案明确为“电影名称”，引导用户输入 -->
-        <el-input v-model="searchKeyword" placeholder="请输入电影名称" class="search-input" @keyup.enter="handleSearch">
+        <!-- 搜索框带 aria-label：placeholder 一输入就消失，不构成可访问名称（规范 §9.3） -->
+        <el-input v-model="searchKeyword" placeholder="请输入电影名称" aria-label="搜索电影名称"
+                  class="search-input" @keyup.enter="handleSearch">
           <template #append>
             <el-button type="info" @click="handleSearch">搜 索</el-button>
           </template>
@@ -149,7 +128,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { CaretBottom } from '@element-plus/icons-vue'
@@ -160,7 +139,33 @@ const route = useRoute()
 const { user, logout: authLogout, isLoggedIn, isAdmin, isCinema } = useAuth()
 
 const searchKeyword = ref('')
-const activePath = ref('')
+
+// 导航项，`sections` 是这一项归属的路由前缀（高亮判据）。
+// 按用户心智分：影片详情 / 选择影院 / 影评都属于「电影」这条线，影院详情属于「影院」。
+// 不属于任何一项的页面（个人中心、修改密码 —— 它们只在头像下拉里）保持无高亮，
+// 而不是把「首页」点亮。
+// 取票大厅刻意不带 requiresUser：它是自助机口径，游客也必须能进；
+// 「购票记录 / 我的账户」对应的路由 meta.roles 只认 USER，故仅对 USER 与游客渲染。
+const NAV_ITEMS = [
+  { path: '/front/home', label: '首页', sections: ['/front/home'] },
+  {
+    path: '/front/movie',
+    label: '电影',
+    sections: ['/front/movie', '/front/search', '/front/filmDetail', '/front/filmCinema', '/front/filmMarks'],
+  },
+  { path: '/front/cinema', label: '影院', sections: ['/front/cinema', '/front/cinemaDetail'] },
+  { path: '/front/rank', label: '排行榜', sections: ['/front/rank'] },
+  { path: '/front/pickup', label: '取票大厅', sections: ['/front/pickup'] },
+  { path: '/front/orders', label: '购票记录', sections: ['/front/orders'], requiresUser: true },
+  { path: '/front/account', label: '我的账户', sections: ['/front/account'], requiresUser: true },
+]
+
+const visibleNavItems = computed(() =>
+    NAV_ITEMS.filter(item => !item.requiresUser || showUserEntries.value)
+)
+
+const isNavActive = (item) =>
+    item.sections.some(prefix => route.path.startsWith(prefix))
 
 const goAdmin = () => {
   if (isAdmin.value) {
@@ -200,39 +205,27 @@ const handleSearch = () => {
     ElMessage.warning('请输入电影名称')
     return
   }
-  window.location.href = '/front/search?title=' + encodeURIComponent(keyword)
-}
-
-onMounted(() => {
-  updateActivePath(route.path)
-})
-
-watch(() => route.path, (newPath) => {
-  updateActivePath(newPath)
-})
-
-const updateActivePath = (path) => {
-  if (path.startsWith('/front/movie')) {
-    activePath.value = '/front/movie'
-  } else if (path.startsWith('/front/cinema')) {
-    activePath.value = '/front/cinema'
-  } else if (path.startsWith('/front/rank')) {
-    activePath.value = '/front/rank'
-  } else if (path.startsWith('/front/orders')) {
-    activePath.value = '/front/orders'
-  } else if (path.startsWith('/front/account')) {
-    activePath.value = '/front/account'
-  } else if (path.startsWith('/front/search')) {
-    activePath.value = '/front/movie'
-  } else if (path.startsWith('/front')) {
-    activePath.value = '/home'
-  } else {
-    activePath.value = path === '/' ? '/home' : path
-  }
+  // 走 router.push 而非 window.location.href：整页重载会丢掉 SPA 状态，
+  // 并把应用重新下载一遍（此前这里是一次完整的页面刷新）
+  router.push({ path: '/front/search', query: { title: keyword } })
 }
 </script>
 
 <style scoped>
+/* 前台外壳：消费端页面底色是白（规范 §6.2「前台页面背景 #ffffff」），
+ * 而 body 默认取的是 --el-bg-color-page（灰）。所以在这里铺白，并让内容区撑满，
+ * 短页面时页脚仍贴底。 */
+.front-container {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background-color: var(--el-bg-color);
+}
+
+.front-content {
+  flex: 1;
+}
+
 /* ============================================================
  * 顶部导航栏（Header）—— Flex 弹性自适应
  * 收缩优先级：左组(不缩) > 导航项(不缩、不换行) > 右组(可缩，搜索框是唯一泄压阀)
@@ -315,6 +308,9 @@ const updateActivePath = (path) => {
   font-weight: var(--fw-bold);
 }
 
+/* 下划线是装饰（不承载文字），按 §3.2 取 --color-brand 的亮档 #ef4238 —— 与
+ * 区块标题的短线（front-pages.scss .section-head::after）用同一条品牌强调语言。
+ * 文字仍用 --el-color-primary：那是承载文字的档，两者不可互换。 */
 .nav-item.active::after {
   content: '';
   position: absolute;
@@ -322,8 +318,15 @@ const updateActivePath = (path) => {
   bottom: 0;
   width: 100%;
   height: 2px;
-  background-color: var(--el-color-primary);
+  background-color: var(--color-brand);
   border-radius: var(--el-border-radius-small);
+}
+
+/* 键盘焦点必须可见（§9.1 Focus） */
+.nav-item:focus-visible {
+  outline: 2px solid var(--el-color-primary);
+  outline-offset: 2px;
+  border-radius: var(--el-border-radius-base);
 }
 
 /* 右组：搜索 + 用户区；唯一的泄压阀（flex-shrink: 1） */

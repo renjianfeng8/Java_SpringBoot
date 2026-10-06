@@ -1,5 +1,5 @@
 <template>
-  <div class="search-results-container">
+  <div class="page-narrow search-results">
     <!-- 搜索信息栏 -->
     <div class="search-info">
       <h2 class="search-title">
@@ -8,90 +8,99 @@
       <p class="result-count">找到 {{ filmList.length }} 部相关电影</p>
     </div>
 
-    <!-- 搜索结果列表 -->
-    <div class="film-grid" v-if="filmList.length > 0">
-      <div class="film-card" v-for="film in filmList" :key="film.id" @click="goToDetail(film.id)">
-        <div class="film-card__poster-wrap">
-          <img :src="film.img" :alt="film.title" class="film-card__img">
-          <div class="film-card__score">{{ formatScore(film.score) }}</div>
+    <!-- 结果列表：整卡是 router-link，原生可 Tab 聚焦、可回车进入详情 -->
+    <div v-if="filmList.length" class="film-row-grid">
+      <router-link
+          v-for="film in filmList"
+          :key="film.id"
+          class="film-row"
+          :to="`/front/filmDetail/${film.id}`"
+      >
+        <div class="film-row__poster">
+          <img :src="film.img" :alt="`《${film.title}》海报`" class="film-row__img">
+          <!-- 评分压在图上（§3.6：--color-rating 可用于图片叠加）。
+               垫一层 --overlay-mask 就不需要给文字描边，也就不再手写 text-shadow（§7.2） -->
+          <span v-if="scoreText(film)" class="film-row__score">{{ scoreText(film) }}</span>
         </div>
 
-        <div class="film-card__body">
-          <h3 class="film-card__name">{{ film.title }}</h3>
-          <h3 class="film-card__english">{{ film.english }}</h3>
-
-          <div class="film-card__meta film-card__meta--tight">
-            <span class="film-card__meta-text">时长: {{ film.time }}分钟</span>
-          </div>
-          <div class="film-card__meta">
-            <span class="film-card__meta-text">上映时间: {{ film.start }}</span>
-          </div>
-
+        <div class="film-row__body">
+          <h3 class="film-row__name" :title="film.title">{{ film.title }}</h3>
+          <p class="film-row__english">{{ film.english }}</p>
+          <p class="film-row__meta">时长：{{ film.time }} 分钟</p>
+          <p class="film-row__meta">上映时间：{{ film.start }}</p>
         </div>
-      </div>
+      </router-link>
     </div>
 
-    <!-- 无结果状态 -->
-    <div class="search-empty" v-else>
-      <el-empty description="没有找到匹配的电影" />
+    <!-- 空态与失败态文案固定且必须区分（规范 §11.2）：请求失败时说「暂无数据」
+         会让用户以为库里确实没有，从而不去重试 -->
+    <div v-else-if="error" class="empty-hint">数据加载失败，请稍后重试</div>
+    <div v-else-if="!loading" class="search-empty">
+      <p class="empty-hint">暂无数据</p>
       <el-button type="primary" @click="goBack">返回电影列表</el-button>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
 import request from "@/utils/request.js";
-import { formatScore } from '@/utils/format.js';
 import { FILM_API } from '@/constants';
+import { formatScoreBadge } from '@/utils/format.js';
 
-// 路由实例
 const route = useRoute()
 const router = useRouter()
 
-// 响应式数据
 const searchTitle = ref('')
 const filmList = ref([])
+const loading = ref(false)
+const error = ref(false)
 
-// 跳转到电影详情页
-const goToDetail = (id) => {
-  router.push(`/front/filmDetail/${id}`)
-}
-
-// 返回电影列表页
 const goBack = () => {
   router.push('/front/movie')
 }
 
-// 获取搜索结果数据
+// 徽章只放数字，无评价时为空串（见 utils/format.js#formatScoreBadge）
+const scoreText = (film) => formatScoreBadge(film.score)
+
 const fetchSearchResults = async () => {
+  const title = route.query.title || ''
+  searchTitle.value = title
+  if (!title.trim()) return
+
+  loading.value = true
+  error.value = false
   try {
-    const title = route.query.title || ''
-    searchTitle.value = title
-    if (!title.trim()) return
     const response = await request.get(FILM_API.SEARCH, { params: { title } })
-    filmList.value = response.code === '200' ? (response.data || []) : []
-  } catch (error) {
-    console.error('搜索请求出错:', error)
-    ElMessage.error('搜索失败，请稍后重试')
+    if (response.code === '200') {
+      filmList.value = response.data || []
+    } else {
+      // 业务码非 200 走的是 HTTP 200，不经响应拦截器，必须自己落错误态 ——
+      // 否则会落到「暂无数据」，让用户以为库里确实没有这部片
+      error.value = true
+      filmList.value = []
+    }
+  } catch (err) {
+    // 网络 / 超时 / 5xx 的失败提示由 request.js 的响应拦截器统一给出，页面只落错误态
+    console.error('搜索请求出错:', err)
+    error.value = true
+    filmList.value = []
+  } finally {
+    loading.value = false
   }
 }
 
-// 页面挂载时获取数据
 onMounted(fetchSearchResults)
+
+// 顶栏搜索是同路由只换 query，组件会被复用、onMounted 不再触发，
+// 没有这个 watch 就会一直显示上一次的结果（改 router.push 之前是整页重载，看不出问题）
+watch(() => route.query.title, fetchSearchResults)
 </script>
 
 <style scoped>
-.search-results-container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: var(--space-20);
-}
-
 .search-info {
-  margin-bottom: var(--space-32);
+  margin-bottom: var(--space-24);
   padding-bottom: var(--space-16);
   border-bottom: 1px solid var(--el-border-color-lighter);
 }
@@ -114,58 +123,66 @@ onMounted(fetchSearchResults)
   color: var(--el-text-color-regular);
 }
 
-/* 保留重复使用的类样式：网格容器和卡片基础样式 */
-.film-grid {
+/* 横向条目网格。此处不并入 FilmPosterCard：那个是竖版海报卡，
+   这里是「海报缩略图 + 多行文字」的另一种形状，强行合并只会给组件加一堆开关 */
+.film-row-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: var(--space-24);
 }
 
-.film-card {
+.film-row {
   display: flex;
-  background: var(--el-bg-color);
-  border-radius: var(--el-border-radius-base);
   overflow: hidden;
+  border-radius: var(--el-border-radius-base);
+  background-color: var(--el-bg-color);
   box-shadow: var(--el-box-shadow-lighter);
+  color: inherit;
+  text-decoration: none;
   transition: transform 200ms ease-in-out, box-shadow 200ms ease-in-out;
-  cursor: pointer;
 }
 
-.film-card:hover {
+.film-row:hover {
   transform: translateY(-4px);
   box-shadow: var(--el-box-shadow-light);
 }
 
-.film-card__poster-wrap {
+.film-row__poster {
   position: relative;
   flex-shrink: 0;
   width: 100px;
+  aspect-ratio: 2 / 3;
+  background-color: var(--el-fill-color-light);
 }
 
-.film-card__img {
+.film-row__img {
+  display: block;
   width: 100%;
-  height: 150px;
+  height: 100%;
   object-fit: cover;
 }
 
-/* 评分叠加在图片上，用装饰金（规范 §3.6：仅深底 / 图片叠加） */
-.film-card__score {
+.film-row__score {
   position: absolute;
   right: var(--space-4);
   bottom: var(--space-4);
-  font-size: var(--fs-xs);
+  padding: var(--space-4) var(--space-8);
+  border-radius: var(--el-border-radius-small);
+  background-color: var(--overlay-mask);
   color: var(--color-rating);
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+  font-size: var(--fs-xs);
+  /* 纯数字，可用 500（§4.4） */
+  font-weight: var(--fw-medium);
+  line-height: var(--lh-loose);
 }
 
-.film-card__body {
-  display: flex;
-  flex-direction: column;
+.film-row__body {
   flex-grow: 1;
+  min-width: 0;
   padding: var(--space-16);
 }
 
-.film-card__name {
+.film-row__name {
   margin: 0 0 var(--space-8);
   font-size: var(--fs-md);
   font-weight: var(--fw-bold);
@@ -175,31 +192,24 @@ onMounted(fetchSearchResults)
   text-overflow: ellipsis;
 }
 
-.film-card__english {
-  display: flex;
-  gap: var(--space-12);
+/* 原名是副标题而不是标题，故用 p（原来写成 h3 会让读屏软件的标题跳级） */
+.film-row__english {
   margin: 0 0 var(--space-4);
   font-size: var(--fs-xs);
-  font-weight: var(--fw-regular);
   color: var(--el-text-color-regular);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.film-card__meta {
-  display: flex;
+.film-row__meta {
+  margin: 0 0 var(--space-4);
   font-size: var(--fs-xs);
   color: var(--el-text-color-regular);
-}
-
-.film-card__meta--tight {
-  margin-bottom: var(--space-4);
-}
-
-.film-card__meta-text {
-  display: inline;
 }
 
 .search-empty {
-  padding: var(--space-64) 0;
+  padding: var(--space-40) 0;
   text-align: center;
 }
 </style>
