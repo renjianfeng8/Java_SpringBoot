@@ -13,8 +13,6 @@
     <FilmPosterCard :film="item">
       <el-button ...>购票</el-button>
     </FilmPosterCard>
-
-  即将上映的片子不可购票，传 :cta="''" 即不显示 hover 提示。
 -->
 <template>
   <article class="poster-card">
@@ -30,11 +28,6 @@
         >
         <!-- 破图兜底取片名首字，与该项目的头像兜底同一手法（front-pages.scss .mark-item__avatar） -->
         <div v-else class="poster-card__fallback" aria-hidden="true">{{ firstChar }}</div>
-
-        <!-- hover 提示：纯视觉暗示，交互本体是整块 link，故用 span 并 aria-hidden，
-             免得读屏软件把「购票」念第二遍。底色用主色而非半透明遮罩：白字压主色 5.58:1 达标，
-             压半透明遮罩则取决于海报本身，无法保证（§10.1）。 -->
-        <span v-if="cta" class="poster-card__cta" aria-hidden="true">{{ cta }}</span>
 
         <!-- 评分徽章压在图上：§3.6 明确 --color-rating 可用于「图片叠加」，
              垫一层 --overlay-mask 使任意海报底色下都可读 -->
@@ -55,7 +48,6 @@ import { formatScoreBadge } from '@/utils/format.js';
 
 const props = defineProps({
   film: { type: Object, required: true },
-  cta: { type: String, default: '购票' },
 });
 
 const posterFailed = ref(false);
@@ -107,26 +99,6 @@ const scoreText = computed(() => formatScoreBadge(props.film.score));
   height: 100%;
   font-size: var(--fs-2xl);
   color: var(--el-text-color-regular);
-}
-
-.poster-card__cta {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  padding: var(--space-8) var(--space-20);
-  border-radius: var(--el-border-radius-round);
-  background-color: var(--el-color-primary);
-  color: var(--color-on-accent);
-  /* 「购票」含中文，§4.4 只允许 400 / 700 */
-  font-weight: var(--fw-bold);
-  white-space: nowrap;
-  opacity: 0;
-  transition: opacity 200ms ease-in-out;
-}
-
-.poster-card:hover .poster-card__cta {
-  opacity: 1;
 }
 
 .poster-card__score {

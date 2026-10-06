@@ -120,6 +120,7 @@
 83. `window.location.href` 换成 `router.push` 会改变组件复用语义，同页换 query 不再重新挂载: 改之前是整页重载，目标组件必然重建；改之后同一路由记录只换 query 时组件被复用，只写在 `onMounted` 里的取数**不会**再触发。搜索页因此会一直显示上一次的关键词与结果（`Front.vue` 的顶栏搜索正是同路由换 `?title=`）。凡"同路径不同参数"的取数入口都要 `watch` 参数本身，不能只靠 `onMounted` —— 把"整页重载"改成"站内跳转"时，必须回头检查目标页是不是靠重载来刷新的（见 BUG-055）
 84. `opacity: 0` 的叠放层仍然接收点击、也仍然可聚焦: 轮播把多张 slide 都设成 `position: absolute; inset: 0; opacity: 0` 时，后置兄弟节点绘制在上层并照常命中测试 —— 点可见那张的按钮，实际命中的是最后一张透明层的链接，跳到错的条目；同时它们仍在 Tab 顺序与无障碍树里，配上 `aria-hidden` 就成了"可聚焦但不可见不可读"的焦点陷阱。用 `visibility: hidden` 一次解决两件事（既不接收指针事件、也不进 Tab 顺序），过渡写成 `opacity …, visibility …` 即可保留淡入淡出（见 BUG-055）
 85. 表单字段必须有数据落点: 绑定到 `v-model` 并随整表单提交的字段，后端必须有对应列（或对应的处理分支）承接它。`manage/Person.vue` 的「个人介绍」曾绑 `data.form.description` 并 PUT 给 `/api/v1/admins`，而 `admin` 表没有 `description` 列（`cinema` 表有 —— 该页是从影院端复制改写的，字段跟着文本一起搬了过来）。用户填了、点保存、看到「更新成功」，内容静默丢弃：比字段不存在更有害，因为它让人以为填过了。该字段已按本条删除（见 BUG-056）。判断方法同规则 32 的反向 —— 规则 32 问"这个字段该不该由前端给"，本条问"前端给了之后谁接"。加字段前先 `grep` 一次 schema，跨端复制表单时要逐个字段核对目标表
+86. 瞬时接口的加载反馈要有最短时长，失败不要擦掉已展示的数据: 「今日票房」这类本地聚合接口几十毫秒就返回，`loading` 直接跟随请求生命周期会让转圈一闪而过、数字无声替换，用户无从确认「点过了」。给手动刷新一个最短展示时长（约 450ms），并把 loading 的结束与结果高亮压到同一刻 —— 读起来是「转圈停 → 数字亮一下」。配套三条：① `el-button` 的 `loading` 会自己渲染一个转圈图标，默认插槽里的自定义图标不会随之消失，两者叠加就是一个按钮两个图标，要在 loading 时 `v-if` 掉自定义图标；② 刷新失败保留上次的数字（状态里的值不回退），只在次要行提示，瞬时故障不该把已知数据抹成错误文案；③ 宽字号数据（前台 `--fs-5xl` 36px 的大字）不要与"两态宽度会变"的按钮同排 —— 按钮一宽就把数字挤到折行，「元」掉到第二行再弹回，看着就是数字上下跳。数据要 `white-space: nowrap`，并让它独占一行，按钮让到次要行（见 BUG-057）
 
 ## 案例篇
 
@@ -994,4 +995,21 @@
   - **「重置」按钮沿用 `type="warning"`**：按 §3.7 功能色不得用于装饰，橙色「重置」站不住；但这是全站既有约定（前台 1 页 + back 4 页 + manage 13 页共 18 处，含 BUG-055 已审的前台页），不静默分叉，留待一次性统一。
 - 相关文件: `xm_film/vue/src/assets/css/{admin-pages.scss,admin-layout.scss}`、`xm_film/vue/src/views/manage/`（16 页）、`xm_film/vue/src/views/back/{Film.vue,Person.vue,Password.vue}`、`xm_film/vue/src/composables/useCrud.js`、`xm_film/vue/src/constants/index.js`、`CLAUDE.md`、`Bug.md`、`前端规范待办.md`
 - 提交记录: `7d60ca01`
+- 状态: 已修复
+
+### BUG-057: 首页「今日票房」的刷新反馈不可感知（转圈一闪而过、数字无声替换）
+
+- 日期: 2026-10-06
+- 问题描述: `/front/home` 右侧栏「今日票房」点「刷新」几乎看不到任何反馈：按钮的转圈几十毫秒就消失，数字直接换掉，用户无从判断是否点中、是否刷新成功。失败时更糟 —— 大数字被整块换成错误文案，一次瞬时故障就把已知的票房数抹掉了
+- 根因分析: 三个独立的原因叠加。① `box-office/today`（BUG-047 引入的匿名聚合端点）在本机几十毫秒返回，`loading.today` 直接挂在请求生命周期上（`finally` 里清），转圈时长等于请求时长 —— 这是典型的 spinner flash：操作快过感知阈值时反而像没响应。② 数字与错误文案是 `v-if` / `v-else` 二选一渲染的，错误态一到就把数字换掉，没有"保留旧值"的概念。③ 数字与刷新按钮同处一行，而这一行只有 208px 内容宽（`aside 280` − 色条 40 − 内边距 32）；按钮 idle 态「刷新」与 loading 态「刷新中」宽度不同，EP 又把转圈图标渲染成标签 `<span>` 的兄弟节点（`.el-button [class*=el-icon]+span` 再加 6px 间距），刷新时按钮宽约 20px。临界长度的金额（如 `135.00元`，36px 粗体约 146px）在 idle 时刚好放下、刷新时被挤到折行 ——「元」掉到第二行、刷新完又弹回，就是肉眼看到的"元字上下跳"
+- 解决方案:
+  1. `loadTodayBoxOffice` 引入 `MIN_REFRESH_MS = 450`：请求结果先拿到，再在结算点统一提交 —— 请求耗时不足 450ms 就等满，够了就立即提交，loading 的结束与结果高亮压在同一刻
+  2. 数字挂一次性高亮 class `today-box__amount--fresh`（~500ms 主色 → 默认文字色的颜色脉冲），`animationend` 自清；只在值真的变化时触发。关键帧只在本组件 scoped 块引用，非共享故不进 `global.css`（规则 78）
+  3. 按钮 loading 时 `v-if` 掉自定义的 `Refresh` 图标并改文案「刷新中」—— EP 的 `loading` 自身会渲染一个转圈图标且默认插槽照常渲染，不 `v-if` 就是一个按钮两个图标
+  4. 失败不再覆盖数字：`error` 只驱动时间戳那行的提示（有旧值 → 「刷新失败 · 数据更新于 HH:mm:ss」；无旧值 → 「数据加载失败，请稍后重试」），数字始终渲染 `total`（首屏未拿到时是 `—`）
+  5. 时间戳由「北京时间：<完整日期时间>」改为「更新于 HH:mm:ss」（widget 名叫「今日」，日期冗余）；数字配 `aria-live="polite"`、刷新行配 `:aria-busy`
+  6. 用户复查时发现「元」上下跳，定位到 ③：`.today-box__row` 拆成 `.today-box__amount`（独占整行）+ `.today-box__foot`（时间戳 `flex: 1` / 按钮 `flex-shrink: 0`），数字补 `white-space: nowrap`。数字不再与按钮争同一行的 208px，按钮宽度怎么变都挤不到它
+- 验证: `npm run build` 通过；构建产物核对 `Home-*.css` 含 `@keyframes today-amount-flash` 与 `white-space:nowrap`、`Home-*.js` 含 `MIN_REFRESH_MS` / 「刷新中」 / 失败文案。未做浏览器渲染验证（UI 目视由用户自查）
+- 相关文件: `xm_film/vue/src/views/front/Home.vue`
+- 提交记录: 未提交
 - 状态: 已修复

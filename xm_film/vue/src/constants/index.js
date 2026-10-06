@@ -161,11 +161,15 @@ export function getCinemaStatusType(status) {
   return CINEMA_STATUS_MAP[status] || 'info'
 }
 
+/** 影片状态 → el-tag type；键序即前台筛选项顺序（tag 取色按 key 查，与顺序无关） */
 export const FILM_STATUS_MAP = {
-  '待上映': 'warning',
   '已上映': 'success',
+  '待上映': 'warning',
   '停止上映': 'danger',
 }
+
+/** 影片状态筛选项，直接由 FILM_STATUS_MAP 派生，保证筛选项与状态色始终对齐 */
+export const FILM_STATUS_OPTIONS = Object.keys(FILM_STATUS_MAP)
 
 /** 角色 → el-tag type，取值与后端 RoleEnum 一致。缺省 success 与原内联三元式的兜底分支保持一致 */
 export const ROLE_TAG_MAP = {

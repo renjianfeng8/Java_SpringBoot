@@ -66,6 +66,7 @@
             <if test="typeId != null">AND EXISTS (SELECT 1 FROM film_type ft WHERE ft.film_id = film.id AND ft.type_id = #{typeId})</if>
             <if test="year != null">AND film.start LIKE CONCAT('%', #{year}, '%')</if>
             <if test="areaId != null">AND film.area_id = #{areaId}</if>
+            <if test="status != null and status != ''">AND film.status = #{status}</if>
             <if test="actorId != null">AND film.actor_id = #{actorId}</if>
         </where>
         ORDER BY id DESC
