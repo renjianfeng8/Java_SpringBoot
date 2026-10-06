@@ -993,5 +993,5 @@
   - **`manage/Home.vue` 的图表每次加载初始化两次**（`initData()` 内显式初始化一次，`watch` 又初始化一次；因为每次都先 `dispose` 旧实例，所以只是冗余不是错误）。该 `watch` 服务于后续数据更新，未动。
   - **「重置」按钮沿用 `type="warning"`**：按 §3.7 功能色不得用于装饰，橙色「重置」站不住；但这是全站既有约定（前台 1 页 + back 4 页 + manage 13 页共 18 处，含 BUG-055 已审的前台页），不静默分叉，留待一次性统一。
 - 相关文件: `xm_film/vue/src/assets/css/{admin-pages.scss,admin-layout.scss}`、`xm_film/vue/src/views/manage/`（16 页）、`xm_film/vue/src/views/back/{Film.vue,Person.vue,Password.vue}`、`xm_film/vue/src/composables/useCrud.js`、`xm_film/vue/src/constants/index.js`、`CLAUDE.md`、`Bug.md`、`前端规范待办.md`
-- 提交记录: 未提交
+- 提交记录: `7d60ca01`
 - 状态: 已修复
