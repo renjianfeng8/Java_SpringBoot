@@ -916,5 +916,5 @@
   - `front/FilmMarks.vue` 写评价弹窗里 `el-form-item label="影片"` **不需要** `prop`：那是一行只读展示（`<span>{{ film.title }}</span>`），没有输入、没有校验规则，`prop` 也无处生效。规范 §9.3 的"每个 `el-form-item` 有 `prop`"只对参与校验的字段成立，待办里把只读展示行计入违规数是口径错误。
   - `CinemaDetail.vue` 的 `.status-tag--upcoming/playing/ended` 三态**未**收进 `constants/index.js`：它们是"未开始 / 放映中 / 已结束"这类**派生**状态（由 `start` 现算，不落库），与 `constants` 里那些落库状态词表不同源；且三个配色（primary / success / info 的基色压各自 `light-9` 底）实测均在 4.5:1 以上，合规。单消费点的派生状态放本地是合理的，强行搬进 `constants` 只会造出一个只有一个读者的映射。
 - 相关文件: `xm_film/vue/src/components/{FilmPosterCard.vue,DetailSkeleton.vue}`（均新增）、`xm_film/vue/src/utils/format.js`、`xm_film/vue/src/router/index.js`、`xm_film/vue/src/assets/css/{front-pages.scss,global.css,auth-layout.scss}`、`xm_film/vue/src/views/{Front.vue,Login.vue,Register.vue}`、`xm_film/vue/src/constants/index.js`、`xm_film/vue/src/views/front/{Home,Movie,Search,FilmDetail,CinemaDetail,BuyTicket,Rank,Cinema,FilmCinema,Orders,Account,Person,Password}.vue`
-- 提交记录: 未提交
+- 提交记录: `e09701dc`
 - 状态: 已修复
