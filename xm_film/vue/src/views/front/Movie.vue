@@ -39,7 +39,7 @@
         </div>
       </div>
 
-      <div class="filter-row filter-row--last">
+      <div class="filter-row">
         <div class="filter-label">区域 :</div>
         <div class="filter-options">
           <button
@@ -54,6 +54,24 @@
               :class="{ 'filter-chip--active': data.areaFlag === item.id }"
               @click="changeAreaFlag(item.id)"
           >{{ item.title }}</button>
+        </div>
+      </div>
+
+      <div class="filter-row filter-row--last">
+        <div class="filter-label">状态 :</div>
+        <div class="filter-options">
+          <button
+              class="filter-chip"
+              :class="{ 'filter-chip--active': !data.statusFlag }"
+              @click="changeStatusFlag(null)"
+          >全部</button>
+          <button
+              v-for="item in FILM_STATUS_OPTIONS"
+              :key="item"
+              class="filter-chip"
+              :class="{ 'filter-chip--active': data.statusFlag === item }"
+              @click="changeStatusFlag(item)"
+          >{{ item }}</button>
         </div>
       </div>
 
@@ -90,12 +108,13 @@
 import { reactive } from "vue";
 import request from "@/utils/request.js";
 import { ElMessage } from "element-plus";
-import { API_PATHS, apiPage, getFilmStatusType as getStatusType } from '@/constants';
+import { API_PATHS, apiPage, FILM_STATUS_OPTIONS, getFilmStatusType as getStatusType } from '@/constants';
 
 const data = reactive({
   typeFlag: null,
   yearFlag: null,
   areaFlag: null,
+  statusFlag: null,
   typeData: [],
   areaData: [],
   yearData: [],
@@ -115,7 +134,8 @@ const load = () => {
       pageSize: data.pageSize,
       typeId: data.typeFlag,
       areaId: data.areaFlag,
-      year: data.yearFlag
+      year: data.yearFlag,
+      status: data.statusFlag
     }
   }).then(res => {
     if (res.code === '200') {
@@ -175,6 +195,7 @@ const applyFilter = (assign) => {
 const changeTypeFlag = (id) => applyFilter(() => { data.typeFlag = id })
 const changeYearFlag = (year) => applyFilter(() => { data.yearFlag = year })
 const changeAreaFlag = (id) => applyFilter(() => { data.areaFlag = id })
+const changeStatusFlag = (status) => applyFilter(() => { data.statusFlag = status })
 
 const handleSizeChange = (newSize) => {
   data.pageSize = newSize;
