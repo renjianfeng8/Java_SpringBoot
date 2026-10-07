@@ -1,32 +1,135 @@
 <template>
   <div class="dashboard">
-    <!-- ECharts 数据可视化分析区域 -->
-    <section class="dashboard__section">
-      <div class="section-head">
-        <h2 class="section-head__title">数据可视化分析</h2>
-      </div>
 
-      <div class="chart-grid">
-        <div class="card chart-card">
-          <h3 class="chart-card__title">影院状态分布</h3>
-          <div v-if="hasCinemaStatus" ref="cinemaStatusChart" class="chart-card__body"></div>
-          <div v-else class="empty-hint">暂无影院数据</div>
-        </div>
+    <!-- ① 核心指标 -->
+    <section class="dashboard__section" aria-label="核心指标">
+      <div class="kpi-grid" :aria-busy="loading.overview">
+        <div v-for="card in kpiCards" :key="card.key" class="card kpi-card">
+          <div class="kpi-card__head">
+            <el-icon class="kpi-card__icon" aria-hidden="true"><component :is="card.icon" /></el-icon>
+            <span class="kpi-card__label">{{ card.label }}</span>
+          </div>
 
-        <div class="card chart-card">
-          <h3 class="chart-card__title">电影类型占比</h3>
-          <div v-if="hasFilmType" ref="filmTypeChart" class="chart-card__body"></div>
-          <div v-else class="empty-hint">暂无电影数据</div>
+          <p v-if="card.value !== null" class="kpi-card__value">{{ card.value }}</p>
+          <p v-else-if="failed.overview" class="kpi-card__failed">数据加载失败，请稍后重试</p>
+          <div v-else class="kpi-card__skeleton"><el-skeleton :rows="1" animated /></div>
+
+          <p v-if="card.foot && card.value !== null" class="kpi-card__foot">
+            <template v-if="card.foot.kind === 'delta'">
+              <span v-if="card.foot.value === null">较昨日 —</span>
+              <template v-else>
+                <!-- 箭头是装饰（aria-hidden），方向由后面的 +/- 文字承载，
+                     不靠颜色或图形单独传信息（§3.7） -->
+                <span aria-hidden="true">{{ card.foot.value >= 0 ? '▲' : '▼' }}</span>
+                <span :class="card.foot.value >= 0 ? 'kpi-card__delta--up' : 'kpi-card__delta--down'">
+                  较昨日 {{ card.foot.value >= 0 ? '+' : '-' }}{{ Math.abs(card.foot.value) }}%
+                </span>
+              </template>
+            </template>
+            <span v-else>{{ card.foot.text }}</span>
+          </p>
         </div>
       </div>
     </section>
 
-    <!-- 核心功能入口区域 -->
-    <section class="dashboard__section">
+    <!-- ② 待办：两项都为 0 时整条不渲染 —— 恒显示「0」的待办条只会训练用户忽略它 -->
+    <section v-if="todoItems.length" class="dashboard__section" aria-label="待办">
+      <div class="todo-grid">
+        <router-link v-for="item in todoItems" :key="item.key" class="card todo-card" :to="item.to">
+          <span class="todo-card__label">{{ item.label }}</span>
+          <span class="todo-card__count">{{ item.count }}</span>
+          <span class="todo-card__action">{{ item.action }} ›</span>
+        </router-link>
+      </div>
+    </section>
+
+    <!-- ③ 近 7 日票房趋势 -->
+    <section class="dashboard__section" aria-label="近 7 日票房趋势">
+      <div class="section-head">
+        <h2 class="section-head__title">近 7 日票房趋势</h2>
+        <span class="dashboard__note">截至昨日</span>
+        <el-button class="dashboard__refresh" link type="primary" :loading="refreshing" @click="reload">
+          <!-- loading 时 EP 自带转圈图标，再留一个 Refresh 就是一个按钮两个图标（规则 86） -->
+          <el-icon v-if="!refreshing"><Refresh /></el-icon>
+          {{ refreshing ? '刷新中' : '刷新' }}
+        </el-button>
+      </div>
+
+      <div class="card chart-card">
+        <div v-if="failed.overview && !overview.revenueTrend.length" class="empty-hint">数据加载失败，请稍后重试</div>
+        <div v-else-if="!overview.revenueTrend.length" class="chart-card__skeleton"><el-skeleton :rows="4" animated /></div>
+        <div v-else ref="trendChart" class="chart-card__body"></div>
+        <p v-if="overview.updatedAt" class="chart-card__foot">
+          <span v-if="failed.overview" class="chart-card__foot-error">刷新失败，请稍后重试 · </span>
+          数据截至 {{ updatedTime }}
+        </p>
+      </div>
+    </section>
+
+    <!-- ④ 分布拆解 -->
+    <section class="dashboard__section" aria-label="分布拆解">
+      <div class="chart-grid">
+        <div class="card chart-card">
+          <h3 class="chart-card__title">影院审核进度</h3>
+          <div v-if="!cinemaTotal" class="empty-hint">
+            {{ failed.overview ? '数据加载失败，请稍后重试' : '暂无数据' }}
+          </div>
+          <div v-else class="audit">
+            <el-progress :percentage="approvedPercent" status="success" :stroke-width="12" :show-text="false" />
+            <p class="audit__percent">{{ approvedPercent }}%</p>
+            <p class="audit__detail">
+              共 {{ cinemaTotal }} 家 · 已审核 {{ approvedCount }} · 未审核 {{ overview.summary.pendingCinemas }}
+            </p>
+          </div>
+        </div>
+
+        <div class="card chart-card">
+          <h3 class="chart-card__title">电影类型分布</h3>
+          <div v-if="failed.overview && !overview.filmType.length" class="empty-hint">数据加载失败，请稍后重试</div>
+          <div v-else-if="!overview.filmType.length" class="empty-hint">暂无数据</div>
+          <div v-else ref="filmTypeChart" class="chart-card__body"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ⑤ 双榜单 -->
+    <section class="dashboard__section" aria-label="榜单">
+      <div class="chart-grid">
+        <div class="card chart-card">
+          <h3 class="chart-card__title">票房 Top 5</h3>
+          <div v-if="loading.boxOffice && !boxOfficeTop.length" class="rank-box__loading"><el-skeleton :rows="5" animated /></div>
+          <div v-else-if="failed.boxOffice && !boxOfficeTop.length" class="empty-hint">数据加载失败，请稍后重试</div>
+          <div v-else-if="!boxOfficeTop.length" class="empty-hint">暂无数据</div>
+          <div v-else class="rank-box">
+            <div v-for="(film, index) in boxOfficeTop" :key="film.id" class="rank-row">
+              <span class="rank-badge" :class="rankBadgeClass(index)">{{ index + 1 }}</span>
+              <span class="rank-row__title">{{ film.title }}</span>
+              <span class="rank-row__value">{{ formatBoxOffice(film.boxOffice) }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="card chart-card">
+          <h3 class="chart-card__title">评分 Top 5</h3>
+          <div v-if="loading.mark && !markTop.length" class="rank-box__loading"><el-skeleton :rows="5" animated /></div>
+          <div v-else-if="failed.mark && !markTop.length" class="empty-hint">数据加载失败，请稍后重试</div>
+          <div v-else-if="!markTop.length" class="empty-hint">暂无数据</div>
+          <div v-else class="rank-box">
+            <div v-for="(film, index) in markTop" :key="film.id" class="rank-row">
+              <span class="rank-badge" :class="rankBadgeClass(index)">{{ index + 1 }}</span>
+              <span class="rank-row__title">{{ film.title }}</span>
+              <span class="rank-row__value rank-row__value--score">{{ formatScore(film.score) }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ⑥ 快捷入口 -->
+    <section class="dashboard__section" aria-label="核心功能入口">
       <div class="section-head">
         <h2 class="section-head__title">核心功能入口</h2>
       </div>
-
       <div class="entry-grid">
         <router-link v-for="entry in entries" :key="entry.path" class="entry-card" :to="entry.path">
           <el-icon class="entry-card__icon"><component :is="entry.icon" /></el-icon>
@@ -39,224 +142,309 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, onMounted, onUnmounted, computed, ref, watch, nextTick } from "vue";
+import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from "vue";
 import request from "@/utils/request.js";
-import { ElMessage } from "element-plus";
-import { CreditCard, OfficeBuilding, User, VideoCamera } from "@element-plus/icons-vue";
+import { Refresh, Money, Tickets, User, OfficeBuilding, CreditCard, VideoCamera } from "@element-plus/icons-vue";
+// formatYuan 给「区间聚合」（今日票房、逐日趋势），0 是真实值；
+// formatBoxOffice 给「累计票房」（榜单），0 表示该片还没有收入，渲染「暂无数据」。
+// 两者刻意不混用 —— 见 utils/format.js 里两个函数各自的注释。
+import { formatYuan, formatBoxOffice, formatScore } from "@/utils/format.js";
+import { FILM_API, STATISTICS_API } from "@/constants";
 import * as echarts from 'echarts/core';
-import { BarChart, PieChart } from 'echarts/charts';
-import { GridComponent, LegendComponent, TooltipComponent } from 'echarts/components';
-import { LabelLayout } from 'echarts/features';
+import { BarChart, LineChart } from 'echarts/charts';
+import { GridComponent, TooltipComponent } from 'echarts/components';
 import { CanvasRenderer } from 'echarts/renderers';
-import { STATISTICS_API } from '@/constants';
 
-echarts.use([
-  BarChart,
-  PieChart,
-  GridComponent,
-  LegendComponent,
-  TooltipComponent,
-  LabelLayout,
-  CanvasRenderer,
-]);
+// 只注册用到的：此前那份注册了 PieChart 与 LabelLayout 供饼图使用，
+// 饼图换成 el-progress 后这两个都可以摘掉，产物跟着变小。
+echarts.use([BarChart, LineChart, GridComponent, TooltipComponent, CanvasRenderer]);
 
-/* 功能入口用 router-link 渲染（真 <a href>，天然进 Tab 序、回车可激活）。
-   图标与侧栏给同一目的地分配的图标一致，入口卡顺带教了导航。 */
+/* 刷新反馈的最短展示时长：本机聚合查询几十毫秒就返回，不兜底的话转圈一闪而过，
+   用户无从确认「点过了」（规则 86）。与前台 front/Home.vue 取同一个值。 */
+const MIN_REFRESH_MS = 450;
+const RANK_LIMIT = 5;
+/* 与后端 CinemaStatus 枚举、constants/index.js 的 CINEMA_STATUS 同字面量。
+   写成常量而非「不等于未审核」，是为了将来真出现第三个审核状态时不会静默算错 */
+const UNAUDITED = '未审核';
+const APPROVED = '已审核';
+
 const entries = [
   { path: '/manage/cinema', icon: OfficeBuilding, title: '影院管理', desc: '新增、编辑、审核影院信息' },
   { path: '/manage/film', icon: VideoCamera, title: '电影管理', desc: '维护电影信息、封面与排片' },
   { path: '/manage/user', icon: User, title: '用户管理', desc: '管理平台用户与权限分配' },
   { path: '/manage/ordered', icon: CreditCard, title: '购票记录', desc: '查看和管理用户的购票订单信息' },
-]
+];
 
-// ECharts 容器引用
-const cinemaStatusChart = ref<HTMLElement | null>(null);
+const overview = reactive({
+  summary: null as null | Record<string, any>,
+  cinemaStatus: [] as Array<{ name: string; value: number }>,
+  filmType: [] as Array<{ name: string; value: number }>,
+  revenueTrend: [] as Array<{ date: string; revenue: number; orders: number }>,
+  updatedAt: '',
+});
+
+const loading = reactive({ overview: false, boxOffice: false, mark: false });
+const failed = reactive({ overview: false, boxOffice: false, mark: false });
+const refreshing = ref(false);
+const boxOfficeTop = ref<any[]>([]);
+const markTop = ref<any[]>([]);
+
+const trendChart = ref<HTMLElement | null>(null);
 const filmTypeChart = ref<HTMLElement | null>(null);
-
-// 统一的页面 resize 处理函数（避免重复添加/累积监听器）。
-// 图表为空态时容器是 v-if 掉的、ref 为 null，必须先挡掉再问 ECharts 要实例。
-const handleResize = () => {
-  if (cinemaStatusChart.value) {
-    echarts.getInstanceByDom(cinemaStatusChart.value)?.resize();
-  }
-  if (filmTypeChart.value) {
-    echarts.getInstanceByDom(filmTypeChart.value)?.resize();
-  }
-};
 
 // ECharts 用 canvas 渲染，不解析 CSS 变量，只能在运行期把令牌值读出来（规范 §3.7）
 const cssVar = (name: string, fallback = '') =>
   getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback;
 
-// 大盘统计：数值全部来自 /statistics/overview 的实时聚合，前端不再拉全表自己算
-const stats = reactive({
-  cinemaStatus: [] as Array<{ name: string; value: number }>,
-  filmType: [] as Array<{ name: string; value: number }>
+const updatedTime = computed(() =>
+  overview.updatedAt.length >= 19 ? overview.updatedAt.slice(11, 19) : '—'
+);
+
+/* 影院总数与已审核数都从同一份分组结果派生 —— 后端已经算好，前端不再取第二次 */
+const cinemaTotal = computed(() =>
+  overview.cinemaStatus.reduce((sum, row) => sum + Number(row.value), 0)
+);
+const approvedCount = computed(() =>
+  Number(overview.cinemaStatus.find((row) => row.name === APPROVED)?.value ?? 0)
+);
+const approvedPercent = computed(() =>
+  cinemaTotal.value ? Math.round((approvedCount.value / cinemaTotal.value) * 100) : 0
+);
+
+/**
+ * 环比。基准是趋势的末点（= 昨天），不另发请求：同一份趋势数据既画折线又算环比，
+ * 两者永远对得上。除数为 0 或没有基准时返回 null，渲染成「较昨日 —」——
+ * 给一个没有意义的百分比比不给更糟。
+ */
+const delta = (current: number | null, previous: number | null | undefined) => {
+  if (current === null || current === undefined) return null;
+  if (previous === null || previous === undefined || Number(previous) === 0) return null;
+  return Math.round(((Number(current) - Number(previous)) / Math.abs(Number(previous))) * 1000) / 10;
+};
+
+const kpiCards = computed(() => {
+  const s = overview.summary;
+  const cards = [
+    { key: 'todayRevenue', icon: Money, label: '今日票房', foot: null as any, value: null as string | null },
+    { key: 'todayOrders', icon: Tickets, label: '今日订单（笔）', foot: null as any, value: null as string | null },
+    { key: 'totalUsers', icon: User, label: '用户总数', foot: null as any, value: null as string | null },
+    { key: 'totalCinemas', icon: OfficeBuilding, label: '影院总数', foot: null as any, value: null as string | null },
+  ];
+  if (!s) return cards;
+
+  const last = overview.revenueTrend.length
+    ? overview.revenueTrend[overview.revenueTrend.length - 1]
+    : null;
+
+  cards[0].value = formatYuan(s.todayRevenue);
+  cards[0].foot = { kind: 'delta', value: delta(s.todayRevenue, last?.revenue) };
+  cards[1].value = String(s.todayOrders);
+  cards[1].foot = { kind: 'delta', value: delta(s.todayOrders, last?.orders) };
+  cards[2].value = String(s.totalUsers);
+  cards[3].value = String(s.totalCinemas);
+  // 待审核数只在待办条出现一次，这里给另一半，避免同一个数字在页面上出现两遍
+  cards[3].foot = { kind: 'text', text: `已审核 ${approvedCount.value} 家` };
+  return cards;
 });
 
-// 图表是否有真实数据。无数据时渲染「暂无数据」占位，不再用假数据填充 ——
-// 画一张有数据的图会让人以为系统里真有那些影院 / 电影（规范 §11.2）。
-const hasCinemaStatus = computed(() => stats.cinemaStatus.length > 0);
-const hasFilmType = computed(() => stats.filmType.length > 0);
+/* 待办只放真有落地页的两项。处理中充值单据刻意不放：管理后台没有充值单据页，
+   一个点不动的数字比不显示更糟。 */
+const todoItems = computed(() => {
+  const s = overview.summary;
+  if (!s) return [];
+  return [
+    {
+      key: 'pendingCinemas',
+      label: '待审核影院',
+      count: s.pendingCinemas,
+      action: '去审核',
+      to: { path: '/manage/cinema', query: { status: UNAUDITED } },
+    },
+    {
+      key: 'pendingPickupOrders',
+      label: '待取票订单',
+      count: s.pendingPickupOrders,
+      action: '去查看',
+      to: { path: '/manage/ordered', query: { status: '待取票' } },
+    },
+  ].filter((item) => Number(item.count) > 0);
+});
 
-const loadStats = async () => {
+const rankBadgeClass = (index: number) =>
+  index < 3 ? `rank-badge--top${index + 1}` : 'rank-badge--plain';
+
+/* ---------- 取数 ---------- */
+
+/* 三个取数函数都遵守同一条：**失败不清空已展示的数据**（规则 86）。
+   瞬时故障不该把已知数值抹成错误文案，失败只翻 failed 标记，由各区块的次要行提示。 */
+const loadOverview = async () => {
+  loading.overview = true;
   try {
     const res = await request.get(STATISTICS_API.OVERVIEW);
     if (res.code === '200') {
-      stats.cinemaStatus = res.data?.cinemaStatus || [];
-      stats.filmType = res.data?.filmType || [];
+      const d = res.data || {};
+      overview.summary = d.summary || null;
+      overview.cinemaStatus = d.cinemaStatus || [];
+      overview.filmType = d.filmType || [];
+      overview.revenueTrend = d.revenueTrend || [];
+      overview.updatedAt = d.updatedAt || '';
+      failed.overview = false;
     } else {
-      ElMessage.error(res.msg);
+      failed.overview = true;
     }
   } catch (error) {
-    // 网络异常的统一提示由 request.js 响应拦截器给出；这里保持空数据 → 图表显示占位
+    // 网络异常的统一提示由 request.js 的响应拦截器给出，这里只落错误态
     console.error('统计接口请求异常：', error);
+    failed.overview = true;
+  } finally {
+    loading.overview = false;
   }
 };
 
-// 初始化影院状态饼图
-const initCinemaStatusChart = () => {
-  if (!cinemaStatusChart.value) return;
-
-  // 销毁旧实例
-  const chartInstance = echarts.getInstanceByDom(cinemaStatusChart.value);
-  if (chartInstance) {
-    chartInstance.dispose();
-  }
-
-  const chart = echarts.init(cinemaStatusChart.value);
-  // 状态配色取自令牌（§3.3 功能色），不再自成一表
-  const statusColorMap: Record<string, string> = {
-    '已审核': cssVar('--el-color-success'),
-    '未审核': cssVar('--el-color-warning')
-  };
-
-  // 后端已按 status 分组，这里只做配色映射
-  const pieData = stats.cinemaStatus.map((item) => ({
-    name: item.name,
-    value: item.value,
-    itemStyle: {
-      color: statusColorMap[item.name] || cssVar('--el-text-color-secondary')
+const loadFilmBoxOfficeTop = async () => {
+  loading.boxOffice = true;
+  try {
+    const res = await request.get(FILM_API.BOX_OFFICE_TOP, { params: { topNum: 10 } });
+    if (res.code === '200') {
+      boxOfficeTop.value = (res.data || []).slice(0, RANK_LIMIT);
+      failed.boxOffice = false;
+    } else {
+      failed.boxOffice = true;
     }
-  }));
-
-  const option = {
-    tooltip: {
-      trigger: 'item',
-      formatter: '{a} <br/>{b}: {c} ({d}%)'
-    },
-    legend: {
-      orient: 'vertical',
-      left: 'left',
-      textStyle: { fontSize: 12 }
-    },
-    series: [
-      {
-        name: '影院状态',
-        type: 'pie',
-        radius: ['40%', '70%'],
-        avoidLabelOverlap: false,
-        itemStyle: {
-          borderRadius: 4,
-          // 图表垫在白色 .card 上，饼图切片的分隔线取卡片底色
-          borderColor: cssVar('--el-bg-color'),
-          borderWidth: 2
-        },
-        label: { show: false, position: 'center' },
-        emphasis: {
-          label: { show: true, fontSize: 16, fontWeight: 'bold' }
-        },
-        labelLine: { show: false },
-        data: pieData
-      }
-    ]
-  };
-
-  chart.setOption(option, true);
+  } catch (error) {
+    console.error('票房榜接口请求异常：', error);
+    failed.boxOffice = true;
+  } finally {
+    loading.boxOffice = false;
+  }
 };
 
-// 初始化电影类型柱状图
-const initFilmTypeChart = () => {
-  if (!filmTypeChart.value) return;
-  // 销毁旧实例
-  const chartInstance = echarts.getInstanceByDom(filmTypeChart.value);
-  if (chartInstance) {
-    chartInstance.dispose();
+const loadFilmMarkTop = async () => {
+  loading.mark = true;
+  try {
+    const res = await request.get(FILM_API.MARK_TOP, { params: { topNum: 10 } });
+    if (res.code === '200') {
+      markTop.value = (res.data || []).slice(0, RANK_LIMIT);
+      failed.mark = false;
+    } else {
+      failed.mark = true;
+    }
+  } catch (error) {
+    console.error('评分榜接口请求异常：', error);
+    failed.mark = true;
+  } finally {
+    loading.mark = false;
   }
-  const chart = echarts.init(filmTypeChart.value);
-  const option = {
+};
+
+/* 请求无论多快都把转圈撑满 MIN_REFRESH_MS，读起来是「转圈停 → 数据落位」 */
+const reload = async () => {
+  if (refreshing.value) return;
+  refreshing.value = true;
+  const startedAt = Date.now();
+
+  await Promise.all([loadOverview(), loadFilmBoxOfficeTop(), loadFilmMarkTop()]);
+
+  const wait = Math.max(0, MIN_REFRESH_MS - (Date.now() - startedAt));
+  if (wait) await new Promise((resolve) => window.setTimeout(resolve, wait));
+  refreshing.value = false;
+};
+
+/* ---------- 图表 ---------- */
+
+const initTrendChart = () => {
+  const el = trendChart.value;
+  if (!el) return;
+  echarts.getInstanceByDom(el)?.dispose();
+
+  const points = overview.revenueTrend;
+  const chart = echarts.init(el);
+  const primary = cssVar('--el-color-primary');
+
+  chart.setOption({
     tooltip: {
       trigger: 'axis',
-      axisPointer: { type: 'shadow' }
+      formatter: (params: any[]) => {
+        const point = points[params[0].dataIndex];
+        return `${point.date}<br/>票房 ${formatYuan(point.revenue)}<br/>订单 ${point.orders} 笔`;
+      },
     },
-    grid: {
-      left: '3%',
-      right: '4%',
-      bottom: '3%',
-      containLabel: true
+    grid: { left: 8, right: 16, top: 16, bottom: 8, containLabel: true },
+    xAxis: {
+      type: 'category',
+      boundaryGap: false,
+      data: points.map((point) => point.date.slice(5)),
+      axisLabel: { fontSize: 12 },
     },
-    xAxis: [
-      {
-        type: 'category',
-        data: stats.filmType.map((item) => item.name),
-        axisTick: { alignWithLabel: true },
-        axisLabel: { fontSize: 12, rotate: 30 }
-      }
-    ],
-    yAxis: [
-      {
-        type: 'value',
-        name: '影片数量',
-        min: 0
-      }
-    ],
+    yAxis: { type: 'value', name: '票房（元）', min: 0, axisLabel: { fontSize: 12 } },
     series: [
       {
-        name: '电影数量',
+        name: '票房',
+        type: 'line',
+        symbolSize: 6,
+        data: points.map((point) => Number(point.revenue)),
+        lineStyle: { color: primary },
+        itemStyle: { color: primary },
+      },
+    ],
+  }, true);
+};
+
+const initFilmTypeChart = () => {
+  const el = filmTypeChart.value;
+  if (!el) return;
+  echarts.getInstanceByDom(el)?.dispose();
+
+  // 横向条：类别名是中文，竖柱要旋转 30° 才放得下。
+  // ECharts 的类目轴从下往上画，升序排列才能让最大的那条落在顶部。
+  const rows = [...overview.filmType].sort((a, b) => Number(a.value) - Number(b.value));
+  const chart = echarts.init(el);
+
+  chart.setOption({
+    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+    grid: { left: 8, right: 24, top: 8, bottom: 8, containLabel: true },
+    xAxis: { type: 'value', name: '影片数量', min: 0, axisLabel: { fontSize: 12 } },
+    yAxis: { type: 'category', data: rows.map((row) => row.name), axisLabel: { fontSize: 12 } },
+    series: [
+      {
+        name: '影片数量',
         type: 'bar',
         barWidth: '60%',
-        data: stats.filmType.map((item) => item.value),
-        itemStyle: { borderRadius: 4 }
-      }
+        data: rows.map((row) => Number(row.value)),
+        itemStyle: { borderRadius: 4, color: cssVar('--el-color-primary') },
+      },
     ],
-    color: [cssVar('--el-color-primary')]
-  };
-  chart.setOption(option, true);
+  }, true);
 };
 
-// 初始化页面所有数据
-const initData = async () => {
-  await loadStats();
-
-  // 等待 DOM 更新后初始化图表
-  await nextTick();
-  initCinemaStatusChart();
-  initFilmTypeChart();
-};
-
-// 监听数据变化更新图表
+/* 唯一的初始化路径：数据落位 → watch 触发 → 建图。
+   页面挂载时不再单独调一次 —— 那样每次加载都会初始化两遍（旧实现的冗余，
+   见 前端规范待办.md T-11）。空态时容器被 v-if 摘掉、ref 为 null，两函数各自挡掉。 */
 watch(
-    [() => stats.cinemaStatus, () => stats.filmType],
-    async () => {
-      await nextTick();
-      initCinemaStatusChart();
-      initFilmTypeChart();
-    },
-    { deep: true }
+  [() => overview.revenueTrend, () => overview.filmType],
+  async () => {
+    await nextTick();
+    initTrendChart();
+    initFilmTypeChart();
+  },
+  { deep: true }
 );
 
-// 页面挂载初始化
+const handleResize = () => {
+  if (trendChart.value) echarts.getInstanceByDom(trendChart.value)?.resize();
+  if (filmTypeChart.value) echarts.getInstanceByDom(filmTypeChart.value)?.resize();
+};
+
 onMounted(() => {
-  initData();
   window.addEventListener('resize', handleResize);
+  reload();
 });
 
-// 页面卸载时移除 resize 监听器并销毁图表实例。
 // 不销毁的话，ECharts 内部注册表仍持有画布 DOM 与 canvas —— v-if 摘掉容器后
 // 那段 DOM 已经不是页面的一部分，实例却继续挂着。
 onUnmounted(() => {
   window.removeEventListener('resize', handleResize);
-  [cinemaStatusChart.value, filmTypeChart.value].forEach((el) => {
+  [trendChart.value, filmTypeChart.value].forEach((el) => {
     if (el) echarts.getInstanceByDom(el)?.dispose();
   });
 });
@@ -278,8 +466,127 @@ onUnmounted(() => {
   gap: var(--space-16);
 }
 
+/* ---------- ① KPI ---------- */
+
 /* minmax(0, 1fr) 的 0 下限是承重件：裸 1fr 的 min-width 是 auto，
-   会被 ECharts 画布的固定像素宽撑破，右侧那张卡就会溢出容器。 */
+   长数字会把格子撑破、右侧那张卡溢出容器。 */
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-16);
+}
+
+.kpi-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  padding: var(--space-16);
+}
+
+.kpi-card__head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+}
+
+.kpi-card__icon {
+  font-size: 20px;
+  color: var(--el-color-primary);
+}
+
+/* 12px 辅助文字用 --el-text-color-regular（6.11:1）而非 secondary（3.08:1，不达正文） */
+.kpi-card__label {
+  font-size: var(--fs-xs);
+  color: var(--el-text-color-regular);
+}
+
+/* KPI 主指标取 §4.2 的 28px 档。字重只能是 700：formatYuan 返回的字符串含「元」，
+   含中文就落进 §4.4 的「只能 400 / 700」，500 会给中文触发伪粗体。
+   tabular-nums 让数字等宽，刷新前后不左右跳。 */
+.kpi-card__value {
+  margin: 0;
+  font-size: var(--fs-3xl);
+  font-weight: var(--fw-bold);
+  line-height: var(--lh-loose);
+  color: var(--el-text-color-primary);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.kpi-card__foot {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  margin: 0;
+  font-size: var(--fs-xs);
+  color: var(--el-text-color-regular);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 涨跌按「有利性」着色：票房与订单都是越多越好，故升用功能色成功、降用危险。
+   这是状态通道，不是装饰 —— 且方向另有 +/- 文字与箭头承载，不单靠颜色（§3.7）。 */
+.kpi-card__delta--up {
+  color: var(--el-color-success);
+}
+
+.kpi-card__delta--down {
+  color: var(--el-color-danger);
+}
+
+.kpi-card__failed {
+  margin: 0;
+  font-size: var(--fs-base);
+  color: var(--el-text-color-regular);
+}
+
+.kpi-card__skeleton {
+  padding: var(--space-4) 0;
+}
+
+/* ---------- ② 待办 ---------- */
+
+.todo-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--space-16);
+}
+
+/* 待办卡是 <a>（router-link），要显式去掉下划线并继承文字色 */
+.todo-card {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-12);
+  padding: var(--space-16);
+  border: 1px solid var(--el-border-color-lighter);
+  color: inherit;
+  text-decoration: none;
+  transition: border-color 100ms ease-out;
+}
+
+.todo-card:hover {
+  border-color: var(--el-color-primary);
+}
+
+.todo-card__label {
+  font-size: var(--fs-base);
+  color: var(--el-text-color-regular);
+}
+
+.todo-card__count {
+  font-size: var(--fs-2xl);
+  font-weight: var(--fw-bold);
+  color: var(--el-color-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.todo-card__action {
+  margin-left: auto;
+  font-size: var(--fs-xs);
+  color: var(--el-color-primary);
+}
+
+/* ---------- ③④⑤ 图表卡 ---------- */
+
 .chart-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -292,7 +599,7 @@ onUnmounted(() => {
   padding: var(--space-16);
 }
 
-/* 标题含中文，字重只能用 400 / 700（§4.4）。 */
+/* 标题含中文，字重只能用 400 / 700（§4.4） */
 .chart-card__title {
   margin: 0 0 var(--space-16);
   font-size: var(--fs-md);
@@ -306,15 +613,141 @@ onUnmounted(() => {
   height: 320px;
 }
 
+.chart-card__skeleton {
+  padding: var(--space-8) 0;
+}
+
+.chart-card__foot {
+  margin: var(--space-8) 0 0;
+  font-size: var(--fs-xs);
+  color: var(--el-text-color-regular);
+}
+
+.chart-card__foot-error {
+  color: var(--el-color-danger);
+}
+
+/* 标题带右侧的两枚：说明文字与刷新按钮。.section-head 是 flex + baseline，
+   故刷新按钮用 margin-left: auto 顶到最右。 */
+.dashboard__note {
+  font-size: var(--fs-xs);
+  color: var(--el-text-color-regular);
+}
+
+.dashboard__refresh {
+  margin-left: auto;
+}
+
+/* ---------- 影院审核进度 ---------- */
+
+.audit {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12);
+}
+
+/* 百分比是这一块的主指标，取 28px 档与 KPI 一致；数字非中文，可用等宽数字 */
+.audit__percent {
+  margin: 0;
+  font-size: var(--fs-3xl);
+  font-weight: var(--fw-bold);
+  color: var(--el-text-color-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.audit__detail {
+  margin: 0;
+  font-size: var(--fs-base);
+  color: var(--el-text-color-regular);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- 榜单 ---------- */
+
+.rank-box {
+  display: flex;
+  flex-direction: column;
+}
+
+.rank-box__loading {
+  padding: var(--space-4) 0;
+}
+
+.rank-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-12);
+  padding: var(--space-8) 0;
+  border-bottom: 1px solid var(--el-border-color-lighter);
+}
+
+.rank-row:last-child {
+  border-bottom: none;
+}
+
+/* 名次徽章用 §3.6 的扩展色板（白字压其上达标）；1~3 名金 / 银 / 铜 */
+.rank-badge {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--el-border-radius-circle);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-bold);
+  line-height: 24px;
+  text-align: center;
+}
+
+.rank-badge--top1 {
+  background-color: var(--color-rank-1);
+  color: var(--color-on-accent);
+}
+
+.rank-badge--top2 {
+  background-color: var(--color-rank-2);
+  color: var(--color-on-accent);
+}
+
+.rank-badge--top3 {
+  background-color: var(--color-rank-3);
+  color: var(--color-on-accent);
+}
+
+.rank-badge--plain {
+  background-color: var(--el-fill-color-light);
+  color: var(--el-text-color-regular);
+}
+
+.rank-row__title {
+  flex: 1;
+  min-width: 0;
+  color: var(--el-text-color-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rank-row__value {
+  flex-shrink: 0;
+  font-weight: var(--fw-bold);
+  color: var(--el-text-color-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 评分含「分」字（中文），字重必须 400 / 700；白底评分色 4.68:1 达 AA（§3.6） */
+.rank-row__value--score {
+  color: var(--color-rating-text);
+}
+
+/* ---------- ⑥ 快捷入口 ---------- */
+
 .entry-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: var(--space-16);
 }
 
-/* 入口卡是 <a>（router-link），要显式去掉下划线并继承文字色。
-   hover 只改边框与标题色，不叠阴影 —— 全局 .card 已常驻 --el-box-shadow-lighter，
-   再叠一层阴影需要先把全部 .card 降档，会外溢到其他端。 */
+/* 入口卡是 <a>，要显式去掉下划线并继承文字色。
+   hover 只改边框与标题色，不叠阴影 —— 全局 .card 已常驻 --el-box-shadow-lighter。 */
 .entry-card {
   display: flex;
   flex-direction: column;
