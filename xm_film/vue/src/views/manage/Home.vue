@@ -155,8 +155,11 @@ import { BarChart, LineChart } from 'echarts/charts';
 import { GridComponent, TooltipComponent } from 'echarts/components';
 import { CanvasRenderer } from 'echarts/renderers';
 
-// 只注册用到的：此前那份注册了 PieChart 与 LabelLayout 供饼图使用，
-// 饼图换成 el-progress 后这两个都可以摘掉，产物跟着变小。
+// 只注册用到的：此前那份还注册了 PieChart 与 LabelLayout（供饼图）。
+// 饼图换成 el-progress 后两者都不再进产物。
+// 想核对 pie 是否真的被摇掉，**不能**用 grep "pie" —— ECharts 的 lang 字典
+// （typeNames）与事件分发里始终有 "pie" 字样，与注册了哪些图表无关。
+// 判据是 pie 专有的实现符号在不在，例如 padAngle / avoidLabelOverlap。
 echarts.use([BarChart, LineChart, GridComponent, TooltipComponent, CanvasRenderer]);
 
 /* 刷新反馈的最短展示时长：本机聚合查询几十毫秒就返回，不兜底的话转圈一闪而过，
