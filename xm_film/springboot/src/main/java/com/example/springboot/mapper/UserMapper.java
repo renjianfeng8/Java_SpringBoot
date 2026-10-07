@@ -12,6 +12,9 @@ public interface UserMapper extends BaseMapper<User> {
 
     void updatePassword(User user);
 
+    /** 大盘：注册用户总数 */
+    int countAll();
+
     /* 账户余额：余额不挂 User 实体，避免 selectAll 的 SELECT * 把他人余额带出去 */
 
     /** 取余额并加行锁，供「读余额 → 变更 → 记流水」在同一事务内串行化 */

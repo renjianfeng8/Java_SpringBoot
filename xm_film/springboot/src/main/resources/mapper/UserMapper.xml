@@ -93,4 +93,9 @@
         </foreach>
     </delete>
 
+    <!-- 大盘：注册用户总数。只出计数，不带任何行 —— 余额明细绝不从这里出去 -->
+    <select id="countAll" resultType="int">
+        SELECT COUNT(*) FROM user
+    </select>
+
 </mapper>
