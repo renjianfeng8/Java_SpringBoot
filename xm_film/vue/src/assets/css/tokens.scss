@@ -45,13 +45,18 @@
   --space-48: 48px;
   --space-64: 64px;
 
-  /* §3.5 深色表面（前台页脚 / 影片详情横幅）—— EP 中性色是浅底浅字，不适用 */
+  /* §3.5 深色表面（前台页脚 / 影片详情 · 选择影院 · 影院详情三处头横幅）—— EP 中性色是浅底浅字，不适用。
+   *
+   * 两个深底令牌的亮度刻意靠近，于是下面这组前景色在两边都达 AA，评论区标注的比值两边通用。
+   * --dark-bg-hero 原取 #41036a（紫色，亮度远高于 #1a1a1a），实测 --dark-text-faint 在其上
+   * 只有 4.21:1、--color-brand 只有 3.81:1，均不达 AA —— 规范 §3.5 那时给的比值实际只在
+   * --dark-bg 上成立，对 hero 是假保证。改用近黑红后两处口径一致。 */
   --dark-bg: #1a1a1a;
-  --dark-bg-hero: #41036a;
-  --dark-text: #ffffff;          /* 17.40:1 */
-  --dark-text-secondary: #cccccc; /* 10.84:1 */
-  --dark-text-muted: #aaaaaa;    /* 7.49:1 */
-  --dark-text-faint: #8a8a8a;    /* 5.04:1；原 #666 只有 3.03:1，不达 AA */
+  --dark-bg-hero: #2A1214;
+  --dark-text: #ffffff;          /* #1a1a1a 上 17.40:1 · #2A1214 上 17.57:1 */
+  --dark-text-secondary: #cccccc; /* #1a1a1a 上 10.84:1 · #2A1214 上 10.94:1 */
+  --dark-text-muted: #aaaaaa;    /* #1a1a1a 上 7.49:1 · #2A1214 上 7.56:1 */
+  --dark-text-faint: #8a8a8a;    /* #1a1a1a 上 5.04:1 · #2A1214 上 5.09:1；原 #666 只有 3.03:1，不达 AA */
   --dark-divider: #333333;
   --dark-bg-video: #000000; /* 视频播放器底（画布黑，非深灰） */
   --overlay-mask: rgba(0, 0, 0, 0.5); /* 自绘弹窗的遮罩，EP 的 --el-mask-color 是浅色，不适用 */

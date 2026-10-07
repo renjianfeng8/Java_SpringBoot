@@ -102,7 +102,7 @@
     background-color: var(--el-color-info);
   }
 
-  /* 详情页首屏骨架：影片详情与影院详情共用，形状与真实头图一致，
+  /* 详情页首屏骨架：影片详情 / 选择影院 / 影院详情三处共用，形状与真实头图一致，
      数据到位时不会跳高。灰块不是数据，不违反「禁止用假数据填充」（§11.2）。 */
   .detail-skeleton {
     display: flex;
@@ -118,6 +118,13 @@
     aspect-ratio: 2 / 3;
     border-radius: var(--el-border-radius-base);
     background-color: var(--el-fill-color-dark);
+  }
+
+  /* 头图是横版的页面（影院详情）用这一档：影院图取 10:7，与影院列表页同比例，
+     不是影片页的 2:3 竖版海报。骨架不跟着变形，数据到位时首屏就会跳高。 */
+  .detail-skeleton--wide .detail-skeleton__poster {
+    width: 240px;
+    aspect-ratio: 10 / 7;
   }
 
   .detail-skeleton__lines {
