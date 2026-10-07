@@ -4,6 +4,7 @@ import com.example.springboot.common.BaseMapper;
 import com.example.springboot.entity.Ordered;
 import org.apache.ibatis.annotations.Param;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
@@ -13,6 +14,19 @@ public interface OrderedMapper extends BaseMapper<Ordered> {
 
     /** 今日票房：今天支付的售票收入合计（元）+ 统计时刻，供前台公开只读接口使用 */
     Map<String, Object> selectTodayPaidRevenue();
+
+    /** 今日已支付订单数（笔）。口径与 selectTodayPaidRevenue 同源（共用 paidOrderStatuses 片段） */
+    int countTodayPaidOrders();
+
+    /**
+     * 逐日已支付票房与订单数（[{date, revenue, orders}]），覆盖 [from, to)。
+     * 无销售的日期不产生行，由调用方补零。
+     */
+    List<Map<String, Object>> selectPaidRevenueByDay(@Param("from") LocalDate from,
+                                                     @Param("to") LocalDate to);
+
+    /** 按状态计数（大盘的「待取票订单」等） */
+    int countByStatus(@Param("status") String status);
 
     int countSeatInUse(@Param("recordId") Integer recordId, @Param("seat") String seat);
 
