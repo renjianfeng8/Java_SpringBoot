@@ -1040,7 +1040,7 @@
   11. 不再传 `pageNum` / `pageSize` 给 `films/by-cinema` —— 该接口返回完整列表，后端根本不读这两个参数
 - 验证: `npm run build` 通过；产物核对 `index-*.css` 含 `2A1214` 且全仓已无 `41036a`、含共享层的 `detail-skeleton--wide`；`CinemaDetail-*.css` 含 `date-tab--active` / `showtime__room` / `film-row__meta` / `scroll-margin-top`；`CinemaDetail-*.js` 含 `aria-pressed` 与「今天」「明天」「今日可购」「场次加载失败」「所选日期暂无场次」文案。另核实 `--el-index-normal: 1` 确由 EP 产出（否则 sticky 的 `z-index` 会静默失效），以及 `Search.vue` 的同名 `.film-row__meta` 与本页哈希不同（`data-v-9d8a95ab` / `data-v-d6b24c36`，不触发规则 79）。未做浏览器渲染验证（UI 目视由用户自查）
 - 相关文件: `xm_film/vue/src/views/front/CinemaDetail.vue`、`xm_film/vue/src/components/DetailSkeleton.vue`、`xm_film/vue/src/assets/css/{tokens.scss,front-pages.scss}`、`标准前端视觉与交互设计规范.md`、`CLAUDE.md`
-- 提交记录: 待回填
+- 提交记录: `55b93b6b`
 - 状态: 已修复
 - 未做但记录备查:
   - **影院详情接口会把 `token` / `newPassword` 一起序列化**。`Cinema extends Account`，而 `Account` 只给 `password` 加了 `@JsonProperty(access = WRITE_ONLY)`，`token` 与 `newPassword` 没有 —— `GET /api/v1/cinemas/{id}` 的响应因此多出两个与前台无关的键（当前值为 null）。规则 48 管的是「共享视图泄露他人数据」，这里是另一条路径（继承带出的自身字段），故未并入该条。稳妥修法是给 `BaseController` 的只读端点建投影 DTO，或至少给这两个字段补写保护；本轮按「接口不动」的约定只记录不动
@@ -1054,5 +1054,5 @@
 - 解决方案: 把 `--dark-bg-hero` 收到与 `--dark-bg` 亮度相近的近黑红 `#2A1214`，两个深底共用同一份达标口径；规范 §3.5 补一段说明「深底对比度」一列同时适用于两个令牌，并把这次实测的六个比值列出来。另在规范里写明：改 `--dark-bg-hero` 时必须复测 `--dark-text-faint` 与 `--color-brand` —— 底色每变亮一档，最先跌破 AA 的就是它们（`#3D0F12` 已经开始掉 `--color-brand`）
 - 验证: 候选值与前景色的对比度用亮度公式逐个算过（`#2A1214`：白 17.57 / `#cccccc` 10.94 / `#aaaaaa` 7.56 / `#8a8a8a` 5.09 / `#ef4238` 4.61）；产物核对 `index-*.css` 含 `2A1214`
 - 相关文件: `xm_film/vue/src/assets/css/tokens.scss`、`标准前端视觉与交互设计规范.md`（§3.5）
-- 提交记录: 待回填
+- 提交记录: `55b93b6b`
 - 状态: 已修复
