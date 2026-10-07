@@ -152,8 +152,8 @@
         WHERE pay_time >= #{from}
           AND pay_time &lt; #{to}
           AND <include refid="paidOrderStatuses"/>
-        GROUP BY DATE(pay_time)
-        ORDER BY DATE(pay_time)
+        GROUP BY DATE_FORMAT(pay_time, '%Y-%m-%d')
+        ORDER BY DATE_FORMAT(pay_time, '%Y-%m-%d')
     </select>
 
     <!-- 按状态计数：大盘的「待取票订单」用它 -->
