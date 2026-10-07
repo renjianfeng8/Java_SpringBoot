@@ -109,11 +109,16 @@
           AND status = '待支付'
     </update>
 
+    <!-- 「已支付」的状态集合只有一处定义，供本文件三条聚合语句 <include>：
+         countTodayPaidOrders / selectPaidRevenueByDay / selectTodayPaidRevenue。
+         口径方向与 FilmMapper.filmRevenueJoin（票房聚合）一致 —— 新增或改变任一状态时
+         几处必须同步（Bug 规则 75）。写成片段而非各写一遍，是为了让「同源」由构建保证，
+         而不是靠注释提醒。 -->
+    <sql id="paidOrderStatuses">status IN ('待取票', '已取票')</sql>
+
     <!-- 今日票房：今天支付的售票收入合计（元）+ 统计时刻。
          日期口径取 pay_time（收款日），不是 ordered.start（放映日）—— 本系统是提前购票，
          按放映日聚合会让"今日"长期恒为 0，指标失去意义。
-         「已支付」状态集合与 FilmMapper.filmRevenueJoin 同源，新增任何改变
-         "是否已支付"的状态时两处必须同步，否则今日票房与总票房会各说各话。
          SUM 在空集上返回 NULL，COALESCE 兜成 0：区间聚合的 0 是真实值（今天还没卖票），
          不是"取不到数据"，前端因此不渲染「暂无数据」。
          别名写 camelCase：map-underscore-to-camel-case 只转换 bean 属性，不转换 Map 的 key。 -->
@@ -123,7 +128,37 @@
         FROM ordered
         WHERE pay_time >= CURDATE()
           AND pay_time &lt; CURDATE() + INTERVAL 1 DAY
-          AND status IN ('待取票', '已取票')
+          AND <include refid="paidOrderStatuses"/>
+    </select>
+
+    <!-- 今日已支付订单数（笔）。与 selectTodayPaidRevenue 共用同一片段、同一 pay_time 区间：
+         两者口径一旦不一致，就会出现"收入涨了笔数没涨"的自相矛盾。 -->
+    <select id="countTodayPaidOrders" resultType="int">
+        SELECT COUNT(*)
+        FROM ordered
+        WHERE pay_time >= CURDATE()
+          AND pay_time &lt; CURDATE() + INTERVAL 1 DAY
+          AND <include refid="paidOrderStatuses"/>
+    </select>
+
+    <!-- 逐日已支付票房与订单数，覆盖 [from, to)。
+         没有销售的日子**不产生行**，由 StatisticsService 补零 —— 折线图缺一天会把它
+         连成一条跨越两天的直线，读起来像"那天也有销售额"。补零与「取不到数据」是两回事。 -->
+    <select id="selectPaidRevenueByDay" resultType="java.util.Map">
+        SELECT DATE_FORMAT(pay_time, '%Y-%m-%d') AS date,
+               COALESCE(SUM(total), 0) AS revenue,
+               COUNT(*) AS orders
+        FROM ordered
+        WHERE pay_time >= #{from}
+          AND pay_time &lt; #{to}
+          AND <include refid="paidOrderStatuses"/>
+        GROUP BY DATE(pay_time)
+        ORDER BY DATE(pay_time)
+    </select>
+
+    <!-- 按状态计数：大盘的「待取票订单」用它 -->
+    <select id="countByStatus" resultType="int">
+        SELECT COUNT(*) FROM ordered WHERE status = #{status}
     </select>
 
     <!-- 删除守卫引用计数 -->
