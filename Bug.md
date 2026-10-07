@@ -1078,7 +1078,7 @@
   9. 单一初始化路径：图表只由 `watch(数据)` 触发建图，页面挂载时不再单独调一次 —— 旧实现每次加载初始化两遍，正是《前端规范待办》T-11 记的那处冗余
 - 规范修订: §3.7 补「指标状态色是状态通道，不是装饰」（按有利性着色 + 必须搭配箭头/文字）；§4.2 的 `--fs-3xl` 用途补上「管理端 KPI 主指标」
 - 已知取舍: 刷新交互在前台 `front/Home.vue` 与本次的 `manage/Home.vue` 各有一份实现（最短时长、失败保留旧值、数字脉冲三段行为同形不同源）。本仓没有 `useRefresh` 之类的共享抽象，两端骨架层也刻意不合并（见《前端规范待办》T-7），故不静默处理，在此登记
-- 验证: <待回填：后端单测与绑定测试结论、备用端口 curl 的契约核对结果、前端 build 与产物命中结果>
+- 验证: 后端 `StatisticsServiceTest` 4/4 通过（纯 Mockito，不起 Spring 上下文、不连库）；绑定层守卫 `StatisticsMapperLoadTest` 4/4 通过，且它**首次运行就抓到一处真实 SQL 缺陷** —— `selectPaidRevenueByDay` 原写 `GROUP BY DATE(pay_time)` 而 SELECT 是 `DATE_FORMAT(pay_time, …)`，违反 MySQL 8 默认的 `only_full_group_by`，接口一上线必崩，已改为两处表达式逐字一致。备用端口 9091 起实例 curl 核对契约：`totalCinemas`(4) == `cinemaStatus` 各项之和、匿名访问返回 401、`revenueTrend` 恰好 7 条且覆盖 2026-09-30…10-06（末点是昨天、不含今天）、无销售的日期补 0（09-30…10-05 全 0，10-06 为 684.00 元 / 8 笔）、`summary.todayRevenue`(116.00) 与公开端点 `GET /api/v1/films/box-office/today` 完全一致。前端 `npm run build` 通过；产物命中「较昨日」/ `kpi-card__delta--up` / `todo-card` / `tabular-nums` / `audit__percent`。另记一处**判据更正**：原计划用 `grep "pie"` 验证 PieChart 已摇掉，该判据无效（ECharts 的 lang 字典与事件分发里始终有 "pie" 字样，与注册了哪些图表无关），改用 pie 专有实现符号 `padAngle` / `avoidLabelOverlap` 判定，两者均不在产物中。未做浏览器渲染验证（UI 目视由用户自查）
 - 相关文件: `xm_film/springboot/src/main/java/com/example/springboot/service/StatisticsService.java`、`xm_film/springboot/src/main/java/com/example/springboot/controller/StatisticsController.java`、`xm_film/springboot/src/main/resources/mapper/{OrderedMapper,UserMapper}.xml`、`xm_film/vue/src/views/manage/{Home,Cinema,Ordered}.vue`、`标准前端视觉与交互设计规范.md`、`CLAUDE.md`
-- 提交记录: <待回填>
+- 提交记录: `d480215d`（后端口径）· `04984256`（首页重构）· `5cb634ae`（本条目）
 - 状态: 已修复
