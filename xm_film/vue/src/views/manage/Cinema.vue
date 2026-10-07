@@ -11,6 +11,9 @@
       <div class="list-toolbar__filters">
         <el-input v-model="searchForm.name" placeholder="请输入影院名称查询" aria-label="影院名称"
                   class="search-input" :prefix-icon="Search" @keyup.enter="onSearch" />
+        <el-select v-model="searchForm.status" placeholder="请选择审核状态" aria-label="审核状态" class="field-md">
+          <el-option v-for="status in CINEMA_STATUS_OPTIONS" :key="status" :label="status" :value="status" />
+        </el-select>
         <el-button type="primary" @click="onSearch">查 询</el-button>
         <el-button type="warning" @click="onReset">重 置</el-button>
       </div>
@@ -155,6 +158,8 @@
 </template>
 
 <script setup>
+import { watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { Delete, Edit, Plus, Search } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useCrud } from '@/composables/useCrud'
@@ -181,7 +186,16 @@ const { dialogVisible, formRef, form, rules, openAdd, openEdit, submit, close } 
   }
 })
 
-crud.load()
+const route = useRoute()
+
+/* 待办卡带着 ?status=未审核 跳进来，这里把它预置成筛选项。
+   必须 watch 参数本身而不能只写在顶层：站内跳转同页换参不会重挂组件（规则 83），
+   从首页反复点待办卡时只有第一次会生效。immediate 让首屏也走同一条路径，
+   于是 crud.load() 不再是独立的第二次取数。 */
+watch(() => route.query.status, (status) => {
+  if (status) searchForm.status = status
+  onSearch()
+}, { immediate: true })
 
 function handleFileUpload(res) {
   if (res.code === '200') { form.avatar = res.data; ElMessage.success('头像上传成功') }

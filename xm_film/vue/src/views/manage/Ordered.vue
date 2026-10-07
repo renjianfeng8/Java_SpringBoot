@@ -118,6 +118,8 @@
 </template>
 
 <script setup>
+import { watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { Delete, Search } from '@element-plus/icons-vue'
 import { useCrud } from '@/composables/useCrud'
 import { API_PATHS, ORDER_STATUS_OPTIONS, getOrderStatusType as getStatusType, isOrderDeletable } from '@/constants'
@@ -140,6 +142,13 @@ function getRoomName(roomId) {
   return roomData.find(r => r.id === roomId)?.name || '暂未关联影厅'
 }
 
-crud.load()
+const route = useRoute()
+
+/* 同 Cinema.vue：待办卡带 ?status=待取票 进来。watch 而非顶层读取，理由见规则 83。 */
+watch(() => route.query.status, (status) => {
+  if (status) searchForm.status = status
+  onSearch()
+}, { immediate: true })
+
 loadRoom()
 </script>
