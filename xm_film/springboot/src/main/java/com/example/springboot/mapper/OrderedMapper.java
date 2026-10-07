@@ -12,7 +12,12 @@ public interface OrderedMapper extends BaseMapper<Ordered> {
 
     List<Ordered> selectActiveByRecordId(Integer recordId);
 
-    /** 今日票房：今天支付的售票收入合计（元）+ 统计时刻，供前台公开只读接口使用 */
+    /**
+     * 今日票房：今天支付的售票收入合计（元）+ 统计时刻。
+     * 两个消费者：前台公开只读端点 {@code GET /api/v1/films/box-office/today}，
+     * 与后台大盘 {@code GET /api/v1/statistics/overview} 的 {@code summary.todayRevenue}。
+     * 两处共用这一份实现 —— 「今日票房」只有一个口径（见 CLAUDE.md 的口径来源表）。
+     */
     Map<String, Object> selectTodayPaidRevenue();
 
     /** 今日已支付订单数（笔）。口径与 selectTodayPaidRevenue 同源（共用 paidOrderStatuses 片段） */
