@@ -121,6 +121,8 @@
 84. `opacity: 0` 的叠放层仍然接收点击、也仍然可聚焦: 轮播把多张 slide 都设成 `position: absolute; inset: 0; opacity: 0` 时，后置兄弟节点绘制在上层并照常命中测试 —— 点可见那张的按钮，实际命中的是最后一张透明层的链接，跳到错的条目；同时它们仍在 Tab 顺序与无障碍树里，配上 `aria-hidden` 就成了"可聚焦但不可见不可读"的焦点陷阱。用 `visibility: hidden` 一次解决两件事（既不接收指针事件、也不进 Tab 顺序），过渡写成 `opacity …, visibility …` 即可保留淡入淡出（见 BUG-055）
 85. 表单字段必须有数据落点: 绑定到 `v-model` 并随整表单提交的字段，后端必须有对应列（或对应的处理分支）承接它。`manage/Person.vue` 的「个人介绍」曾绑 `data.form.description` 并 PUT 给 `/api/v1/admins`，而 `admin` 表没有 `description` 列（`cinema` 表有 —— 该页是从影院端复制改写的，字段跟着文本一起搬了过来）。用户填了、点保存、看到「更新成功」，内容静默丢弃：比字段不存在更有害，因为它让人以为填过了。该字段已按本条删除（见 BUG-056）。判断方法同规则 32 的反向 —— 规则 32 问"这个字段该不该由前端给"，本条问"前端给了之后谁接"。加字段前先 `grep` 一次 schema，跨端复制表单时要逐个字段核对目标表
 86. 瞬时接口的加载反馈要有最短时长，失败不要擦掉已展示的数据: 「今日票房」这类本地聚合接口几十毫秒就返回，`loading` 直接跟随请求生命周期会让转圈一闪而过、数字无声替换，用户无从确认「点过了」。给手动刷新一个最短展示时长（约 450ms），并把 loading 的结束与结果高亮压到同一刻 —— 读起来是「转圈停 → 数字亮一下」。配套三条：① `el-button` 的 `loading` 会自己渲染一个转圈图标，默认插槽里的自定义图标不会随之消失，两者叠加就是一个按钮两个图标，要在 loading 时 `v-if` 掉自定义图标；② 刷新失败保留上次的数字（状态里的值不回退），只在次要行提示，瞬时故障不该把已知数据抹成错误文案；③ 宽字号数据（前台 `--fs-5xl` 36px 的大字）不要与"两态宽度会变"的按钮同排 —— 按钮一宽就把数字挤到折行，「元」掉到第二行再弹回，看着就是数字上下跳。数据要 `white-space: nowrap`，并让它独占一行，按钮让到次要行（见 BUG-057）
+87. 实体的派生 / 只读字段必须在**每一条**返回该实体的查询路径上填充: `film.typeList` 由 `FilmService.fillFilmTypes` 后置填充，`selectAll` / `selectById` / `selectPage` / `selectByTitle` 都调了，唯独 `selectByCinema` 漏了 —— 于是影院详情页的影片永远没有类型，而影片详情页（同一实体的另一条查询路径）一切正常。后置填充不是"顺手加的加工"，它和 SQL 一样是这条路径输出契约的一部分：新增或修改任何返回该实体的查询方法时，逐个核对后置填充有没有跟着走（见 BUG-058）
+88. 深色表面上的文字色受底色亮度约束，改 `--dark-bg-hero` 必须复测: `--dark-bg-hero` 与 `--dark-bg` 亮度相近是有意维持的 —— §3.5 那张对比度表同时担保两者。曾经 `--dark-bg-hero` 取 `#41036a`，亮度远高于 `#1a1a1a`，于是 `--dark-text-faint`（实测 4.21:1）与 `--color-brand`（3.81:1）在头横幅上都不达 AA，而表格看上去是达标的。头横幅上承载文字只许用 `--dark-text` / `--dark-text-secondary`；要用 `--dark-text-faint` 或 `--color-brand`，先把底色换回近黑档并复测（见 BUG-059）
 
 ## 案例篇
 
@@ -1012,4 +1014,45 @@
 - 验证: `npm run build` 通过；构建产物核对 `Home-*.css` 含 `@keyframes today-amount-flash` 与 `white-space:nowrap`、`Home-*.js` 含 `MIN_REFRESH_MS` / 「刷新中」 / 失败文案。未做浏览器渲染验证（UI 目视由用户自查）
 - 相关文件: `xm_film/vue/src/views/front/Home.vue`
 - 提交记录: `ce596c0f`
+- 状态: 已修复
+
+### BUG-058: 影院详情页排版与交互重构（场次表格 + 分页器嵌套 + 竖版影院图 + 重复弹提示）
+
+- 日期: 2026-10-07
+- 问题描述: `/front/cinemaDetail/:id` 多处失当，其中三处是功能性缺陷而不只是观感问题。① 头横幅底色是紫（`#41036a`），与前台红品牌（`--color-brand` `#ef4238`）冲突。② 影院图被裁成 5:6 竖条（220×264）——影院没有「海报」，一张门脸照裁成竖版是错的比例尺，也与影院列表页的 10:7 不一致。③ 「营业时间」这行恒显示「暂无营业时间信息」，永远拿不到值。④ 场次以表格呈现：「操作」列占 40% 宽却只放一个 `--fs-xs` 的小按钮；表格体锁 `max-height: 200px` 内滚动，而分页器（`.record-table__pagination`）又塞在这个滚动容器**里面**；每部影片各带一套分页器，10 部片就是 10 个。⑤ 不同日期的场次混在同一个分页列表里，日期只能靠单元格内 `<br>` 换行看出，用户无法「看明天的场次」。⑥ 某片场次请求失败时被置成 `list = []`，与「该片无排片」渲染成同一副样子
+- 根因分析: 五条独立的原因。
+  1. **紫色头图不是页面自己定的**，是 `--dark-bg-hero` 的令牌值，规范 §3.5 把它指定给「影片详情 / 影院详情页头横幅」。所以它是三处详情页共有的问题，只改这一个页面无效
+  2. **「营业时间」绑的字段不存在**。`Cinema` 继承 `Account`，全字段是 `id / username / password / role / name / newPassword / token / avatar / email / address / leader / code / certificate / status / phone / description` —— 没有 `businessHours`。模板却渲染它，于是兜底文案成了唯一可能的结果。同一页的 `cinema.rating` / `hallCount` / `todaySchedule` 也是死状态（声明了但后端无此字段，且模板从未渲染）
+  3. **表格是后台思维的产物**。「操作」列 40% 宽是照抄后台 CRUD 表格的列宽分配（那里一格放多个按钮），搬到前台后，一格只有一个「选座购票」，剩下全是空白。内滚动 + 分页器的嵌套则来自「每部影片独立分页」这个设计：为了让表格不无限长而锁高度，锁了高度又得分页，分页器只能塞进容器里
+  4. **日期不是一等公民**。场次是按「影院 + 影片」查的（`records/page?cinemaId&filmId`），日期只是 `start` 字符串的前 10 位。没有日期维度，就没有日期选择，只能把所有日期堆在一起
+  5. **`catch` 里重复弹提示**。`fetchCinemaInfo` / `loadFilmList` / `fetchRecordList` 的 `catch` 都调了 `ElMessage.error`，而 `utils/request.js` 的响应拦截器已经弹过一次 —— 同一次失败弹两遍，违反规则 72
+- 解决方案:
+  1. `--dark-bg-hero` 由 `#41036a` 改为 `#2A1214`（近黑红），三处详情页同步受益。改之前先用对比度公式核过候选值：`#2A1214` 上白 17.57 / `#cccccc` 10.94 / `#aaaaaa` 7.56 / `#8a8a8a` 5.09 / `#ef4238` 4.61，五项全达 AA。选它而非更红的 `#3D0F12`，是因为后者会把 `--color-brand` 压到 4.32（不达 AA），且 `#2A1214` 的数值与规范 §3.5 现值几乎重合，表格不必改数字（见 BUG-059）
+  2. 影院图改 `240px` / `aspect-ratio: 10 / 7`，与影院列表页同比例
+  3. 删掉营业时间行；`cinema` 状态收敛为 `id / name / avatar / address / phone`，用显式挑字段的 `Object.assign` 代替原来整包 `Object.assign(cinema, cinemaInfo)`（后者会把响应的 `role` / `token` / `newPassword` 一起灌进前端状态）
+  4. 场次表格整体删除，改为「日期条 + 影片行 + 场次块」：日期条是今天起 7 天的固定窗口，sticky 吸顶；影片行左侧 96×134 海报，右侧场次块（`14:30` + 影厅名）；点场次块直接进选座。视觉选中态走三通道（颜色 + 字重 + 3px 下划线），另挂 `aria-pressed`，满足 §3.7「禁止仅靠颜色传递状态」
+  5. **日期切换做到 0 请求**：加载时对每部影片发一次 `records/page?cinemaId&filmId&pageSize=200` 取回该片全部场次，前端按 `start` 的前 10 位归并成 `sessionsByFilm[filmId]`，切日期只是客户端过滤。若改成「按日期查」，每切一天就要对每部片各发一次请求（10 部片 = 10 次），切日期变成有延迟的操作。代价是 `SESSION_PAGE_SIZE = 200` 这个硬上限，写进代码注释
+  6. **只渲染可购场次**（`status != '停售'` 且 `start` 晚于当前，与后端 `RecordService.isPurchasable` 同规则），于是不需要「已结束 / 放映中 / 停售」的置灰态，也就免掉了整套禁用样式。该日无场次的影片整行不渲染 —— 一屏十行「暂无排片」比不显示更吵
+  7. **失败态与空态分开**（规则 72）：影片列表失败 → 「数据加载失败，请稍后重试」；某片场次失败 → 保留该行并写「场次加载失败」（不当作「无场次」静默隐藏，那会让用户以为系统里真没有）；`catch` 里不再弹提示，只落错误态
+  8. 首屏 1 + N 次请求（N = 影片数，与改前相同），但**等齐再渲染**（逐行落位会让行数反复跳），并给骨架一个 `MIN_SKELETON_MS = 400` 的最短时长（本机三组请求百毫秒内就回，骨架会一闪而过，规则 86）
+  9. `DetailSkeleton` 加 `wide` 开关：影院页头图是横版，骨架必须同形，否则数据到位时跳高。原骨架海报位是 2:3，与真实头图 5:6 本就不同形
+  10. 深度链接 `?filmId=`（来自「选择影院」页）保留：自动选中该片最近一个有场次的日期，再滚动到该行。`.film-row` 补 `scroll-margin-top: var(--space-64)` 给吸顶日期条让出高度，否则片名被压在日期条底下
+  11. 不再传 `pageNum` / `pageSize` 给 `films/by-cinema` —— 该接口返回完整列表，后端根本不读这两个参数
+- 验证: `npm run build` 通过；产物核对 `index-*.css` 含 `2A1214` 且全仓已无 `41036a`、含共享层的 `detail-skeleton--wide`；`CinemaDetail-*.css` 含 `date-tab--active` / `showtime__room` / `film-row__meta` / `scroll-margin-top`；`CinemaDetail-*.js` 含 `aria-pressed` 与「今天」「明天」「今日可购」「场次加载失败」「所选日期暂无场次」文案。另核实 `--el-index-normal: 1` 确由 EP 产出（否则 sticky 的 `z-index` 会静默失效），以及 `Search.vue` 的同名 `.film-row__meta` 与本页哈希不同（`data-v-9d8a95ab` / `data-v-d6b24c36`，不触发规则 79）。未做浏览器渲染验证（UI 目视由用户自查）
+- 相关文件: `xm_film/vue/src/views/front/CinemaDetail.vue`、`xm_film/vue/src/components/DetailSkeleton.vue`、`xm_film/vue/src/assets/css/{tokens.scss,front-pages.scss}`、`标准前端视觉与交互设计规范.md`、`CLAUDE.md`
+- 提交记录: 待回填
+- 状态: 已修复
+- 未做但记录备查:
+  - **影院详情接口会把 `token` / `newPassword` 一起序列化**。`Cinema extends Account`，而 `Account` 只给 `password` 加了 `@JsonProperty(access = WRITE_ONLY)`，`token` 与 `newPassword` 没有 —— `GET /api/v1/cinemas/{id}` 的响应因此多出两个与前台无关的键（当前值为 null）。规则 48 管的是「共享视图泄露他人数据」，这里是另一条路径（继承带出的自身字段），故未并入该条。稳妥修法是给 `BaseController` 的只读端点建投影 DTO，或至少给这两个字段补写保护；本轮按「接口不动」的约定只记录不动
+  - **`FilmService.selectByCinema` 漏调 `fillFilmTypes`**。`selectAll` / `selectById` / `selectPage` / `selectByTitle` 都调了，唯独它没有，于是影院详情页的影片永远拿不到 `typeList`，影片行只能显示「时长 · 语言 · 格式」而不能显示类型。修法是补一行调用，但这会让响应多出一个字段（属于接口变更），同样按约定只记录不动。已立规则 87
+
+### BUG-059: 规范 §3.5 深色表面的对比度担保只在页脚底色上成立
+
+- 日期: 2026-10-07
+- 问题描述: 规范 §3.5 的表格给 `--dark-text-secondary` 标 10.84:1、`--dark-text-faint` 标 5.04:1、`--color-brand` 标 4.56:1，读起来像是「深色表面这一族令牌都达 AA」。但 `--dark-bg-hero` 取的是 `#41036a`（紫），亮度远高于 `#1a1a1a`
+- 根因分析: 那一列数值实际是拿 `--dark-bg`（`#1a1a1a`，相对亮度 0.0103）算出来的，却被当成整组深色令牌的担保。在 `#41036a` 上实测：`--dark-text-faint` 只有 4.21:1、`--color-brand` 只有 3.81:1，**两者都不达 AA**。当时没暴露，纯属运气 —— 三处详情页恰好只用了 `--dark-text`（14.52:1）与 `--dark-text-secondary`（9.04:1），没用到那两个穷色
+- 解决方案: 把 `--dark-bg-hero` 收到与 `--dark-bg` 亮度相近的近黑红 `#2A1214`，两个深底共用同一份达标口径；规范 §3.5 补一段说明「深底对比度」一列同时适用于两个令牌，并把这次实测的六个比值列出来。另在规范里写明：改 `--dark-bg-hero` 时必须复测 `--dark-text-faint` 与 `--color-brand` —— 底色每变亮一档，最先跌破 AA 的就是它们（`#3D0F12` 已经开始掉 `--color-brand`）
+- 验证: 候选值与前景色的对比度用亮度公式逐个算过（`#2A1214`：白 17.57 / `#cccccc` 10.94 / `#aaaaaa` 7.56 / `#8a8a8a` 5.09 / `#ef4238` 4.61）；产物核对 `index-*.css` 含 `2A1214`
+- 相关文件: `xm_film/vue/src/assets/css/tokens.scss`、`标准前端视觉与交互设计规范.md`（§3.5）
+- 提交记录: 待回填
 - 状态: 已修复

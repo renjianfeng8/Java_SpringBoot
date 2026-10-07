@@ -71,7 +71,7 @@ project_02/
 | 项 | 事实 |
 |----|------|
 | 主订票外键 | `room.cinema_id` · `record.film_id` · `ordered.record_id`；`xm_film/sql` 为 schema 与种子唯一出处 |
-| 影院上映影片 | 由 `record` 派生（`EXISTS` 子查询）；无关联表；`record.film_id NOT NULL` |
+| 影院上映影片 | 由 `record` 派生（`EXISTS` 子查询）；无关联表；`record.film_id NOT NULL`；`by-cinema` 返回**不分页**的完整列表（传 `pageNum`/`pageSize` 后端不读），且**不填 `typeList`**（`selectByCinema` 漏调 `fillFilmTypes`，见规则 [87](Bug.md#规则篇)） |
 | 影片类型 / 地区 | 只读后端字段 `areaName` · `typeList`；`Film` 无 `types` |
 | 影厅 | `title` 后端派生；座位随 `room.seat_rows` / `seat_cols` |
 | 选座 | 座位来源 `record.roomSeatRows` / `roomSeatCols`；单笔上限 6；USER 无权访问 `/api/v1/rooms` |
@@ -114,12 +114,14 @@ project_02/
 | 跨端入口 | 各外壳右上角显式按钮；`/front/home` 不用 `router.back()` |
 | 热评 | 即 `GET /api/v1/marks/by-film`（`likeCount DESC, id DESC`）前 3 行，不另开查询 |
 | 点赞表 | `mark_like` 纯关系表（`PRIMARY KEY (mark_id, user_id)`），赞数 `COUNT(*)`，无计数列 |
-| 前台共享骨架 | `assets/css/front-pages.scss`，全部挂在 `.front-content` 下（`.page-card` / `.section-head` / `.poster-grid` / `.filter-chip` / `.service-tag--*` / `.detail-skeleton` / `.empty-hint`）。前台页面不再各写一份。`.detail-skeleton` 的标记收在 `components/DetailSkeleton.vue`；`.empty-hint` 是单行占位，带标题与说明的虚线面板叫 `.empty-panel`（组件内本地写） |
+| 前台共享骨架 | `assets/css/front-pages.scss`，全部挂在 `.front-content` 下（`.page-card` / `.section-head` / `.poster-grid` / `.filter-chip` / `.service-tag--*` / `.detail-skeleton` / `.detail-skeleton--wide` / `.empty-hint`）。前台页面不再各写一份。`.detail-skeleton` 的标记收在 `components/DetailSkeleton.vue`，`wide` 开关给横版头图的页面（影院详情）；`.empty-hint` 是单行占位，带标题与说明的虚线面板叫 `.empty-panel`（组件内本地写） |
 | 管理端共享骨架 | `assets/css/admin-pages.scss`，全部挂在 `.manage-container` 下（`.crud-page` / `.page-head` / `.list-toolbar` / `.table-card` / `.table-foot` / `.selection-count` / `.empty-hint` / `.row-actions` / `.line` / `.section-head`）。manage 的 13 个表格页共用「标题带 + 工具条 + 表格卡」两卡骨架，不再各写一份。`.section-head` 的几何与前台同名类一致 —— 两端各自是所在端的唯一骨架层，刻意不做一份全局层（§11.3 文件职责） |
 | 卡片外观分工 | `global.css` 的 `.card` 提供底色 / 圆角 / 阴影（三端共用），`.page-card` 只负责堆叠间距与消费端内边距（前台 `--space-24`，即 §6.2 的密度分端）。manage 页已不用 `.page-card`，改用 `.list-toolbar` / `.table-card` 各自声明内边距；`back/*` 仍用 `.page-card`，其内边距取 `.card` 的 `--space-8` |
 | 海报卡 | 唯一 `components/FilmPosterCard.vue`（2:3 海报 + 破图兜底 + 评分角标 + 元信息插槽），消费方 `front/Home.vue` · `front/Movie.vue`。`Search.vue` 横向卡与 `Rank.vue` 榜单行是另两种形状，不并入 |
 | 导航高亮 | `Front.vue` 由 `NAV_ITEMS`（各项自带的 `sections` 路由前缀）从 `route.path` 现算，不手工同步 `activePath` 字符串 |
 | 表单页跳转 | 登录回跳等站内跳转一律 `router.push`（`window.location.href` 既整页重载，又会把 `//host` 这类路径解析成外站） |
+| 影院详情场次 | 日期条是今天起 7 天的固定窗口（客户端时钟，跨零点不自动翻页）；每片场次一次取回（`pageSize=200`，硬上限）后**在客户端按日期过滤**，切日期不发请求；只渲染可购场次（`status != 停售` 且未开场，与 `RecordService.isPurchasable` 同规则），该日无场次的影片整行不渲染；`?filmId=` 深链自动选中该片最近有场次的日期并滚到该行（`.film-row` 的 `scroll-margin-top` 给吸顶日期条让位） |
+| 影院服务标签 | 一组三个（退票无忧 / 儿童优惠 / WiFi 覆盖），影院列表页与影院详情横幅两处**同色**，底色走共享层 `.service-tag--*`（功能色基色 + `--color-on-accent`）；两页形状不同故各自写形状，只共享底色 |
 
 ## API 接口清单
 
@@ -237,6 +239,8 @@ project_02/
 | `opacity: 0` 叠放层仍可点击可聚焦，用 `visibility` | [84](Bug.md#规则篇) |
 | 表单字段必须有数据落点（后端有列或分支承接） | [85](Bug.md#规则篇) |
 | 瞬时接口加载反馈要有最短时长；失败保留已展示数据 | [86](Bug.md#规则篇) |
+| 实体的派生 / 只读字段须在每条返回该实体的查询路径上填充 | [87](Bug.md#规则篇) |
+| 改 `--dark-bg-hero` 必须复测深底文字色；头横幅不许用 `--dark-text-faint` / `--color-brand` 承文字 | [88](Bug.md#规则篇) |
 
 ## 开发守则
 
