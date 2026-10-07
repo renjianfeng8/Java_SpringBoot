@@ -143,7 +143,10 @@
 
     <!-- 逐日已支付票房与订单数，覆盖 [from, to)。
          没有销售的日子**不产生行**，由 StatisticsService 补零 —— 折线图缺一天会把它
-         连成一条跨越两天的直线，读起来像"那天也有销售额"。补零与「取不到数据」是两回事。 -->
+         连成一条跨越两天的直线，读起来像"那天也有销售额"。补零与「取不到数据」是两回事。
+         GROUP BY / ORDER BY 必须与 SELECT 里那个表达式逐字相同（都写 DATE_FORMAT）：
+         MySQL 8 默认开启 only_full_group_by，写成更"自然"的 GROUP BY DATE(pay_time)
+         会因为 SELECT 表达式不在 GROUP BY 里而直接报错。别把它简化回去。 -->
     <select id="selectPaidRevenueByDay" resultType="java.util.Map">
         SELECT DATE_FORMAT(pay_time, '%Y-%m-%d') AS date,
                COALESCE(SUM(total), 0) AS revenue,
