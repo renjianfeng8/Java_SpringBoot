@@ -69,7 +69,9 @@
           <el-input v-model="form.title" autocomplete="off" placeholder="请输入电影名称" @keyup.enter="submit" />
         </el-form-item>
         <el-form-item label="电影图片" prop="img">
-          <el-upload :action="FILE_UPLOAD_URL" :on-success="handleFileUpload" :auto-upload="true" list-type="picture">
+          <el-upload :action="FILE_UPLOAD_URL" :headers="uploadHeaders"
+                     :on-success="handleFileUpload" :on-error="handleUploadError"
+                     :auto-upload="true" list-type="picture">
             <el-button type="primary">点击上传电影图片</el-button>
           </el-upload>
         </el-form-item>
@@ -80,7 +82,9 @@
           <el-date-picker v-model="form.start" type="date" value-format="YYYY-MM-DD" />
         </el-form-item>
         <el-form-item label="预告视频" prop="preview">
-          <el-upload :action="FILE_UPLOAD_URL" :on-success="handleVideoUpload" :auto-upload="true" list-type="text">
+          <el-upload :action="FILE_UPLOAD_URL" :headers="uploadHeaders"
+                     :on-success="handleVideoUpload" :on-error="handleUploadError"
+                     :auto-upload="true" list-type="text">
             <el-button type="primary">点击上传视频</el-button>
           </el-upload>
         </el-form-item>
@@ -101,6 +105,7 @@ import { ElMessage } from 'element-plus'
 import { useCrud } from '@/composables/useCrud'
 import { useFormDialog } from '@/composables/useFormDialog'
 import { API_PATHS, FILE_UPLOAD_URL } from '@/constants'
+import { uploadHeaders, handleUploadError } from '@/utils/upload'
 
 const crud = useCrud(API_PATHS.VIDEOS)
 const { dataList, total, pageNum, pageSize, searchForm, selectedIds, loading, error,

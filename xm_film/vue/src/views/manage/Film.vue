@@ -122,7 +122,8 @@
           <el-input v-model="form.title" autocomplete="off" placeholder="请输入电影名称" @keyup.enter="submit"/>
         </el-form-item>
         <el-form-item label="电影封面" prop="img">
-          <el-upload :action="FILE_UPLOAD_URL" :on-success="handleFileUpload"
+          <el-upload :action="FILE_UPLOAD_URL" :headers="uploadHeaders"
+                     :on-success="handleFileUpload" :on-error="handleUploadError"
                      :auto-upload="true" list-type="picture">
             <el-button type="primary">点击上传电影封面图</el-button>
           </el-upload>
@@ -196,6 +197,7 @@ import { useCrud } from '@/composables/useCrud'
 import { useFormDialog } from '@/composables/useFormDialog'
 import { API_PATHS, FILE_UPLOAD_URL, getFilmStatusType as getStatusType } from '@/constants'
 import request from '@/utils/request'
+import { uploadHeaders, handleUploadError } from '@/utils/upload'
 
 const crud = useCrud(API_PATHS.FILMS)
 const { dataList, total, pageNum, pageSize, searchForm, selectedIds, loading, error,

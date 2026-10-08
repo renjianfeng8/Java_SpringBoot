@@ -124,6 +124,8 @@
 87. 实体的派生 / 只读字段必须在**每一条**返回该实体的查询路径上填充: `film.typeList` 由 `FilmService.fillFilmTypes` 后置填充，`selectAll` / `selectById` / `selectPage` / `selectByTitle` 都调了，唯独 `selectByCinema` 漏了 —— 于是影院详情页的影片永远没有类型，而影片详情页（同一实体的另一条查询路径）一切正常。后置填充不是"顺手加的加工"，它和 SQL 一样是这条路径输出契约的一部分：新增或修改任何返回该实体的查询方法时，逐个核对后置填充有没有跟着走（见 BUG-058）
 88. 深色表面上的文字色受底色亮度约束，改 `--dark-bg-hero` 必须复测: `--dark-bg-hero` 与 `--dark-bg` 亮度相近是有意维持的 —— §3.5 那张对比度表同时担保两者。曾经 `--dark-bg-hero` 取 `#41036a`，亮度远高于 `#1a1a1a`，于是 `--dark-text-faint`（实测 4.21:1）与 `--color-brand`（3.81:1）在头横幅上都不达 AA，而表格看上去是达标的。头横幅上承载文字只许用 `--dark-text` / `--dark-text-secondary`；要用 `--dark-text-faint` 或 `--color-brand`，先把底色换回近黑档并复测（见 BUG-059）
 89. 驾驶舱的每个数字都要有对比基准，且对比基准不得另取一次数: KPI 卡片只给一个孤立的数字等于没有信息 —— 必须带环比 / 目标 / 上期。基准取「近 7 日趋势的末点」（= 昨天），不另发请求：同一份趋势数据既画折线又算环比，两者永远对得上，也不会出现「卡片说涨、图上是跌」。除数为 0 或没有基准时渲染「较昨日 —」，不给没有意义的百分比。涨跌按**有利性**而非方向着色（门票收入涨是成功色，待处理数涨是危险色），并同时给箭头与 +/- 文字，不单靠颜色（§3.7）。趋势窗口不含今天：今天只过了一半，画进折线会让曲线在每个上午都呈现"断崖下跌"（见 BUG-060）
+90. `el-upload` 走自带 XHR，不经过 axios 拦截器，鉴权头与失败反馈都得自己接: `utils/request.js` 的请求拦截器只作用于 axios 实例，`el-upload` 用自己的 `XMLHttpRequest` 发 multipart，拿不到那里统一注入的 `Authorization`。而 `/api/v1/files/upload` 既不在 `WebMvcConfig` 的 `excludePathPatterns` 也不在 `AuthInterceptor` 的匿名写白名单里，无令牌即 401 —— 全仓 7 处上传（影院头像 / 营业执照、演员图片 / 照片、电影封面、视频封面 / 预告）因此长期**静默**失败。两件事必须同时做: ① 绑 `:headers="uploadHeaders"`（`utils/upload.js` 是唯一读取点；用 getter 而不是普通对象 —— el-upload 在发请求时才 `Object.entries(headers)`，普通对象会在模块加载时就把令牌固定成空，未登录返回 `null` 则让它跳过该头）；② 绑 `:on-error`，因为非 2xx 走 `on-error` 而不是 `on-success`，`handleFileUpload` 那类成功回调在失败时根本不会被调用，不接事件就是完全静默。不要用"把 `/api/v1/files/upload` 加进 `excludePathPatterns`"来绕过 —— 那等于开放匿名任意写文件（规则 33）（见 BUG-062）
+91. 后端有兜底默认值的入参前端必须给入口，编辑态的字段必须有落点: `UserService.insertUser` / `AdminService.add` / `CinemaService.add` 都在 `password == null` 时兜底 `user123` / `admin123` / `cinema123`。兜底是防御性的、不是设计 —— 三个新增表单曾都没有密码输入，兜底就成了唯一路径，于是"所有新建账号都是默认密码"；`User` / `Admin` / `Cinema` 都有 `avatar` 列且 insert 语句都写了它，前端却长期只有影院表单给了上传入口。判断方法: 拿实体字段逐个对照新增表单，凡是 insert 会写入而后端允许为 `null` 的列，要么给入口、要么明确接受默认值。两条反向约束同样成立 —— ① 密码框只在新增态渲染（`v-if="!isEdit"`），因为三个 `update` 都显式 `setPassword(null)`，编辑态放一个密码框就是规则 85 说的无落点字段（改密另有 `/password` 页，规则 74）；② 判"是否新增"一律用 `isEdit`，不要用 `form.id` —— `openEdit` 把整行拷进 `form`，`openAdd` 合默认值时不删残留键（该缺陷已于 BUG-063 从 `openAdd` 侧堵住），所以"表单里有没有 id"曾长期等价于"是否编辑"。靠残留键门控的字段在"先编辑后新增"时会错误地一直显示，连它的必填规则也跟着注册；密码框若照抄这个写法则相反，会永远不出现、必填静默失效。`manage/Cinema.vue` 的「审核状态」原用 `form.id` 门控，已改判 `isEdit`（见 BUG-061 与 BUG-063）
 
 ## 案例篇
 
@@ -1082,3 +1084,50 @@
 - 相关文件: `xm_film/springboot/src/main/java/com/example/springboot/service/StatisticsService.java`、`xm_film/springboot/src/main/java/com/example/springboot/controller/StatisticsController.java`、`xm_film/springboot/src/main/resources/mapper/{OrderedMapper,UserMapper}.xml`、`xm_film/vue/src/views/manage/{Home,Cinema,Ordered}.vue`、`标准前端视觉与交互设计规范.md`、`CLAUDE.md`
 - 提交记录: `d480215d`（后端口径）· `04984256`（首页重构）· `5cb634ae`（本条目）
 - 状态: 已修复
+
+### BUG-061: 新增账号弹窗没有头像与密码输入，新建账号一律落到后端兜底
+
+- 日期: 2026-10-08
+- Bug 描述: 管理后台 `/manage/user`、`/manage/admin` 与 `/manage/cinema` 的新增弹窗里没有密码输入（前两者还没有头像上传），于是新建账号一律拿到后端兜底密码（`user123` / `admin123` / `cinema123`）且头像为空；`/front/person` 也没有改头像的入口，自助注册的用户永远设不了头像
+- 根因分析: 弹窗字段集落后于数据模型。`User`、`Admin`、`Cinema` 实体都有 `avatar`，`Account` 有 `password`，三个 Mapper 的 insert 语句都已写入这两列（`AdminMapper` 还写 `id`），三个 `add` 只在 `password == null` 时才兜底 —— 后端入参本来就是通的，只有前端没给入口，兜底默认值因此成了唯一路径。`front/Person.vue` 另有第二处独立缺陷: 保存成功后只调 `setStoredUser({ ...getStoredUser(), ...formData })`，而 `setStoredUser` 只是 `useAuth` 的持久化副本、不会更新模块里的 `user` ref（规则 76），所以即便补上头像，表现也会是"上传成功但顶栏头像不变"
+- 解决方案:
+  1. `manage/User.vue`、`manage/Admin.vue`、`manage/Cinema.vue` 的新增弹窗补密码输入，前两者并补头像上传（复用 `manage/Cinema.vue` 既有的 `el-upload` + `handleFileUpload` 写法）
+  2. 密码标必填，且只在新增态渲染（`v-if="!isEdit"`）。编辑态的密码框会是无落点字段 —— 三个 `update` 都显式 `setPassword(null)`，属规则 85；改密走 `/password` 页，属规则 74。`el-form-item` 被 `v-if` 卸载时会从表单的 `fields` 数组里摘掉（element-plus `form-item` 的 `onBeforeUnmount` 调 `removeField`），而 `validate` 只遍历已注册字段，故必填规则不会在编辑态误触发
+  3. 新增态判据统一走 `isEdit`。`manage/Cinema.vue` 的「审核状态」原写 `v-if="form.id"`，而 `useFormDialog.openAdd` 用 `Object.assign(form, defaultForm)` 合默认值、不删残留键，上次编辑留下的 `id` 会一直为真 —— 靠它门控的字段在"先编辑后新增"时会错误地一直显示（密码框若照抄这个写法则相反，会永远不出现且必填不生效）。两个字段都改判 `isEdit`
+  4. `front/Person.vue` 补头像上传，并把保存后的状态变更从 `setStoredUser` 改为 `useAuth().setUser`（规则 76），登录态单一来源语义得以恢复。头像在该页**上传成功即落库**，不等用户再点「更新个人信息」—— 那页的按钮是整表单提交，头像若也等它，用户传完就离开会以为已经存了。落库只 PUT `avatar` 一个字段（整体 PUT 会把表单里尚未校验、尚未保存的其他改动一并写库），失败则把表单回退到服务端真值，不在页面上留一个"看着像已生效"的假象
+  5. 顺带删掉 `front/Person.vue` `onMounted` 里包裹 `getStoredUser()` 的 try/catch —— `getStoredUser` 自己吞解析异常并返回 `null`，那段 catch 不可达
+- 相关文件: `xm_film/vue/src/views/manage/User.vue`、`xm_film/vue/src/views/manage/Admin.vue`、`xm_film/vue/src/views/manage/Cinema.vue`、`xm_film/vue/src/views/front/Person.vue`、`xm_film/vue/src/utils/upload.js`、`CLAUDE.md`、`Bug.md`
+- 提交记录: （未提交）
+- 状态: 已修复（待提交）
+
+### BUG-062: 全仓 el-upload 上传均 401，且失败完全静默
+
+- 日期: 2026-10-08
+- Bug 描述: 所有 `el-upload` 上传都是坏的，且失败不留任何痕迹 —— 选完文件页面毫无反应，既不成功也不报错
+- 根因分析: 四个条件叠在一起。
+  1. `el-upload` 用自带的 `XMLHttpRequest` 发 multipart（`element-plus/es/components/upload/src/ajax.mjs`），不经过 `utils/request.js` 的 axios 请求拦截器，因此拿不到那里统一注入的 `Authorization`。它只在 `headers` prop 存在时才 `setRequestHeader`（`ajax.mjs` 第 56-60 行）
+  2. `/api/v1/files/upload` 需要令牌: 它不在 `WebMvcConfig` 的 `excludePathPatterns`，也不在 `AuthInterceptor` 的 `ANONYMOUS_WRITE_EXACT`，但落在 `addPathPatterns("/api/v1/**")` 之内
+  3. 全仓 7 处 `el-upload` 没有一处绑 `:headers`（`git log -S '":headers"'` 零命中，说明从未绑过），于是每个上传请求都不带令牌，被拦截器判 401
+  4. 失败之所以无声: `ajax.mjs` 第 51 行非 2xx 走 `option.onError` 而不是 `option.onSuccess`，而各页只接了 `:on-success`，所以 401 连一句提示都触发不了
+- 解决方案:
+  1. 新增 `utils/upload.js`，导出 `uploadHeaders` 与 `handleUploadError` 两个唯一入口。`uploadHeaders` 用 getter 而不是普通对象: el-upload 在发请求时才 `Object.entries(headers)`（`ajax.mjs` 第 58 行），普通对象会在模块加载时就把令牌固定成空值；未登录返回 `null`，因 `ajax.mjs` 第 59 行的 `isNil(value)` 判定而跳过该头
+  2. 10 处 `el-upload`（7 处既有 + 本轮新增 3 处）统一绑 `:headers="uploadHeaders"` 与 `:on-error="handleUploadError"`，失败按规则 72 给文案，401 单独提示"登录已过期，请重新登录"
+  3. 明确不采用"把 `/api/v1/files/upload` 加进 `excludePathPatterns`"的修法 —— 那等于开放匿名任意写文件（规则 33）
+- 验证: 不带 Authorization 实测 `POST http://localhost:9090/api/v1/files/upload` 返回 `401 {"code":"401","msg":"登录已过期，请重新登录"}`；"el-upload 只从 `headers` prop 取头""非 2xx 走 `on-error`""getter 每次发请求时求值"三条由 element-plus 源码确认（`ajax.mjs` 第 51 / 56-60 行）；改后 `npm run build` 通过，`grep` 核对 10 处 `el-upload` 全部带 `:headers` 与 `:on-error`。**未完成**: 带 Bearer 令牌的正向验证（应放行）未做 —— 本机 9090 在验证过程中已停止监听（会话开始时 `/api/v1/health` 还是 200，期间只发过只读探测与 `npm run build`，未发过任何终止命令）；浏览器行为未验证（UI 目视由用户自查）
+- 相关文件: `xm_film/vue/src/utils/upload.js`、`xm_film/vue/src/views/manage/Cinema.vue`、`xm_film/vue/src/views/manage/Actor.vue`、`xm_film/vue/src/views/manage/Film.vue`、`xm_film/vue/src/views/manage/Video.vue`、`xm_film/vue/src/views/manage/User.vue`、`xm_film/vue/src/views/manage/Admin.vue`、`xm_film/vue/src/views/front/Person.vue`
+- 提交记录: （未提交）
+- 状态: 已修复（待提交）
+
+### BUG-063: 先编辑后新增，表单带着上一行的主键 id 一起提交
+
+- 日期: 2026-10-08
+- Bug 描述: 在 `/manage/admin`、`/manage/area`、`/manage/type`、`/manage/notice`、`/manage/video` 上按「编辑某行 → 取消 → 新增 → 填写 → 保存」，保存必失败并弹「系统异常」
+- 根因分析: 两段代码叠在一起。
+  1. `useFormDialog.openEdit` 用 `Object.assign(form, row)` 把整行（含 `id`）拷进表单；`openAdd` 只用 `Object.assign(form, defaultForm)` 合默认值 —— `Object.assign` **不会删除**目标里 source 没有的键，而这 5 页的 `defaultForm` 都不含 `id`。于是"先编辑后新增"之后 `form.id` 仍是上一行的 id
+  2. `crud.add(form)` 原样 POST `form`。这本来无害，除非 Mapper 的 insert 显式写主键 `id` —— 而 `AdminMapper` / `AreaMapper` / `NoticeMapper` / `TypeMapper` / `VideoMapper` 五张表正是这样写的（其余表的 insert 都是动态 `<trim>` 列清单，不写主键 id）。带着一个已存在的 id 插入 → MySQL `Duplicate entry 'N' for key 'PRIMARY'`
+  3. `close()` 里的 `formRef.resetFields()` 救不了: 它只重置已注册的 `el-form-item`，`id` 没有对应的 form-item；且弹窗带 `destroy-on-close`，关闭时 form-item 先卸载，`resetFields` 更无从谈起
+- 解决方案: 在 `useFormDialog.openAdd` 里先删掉不在 `defaultForm` 中的残留键，再合默认值。一处改动覆盖全部 13 个使用方，且对将来新增的页面自动生效 —— 不必指望每个页面都记得在 `defaultForm` 里补一个 `id: null` 之类的占位。`manage/Cinema.vue` 用残留 `form.id` 门控「审核状态」的显示错位是同一根因的另一副面孔，一并改判 `isEdit`（见 BUG-061）
+- 验证: `npm run build` 通过。**未完成**: 主键冲突既未实测复现、也未实测验证已消除 —— 后端 9090 在本次会话中已停止监听；结论由 SQL 列清单与 `Object.assign` 语义推导。另记一句现状: `useFormDialog` 没有单测，本次未新增（本仓无前端测试基建）
+- 相关文件: `xm_film/vue/src/composables/useFormDialog.js`、`xm_film/vue/src/views/manage/Admin.vue`、`xm_film/vue/src/views/manage/Area.vue`、`xm_film/vue/src/views/manage/Type.vue`、`xm_film/vue/src/views/manage/Notice.vue`、`xm_film/vue/src/views/manage/Video.vue`、`xm_film/vue/src/views/manage/Cinema.vue`、`Bug.md`
+- 提交记录: （未提交）
+- 状态: 已修复（待提交）
