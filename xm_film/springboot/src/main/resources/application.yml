@@ -28,7 +28,11 @@ cors:
   allowed-origins: http://localhost:5173
 
 jwt:
-  secret: xm-film-secret-key-2024-springboot-vue3-jwt-auth
+  # 键名刻意不叫 secret —— 本机存在用户级环境变量 JWT_SECRET（属于另一个项目，不可动），
+  # Spring 的宽松绑定会把它映射到 jwt.secret，而环境变量优先级高于本文件，
+  # 于是这行会被静默覆盖、形同虚设。改名成 signing-key 后本文件才是唯一来源。
+  # 再改回 secret 就会复现该问题；改名的代价是换密钥、旧令牌失效需重新登录。
+  signing-key: xm-film-secret-key-2024-springboot-vue3-jwt-auth
   expire: 86400000
 
 file:
