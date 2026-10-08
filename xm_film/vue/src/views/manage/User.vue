@@ -67,6 +67,16 @@
         <el-form-item label="账号" prop="username">
           <el-input v-model="form.username" autocomplete="off" placeholder="请输入账号" @keyup.enter="submit" />
         </el-form-item>
+        <el-form-item v-if="!isEdit" label="密码" prop="password">
+          <el-input v-model="form.password" show-password autocomplete="off" placeholder="请输入初始密码" @keyup.enter="submit" />
+        </el-form-item>
+        <el-form-item label="头像" prop="avatar">
+          <el-upload :action="FILE_UPLOAD_URL" :headers="uploadHeaders"
+                     :on-success="handleFileUpload" :on-error="handleUploadError"
+                     :auto-upload="true" list-type="picture">
+            <el-button type="primary">点击上传</el-button>
+          </el-upload>
+        </el-form-item>
         <el-form-item label="姓名" prop="name">
           <el-input v-model="form.name" autocomplete="off" placeholder="请输入姓名" @keyup.enter="submit" />
         </el-form-item>
@@ -89,20 +99,29 @@
 
 <script setup>
 import { Delete, Edit, Plus, Search } from '@element-plus/icons-vue'
+import { ElMessage } from 'element-plus'
 import { useCrud } from '@/composables/useCrud'
 import { useFormDialog } from '@/composables/useFormDialog'
-import { API_PATHS, getRoleType } from '@/constants'
+import { API_PATHS, FILE_UPLOAD_URL, getRoleType } from '@/constants'
+import { uploadHeaders, handleUploadError } from '@/utils/upload'
 
 const crud = useCrud(API_PATHS.USERS)
 const { dataList, total, pageNum, pageSize, searchForm, selectedIds, loading, error,
         confirmDel, confirmDelBatch, onSearch, onReset, onPageChange, onSizeChange, onSelectionChange } = crud
-const { dialogVisible, formRef, form, rules, openAdd, openEdit, submit, close } = useFormDialog(crud, {
-  defaultForm: { username: '', name: '', phone: '', email: '' },
+const { dialogVisible, isEdit, formRef, form, rules, openAdd, openEdit, submit, close } = useFormDialog(crud, {
+  defaultForm: { username: '', password: '', avatar: '', name: '', phone: '', email: '' },
   rules: {
     username: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
+    // 只在新增态生效：编辑态的密码框被 v-if 卸载，UserService.update 又显式置空 password
+    password: [{ required: true, message: '请输入初始密码', trigger: 'blur' }],
     name: [{ required: true, message: '请输入姓名', trigger: 'blur' }]
   }
 })
 
 crud.load()
+
+function handleFileUpload(res) {
+  if (res.code === '200') { form.avatar = res.data; ElMessage.success('头像上传成功') }
+  else { ElMessage.error(res.msg || '头像上传失败') }
+}
 </script>

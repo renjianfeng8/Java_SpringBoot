@@ -122,6 +122,7 @@ project_02/
 | 表单页跳转 | 登录回跳等站内跳转一律 `router.push`（`window.location.href` 既整页重载，又会把 `//host` 这类路径解析成外站） |
 | 影院详情场次 | 日期条是今天起 7 天的固定窗口（客户端时钟，跨零点不自动翻页）；每片场次一次取回（`pageSize=200`，硬上限）后**在客户端按日期过滤**，切日期不发请求；只渲染可购场次（`status != 停售` 且未开场，与 `RecordService.isPurchasable` 同规则），该日无场次的影片整行不渲染；`?filmId=` 深链自动选中该片最近有场次的日期并滚到该行（`.film-row` 的 `scroll-margin-top` 给吸顶日期条让位） |
 | 影院服务标签 | 一组三个（退票无忧 / 儿童优惠 / WiFi 覆盖），影院列表页与影院详情横幅两处**同色**，底色走共享层 `.service-tag--*`（功能色基色 + `--color-on-accent`）；两页形状不同故各自写形状，只共享底色 |
+| 文件上传 | 唯一入口 `utils/upload.js`：`:headers="uploadHeaders"`（`el-upload` 自带 XHR 不过 axios 拦截器，不绑就 401）与 `:on-error="handleUploadError"`（非 2xx 不走 `on-success`，不绑即静默失败）。全仓 10 处 `el-upload` 一律绑这两个 |
 
 ## API 接口清单
 
@@ -241,6 +242,9 @@ project_02/
 | 瞬时接口加载反馈要有最短时长；失败保留已展示数据 | [86](Bug.md#规则篇) |
 | 实体的派生 / 只读字段须在每条返回该实体的查询路径上填充 | [87](Bug.md#规则篇) |
 | 改 `--dark-bg-hero` 必须复测深底文字色；头横幅不许用 `--dark-text-faint` / `--color-brand` 承文字 | [88](Bug.md#规则篇) |
+| 驾驶舱每个数字须带对比基准，基准不另取数（取近 7 日末点） | [89](Bug.md#规则篇) |
+| `el-upload` 须自绑鉴权头与失败反馈，不过 axios 拦截器 | [90](Bug.md#规则篇) |
+| 后端兜底默认值的入参前端须给入口；编辑态字段须有落点；判新增用 `isEdit` 不用 `form.id` | [91](Bug.md#规则篇) |
 
 ## 开发守则
 

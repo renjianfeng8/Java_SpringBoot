@@ -111,8 +111,15 @@
         <el-form-item label="账号" prop="username">
           <el-input v-model="form.username" autocomplete="off" placeholder="请输入账号" @keyup.enter="submit"/>
         </el-form-item>
+        <!-- 只在新增态渲染。不要用 `v-if="form.id"` 门控：useFormDialog.openAdd 是
+             Object.assign 合默认值，不会删掉上次编辑残留的 id，那个键会一直为真，
+             密码框就永远不出现，必填规则也不会注册 -->
+        <el-form-item v-if="!isEdit" label="密码" prop="password">
+          <el-input v-model="form.password" show-password autocomplete="off" placeholder="请输入初始密码" @keyup.enter="submit"/>
+        </el-form-item>
         <el-form-item label="头像" prop="avatar">
-          <el-upload :action="FILE_UPLOAD_URL" :on-success="handleFileUpload"
+          <el-upload :action="FILE_UPLOAD_URL" :headers="uploadHeaders"
+                     :on-success="handleFileUpload" :on-error="handleUploadError"
                      :auto-upload="true" list-type="picture">
             <el-button type="primary">点击上传</el-button>
           </el-upload>
@@ -136,12 +143,14 @@
           <el-input v-model="form.code" autocomplete="off" placeholder="请输入负责人身份证号" @keyup.enter="submit"/>
         </el-form-item>
         <el-form-item label="营业执照" prop="certificate">
-          <el-upload :action="FILE_UPLOAD_URL" :on-success="handleCertificateUpload" list-type="picture">
+          <el-upload :action="FILE_UPLOAD_URL" :headers="uploadHeaders"
+                     :on-success="handleCertificateUpload" :on-error="handleUploadError" list-type="picture">
             <el-button type="primary">上传影院的营业执照</el-button>
           </el-upload>
         </el-form-item>
-        <!-- 新增时状态由后端固定为「未审核」，故仅在编辑时暴露审核状态 -->
-        <el-form-item v-if="form.id" label="审核状态" prop="status">
+        <!-- 新增时状态由后端固定为「未审核」，故仅在编辑时暴露审核状态。
+             判据用 isEdit 而不是 form.id：后者会被上次编辑的残留 id 污染（见上方密码项注释） -->
+        <el-form-item v-if="isEdit" label="审核状态" prop="status">
           <el-select v-model="form.status" placeholder="请选择审核状态" class="field-full">
             <el-option v-for="s in CINEMA_STATUS_OPTIONS" :key="s" :label="s" :value="s" />
           </el-select>
@@ -165,6 +174,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { useCrud } from '@/composables/useCrud'
 import { useFormDialog } from '@/composables/useFormDialog'
 import request from '@/utils/request'
+import { uploadHeaders, handleUploadError } from '@/utils/upload'
 import {
   API_PATHS, CINEMA_STATUS, CINEMA_STATUS_OPTIONS, FILE_UPLOAD_URL,
   getCinemaStatusType as getStatusType
@@ -173,10 +183,12 @@ import {
 const crud = useCrud(API_PATHS.CINEMAS)
 const { dataList, total, pageNum, pageSize, searchForm, selectedIds, loading, error,
         confirmDel, confirmDelBatch, onSearch, onReset, onPageChange, onSizeChange, onSelectionChange } = crud
-const { dialogVisible, formRef, form, rules, openAdd, openEdit, submit, close } = useFormDialog(crud, {
-  defaultForm: { username: '', name: '', phone: '', email: '', address: '', leader: '', code: '', certificate: '', avatar: '', status: CINEMA_STATUS.UNAUDITED },
+const { dialogVisible, isEdit, formRef, form, rules, openAdd, openEdit, submit, close } = useFormDialog(crud, {
+  defaultForm: { username: '', password: '', name: '', phone: '', email: '', address: '', leader: '', code: '', certificate: '', avatar: '', status: CINEMA_STATUS.UNAUDITED },
   rules: {
     username: [{ required: true, message: '请输入账号', trigger: 'blur' }],
+    // 只在新增态生效：编辑态的密码框被 v-if 卸载，CinemaService.update 又显式置空 password
+    password: [{ required: true, message: '请输入初始密码', trigger: 'blur' }],
     name: [{ required: true, message: '请输入影院名称', trigger: 'blur' }],
     email: [{ type: 'email', message: '请输入正确的邮箱地址', trigger: ['blur', 'change'] }],
     address: [{ required: true, message: '请输入影院地址', trigger: 'blur' }],

@@ -11,6 +11,14 @@
             <el-input disabled v-model="formData.username" autocomplete="off" placeholder="请输入用户名" />
           </el-form-item>
 
+          <el-form-item label="头像" prop="avatar">
+            <el-upload :action="FILE_UPLOAD_URL" :headers="uploadHeaders"
+                       :on-success="handleFileUpload" :on-error="handleUploadError"
+                       :auto-upload="true" list-type="picture">
+              <el-button type="primary">点击上传</el-button>
+            </el-upload>
+          </el-form-item>
+
           <el-form-item label="名称" prop="name">
             <el-input v-model="formData.name" autocomplete="off" placeholder="请输入名称" @keyup.enter="updateUser" />
           </el-form-item>
@@ -36,8 +44,11 @@
 import { reactive, ref, onMounted } from "vue";
 import request from "@/utils/request.js";
 import { ElMessage } from "element-plus";
-import { API_PATHS } from '@/constants';
-import { getStoredUser, setStoredUser } from "@/utils/authStorage";
+import { API_PATHS, FILE_UPLOAD_URL } from '@/constants';
+import { uploadHeaders, handleUploadError } from "@/utils/upload";
+import { useAuth } from "@/composables/useAuth";
+
+const { user, setUser } = useAuth()
 
 const formRef = ref();
 const formData = reactive({
@@ -46,6 +57,7 @@ const formData = reactive({
   name: "",
   phone: "",
   email: "",
+  avatar: "",
 });
 
 const rules = {
@@ -58,19 +70,14 @@ const rules = {
 };
 
 onMounted(() => {
-  const storedUser = getStoredUser();
-  if (storedUser) {
-    try {
-      const user = storedUser;
-      formData.username = user.username;
-      formData.name = user.name || user.username;
-      formData.phone = user.phone || "";
-      formData.email = user.email || "";
-      formData.id = user.id || null;
-    } catch (error) {
-      console.error("解析用户数据失败", error);
-      ElMessage.error("获取用户信息失败");
-    }
+  const current = user.value;
+  if (current) {
+    formData.username = current.username;
+    formData.name = current.name || current.username;
+    formData.phone = current.phone || "";
+    formData.email = current.email || "";
+    formData.avatar = current.avatar || "";
+    formData.id = current.id || null;
   }
 });
 
@@ -80,8 +87,9 @@ const updateUser = () => {
       request.put(API_PATHS.USERS, formData).then((res) => {
         if (res.code === "200") {
           ElMessage.success("更新成功");
-          // 更新缓存数据
-          setStoredUser({ ...getStoredUser(), ...formData });
+          // 登录态只能经 useAuth 变更（规则 76）：只写 storage 副本不更新内存里的
+          // user ref，顶栏的头像与用户名要等整页刷新才变。
+          setUser({ ...user.value, ...formData });
         } else {
           ElMessage.error(res.msg);
         }
@@ -89,6 +97,34 @@ const updateUser = () => {
     }
   });
 };
+
+function handleFileUpload(res) {
+  if (res.code === '200') saveAvatar(res.data)
+  else ElMessage.error(res.msg || '头像上传失败')
+}
+
+/**
+ * 头像上传成功后立即落库，不等用户再点「更新个人信息」。
+ * 载荷只带 avatar 与定位用的 id：整体 PUT 会把表单里尚未校验、尚未保存的
+ * 其他改动（比如写了一半的邮箱）一起写进去。id 是 WHERE 键，其余字段为 null 时
+ * updateById 的动态 set 不会碰它们，所以本次只改 avatar 一列。
+ * 失败则把表单回退到服务端的真值 —— 没落库就不该在页面上显示成已生效。
+ */
+function saveAvatar(url) {
+  formData.avatar = url
+  request.put(API_PATHS.USERS, { id: formData.id, avatar: url }).then((res) => {
+    if (res.code === '200') {
+      // 规则 76：登录态只经 useAuth 变更，顶栏头像才会立刻跟着变
+      setUser({ ...user.value, avatar: url })
+      ElMessage.success('头像已更新')
+    } else {
+      formData.avatar = user.value?.avatar || ''
+      ElMessage.error(res.msg || '头像保存失败')
+    }
+  }).catch(() => {
+    formData.avatar = user.value?.avatar || ''
+  })
+}
 </script>
 
 <style scoped>
