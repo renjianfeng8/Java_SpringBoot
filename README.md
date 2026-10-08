@@ -20,7 +20,7 @@
 | 影院管理员 | asks | cinema123 |
 | 普通用户 | zhangsan | user123 |
 
-**代码质量**：193 个单元测试用例覆盖核心 Service 与权限边界；BCrypt 密码加密 + JWT 认证 + RBAC 权限控制；GitHub Actions CI 流水线（后端编译 → 前端构建）。
+**代码质量**：203 个单元测试用例覆盖核心 Service 与权限边界；BCrypt 密码加密 + JWT 认证 + RBAC 权限控制；GitHub Actions CI 流水线（后端编译 → 前端构建）。
 
 ---
 
@@ -299,7 +299,7 @@ cd xm_film/springboot
 mvn test
 ```
 
-14 个测试类 / 193 个用例，覆盖核心 Service（Admin / User / Cinema / Film / Ordered / Mark / Wallet / Recharge / FundFlow）与权限边界、订单状态机（支付超时 / 退票窗口 / 座位冲突与单笔上限）、评价规则（评分区间 / 一人一片去重 / 均分回写 / **未取票不得评价**）、影院审核与可见性下推、账户资金（余额足额与不足、退款入账、流水前后余额）、充值单据状态机、订单删除守卫、取票码核销（一次性 / 退票作废 / 并发抢核销 / 输入归一化）、评价点赞（显式 `liked` 幂等、投影不下发 `userId`）。
+16 个测试类 / 203 个用例，覆盖核心 Service（Admin / User / Cinema / Film / Ordered / Mark / Wallet / Recharge / FundFlow / Statistics）与权限边界、订单状态机（支付超时 / 退票窗口 / 座位冲突与单笔上限）、评价规则（评分区间 / 一人一片去重 / 均分回写 / **未取票不得评价**）、影院审核与可见性下推、账户资金（余额足额与不足、退款入账、流水前后余额）、充值单据状态机、订单删除守卫、取票码核销（一次性 / 退票作废 / 并发抢核销 / 输入归一化）、评价点赞（显式 `liked` 幂等、投影不下发 `userId`）。
 
 > **Mockito 打桩后测到的是桩，不是 SQL。** SQL 谓词、唯一索引、状态条件更新、`ORDER BY` 的并列裁决与事务隔离级别这五类，单测覆盖不到，必须在**备用端口 + 临时库**上跑真实库验证。
 
