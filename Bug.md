@@ -129,6 +129,8 @@
 92. 独立事务也救不了"自己抛自己回滚"，失败计数与抛异常必须分处两个方法: `PayPasswordService.check*` 标注 `REQUIRES_NEW`，是为了让支付密码的错误计数/锁定不被外层 `payOrder` 的回滚带走（规则 29 的合法出口）。但**在同一个方法里"写计数 → 抛异常"仍然会被回滚** —— `REQUIRES_NEW` 隔离的是外层事务，管不了本事务内部的抛与写。正确形态是：写库的那个方法**正常返回**（事务提交），把"该抛的异常"作为返回值交给调用方，由调用方在自己的事务里抛。判定方法：凡是"要把某次失败记进库、同时又要把它变成异常"的地方，都要先问"记录和抛出在不在同一个事务里"。另注意同一方法内的 `@Transactional` 自调用会绕过代理，拆事务别指望内部方法（见 BUG-064）
 93. 支付密码是与登录密码并列的第二套凭证：服务端校验、必须限次、只认订单归属者: 登录密码回答"你是谁"，支付密码回答"这笔钱你同意付"，两者不可复用（`user.pay_password` 独立列、独立设置入口）。三条硬约束：① **校验只能在服务端**，前端只负责把 6 位密码收上来交给 `/orders/{id}/pay` 一并校验，前端拦一下等于没拦；② **必须限次**，6 位纯数字只有 10⁶ 种，`pay_pwd_error_count` + `pay_pwd_locked_until`（5 次锁 15 分钟），且自增计数要与"触顶即锁定"写进**同一条** `UPDATE`（`IF(pay_pwd_error_count + 1 >= ?, ?, ...)` 写在自增之前 —— MySQL 的 `SET` 自左向右求值，顺序调换会提前一次锁定），读-算-写回在并发下会互相覆盖；③ **验的是订单归属者的密码**，扣谁的余额就验谁的密码，ADMIN / CINEMA 因此结构性地无法代付，不必再补角色黑名单。三列与余额同理不挂 `User` 实体（规则 46），未设置时也不能靠 `SELECT` 返回 null 判断 —— MyBatis 把"映射出来全是 null"的行当作没有行，查询要带上一个非空列（见 BUG-064）
 
+94. 页面形态取决于服务端状态时，「取不到状态」的兜底必须选两条路都走得通的那条: `front/PayPassword.vue` 用 `summary.hasPayPassword` 在「修改」（验原支付密码）与「设置」（验登录密码）两态间二选一，但 `mode` 初值写成 `ref('change')`，`loadState` 又只在 `res.code === '200'` 时改写它 —— 非 200 与异常两条分支都不动 mode。于是摘要接口一失败，未设置的用户就被留在改密态，要求填一个根本不存在的原支付密码（同文件 catch 块的注释还写着「这里保持默认的「设置」模式即可」，与实现的初值正好相反）。兜底方向的判据不是「哪种用户多」，而是「哪条分支在两种真实状态下都走得通」：退回「设置」态对已设置用户仍是合法的重设路径（验登录密码），对未设置用户则是唯一一条，两个方向不对称。兜底也不能把「取不到」静默成一个看似合理的默认值 —— 否则环境问题会被伪装成业务缺陷（本条的触发场景正是本机库缺列 → body `code:500`，见 `sql/README.md` 的「已存在的数据库：重建，不做增量升级」）。反向也成立：`OrderPayDialog.vue` 的 `hasPayPassword = ref(true)` 是**刻意**的反向兜底，理由写在注释里（宁可多输一次密码，也不因一次网络抖动把人误送到设置页），在那里成立是因为输错能立刻拿到后端的明确提示、弹窗不丢上下文（见 BUG-065）
+
 ## 案例篇
 
 每个 Bug 的根因、处置与相关文件，按编号排列。本段只增不改 —— 从案例中提炼出的规则写进上方规则篇。
@@ -1147,4 +1149,17 @@
 - 验证: `mvn test` 205 通过（`OrderedServiceTest` 新增 2 条：验密码在扣款之前、验的是订单归属者的密码）。隔离验证用临时库 `xm-film-paypwd-test` + 备用端口 9099（未触碰本机 9090/5173），实测：连错 5 次提示 4→3→2→1 → 第 5 次锁定 15 分钟 → 第 6/7 次返回"已锁定"，且**订单始终停在待支付、无 `pay_time`/`pickup_code`、余额不变**（计数存活而订单未被误改，正是 `REQUIRES_NEW` 生效的证据）；重设（登录密码错/对）、修改（原码错/对）、5 位格式拒绝（400）、正确密码支付成功（订单转待取票 + 取票码 + 余额 100→55 + `fund_flow` 一条 -45）、重复支付拒绝、未设置时 `summary.hasPayPassword=false` 且支付被拒、无 token 401、ADMIN 访问 `summary` 403；`npm run build` 通过。**未完成**: 前端 UI 未人工目视（6 格输入的跳格/粘贴/退格、弹窗三态切换按仓库分工由用户自查）
 - 相关文件: `xm_film/sql/schema.sql`、`xm_film/sql/data.sql`、`xm_film/springboot/src/main/java/com/example/springboot/service/PayPasswordService.java`、`.../mapper/UserMapper.java`、`.../resources/mapper/UserMapper.xml`、`.../controller/AccountController.java`、`.../controller/OrderedController.java`、`.../service/OrderedService.java`、`.../dto/request/PayPassword*Request.java`、`.../dto/request/OrderPayRequest.java`、`.../dto/response/PayPasswordState.java`、`.../test/java/com/example/springboot/OrderedServiceTest.java`、`xm_film/vue/src/components/PayPasswordInput.vue`、`xm_film/vue/src/views/front/PayPassword.vue`、`xm_film/vue/src/components/OrderPayDialog.vue`、`xm_film/vue/src/constants/index.js`、`xm_film/vue/src/router/index.js`、`xm_film/vue/src/views/Front.vue`、`CLAUDE.md`、`Bug.md`
 - 提交记录: `6288098b`（本轮新增，含本条目）
+- 状态: 已修复
+
+### BUG-065: 支付密码页在「状态未取到」时兜底到了死路一侧
+
+- 日期: 2026-10-08
+- Bug 描述: 一个没设置过支付密码的用户打开 `/front/payPassword`，看到标题「修改支付密码」、表单要「原支付密码」，而同一页的「当前状态」却写着「未设置」—— 页面在要一个并不存在的东西
+- 根因分析: 两层叠在一起，缺一不可。
+  1. 环境层 —— 本机 `xm-film` 库落后于 `schema.sql`：`user` 表缺 `pay_password` / `pay_pwd_error_count` / `pay_pwd_locked_until`（全库 17 表逐列比对，只此一处漂移）。`UserMapper.countPayPasswordSet` 查 `pay_password IS NOT NULL`，命中不存在的列 → `GET /api/v1/account/summary` 返回 body `{"code":"500","msg":"系统错误"}`（HTTP 200，规则 15）。该库是支付密码功能落地之前建的，而本仓按设计不提供增量迁移
+  2. 代码层 —— `front/PayPassword.vue` 的 `mode` 初值是 `ref('change')`，`loadState` 只在 `res.code === '200'` 时改写它，非 200 与异常两条分支都不动 mode。于是摘要接口一失败，页面就停在改密态。「修改支付密码」与「当前状态：未设置」是同一个错误的一体两面：标题读 `mode`，状态文本读 `hasPayPassword`，两者在失败时必然相反 —— 页面自相矛盾本身就是信号。同文件 catch 块的注释写的是「这里保持默认的「设置」模式即可」，与实现的初值正好相反，说明作者本意就是退回设置态，只是初值没跟着改
+- 解决方案: ① 本机库按 `schema.sql` 的列定义 `ALTER TABLE user` 补上这三列（本次选非破坏性补列，而非 `sql/README.md` 的 DROP + 重建，以保住本机已灌的场次与两个注册用户；仓库侧不动，仍不新增迁移脚本）；② `loadState` 改为只在 `code === '200'` 时采信 `hasPayPassword`，`mode` 一律按 `known && hasPayPassword ? 'change' : 'reset'` 赋值，异常分支显式退回 `'reset'`。初值仍留 `'change'`（已设置用户占多数，避免首屏闪一下「设置」），只有"取不到状态"这一确定情形才退回两态通用的「设置」态
+- 验证: 补列后 `GET /api/v1/account/summary` 由 `{"code":"500","msg":"系统错误"}` 变为 `{"code":"200",...,"hasPayPassword":false}`（zhangsan，未设置）；全库 17 表与 `schema.sql` 逐列比对无漂移。`npm run build` 通过。**未完成**: 前端 UI 未人工目视（按仓库分工由用户自查）—— 本次只改 `loadState` 一个函数，复验点是"未设置的用户打开该页应落在「设置支付密码」，不应出现「原支付密码」"
+- 相关文件: `xm_film/vue/src/views/front/PayPassword.vue`、`Bug.md`、`CLAUDE.md`
+- 提交记录: 待回填
 - 状态: 已修复

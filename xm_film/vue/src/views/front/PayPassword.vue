@@ -122,13 +122,17 @@ const switchMode = (change) => {
 const loadState = async () => {
   try {
     const res = await request.get(ACCOUNT_API.SUMMARY);
-    if (res.code === '200') {
+    const known = res.code === '200';
+    if (known) {
       hasPayPassword.value = Boolean(res.data?.hasPayPassword);
-      mode.value = hasPayPassword.value ? 'change' : 'reset';
     }
+    // 状态取不到时退回「设置」模式：改密模式要的「原支付密码」只有已设置的用户才有，
+    // 设置模式（验登录密码）对两种状态都走得通 —— 已设置的用户来这里重设也是合法路径。
+    mode.value = known && hasPayPassword.value ? 'change' : 'reset';
   } catch (error) {
-    // 网络类提示由 request.js 响应拦截器统一给出，这里保持默认的「设置」模式即可
+    // 网络类提示由 request.js 响应拦截器统一给出，这里只把模式退回两态通用的「设置」态
     console.error('支付密码状态查询异常：', error);
+    mode.value = 'reset';
   }
 };
 
