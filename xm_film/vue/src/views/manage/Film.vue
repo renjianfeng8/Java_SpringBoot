@@ -3,6 +3,7 @@
     <div class="page-head">
       <h2 class="page-head__title">电影信息</h2>
       <div class="page-head__action">
+        <el-button :icon="Download" @click="openImport">从 TMDB 导入</el-button>
         <el-button type="primary" :icon="Plus" @click="openAdd">新 增</el-button>
       </div>
     </div>
@@ -142,6 +143,11 @@
             <el-option v-for="item in typeData" :key="item.id" :label="item.title" :value="item.id" />
           </el-select>
         </el-form-item>
+        <el-form-item label="主演" prop="actorId">
+          <el-select v-model="form.actorId" placeholder="请选择主演" class="field-lg" clearable filterable>
+            <el-option v-for="item in actorData" :key="item.id" :label="item.actorName" :value="item.id" />
+          </el-select>
+        </el-form-item>
         <el-form-item label="电影语言" prop="language">
           <el-select v-model="form.language" placeholder="请选择电影语言" class="field-lg">
             <el-option label="普通话" value="普通话" />
@@ -186,16 +192,55 @@
         </div>
       </template>
     </el-dialog>
+
+    <!-- TMDB 导入：只产出一份预填值，最终仍由上面的「新增」表单确认后保存 -->
+    <el-dialog v-model="importVisible" title="从 TMDB 导入影片" width="720">
+      <el-input v-model="importQuery" placeholder="输入影片名（中英文均可）" aria-label="TMDB 搜索片名"
+                :prefix-icon="Search" @keyup.enter="doImportSearch">
+        <template #append>
+          <el-button :loading="searching" @click="doImportSearch">搜 索</el-button>
+        </template>
+      </el-input>
+      <p class="import-hint">选中后点「导 入」，字段会回填到新增表单，核对后再保存。海报与主演头像会下载到本机。</p>
+
+      <div v-loading="searching" class="import-results">
+        <el-empty v-if="!searching && importResults.length === 0"
+                  description="输入片名搜索 TMDB" :image-size="60"/>
+        <div v-for="item in importResults" :key="item.tmdbId"
+             class="import-item" :class="{ 'import-item--active': importSelectedId === item.tmdbId }"
+             role="button" tabindex="0" :aria-pressed="importSelectedId === item.tmdbId"
+             @click="importSelectedId = item.tmdbId" @keyup.enter="importSelectedId = item.tmdbId">
+          <img v-if="item.posterUrl" :src="item.posterUrl" alt="" class="import-item__poster" loading="lazy">
+          <div v-else class="import-item__poster import-item__poster--empty" aria-hidden="true"></div>
+          <div class="import-item__body">
+            <div class="import-item__title">
+              {{ item.title }}<span v-if="item.year" class="import-item__year">（{{ item.year }}）</span>
+            </div>
+            <div class="import-item__original">{{ item.originalTitle }}</div>
+            <div class="import-item__overview">{{ item.overview || '暂无简介' }}</div>
+          </div>
+        </div>
+      </div>
+
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button @click="importVisible = false">取 消</el-button>
+          <el-button type="primary" :loading="importing" :disabled="!importSelectedId" @click="applyImport">
+            导 入
+          </el-button>
+        </div>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup>
 import { ref } from 'vue'
-import { Delete, Edit, Plus, Search } from '@element-plus/icons-vue'
+import { Delete, Download, Edit, Plus, Search } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { useCrud } from '@/composables/useCrud'
 import { useFormDialog } from '@/composables/useFormDialog'
-import { API_PATHS, FILE_UPLOAD_URL, getFilmStatusType as getStatusType } from '@/constants'
+import { API_PATHS, FILE_UPLOAD_URL, TMDB_API, getFilmStatusType as getStatusType } from '@/constants'
 import request from '@/utils/request'
 import { uploadHeaders, handleUploadError } from '@/utils/upload'
 
@@ -206,7 +251,7 @@ const { dialogVisible, formRef, form, rules, openAdd, openEdit, submit, close } 
   defaultForm: {
     title: '', english: '', img: '', start: '', time: undefined,
     language: '', content: '', resolution: '', employee: '',
-    areaId: undefined, status: '', typeIds: []
+    areaId: undefined, actorId: undefined, status: '', typeIds: []
   },
   rules: {
     title: [{ required: true, message: '请输入电影名称', trigger: 'blur' }],
@@ -221,22 +266,31 @@ const { dialogVisible, formRef, form, rules, openAdd, openEdit, submit, close } 
 
 const typeData = ref([])
 const areaData = ref([])
+const actorData = ref([])
 
+// 三个都返回 Promise：导入回填前必须等下拉数据刷新完，否则新回填的 id 在下拉里找不到标签
 function loadType() {
-  request.get(API_PATHS.TYPES).then(res => {
+  return request.get(API_PATHS.TYPES).then(res => {
     if (res.code === '200') typeData.value = res.data
   })
 }
 
 function loadArea() {
-  request.get(API_PATHS.AREAS).then(res => {
+  return request.get(API_PATHS.AREAS).then(res => {
     if (res.code === '200') areaData.value = res.data
+  })
+}
+
+function loadActor() {
+  return request.get(API_PATHS.ACTORS).then(res => {
+    if (res.code === '200') actorData.value = res.data
   })
 }
 
 crud.load()
 loadType()
 loadArea()
+loadActor()
 
 function handleFileUpload(res) {
   if (res.code === '200') { form.img = res.data; ElMessage.success('电影封面上传成功') }
@@ -256,5 +310,90 @@ function getTypeTagType(type) {
   const tagTypes = ['primary', 'success', 'warning', 'danger', 'info']
   const seed = type?.id ?? String(type?.title || '').charCodeAt(0) ?? 0
   return tagTypes[Math.abs(seed) % tagTypes.length]
+}
+
+// ===== TMDB 导入 =====
+// 只做「搜片 → 取预填值 → 回填到新增表单」。这里没有写接口 —— 落库仍由上面的保存按钮
+// 走 POST /api/v1/films，管理员不确认就不会多出一部影片。
+
+const importVisible = ref(false)
+const importQuery = ref('')
+const importResults = ref([])
+const importSelectedId = ref(null)
+const searching = ref(false)
+const importing = ref(false)
+
+function openImport() {
+  importQuery.value = ''
+  importResults.value = []
+  importSelectedId.value = null
+  importVisible.value = true
+}
+
+async function doImportSearch() {
+  const query = importQuery.value.trim()
+  if (!query) {
+    ElMessage.warning('请输入影片名')
+    return
+  }
+  searching.value = true
+  try {
+    const res = await request.get(TMDB_API.SEARCH, { params: { query } })
+    if (res.code === '200') {
+      importResults.value = res.data || []
+      importSelectedId.value = null
+      if (!importResults.value.length) ElMessage.warning('TMDB 没有匹配的影片')
+    } else {
+      ElMessage.error(res.msg || '搜索失败')
+    }
+  } catch {
+    // request.js 已统一弹提示
+  } finally {
+    searching.value = false
+  }
+}
+
+async function applyImport() {
+  if (!importSelectedId.value) return
+  importing.value = true
+  try {
+    const res = await request.get(TMDB_API.MOVIE(importSelectedId.value))
+    if (res.code !== '200') {
+      ElMessage.error(res.msg || '导入失败')
+      return
+    }
+
+    const preview = res.data || {}
+    // 取详情这一步后端可能刚建了新的类型/地区/演职人员行，必须重取列表；
+    // 否则回填的 id 在下拉里找不到对应标签，看起来像「没填上」
+    await Promise.all([loadType(), loadArea(), loadActor()])
+
+    openAdd()
+    Object.assign(form, {
+      title: preview.title ?? '',
+      english: preview.english ?? '',
+      start: preview.start ?? '',
+      time: preview.time ?? undefined,
+      language: preview.language ?? '',
+      content: preview.content ?? '',
+      img: preview.img ?? '',
+      employee: preview.employee ?? '',
+      status: preview.status ?? '',
+      areaId: preview.areaId ?? undefined,
+      actorId: preview.actorId ?? undefined,
+      typeIds: preview.typeIds ?? []
+    })
+    importVisible.value = false
+
+    // 降级信息必须让管理员看见：哪项没取到、类型被截断、图片下载失败
+    if (preview.warnings?.length) {
+      ElMessage.warning(preview.warnings.join('；'))
+    }
+    ElMessage.success('已回填，请核对后保存')
+  } catch {
+    // request.js 已统一弹提示
+  } finally {
+    importing.value = false
+  }
 }
 </script>

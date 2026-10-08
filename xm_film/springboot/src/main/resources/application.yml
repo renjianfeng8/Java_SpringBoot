@@ -34,3 +34,11 @@ jwt:
 file:
   upload-dir: "D:/project/picture"
   access-prefix: http://localhost:9090/files/
+
+# TMDB 电影数据接口，仅后台「从 TMDB 导入」使用。
+# 本机直连 api.themoviedb.org 恒超时（实测 8s 无响应），必须经下面这个本机代理；
+# 换机器或代理端口变了，改这两行即可，其余（图片尺寸、接口路径）是 TMDB 的契约，写在 TmdbClient 里。
+tmdb:
+  token: eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJkOGRjNTMwZWJhYjI3ZjMxMzVhM2Y1OTEzMGE5MDZmNSIsIm5iZiI6MTc5MTQ0NTgyOS44MTMsInN1YiI6IjZhYzc0YjQ1YjI1ZDgwYmU1YmJkODdjMiIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.RcP-OhD85uM-m86DA0VSjIi5outtqvLCBi-Aom3CmSc
+  proxy-host: 127.0.0.1
+  proxy-port: 7897

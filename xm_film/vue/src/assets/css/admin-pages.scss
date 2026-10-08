@@ -251,4 +251,98 @@
       margin-left: 0;
     }
   }
+
+  /* ===== TMDB 导入弹窗 =====
+     搜索结果为一行一部片：海报缩略图 + 片名/年份 + 英文名 + 两行简介，整行可点选。
+     用带 role=button 的原生元素而不是 el-radio —— 这里要的是「选中整行」这一动作，
+     不是往表单里塞一个选项；键盘可达性由 tabindex + keyup.enter 保证。 */
+  .import-results {
+    max-height: 380px;
+    margin-top: var(--space-16);
+    overflow-y: auto;
+  }
+
+  .import-item {
+    display: flex;
+    gap: var(--space-12);
+    padding: var(--space-12);
+    border: 1px solid var(--el-border-color-lighter);
+    border-radius: var(--el-border-radius-base);
+    cursor: pointer;
+    transition: border-color 150ms ease-in-out, background-color 150ms ease-in-out;
+
+    & + .import-item {
+      margin-top: var(--space-8);
+    }
+
+    &:hover {
+      background-color: var(--el-fill-color-light);
+    }
+
+    /* 选中态：品牌色描边 + 淡底，与表格选中行同一套语汇 */
+    &--active {
+      border-color: var(--color-brand);
+      background-color: var(--el-color-primary-light-9);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--color-brand);
+      outline-offset: 2px;
+    }
+  }
+
+  .import-item__poster {
+    flex: 0 0 auto;
+    width: 60px;
+    aspect-ratio: 2 / 3;
+    border-radius: var(--el-border-radius-small);
+    background-color: var(--el-fill-color-light);
+    object-fit: cover;
+
+    /* 无海报占位：保持同样几何，避免行高参差 */
+    &--empty {
+      background-color: var(--el-fill-color);
+    }
+  }
+
+  .import-item__body {
+    /* 不设 min-width 会让子元素的省略号失效，长片名把行撑破 */
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+
+  .import-item__title {
+    font-size: var(--fs-base);
+    font-weight: var(--fw-bold);
+    color: var(--el-text-color-primary);
+  }
+
+  .import-item__year {
+    font-weight: var(--fw-regular);
+    color: var(--el-text-color-secondary);
+  }
+
+  .import-item__original {
+    margin-top: var(--space-4);
+    font-size: var(--fs-xs);
+    color: var(--el-text-color-secondary);
+  }
+
+  /* 简介只给两行：挑片时够用，完整简介回填后在表单里看 */
+  .import-item__overview {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    margin-top: var(--space-4);
+    font-size: var(--fs-xs);
+    line-height: var(--lh-base);
+    color: var(--el-text-color-regular);
+  }
+
+  .import-hint {
+    margin-top: var(--space-8);
+    font-size: var(--fs-xs);
+    color: var(--el-text-color-secondary);
+  }
 }

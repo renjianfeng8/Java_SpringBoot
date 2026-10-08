@@ -26,8 +26,10 @@
         SELECT * FROM actor WHERE id = #{id}
     </select>
 
-    <!-- 插入操作 -->
-    <insert id="insert" parameterType="com.example.springboot.entity.Actor">
+    <!-- 插入操作。useGeneratedKeys 是 TMDB 导入的必需项：建完演职人员行要拿回自增 id
+         填进影片表单的 actorId，缺了它 film.actor_id 永远是 null、前台演职人员区永远是空的。
+         注意 actor.film_id 列本语句不写 —— 影片是后保存的，此时还没有 film id。 -->
+    <insert id="insert" parameterType="com.example.springboot.entity.Actor" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO actor
         <trim prefix="(" suffix=")" suffixOverrides=",">
             <if test="title != null">title,</if>

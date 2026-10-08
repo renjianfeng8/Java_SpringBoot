@@ -20,6 +20,7 @@ export const API_PATHS = {
   ACCOUNT: '/api/v1/account',
   FILES: '/api/v1/files/upload',
   YEARS: '/api/v1/auth/years',
+  TMDB: '/api/v1/tmdb',
 }
 
 /**
@@ -40,6 +41,18 @@ export const FILE_UPLOAD_URL = API_BASE_URL === '/'
 export const apiById = (base, id) => `${base}/${id}`
 export const apiPage = (base) => `${base}/page`
 export const apiBatch = (base) => `${base}/batch`
+
+/**
+ * TMDB 导入接口（后台影片页专用）。
+ * 两个端点都是 GET，但在后端属 admin-only：详情那次会建类型/地区/演职人员行并下载图片。
+ * 这里没有「导入影片」的写入端点 —— 拿到预填值后仍走 FILMS 的保存，建影片只有一条路径。
+ */
+export const TMDB_API = {
+  SEARCH: `${API_PATHS.TMDB}/search`,
+  // 路径中间多一段 /movie，不能用 apiById（它只拼 `${base}/${id}`）——
+  // 用它拼出来是 /api/v1/tmdb/550，后端映射的是 /api/v1/tmdb/movie/550，会 404。
+  MOVIE: (tmdbId) => `${API_PATHS.TMDB}/movie/${tmdbId}`,
+}
 
 export const FILM_API = {
   SEARCH: `${API_PATHS.FILMS}/search`,

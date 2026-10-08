@@ -77,6 +77,39 @@ class AuthInterceptorAccessTest {
         assertThat(hasAccess(newInterceptor(), "/api/v1/admins", "GET", "USER")).isFalse();
     }
 
+    // ========== TMDB 导入：GET 但带副作用，必须 admin-only ==========
+    // /api/v1/tmdb 放在 ADMIN_ONLY_PREFIXES（拦所有方法）而不是 ADMIN_WRITE_PREFIXES
+    // （只拦写方法）。若有人把它挪到后者，下面 user/cinema 两个用例立刻失败 —— 正是要挡的那种放宽。
+
+    @Test
+    void adminCanReachTmdbImport() {
+        assertThat(hasAccess(newInterceptor(), "/api/v1/tmdb", "GET", "ADMIN")).isTrue();
+        assertThat(hasAccess(newInterceptor(), "/api/v1/tmdb/movie/550", "GET", "ADMIN")).isTrue();
+    }
+
+    @Test
+    void userCannotReachTmdbImportEvenThoughItIsAGet() {
+        assertThat(hasAccess(newInterceptor(), "/api/v1/tmdb", "GET", "USER")).isFalse();
+        assertThat(hasAccess(newInterceptor(), "/api/v1/tmdb/search", "GET", "USER")).isFalse();
+        assertThat(hasAccess(newInterceptor(), "/api/v1/tmdb/movie/550", "GET", "USER")).isFalse();
+    }
+
+    @Test
+    void cinemaCannotReachTmdbImport() {
+        assertThat(hasAccess(newInterceptor(), "/api/v1/tmdb/movie/550", "GET", "CINEMA")).isFalse();
+    }
+
+    @Test
+    void anonymousCannotReachTmdbImport() {
+        assertThat(anonymousAllowed("/api/v1/tmdb/search", "GET")).isFalse();
+        assertThat(anonymousAllowed("/api/v1/tmdb/movie/550", "GET")).isFalse();
+    }
+
+    @Test
+    void brokenTokenCannotReachTmdbImport() {
+        assertThat(withBrokenToken("/api/v1/tmdb/movie/550", "GET")).isFalse();
+    }
+
     // ========== Read-only for non-ADMIN: actors, areas, types, notices, videos ==========
 
     @Test
