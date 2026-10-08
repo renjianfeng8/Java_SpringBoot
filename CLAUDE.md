@@ -39,12 +39,12 @@ project_02/
     │   └── src/
     │       ├── main.js · App.vue
     │       ├── router/index.js
-    │       ├── components/            # DetailSkeleton · ErrorBoundary · FilmPosterCard · OrderPayDialog
+    │       ├── components/            # DetailSkeleton · ErrorBoundary · FilmPosterCard · OrderPayDialog · PayPasswordInput
     │       ├── composables/           # useAuth · useCrud · useFormDialog
     │       ├── constants/index.js
     │       ├── types/axios.d.ts · env.d.ts · auto-imports.d.ts · components.d.ts
     │       ├── utils/                 # request · authStorage · format
-    │       ├── views/                 # front 15 · back 7 · manage 16 · Login/Register/404
+    │       ├── views/                 # front 16 · back 7 · manage 16 · Login/Register/404
     │       └── assets/css/            # tokens · index · global · admin-layout · auth-layout · admin-pages · front-pages
     └── sql/
         ├── schema.sql                 # 17 表
@@ -104,6 +104,20 @@ project_02/
 | 匿名写 | 全站唯一 `POST /api/v1/tickets/redeem`（精确路径 + 仅 POST） |
 | 账户 / 充值 / 流水 | 均在拦截器覆盖内，未登录 401 |
 | 排除表 | `excludePathPatterns` 是角色盲区，不得加入需角色判断的路径 |
+
+### 支付密码
+
+| 项 | 事实 |
+|----|------|
+| 定位 | 与登录密码并列的第二套凭证：登录密码答"你是谁"，支付密码答"这笔钱你同意付"。仅 USER 有（只有 `user` 有余额） |
+| 存储 | `user.pay_password`（BCrypt，NULL = 未设置）+ `pay_pwd_error_count` + `pay_pwd_locked_until`。三列**不挂 `User` 实体**（与 `balance` 同理，见 `UserMapper.java`），读写唯一出处 `PayPasswordService` |
+| 唯一写入口 | `PayPasswordService`：`checkForPayment`（支付时）/ `checkOldPassword`（改密时）共用同一个 `check` 与同一套计数；`resetWithLoginPassword` 验登录密码写入新码 |
+| 限次 | 连续错 5 次锁 15 分钟。自增计数与"触顶即锁定"写在**同一条** `UPDATE`（`IF` 必须在自增之前 —— MySQL `SET` 自左向右求值）；并发下不许"读-算-写回" |
+| 校验事务 | `check*` 标 `REQUIRES_NEW` 且**返回异常而不抛异常**：计数要先由它自己的事务提交，才不会被外层 `payOrder` 的回滚带走（规则 [92](Bug.md#规则篇)） |
+| 校验位置 | `OrderedService.payOrder` 内、`debitPurchase` **之前**；密码取 `ordered.getUserId()` —— 扣谁的余额就验谁的密码，ADMIN / CINEMA 因此结构性无法代付（规则 [93](Bug.md#规则篇)） |
+| 设置入口 | 唯一页面 `front/payPassword`（设置 / 修改 / 忘记重设三态同页）。首次设置与「忘记支付密码」同走 `/pay-password/reset`（验登录密码），已设置则走 `/pay-password`（验原支付密码） |
+| 支付交互 | `OrderPayDialog` 三态：支付态 →（点余额支付）输入支付密码态 → 凭证态。未设置则提示并跳设置页，不做弹窗内设置态。6 格输入的唯一实现在 `components/PayPasswordInput.vue` |
+| 种子 | `data.sql` 三个演示账号预置 BCrypt('123456') 的**定值哈希**；支付密码是全新字段、无存量数据，故不留登录密码那种明文回退（规则 [6](Bug.md#规则篇)） |
 
 ### 前端
 
@@ -171,7 +185,7 @@ project_02/
 |------|------|------|------|
 | `/api/v1/orders/create` | POST | 下单 | USER |
 | `/api/v1/orders/seats` | GET | 占用座位投影 `{seat, mine}` | 登录 |
-| `/api/v1/orders/{id}/pay` | PUT | 支付；超时取消返回 409 | 归属方 |
+| `/api/v1/orders/{id}/pay` | PUT | 支付（`{payPassword}`，验订单归属者的支付密码）；超时取消返回 409 | 归属方 |
 | `/api/v1/orders/{id}/cancel` | PUT | 取消 | 归属方 |
 | `/api/v1/orders/{id}/pickup` | PUT | 柜台取票 | CINEMA |
 | `/api/v1/orders/{id}/refund` | PUT | 退票（放映前 60 分钟） | 归属方 |
@@ -180,7 +194,9 @@ project_02/
 
 | 路径 | 方法 | 说明 | 角色 |
 |------|------|------|------|
-| `/api/v1/account/summary` | GET | 本人余额 | USER |
+| `/api/v1/account/summary` | GET | 本人余额 + `hasPayPassword` | USER |
+| `/api/v1/account/pay-password` | PUT | 修改支付密码（`{oldPassword, payPassword}`，验原支付密码） | USER |
+| `/api/v1/account/pay-password/reset` | PUT | 设置 / 重设支付密码（`{loginPassword, payPassword}`，验登录密码） | USER |
 | `/api/v1/recharges` | POST | 提交充值单据 | USER |
 | `/api/v1/recharges/page` | GET | 单据分页 | USER / ADMIN |
 | `/api/v1/recharges/{id}/callback` | POST | 模拟回调 | 归属方 / ADMIN |
@@ -190,12 +206,12 @@ project_02/
 
 | 端 | 前缀 | 页数 | 页面 |
 |----|------|------|------|
-| 用户前台 | `/front/*` | 15 | home · movie · filmDetail/:id · cinema · cinemaDetail/:id · filmCinema/:id · rank · search · pickup · filmMarks/:id · buyTicket · orders · account · person · password |
+| 用户前台 | `/front/*` | 16 | home · movie · filmDetail/:id · cinema · cinemaDetail/:id · filmCinema/:id · rank · search · pickup · filmMarks/:id · buyTicket · orders · account · person · password · payPassword |
 | 影院后台 | `/back/*` | 7 | home · film · room · record · ordered · person · password |
 | 管理后台 | `/manage/*` | 16 | home · admin · user · cinema · type · area · film · actor · notice · room · record · ordered · mark · video · person · password |
 
 - 公开（免登录）：front 浏览类 + `pickup` + `filmMarks/:id`
-- 需登录（USER）：`buyTicket` `orders` `account` `person` `password`
+- 需登录（USER）：`buyTicket` `orders` `account` `person` `password` `payPassword`
 - 未登录访问受保护页 → `/login?redirect=<原路径>` → 登录后回跳
 - 根路径 `/` → `/front/home`
 
@@ -245,6 +261,8 @@ project_02/
 | 驾驶舱每个数字须带对比基准，基准不另取数（取近 7 日末点） | [89](Bug.md#规则篇) |
 | `el-upload` 须自绑鉴权头与失败反馈，不过 axios 拦截器 | [90](Bug.md#规则篇) |
 | 后端兜底默认值的入参前端须给入口；编辑态字段须有落点；判新增用 `isEdit` 不用 `form.id` | [91](Bug.md#规则篇) |
+| 失败计数与抛异常须分处两个方法（独立事务也救不了"自己抛自己回滚"） | [92](Bug.md#规则篇) |
+| 支付密码服务端校验、必须限次、只认订单归属者 | [93](Bug.md#规则篇) |
 
 ## 开发守则
 

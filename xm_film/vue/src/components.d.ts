@@ -28,6 +28,7 @@ declare module 'vue' {
     ElImage: typeof import('element-plus/es')['ElImage']
     ElInput: typeof import('element-plus/es')['ElInput']
     ElInputNumber: typeof import('element-plus/es')['ElInputNumber']
+    ElLink: typeof import('element-plus/es')['ElLink']
     ElMenu: typeof import('element-plus/es')['ElMenu']
     ElMenuItem: typeof import('element-plus/es')['ElMenuItem']
     ElOption: typeof import('element-plus/es')['ElOption']
@@ -46,6 +47,7 @@ declare module 'vue' {
     ErrorBoundary: typeof import('./components/ErrorBoundary.vue')['default']
     FilmPosterCard: typeof import('./components/FilmPosterCard.vue')['default']
     OrderPayDialog: typeof import('./components/OrderPayDialog.vue')['default']
+    PayPasswordInput: typeof import('./components/PayPasswordInput.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
   }

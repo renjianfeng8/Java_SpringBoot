@@ -96,6 +96,9 @@ public class OrderedService extends BaseService<Ordered> {
     @Resource
     private WalletService walletService;
 
+    @Resource
+    private PayPasswordService payPasswordService;
+
     @Override
     protected BaseMapper<Ordered> mapper() {
         return orderedMapper;
@@ -190,7 +193,7 @@ public class OrderedService extends BaseService<Ordered> {
      * 因此超时改为返回 {@link PayResult#TIMEOUT_CANCELLED}，由控制器映射为业务错误。
      */
     @Transactional(rollbackFor = Exception.class)
-    public PayResult payOrder(Integer id, String role, Integer userId) {
+    public PayResult payOrder(Integer id, String role, Integer userId, String payPassword) {
         Ordered ordered = orderedMapper.selectByIdForUpdate(id);
         if (ordered == null) {
             throw new CustomException(ErrorCode.NOT_FOUND, "订单不存在");
@@ -207,6 +210,15 @@ public class OrderedService extends BaseService<Ordered> {
             cancel.setPendingTimeoutAt(null);
             orderedMapper.updateById(cancel);
             return PayResult.TIMEOUT_CANCELLED;
+        }
+
+        // 支付密码是这一笔资金操作的授权凭证，位置固定在扣款之前：验不过就一分钱不动。
+        // 校验方法刻意"返回异常而不是抛异常"：失败计数得先由它自己的事务提交，本事务
+        // 随后的回滚才带不走它（见 PayPasswordService.checkForPayment 的注释与 Bug.md 规则 29）。
+        // 密码取的是**订单归属者**的 —— 扣谁的余额就验谁的密码，ADMIN / CINEMA 因此无法代付。
+        CustomException passwordRejected = payPasswordService.checkForPayment(ordered.getUserId(), payPassword);
+        if (passwordRejected != null) {
+            throw passwordRejected;
         }
 
         // 余额校验与扣减必须与出票在同一事务内：扣款失败（余额不足）整笔回滚，

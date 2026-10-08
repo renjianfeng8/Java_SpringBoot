@@ -47,7 +47,7 @@ SOURCE data.sql;
 | # | 表名 | 说明 |
 |---|------|------|
 | 1 | admin | 管理员表 |
-| 2 | user | 用户表（`balance` 是账户余额，资金唯一可信来源；演示账号 zhangsan 预置 100 元） |
+| 2 | user | 用户表（`balance` 是账户余额，资金唯一可信来源；演示账号 zhangsan 预置 100 元。`pay_password` 是支付密码（BCrypt，NULL = 未设置），配 `pay_pwd_error_count` / `pay_pwd_locked_until` 做限次锁定，三列均不挂实体） |
 | 3 | cinema | 影院表（`status` 只有 `未审核`/`已审核`，未审核不可登录且不对外展示） |
 | 4 | area | 区域/产地表 |
 | 5 | type | 电影类型表 |

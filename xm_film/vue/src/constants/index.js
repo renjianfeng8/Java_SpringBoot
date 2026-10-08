@@ -91,6 +91,9 @@ export const AUTH_API = {
 /** 账户余额（只返回当前登录用户自己的余额） */
 export const ACCOUNT_API = {
   SUMMARY: `${API_PATHS.ACCOUNT}/summary`,
+  // 支付密码的两个写入口：CHANGE 验原支付密码，RESET 验登录密码（首次设置与忘记重设同一路径）
+  PAY_PASSWORD: `${API_PATHS.ACCOUNT}/pay-password`,
+  PAY_PASSWORD_RESET: `${API_PATHS.ACCOUNT}/pay-password/reset`,
 }
 
 /** 充值单据：提交申请不改余额，回调成功才入账 */
