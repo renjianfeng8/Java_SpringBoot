@@ -9,8 +9,6 @@ import com.example.springboot.service.CinemaService;
 import com.example.springboot.service.OrderedService;
 import com.example.springboot.service.RecordService;
 import com.example.springboot.service.RoomService;
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.context.request.RequestContextHolder;
@@ -18,7 +16,6 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.util.List;
 
-@Tag(name = "影院管理", description = "影院 CRUD、分页查询（支持按电影筛选）")
 @RestController
 @RequestMapping("/api/v1/cinemas")
 public class CinemaController extends BaseController<Cinema> {
@@ -39,7 +36,6 @@ public class CinemaController extends BaseController<Cinema> {
         this.orderedService = orderedService;
     }
 
-    @Operation(summary = "分页查询影院", description = "支持按电影ID筛选正在上映该电影的影院")
     @Override
     @GetMapping("/page")
     public Result page(Cinema cinema,
@@ -56,14 +52,12 @@ public class CinemaController extends BaseController<Cinema> {
         return Result.success(cinemaService.selectPage(cinema, filmId, pageNum, pageSize, !isAdmin()));
     }
 
-    @Operation(summary = "查询全部影院", description = "未登录/非管理员只会看到「已审核」的影院")
     @Override
     @GetMapping
     public Result list(Cinema cinema) {
         return Result.success(cinemaService.selectAll(cinema, !isAdmin()));
     }
 
-    @Operation(summary = "新增影院", description = "仅管理员；新影院初始状态为「未审核」")
     @Override
     @PostMapping
     public Result add(@RequestBody Cinema cinema) {

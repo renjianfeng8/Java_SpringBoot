@@ -12,8 +12,6 @@ import com.example.springboot.exception.CustomException;
 import com.example.springboot.service.AdminService;
 import com.example.springboot.service.CinemaService;
 import com.example.springboot.service.UserService;
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -25,7 +23,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.IntStream;
 
-@Tag(name = "认证管理", description = "登录、注册、密码修改、年份列表查询")
 @RestController
 @RequestMapping("/api/v1/auth")
 public class AuthController {
@@ -42,7 +39,6 @@ public class AuthController {
     @Resource
     private JwtUtils jwtUtils;
 
-    @Operation(summary = "用户登录", description = "三端共用登录接口，根据角色(ADMIN/CINEMA/USER)路由到不同服务")
     @PostMapping("/login")
     public Result login(@Valid @RequestBody LoginRequest request) {
         Account account = new Account();
@@ -65,7 +61,6 @@ public class AuthController {
         return Result.success(result);
     }
 
-    @Operation(summary = "用户注册", description = "支持CINEMA(影院)和USER(用户)注册")
     @PostMapping("/register")
     public Result register(@Valid @RequestBody RegisterRequest request) {
         Account account = new Account();
@@ -83,7 +78,6 @@ public class AuthController {
         return Result.success();
     }
 
-    @Operation(summary = "修改密码")
     @PutMapping("/password")
     public Result updatePassword(@Valid @RequestBody PasswordChangeRequest request, HttpServletRequest httpRequest) {
         Account account = new Account();
@@ -107,7 +101,6 @@ public class AuthController {
         return Result.success();
     }
 
-    @Operation(summary = "获取当前登录用户信息", description = "根据JWT令牌验证登录状态并返回用户信息")
     @GetMapping("/me")
     public Result me(HttpServletRequest request) {
         String userId = (String) request.getAttribute("userId");
@@ -130,7 +123,6 @@ public class AuthController {
         return Result.success(account);
     }
 
-    @Operation(summary = "获取年份列表", description = "用于前端搜索筛选，返回最近11年")
     @GetMapping("/years")
     public Result getYear() {
         int currentYear = LocalDate.now(ZoneId.systemDefault()).getYear();

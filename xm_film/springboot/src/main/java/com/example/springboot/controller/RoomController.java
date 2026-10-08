@@ -12,7 +12,6 @@ import com.example.springboot.service.RecordService;
 import com.example.springboot.service.RoomService;
 import com.github.pagehelper.PageInfo;
 import com.github.pagehelper.page.PageMethod;
-import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.context.request.RequestContextHolder;
@@ -20,7 +19,6 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.util.List;
 
-@Tag(name = "影厅管理", description = "放映厅 CRUD")
 @RestController
 @RequestMapping("/api/v1/rooms")
 public class RoomController extends BaseController<Room> {

@@ -9,7 +9,6 @@ import com.example.springboot.service.OrderedService;
 import com.example.springboot.service.UserService;
 import com.github.pagehelper.PageInfo;
 import com.github.pagehelper.page.PageMethod;
-import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.context.request.RequestContextHolder;
@@ -17,7 +16,6 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.util.List;
 
-@Tag(name = "用户管理", description = "普通用户 CRUD")
 @RestController
 @RequestMapping("/api/v1/users")
 public class UserController extends BaseController<User> {

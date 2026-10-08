@@ -11,7 +11,6 @@ import com.example.springboot.exception.CustomException;
 import com.example.springboot.service.OrderedService;
 import com.github.pagehelper.PageInfo;
 import com.github.pagehelper.page.PageMethod;
-import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.web.context.request.RequestContextHolder;
@@ -20,7 +19,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-@Tag(name = "订单管理", description = "购票订单 CRUD")
 @RestController
 @RequestMapping("/api/v1/orders")
 public class OrderedController extends BaseController<Ordered> {

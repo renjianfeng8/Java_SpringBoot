@@ -8,13 +8,10 @@ import com.example.springboot.exception.CustomException;
 import com.example.springboot.service.FilmService;
 import com.example.springboot.service.OrderedService;
 import com.example.springboot.service.RecordService;
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-@Tag(name = "电影管理", description = "电影 CRUD、排行榜、搜索、按影院查询")
 @RestController
 @RequestMapping("/api/v1/films")
 public class FilmController extends BaseController<Film> {
@@ -60,20 +57,17 @@ public class FilmController extends BaseController<Film> {
         }
     }
 
-    @Operation(summary = "搜索电影", description = "按标题模糊搜索")
     @GetMapping("/search")
     public Result search(@RequestParam String title) {
         return Result.success(filmService.selectByTitle(title));
     }
 
-    @Operation(summary = "按影院查询电影", description = "查询指定影院上映的电影")
     @GetMapping("/by-cinema")
     public Result byCinema(@RequestParam Integer cinemaId,
                            @RequestParam(required = false) Integer filmId) {
         return Result.success(filmService.selectByCinema(cinemaId, filmId));
     }
 
-    @Operation(summary = "票房排行榜 Top10")
     @GetMapping("/box-office/top")
     public Result boxOfficeTop(Film film) {
         return Result.success(filmService.getBoxOfficeTop(film));
@@ -84,13 +78,11 @@ public class FilmController extends BaseController<Film> {
      * PUBLIC_READ_PREFIXES 内的前缀下，因此不需要为它新增任何放行规则。
      * 返回 {total, updatedAt}，口径见 OrderedService.todayPaidRevenue。
      */
-    @Operation(summary = "今日票房", description = "今天支付的售票收入合计（元）与统计时刻；匿名可读")
     @GetMapping("/box-office/today")
     public Result todayBoxOffice() {
         return Result.success(orderedService.todayPaidRevenue());
     }
 
-    @Operation(summary = "评分排行榜 Top5")
     @GetMapping("/mark/top")
     public Result markTop(Film film) {
         return Result.success(filmService.getMarkTop(film));
