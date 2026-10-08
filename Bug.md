@@ -130,6 +130,7 @@
 93. 支付密码是与登录密码并列的第二套凭证：服务端校验、必须限次、只认订单归属者: 登录密码回答"你是谁"，支付密码回答"这笔钱你同意付"，两者不可复用（`user.pay_password` 独立列、独立设置入口）。三条硬约束：① **校验只能在服务端**，前端只负责把 6 位密码收上来交给 `/orders/{id}/pay` 一并校验，前端拦一下等于没拦；② **必须限次**，6 位纯数字只有 10⁶ 种，`pay_pwd_error_count` + `pay_pwd_locked_until`（5 次锁 15 分钟），且自增计数要与"触顶即锁定"写进**同一条** `UPDATE`（`IF(pay_pwd_error_count + 1 >= ?, ?, ...)` 写在自增之前 —— MySQL 的 `SET` 自左向右求值，顺序调换会提前一次锁定），读-算-写回在并发下会互相覆盖；③ **验的是订单归属者的密码**，扣谁的余额就验谁的密码，ADMIN / CINEMA 因此结构性地无法代付，不必再补角色黑名单。三列与余额同理不挂 `User` 实体（规则 46），未设置时也不能靠 `SELECT` 返回 null 判断 —— MyBatis 把"映射出来全是 null"的行当作没有行，查询要带上一个非空列（见 BUG-064）
 
 94. 页面形态取决于服务端状态时，「取不到状态」的兜底必须选两条路都走得通的那条: `front/PayPassword.vue` 用 `summary.hasPayPassword` 在「修改」（验原支付密码）与「设置」（验登录密码）两态间二选一，但 `mode` 初值写成 `ref('change')`，`loadState` 又只在 `res.code === '200'` 时改写它 —— 非 200 与异常两条分支都不动 mode。于是摘要接口一失败，未设置的用户就被留在改密态，要求填一个根本不存在的原支付密码（同文件 catch 块的注释还写着「这里保持默认的「设置」模式即可」，与实现的初值正好相反）。兜底方向的判据不是「哪种用户多」，而是「哪条分支在两种真实状态下都走得通」：退回「设置」态对已设置用户仍是合法的重设路径（验登录密码），对未设置用户则是唯一一条，两个方向不对称。兜底也不能把「取不到」静默成一个看似合理的默认值 —— 否则环境问题会被伪装成业务缺陷（本条的触发场景正是本机库缺列 → body `code:500`，见 `sql/README.md` 的「已存在的数据库：重建，不做增量升级」）。反向也成立：`OrderPayDialog.vue` 的 `hasPayPassword = ref(true)` 是**刻意**的反向兜底，理由写在注释里（宁可多输一次密码，也不因一次网络抖动把人误送到设置页），在那里成立是因为输错能立刻拿到后端的明确提示、弹窗不丢上下文（见 BUG-065）
+95. 多步表单里「早一步的通过」不得成为信任边界：只验不写的端点 + 真正的写仍原子重验: 支付密码设置页拆成「验证身份 → 设置新密码」两步后，第一步走新增的 `POST /account/pay-password/verify-old` / `verify-login`（只比对、不写库），第二步仍走原来的写端点 `PUT /pay-password` / `PUT /pay-password/reset`，并把第一步的凭证带上**重发一次**。判据是：第一步的"已通过"只是 UI 闸门，后端不能把它当授权凭据 —— 一旦后端认它，就得引入票据 / 会话来承载这份信任（签发、过期、单次性、绑定用户），凭空多出一套要维护、可能出错的机制，还让两个写端点多出「凭证或票」两种入参模式；而"重发 + 原子重验"把这个信任边界整个消掉，代价只是多一次 BCrypt（约 100ms）。两条配套约束：① 只验不写的路径必须复用写入路径**同一个** check（`verifyOldPassword` 走 `checkOldPassword`），否则它立刻变成一条绕过限次的试错通道（规则 93）；② 它**一行都不能写库**，用一条「`updatePayPassword` 从未被调用」的断言钉住。另注意这类方法在同一 bean 内自调用 `REQUIRES_NEW` 会被代理绕过（规则 92），只能从无外层事务的入口（Controller）调到（见 BUG-066）
 
 ## 案例篇
 
@@ -1161,5 +1162,20 @@
 - 解决方案: ① 本机库按 `schema.sql` 的列定义 `ALTER TABLE user` 补上这三列（本次选非破坏性补列，而非 `sql/README.md` 的 DROP + 重建，以保住本机已灌的场次与两个注册用户；仓库侧不动，仍不新增迁移脚本）；② `loadState` 改为只在 `code === '200'` 时采信 `hasPayPassword`，`mode` 一律按 `known && hasPayPassword ? 'change' : 'reset'` 赋值，异常分支显式退回 `'reset'`。初值仍留 `'change'`（已设置用户占多数，避免首屏闪一下「设置」），只有"取不到状态"这一确定情形才退回两态通用的「设置」态
 - 验证: 补列后 `GET /api/v1/account/summary` 由 `{"code":"500","msg":"系统错误"}` 变为 `{"code":"200",...,"hasPayPassword":false}`（zhangsan，未设置）；全库 17 表与 `schema.sql` 逐列比对无漂移。`npm run build` 通过。**未完成**: 前端 UI 未人工目视（按仓库分工由用户自查）—— 本次只改 `loadState` 一个函数，复验点是"未设置的用户打开该页应落在「设置支付密码」，不应出现「原支付密码」"
 - 相关文件: `xm_film/vue/src/views/front/PayPassword.vue`、`Bug.md`、`CLAUDE.md`
+- 提交记录: 待回填
+- 状态: 已修复
+
+### BUG-066: 支付密码设置页两步化 —— 「验证身份」拆出去后，第一步的通过不能成为信任边界
+
+- 日期: 2026-10-08
+- Bug 描述: 需求是交互改进而非缺陷 —— 设置 / 修改支付密码原先把凭证与新密码一屏罗列（登录密码 + 新支付密码 + 再次确认三格同屏），改成"先只验身份，验过了再过渡到设新密码"
+- 根因分析: 拆两步的难点不在前端动画，而在"第一步验过了"这件事在后端到底算不算数。三条路：
+  1. 第一步只在前端收着、不验 —— 达不到"验证无误后才过渡"，用户输错要等到第二步才被告知
+  2. 第一步验完发一张短时票据，第二步凭票写入 —— 登录密码只传一次，但凭空多出签发 / 过期 / 单次性 / 绑定用户一整套机制，且两个写端点要长出「凭证或票」两种入参模式（本仓最忌讳的两套机制并存）
+  3. 新增只验不写的端点，第二步照旧带凭证重发 —— 写路径一行不改
+  另有一个容易漏的点：原支付密码那一支若新开一条"只验"路径而不共用 `checkOldPassword`，它立刻就是一条绕过 5 次 / 15 分钟限次的试错通道（规则 93）
+- 解决方案: 取第 3 条。① `PayPasswordService` 增 `verifyOldPassword`（走已有的 `checkOldPassword`，计数与锁定因此与支付共用）与 `verifyLoginPassword`（把 `resetWithLoginPassword` 里的登录密码比对抽成私有 `checkLoginPassword`，重设与只验共用一处口径）；② 两者都只比对、不写 `pay_password`；③ `AccountController` 增 `POST /pay-password/verify-old` 与 `POST /pay-password/verify-login`，仍由 `requireUser()` 限 USER；④ 两个写端点一字未改，第二步把第一步的凭证带上重发 —— 第一步的通过从不被信任（规则 95）；⑤ 前端 `front/PayPassword.vue` 改两步步进器：第一步改密态填满 6 格即自动验证、设置态按回车验证，`<Transition mode="out-in">` 做淡入位移过渡（卡片给 `min-height`，免得第二步多一格把卡片顶高；`prefers-reduced-motion` 下关闭），第二步两格 + 显式按钮 + 「返回上一步」
+- 验证: `mvn test` 213 通过（`PayPasswordServiceTest` 新增 8 条：两个 verify 各自"验对了不写库"、"验错了抛异常且仍计数"、锁定期内的表现、明文种子密码的判定口径、重设仍写入）。隔离验证用临时库 `xm-film-verify` + 备用端口 9099（未触碰本机 9090/5173），实测：verify-login 对 / 错 / 空（200 / 401「登录密码错误」/ 400 校验）、verify-old 对（200）、verify-old 错（"还可重试 4→3→2→1"→ 第 5 次"已锁定 15 分钟"，`pay_pwd_error_count` 同步落库而 `pay_password` 全程未被改写）、锁定期内正确的原支付密码也返回 409 而 verify-login 不受影响、两个写端点（PUT /pay-password、PUT /pay-password/reset）行为不变且新码立即可用、无 token 401、ADMIN 403、summary 正常。`npm run build` 通过。**未完成**: 前端 UI 未人工目视（按仓库分工由用户自查）—— 复验点是两步过渡、改密态填满自动推进、设置态回车推进、「返回上一步」、失败清空重输、`prefers-reduced-motion` 下无动画
+- 相关文件: `xm_film/springboot/src/main/java/com/example/springboot/service/PayPasswordService.java`、`.../controller/AccountController.java`、`.../dto/request/PayPasswordVerifyOldRequest.java`、`.../dto/request/PayPasswordVerifyLoginRequest.java`、`.../test/java/com/example/springboot/service/PayPasswordServiceTest.java`、`xm_film/vue/src/views/front/PayPassword.vue`、`xm_film/vue/src/constants/index.js`、`CLAUDE.md`、`Bug.md`
 - 提交记录: 待回填
 - 状态: 已修复

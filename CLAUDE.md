@@ -115,7 +115,7 @@ project_02/
 | 限次 | 连续错 5 次锁 15 分钟。自增计数与"触顶即锁定"写在**同一条** `UPDATE`（`IF` 必须在自增之前 —— MySQL `SET` 自左向右求值）；并发下不许"读-算-写回" |
 | 校验事务 | `check*` 标 `REQUIRES_NEW` 且**返回异常而不抛异常**：计数要先由它自己的事务提交，才不会被外层 `payOrder` 的回滚带走（规则 [92](Bug.md#规则篇)） |
 | 校验位置 | `OrderedService.payOrder` 内、`debitPurchase` **之前**；密码取 `ordered.getUserId()` —— 扣谁的余额就验谁的密码，ADMIN / CINEMA 因此结构性无法代付（规则 [93](Bug.md#规则篇)） |
-| 设置入口 | 唯一页面 `front/payPassword`（设置 / 修改 / 忘记重设三态同页）。首次设置与「忘记支付密码」同走 `/pay-password/reset`（验登录密码），已设置则走 `/pay-password`（验原支付密码） |
+| 设置入口 | 唯一页面 `front/payPassword`，两步步进器（设置 / 修改 / 忘记重设同页）。第一步「验证身份」只出一个凭证：已设置是 6 格原支付密码（填满即验证），未设置是登录密码（回车验证），走 `/pay-password/verify-old` / `/pay-password/verify-login`（**只验不写**）；第二步「设置新密码」由显式按钮提交，仍走 `/pay-password`（验原支付密码）或 `/pay-password/reset`（验登录密码），并把第一步的凭证带上重发 —— 第一步的通过只是一道 UI 闸门、从不被信任（规则 [95](Bug.md#规则篇)） |
 | 支付交互 | `OrderPayDialog` 三态：支付态 →（点余额支付）输入支付密码态 → 凭证态。未设置则提示并跳设置页，不做弹窗内设置态。6 格输入的唯一实现在 `components/PayPasswordInput.vue` |
 | 种子 | `data.sql` 三个演示账号预置 BCrypt('123456') 的**定值哈希**；支付密码是全新字段、无存量数据，故不留登录密码那种明文回退（规则 [6](Bug.md#规则篇)） |
 
@@ -197,6 +197,8 @@ project_02/
 | `/api/v1/account/summary` | GET | 本人余额 + `hasPayPassword` | USER |
 | `/api/v1/account/pay-password` | PUT | 修改支付密码（`{oldPassword, payPassword}`，验原支付密码） | USER |
 | `/api/v1/account/pay-password/reset` | PUT | 设置 / 重设支付密码（`{loginPassword, payPassword}`，验登录密码） | USER |
+| `/api/v1/account/pay-password/verify-old` | POST | 只验原支付密码、不写库（设置页第一步） | USER |
+| `/api/v1/account/pay-password/verify-login` | POST | 只验登录密码、不写库（设置页第一步） | USER |
 | `/api/v1/recharges` | POST | 提交充值单据 | USER |
 | `/api/v1/recharges/page` | GET | 单据分页 | USER / ADMIN |
 | `/api/v1/recharges/{id}/callback` | POST | 模拟回调 | 归属方 / ADMIN |
@@ -264,6 +266,7 @@ project_02/
 | 失败计数与抛异常须分处两个方法（独立事务也救不了"自己抛自己回滚"） | [92](Bug.md#规则篇) |
 | 支付密码服务端校验、必须限次、只认订单归属者 | [93](Bug.md#规则篇) |
 | 页面形态取决于服务端状态时，「取不到状态」的兜底须两态通用 | [94](Bug.md#规则篇) |
+| 多步表单早一步的通过不得成为信任边界（只验不写端点 + 写仍原子重验） | [95](Bug.md#规则篇) |
 
 ## 开发守则
 

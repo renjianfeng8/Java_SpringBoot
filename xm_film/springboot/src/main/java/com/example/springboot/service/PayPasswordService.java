@@ -87,14 +87,45 @@ public class PayPasswordService {
     }
 
     /**
+     * 只验不写：设置页第一步「验证原支付密码」的闸门，供前端在两步之间过渡用。
+     *
+     * 走的是与支付、改密完全同一个 {@link #checkOldPassword}，因此失败照旧计数与锁定 ——
+     * 这条只验不写的路径不能变成一条不限次的试错通道（规则 93）。**它绝不写 pay_password**：
+     * 第一步的通过只是 UI 闸门，真正的写仍由 {@link #changePayPassword} 在原码复验后完成。
+     *
+     * 注意本方法与 {@code checkOldPassword} 是同一个 bean 内的自调用，`REQUIRES_NEW` 会被
+     * 代理绕过（规则 92）。这里能成立是因为入口 {@code AccountController} 没有外层事务、
+     * 计数靠自动提交落库 —— 不要把本方法挪进任何事务方法里调用。
+     */
+    public void verifyOldPassword(Integer userId, String rawOldPassword) {
+        CustomException failure = checkOldPassword(userId, rawOldPassword);
+        if (failure != null) {
+            throw failure;
+        }
+    }
+
+    /** 只验不写：设置页第一步「验证登录密码」的闸门。判定口径与重设共用 {@link #checkLoginPassword} */
+    public void verifyLoginPassword(Integer userId, String rawLoginPassword) {
+        checkLoginPassword(userId, rawLoginPassword);
+    }
+
+    /**
      * 设置 / 重设支付密码：验登录密码后写入。
      *
      * 登录密码是本系统的根凭证（登录与改密都只认它），所以"忘了支付密码"用它可以自救；
      * 这条路径验的不是支付密码，因此不共享计数与锁定。
-     * 登录密码的判定与 {@code UserService.login} / {@code updatePassword} 同口径：
-     * 先 BCrypt 比对，再退到明文相等（存量种子账号的密码是明文，见 data.sql）。
      */
     public void resetWithLoginPassword(Integer userId, String rawLoginPassword, String newPayPassword) {
+        checkLoginPassword(userId, rawLoginPassword);
+        userMapper.updatePayPassword(userId, passwordEncoder.encode(newPayPassword));
+    }
+
+    /**
+     * 登录密码比对。判定与 {@code UserService.login} / {@code updatePassword} 同口径：
+     * 先 BCrypt 比对，再退到明文相等（存量种子账号的密码是明文，见 data.sql）。
+     * 重设与第一步的只验不写共用这一处，口径不会分叉。
+     */
+    private void checkLoginPassword(Integer userId, String rawLoginPassword) {
         User user = userMapper.selectById(userId);
         if (user == null) {
             throw new CustomException(ErrorCode.UNAUTHORIZED, "账号不存在");
@@ -103,7 +134,6 @@ public class PayPasswordService {
         if (!passwordEncoder.matches(rawLoginPassword, stored) && !stored.equals(rawLoginPassword)) {
             throw new CustomException(ErrorCode.UNAUTHORIZED, "登录密码错误");
         }
-        userMapper.updatePayPassword(userId, passwordEncoder.encode(newPayPassword));
     }
 
     /** 校验本体。全程不抛异常：要么返回 null（通过），要么返回调用方该抛的那个异常 */

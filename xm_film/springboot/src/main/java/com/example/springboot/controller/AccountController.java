@@ -5,6 +5,8 @@ import com.example.springboot.common.Result;
 import com.example.springboot.common.enums.ErrorCode;
 import com.example.springboot.dto.request.PayPasswordChangeRequest;
 import com.example.springboot.dto.request.PayPasswordResetRequest;
+import com.example.springboot.dto.request.PayPasswordVerifyLoginRequest;
+import com.example.springboot.dto.request.PayPasswordVerifyOldRequest;
 import com.example.springboot.exception.CustomException;
 import com.example.springboot.service.PayPasswordService;
 import com.example.springboot.service.WalletService;
@@ -12,6 +14,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -49,6 +52,22 @@ public class AccountController {
         data.put("balance", walletService.getBalance(userId));
         data.put("hasPayPassword", payPasswordService.hasPayPassword(userId));
         return Result.success(data);
+    }
+
+    @Operation(summary = "验证原支付密码", description = "只验不写；供设置页第一步「验证身份」用，计数与锁定和支付共用")
+    @PostMapping("/pay-password/verify-old")
+    public Result verifyOldPassword(@Valid @RequestBody PayPasswordVerifyOldRequest request) {
+        Integer userId = requireUser();
+        payPasswordService.verifyOldPassword(userId, request.getOldPassword());
+        return Result.success();
+    }
+
+    @Operation(summary = "验证登录密码", description = "只验不写；供设置页第一步「验证身份」用")
+    @PostMapping("/pay-password/verify-login")
+    public Result verifyLoginPassword(@Valid @RequestBody PayPasswordVerifyLoginRequest request) {
+        Integer userId = requireUser();
+        payPasswordService.verifyLoginPassword(userId, request.getLoginPassword());
+        return Result.success();
     }
 
     @Operation(summary = "修改支付密码", description = "需原支付密码；原码校验与支付共用同一套错误计数与锁定")
