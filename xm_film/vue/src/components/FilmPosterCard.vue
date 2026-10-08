@@ -29,7 +29,7 @@
         <!-- 破图兜底取片名首字，与该项目的头像兜底同一手法（front-pages.scss .mark-item__avatar） -->
         <div v-else class="poster-card__fallback" aria-hidden="true">{{ firstChar }}</div>
 
-        <!-- 评分徽章压在图上：§3.6 明确 --color-rating 可用于「图片叠加」，
+        <!-- 评分徽章压在图上：--color-rating 可用于「图片叠加」，
              垫一层 --overlay-mask 使任意海报底色下都可读 -->
         <span v-if="scoreText" class="poster-card__score">{{ scoreText }}</span>
       </div>
@@ -79,7 +79,7 @@ const scoreText = computed(() => formatScoreBadge(props.film.score));
   transition: transform 200ms ease-in-out, box-shadow 200ms ease-in-out;
 }
 
-/* 卡片 hover 取 §7.2 的 Shadow 1（规范：静态卡片无阴影，hover 浮起用 lighter） */
+/* 卡片 hover 取 Shadow 1（静态卡片无阴影，hover 浮起用 lighter） */
 .poster-card:hover .poster-card__poster {
   transform: translateY(-4px);
   box-shadow: var(--el-box-shadow-lighter);
@@ -110,7 +110,7 @@ const scoreText = computed(() => formatScoreBadge(props.film.score));
   background-color: var(--overlay-mask);
   color: var(--color-rating);
   font-size: var(--fs-xs);
-  /* 纯数字，可用 500（§4.4） */
+  /* 纯数字，可用 500 */
   font-weight: var(--fw-medium);
   line-height: var(--lh-loose);
 }
@@ -118,7 +118,7 @@ const scoreText = computed(() => formatScoreBadge(props.film.score));
 .poster-card__title {
   margin-top: var(--space-8);
   font-size: var(--fs-base);
-  /* 片名可能含中文，§4.4 只允许 400 / 700 */
+  /* 片名可能含中文，只允许 400 / 700 */
   font-weight: var(--fw-bold);
   color: var(--el-text-color-primary);
   /* 单行截断：长片名不撑破网格，完整名走 title 属性 */

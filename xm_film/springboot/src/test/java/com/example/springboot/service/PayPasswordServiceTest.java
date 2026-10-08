@@ -115,7 +115,7 @@ class PayPasswordServiceTest {
         verify(userMapper, never()).updatePayPassword(anyInt(), anyString());
     }
 
-    /** 存量种子账号的登录密码是明文（规则 6），判定口径必须与 login / reset 一致 */
+    /** 存量种子账号的登录密码是明文，判定口径必须与 login / reset 一致 */
     @Test
     void verifyLoginPassword_withPlaintextStoredPassword_passes() {
         when(userMapper.selectById(USER_ID)).thenReturn(userWith("123"));

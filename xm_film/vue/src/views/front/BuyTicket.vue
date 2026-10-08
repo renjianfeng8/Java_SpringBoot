@@ -53,7 +53,7 @@
 
           <!-- 座位矩阵：行列数取自所属影厅的 seat_rows / seat_cols 配置。
                每格是 <button> 而非 div —— 键盘用户才能 Tab 到可选座位并用回车选定；
-               不可选的座位用 disabled，读屏软件据此报出状态（§10.2）。 -->
+               不可选的座位用 disabled，读屏软件据此报出状态。 -->
           <div v-else class="seat-map" role="group" aria-label="座位图">
             <div v-for="row in seatRows" :key="'row' + row" class="seat-map__row">
               <button v-for="col in seatCols" :key="`seat-${row}-${col}`"
@@ -419,7 +419,7 @@ const fetchBaseInfo = () => {
 };
 
 // 座位操作工具函数
-// 座位状态 → 语义类名；色值统一由 scoped 样式经令牌给出（规范 §3.7）
+// 座位状态 → 语义类名；色值统一由 scoped 样式经令牌给出
 const getSeatClass = (row, col) => {
   const r = row - 1;
   const c = col - 1;
@@ -645,7 +645,7 @@ const confirmBooking = async () => {
   transition: transform 100ms ease-out;
 }
 
-/* 键盘焦点必须可见（§9.1 Focus）。按钮被清了默认外观，所以要显式给描边 */
+/* 键盘焦点必须可见（Focus）。按钮被清了默认外观，所以要显式给描边 */
 .seat-item:focus-visible {
   outline: 2px solid var(--el-color-primary);
   outline-offset: 2px;

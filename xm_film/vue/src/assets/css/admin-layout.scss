@@ -72,7 +72,7 @@
 .username {
   font-size: var(--fs-base);
   color: var(--el-text-color-regular);
-  /* 用户名可能为中文，按 §4.4 只能 400 / 700（500 会触发伪粗体） */
+  /* 用户名可能为中文，只能 400 / 700（500 会触发伪粗体） */
   font-weight: var(--fw-regular);
 }
 
@@ -93,7 +93,7 @@
   border-right: 1px solid var(--el-border-color-lighter);
 }
 
-/* 内容区底色取 --el-bg-color-page（§6.2：管理端页面背景 #f2f3f5），卡片才是白面。
+/* 内容区底色取 --el-bg-color-page（管理端页面背景 #f2f3f5），卡片才是白面。
    此前是 --el-bg-color（白），卡片与页面底同色，只靠阴影分隔 —— 表格卡与图表卡因此
    失去了"面"的层次。侧栏仍取 el-menu 默认的白底，灰底上自然分界，无需另加边框。 */
 .manage-content {

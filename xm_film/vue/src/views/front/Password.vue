@@ -5,7 +5,7 @@
       <h1 class="password-title">修改密码</h1>
 
       <!-- status-icon 打开「错误反馈三件套」的图标那一件；@submit.prevent 兜住原生提交，
-           回车由输入框上的 @keyup.enter 触发（只挂一处，避免一次回车发两次请求，规范 §9.3） -->
+           回车由输入框上的 @keyup.enter 触发（只挂一处，避免一次回车发两次请求） -->
       <el-form ref="formRef" :rules="data.rules" :model="data.form" class="password-form" label-width="100px"
                status-icon @submit.prevent>
         <el-form-item label="原密码" prop="password">

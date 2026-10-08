@@ -24,7 +24,7 @@
   }
 
   /* 表格行内的操作按钮（编辑 / 删除）。字号即图标尺寸（EP 的 .el-icon 是 font-size: inherit，
-     内嵌 svg 是 1em），故取 §五「常规功能」档 16px。原值 --fs-lg（18px）不在 §五 的
+     内嵌 svg 是 1em），故取「常规功能」档 16px。原值 --fs-lg（18px）不在
      12 / 16 / 20 / 24 四档内；"便于点击"由 EP link 按钮自带的内边距承担。 */
   .row-action {
     font-size: var(--fs-md);
@@ -116,7 +116,7 @@
     width: 100px;
   }
 
-  /* 页面根堆叠。模块间距的唯一出处（§6.2 管理端模块间距 16 / 24px）——
+  /* 页面根堆叠。模块间距的唯一出处（管理端模块间距 16 / 24px）——
      此前靠每页各写一次 `margin-bottom: 8px` / `.mb-2` 工具类。 */
   .crud-page {
     display: flex;
@@ -150,7 +150,7 @@
     background-color: var(--color-brand);
   }
 
-  /* 标题含中文，字重只能用 400 / 700（§4.4）。页面级取 §4.2 的「页面主标题」档，
+  /* 标题含中文，字重只能用 400 / 700。页面级取「页面主标题」档，
      用中性色 —— 品牌感已由短线承载，管理端密度下标题保持克制。 */
   .page-head__title {
     margin: 0;
@@ -163,7 +163,7 @@
     margin-left: auto;
   }
 
-  /* 页内区块标题（大盘的两个区块）取 §4.2 的「区块大标题」档，与前台同名类同色。
+  /* 页内区块标题（大盘的两个区块）取「区块大标题」档，与前台同名类同色。
      这里没有「全部 ›」消费者，故不带 __more 档（原则七：只保留有消费者的刻度）。 */
   .section-head__title {
     margin: 0;
@@ -204,7 +204,7 @@
 
   /* 「已选 N 项」随选中数出现，用 aria-live 把变化播报给读屏。
      文字用 --el-text-color-regular（6.11:1）而非 secondary —— 13px 属正文尺寸，
-     §3.4 明令 secondary（3.08:1）只可用于 ≥18px 或纯装饰。 */
+     secondary 对比度 3.08:1，只可用于 ≥18px 或纯装饰。 */
   .selection-count {
     font-size: var(--fs-sm);
     color: var(--el-text-color-regular);
@@ -228,7 +228,7 @@
     border-top: 1px solid var(--el-border-color-lighter);
   }
 
-  /* 表格空态 / 失败态占位（§11.2：两者文案不同、必须区分）。
+  /* 表格空态 / 失败态占位（两者文案不同、必须区分）。
      挂 el-table 的 #empty 槽 —— EP 的默认空文案分不出「库里确实没有」与「请求失败」。 */
   .empty-hint {
     padding: var(--space-40) 0;
@@ -239,7 +239,7 @@
 
   /* 一格放多个操作按钮：一律从同一左边缘起排。
      EP 的按钮间距是 `.el-button + .el-button { margin-left: 12px }`，列宽不够折行时
-     第二个按钮会被这 12px 右推、两行左右错开（BUG-049）。flex + gap 让间距与
+     第二个按钮会被这 12px 右推、两行左右错开。flex + gap 让间距与
      「是否折行」解耦。 */
   .row-actions {
     display: flex;

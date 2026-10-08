@@ -88,7 +88,7 @@
                   <div class="cinema-card__name">{{ cinema.name || '未知影院' }}</div>
                 </div>
 
-                <!-- 影院服务标签：用功能色，白字压其上均达 AA（规范 §3.3） -->
+                <!-- 影院服务标签：用功能色，白字压其上均达 AA -->
                 <div class="cinema-card__tags">
                   <div class="service-tag service-tag--refund">退票无忧</div>
                   <div class="service-tag service-tag--promo">儿童优惠</div>
@@ -339,7 +339,7 @@ onMounted(() => {
   color: var(--el-color-danger);
 }
 
-/* ---------- 3.1 电影详情头部（深色表面，规范 §3.5） ---------- */
+/* ---------- 3.1 电影详情头部（深色表面） ---------- */
 .film-hero {
   position: relative;
   overflow: hidden;
@@ -357,7 +357,7 @@ onMounted(() => {
   opacity: 0.3;
 }
 
-/* 叠影：左侧压暗保证文字底色稳定。渐变只含令牌与 transparent 关键字（§3.7） */
+/* 叠影：左侧压暗保证文字底色稳定。渐变只含令牌与 transparent 关键字 */
 .film-hero__scrim {
   position: absolute;
   inset: 0;
@@ -412,7 +412,7 @@ onMounted(() => {
   color: var(--dark-text-secondary);
 }
 
-/* CTA 走 EP 的 type="primary" + size="large"：五态由组件库给出（§9.1） */
+/* CTA 走 EP 的 type="primary" + size="large"：五态由组件库给出 */
 .film-hero__action {
   width: 70%;
   margin-top: var(--space-20);

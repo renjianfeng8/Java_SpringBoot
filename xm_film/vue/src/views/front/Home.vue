@@ -119,7 +119,7 @@
                 aria-live="polite"
                 @animationend="todayBoxOffice.fresh = false"
             >{{ todayBoxOffice.total === null ? '—' : formatYuan(todayBoxOffice.total) }}</div>
-            <!-- 按钮让到时间戳这排：36px 大字独占整行，不再与按钮争那 208px，数字不折行（规则 86） -->
+            <!-- 按钮让到时间戳这排：36px 大字独占整行，不再与按钮争那 208px，数字不折行 -->
             <div class="today-box__foot">
               <span class="today-box__time">
                 <template v-if="todayBoxOffice.error && todayBoxOffice.total !== null">
@@ -305,7 +305,7 @@ const stopHero = () => {
 const prefersReducedMotion = () =>
   window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-/** 启动自动轮播。系统开启「减少动态效果」时不启动 —— 自动替换内容本身就是动效（§10.2） */
+/** 启动自动轮播。系统开启「减少动态效果」时不启动 —— 自动替换内容本身就是动效 */
 const startHero = () => {
   stopHero();
   if (heroPaused.value || prefersReducedMotion() || heroSlides.value.length < 2) return;
@@ -380,7 +380,7 @@ watch(heroFilms, () => {
 
 /**
  * 加载今日票房。失败只落错误态，不弹提示 —— 网络异常/超时/5xx 的提示由 request.js
- * 的响应拦截器统一给出，页面再弹一次会让同一次失败弹两遍（规范 §11.2）。
+ * 的响应拦截器统一给出，页面再弹一次会让同一次失败弹两遍。
  *
  * 请求无论多快都把 loading 撑满 MIN_REFRESH_MS：本地聚合查询几十毫秒就返回，
  * 不兜底的话转圈一闪而过，用户看不到「点过」这件事。数字高亮压到同一刻触发，
@@ -533,7 +533,7 @@ onUnmounted(() => {
 
 /* 轨道宽度仍是舞台的 100%，子项各 flex-basis:100% 横向溢出，
    于是 translateX 里的 100% 恰好等于一张 —— 不用按列数换算百分比。
-   时长取 §八 大面板档；缓动取表内的 ease-in-out，纯 ease-in 是给"离场"的，
+   时长取大面板档；缓动取表内的 ease-in-out，纯 ease-in 是给"离场"的，
    轨道滑动同时有起步和到位两段，到位那下用 ease-in 会急刹。 */
 .hero__track {
   display: flex;
@@ -571,7 +571,7 @@ onUnmounted(() => {
   object-fit: cover;
 }
 
-/* 渐变遮罩让左侧文字有稳定底色。只含令牌与 transparent 关键字，无硬编码色值（§3.7） */
+/* 渐变遮罩让左侧文字有稳定底色。只含令牌与 transparent 关键字，无硬编码色值 */
 .hero__scrim {
   position: absolute;
   inset: 0;
@@ -591,7 +591,7 @@ onUnmounted(() => {
   transform: translateY(-50%);
 }
 
-/* 深色块上的文字一律用 §3.5 深色表面令牌 */
+/* 深色块上的文字一律用深色表面令牌 */
 .hero__title {
   font-size: var(--fs-4xl);
   font-weight: var(--fw-bold);
@@ -606,7 +606,7 @@ onUnmounted(() => {
   color: var(--dark-text-secondary);
 }
 
-/* 深色底上的评分用 --color-rating（金），12.41:1 达 AA（§3.6） */
+/* 深色底上的评分用 --color-rating（金），12.41:1 达 AA */
 .hero__score {
   margin-top: var(--space-8);
   font-size: var(--fs-5xl);
@@ -616,7 +616,7 @@ onUnmounted(() => {
 }
 
 /* CTA 是 <a>（router-link），白字压主色 5.58:1 达 AA。
-   hover / active 取 §3.7 状态映射：背景 light-3 / dark-2。 */
+   hover / active 取状态映射：背景 light-3 / dark-2。 */
 .hero__cta {
   display: inline-block;
   margin-top: var(--space-16);
@@ -661,15 +661,15 @@ onUnmounted(() => {
   cursor: pointer;
 }
 
-/* 键盘焦点必须可见（§9.1 Focus）——按钮清了默认外观，要显式补描边 */
+/* 键盘焦点必须可见（Focus）——按钮清了默认外观，要显式补描边 */
 .hero__dot:focus-visible {
   outline: 2px solid var(--el-color-primary);
   outline-offset: 2px;
 }
 
 /* 未选中的条用 --el-border-color-dark、选中用主色，并靠长度区分，
-   不只靠颜色传递「当前是哪一张」（§3.7）。
-   加宽取 §八 常规交互 200ms；颜色是微小变化，取 100ms ease-out。 */
+   不只靠颜色传递「当前是哪一张」。
+   加宽取常规交互 200ms；颜色是微小变化，取 100ms ease-out。 */
 .hero__dot__bar {
   width: 20px;
   height: 4px;
@@ -678,7 +678,7 @@ onUnmounted(() => {
   transition: width 200ms ease-in-out, background-color 100ms ease-out;
 }
 
-/* hover 取 §3.7 状态映射的背景态 light-3 */
+/* hover 取状态映射的背景态 light-3 */
 .hero__dot:hover .hero__dot__bar {
   background-color: var(--el-color-primary-light-3);
 }
@@ -689,7 +689,7 @@ onUnmounted(() => {
   background-color: var(--el-color-primary);
 }
 
-/* 按下反馈（§9.1 Active）排最后：任何一条被按下都走 dark-2，压过选中与 hover */
+/* 按下反馈（Active）排最后：任何一条被按下都走 dark-2，压过选中与 hover */
 .hero__dot:active .hero__dot__bar {
   background-color: var(--el-color-primary-dark-2);
 }
@@ -714,7 +714,7 @@ onUnmounted(() => {
 }
 
 /* 色条上压的是白字，底色必须是「承载文字」的主色（前台 #BF352D，5.58:1）。
-   --color-brand（前台 #ef4238）按 §3.2 只用于不承载文字的图形 / 大标题 —— 白字压它仅 3.81:1。 */
+   --color-brand（前台 #ef4238）只用于不承载文字的图形 / 大标题 —— 白字压它仅 3.81:1。 */
 .today-box__strip {
   display: flex;
   flex-shrink: 0;
@@ -740,9 +740,9 @@ onUnmounted(() => {
   padding: var(--space-4) 0;
 }
 
-/* 前台数据大字，§4.2 指定 --fs-5xl 给「评分 / 票房」。
+/* 前台数据大字，--fs-5xl 给「评分 / 票房」。
    nowrap 兜住「元」被折到第二行：36px 字在 208px 内容区里一折行，
-   刷新前后高度一变，整个数字就上下跳（规则 86）。 */
+   刷新前后高度一变，整个数字就上下跳。 */
 .today-box__amount {
   color: var(--el-text-color-primary);
   font-size: var(--fs-5xl);
@@ -761,7 +761,7 @@ onUnmounted(() => {
 
 /* 数字刚更新：一次性的颜色脉冲，让「刷新到了」看得见。
    取主色基色（前台 #BF352D，浅底仍达正文对比度）回落到默认文字色；
-   只在本组件 scoped 块引用，非共享关键帧，不进 global.css（规则 78）。 */
+   只在本组件 scoped 块引用，非共享关键帧，不进 global.css。 */
 .today-box__amount--fresh {
   animation: today-amount-flash 500ms ease-out;
 }
@@ -906,7 +906,7 @@ onUnmounted(() => {
   object-fit: cover;
 }
 
-/* 评分每行是「9.2 分」，含中文，故字重只能用 400 / 700（§4.4）。
+/* 评分每行是「9.2 分」，含中文，故字重只能用 400 / 700。
    文字色用白底评分色 --color-rating-text（4.68:1） */
 .rank-row__score {
   margin-top: var(--space-4);

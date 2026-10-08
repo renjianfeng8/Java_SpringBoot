@@ -15,7 +15,7 @@
         <div class="cinema-card__info">
           <h3 class="cinema-card__name">{{ cinema.name }}</h3>
 
-          <!-- 影院服务标签：用功能色，白字压其上均达 AA（规范 §3.3） -->
+          <!-- 影院服务标签：用功能色，白字压其上均达 AA -->
           <div class="cinema-card__tags">
             <span class="service-tag service-tag--refund">退票无忧</span>
             <span class="service-tag service-tag--promo">儿童优惠</span>
@@ -85,7 +85,7 @@ const load = () => {
     }
   }).catch(err => {
     // 网络与 5xx 那类失败的提示由 request.js 的响应拦截器给出，这里只落错误态，
-    // 否则同一次失败会弹两次（规范 §11.2）
+    // 否则同一次失败会弹两次
     console.error(err)
     data.error = true
   })

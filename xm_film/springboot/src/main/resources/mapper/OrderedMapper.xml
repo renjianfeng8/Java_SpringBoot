@@ -112,7 +112,7 @@
     <!-- 「已支付」的状态集合只有一处定义，供本文件三条聚合语句 <include>：
          countTodayPaidOrders / selectPaidRevenueByDay / selectTodayPaidRevenue。
          口径方向与 FilmMapper.filmRevenueJoin（票房聚合）一致 —— 新增或改变任一状态时
-         几处必须同步（Bug 规则 75）。写成片段而非各写一遍，是为了让「同源」由构建保证，
+         几处必须同步。写成片段而非各写一遍，是为了让「同源」由构建保证，
          而不是靠注释提醒。 -->
     <sql id="paidOrderStatuses">status IN ('待取票', '已取票')</sql>
 

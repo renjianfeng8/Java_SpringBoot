@@ -5,7 +5,7 @@
       正在加载影评...
     </div>
 
-    <!-- 2. 错误提示（影片 404 与请求失败同一文案，见规范 §11.2） -->
+    <!-- 2. 错误提示（影片 404 与请求失败同一文案） -->
     <div v-else-if="errorMsg" class="page-hint page-hint--error">
       <div>{{ errorMsg }}</div>
       <el-button class="page-hint__action" type="primary" @click="goBackToFilmList">返回影片列表</el-button>
@@ -13,7 +13,7 @@
 
     <!-- 3. 内容区 -->
     <div v-else>
-      <!-- 3.1 影片头部（深色横幅，与影片/影院详情页同款，规范 §3.5） -->
+      <!-- 3.1 影片头部（深色横幅，与影片/影院详情页同款） -->
       <div class="marks-hero">
         <div class="marks-hero__inner">
           <img :src="film.img" :alt="`${film.title}的海报`" class="marks-hero__img">
@@ -40,7 +40,7 @@
           </div>
         </div>
 
-        <!-- 列表三态：加载 / 失败（文案固定且与空态区分，§11.2） / 空 -->
+        <!-- 列表三态：加载 / 失败（文案固定且与空态区分） / 空 -->
         <div v-if="listLoading" class="marks-hint">正在加载评价...</div>
         <div v-else-if="listError" class="marks-hint marks-hint--error">数据加载失败，请稍后重试</div>
         <div v-else-if="!marks.list.length" class="marks-hint">暂无数据</div>
@@ -131,7 +131,7 @@ const { user, isAdmin, isCinema } = useAuth();
 // 路由参数（影片ID）
 const filmId = route.params.id;
 
-// 「取不到数据」的统一文案；失败提示由 request.js 的拦截器弹出，页面只落错误态（§11.2）
+// 「取不到数据」的统一文案；失败提示由 request.js 的拦截器弹出，页面只落错误态
 const LOAD_FAILED = '数据加载失败，请稍后重试';
 
 const loading = ref(false);       // 整页三态外壳（同时覆盖影片与评价两条请求）
@@ -332,7 +332,7 @@ onMounted(() => {
   margin-top: var(--space-16);
 }
 
-/* ---------- 3.1 影片头部（深色横幅，规范 §3.5） ---------- */
+/* ---------- 3.1 影片头部（深色横幅） ---------- */
 .marks-hero {
   background-color: var(--dark-bg-hero);
 }
@@ -363,7 +363,7 @@ onMounted(() => {
   font-weight: var(--fw-bold);
 }
 
-/* 深底上的评分金（12.41:1 以上，规范 §3.6 允许用于深底/图片叠加） */
+/* 深底上的评分金（12.41:1 以上，允许用于深底/图片叠加） */
 .marks-hero__score {
   margin-top: var(--space-12);
   font-size: var(--fs-lg);

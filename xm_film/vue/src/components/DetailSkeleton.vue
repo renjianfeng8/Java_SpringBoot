@@ -8,7 +8,7 @@
   wide：头图是横版的页面（影院详情）传 true —— 影院图取 10:7，与影片页的 2:3
   竖版海报形状不同，骨架必须跟着走，否则数据到位时首屏跳高。
 
-  纯装饰，故整块 aria-hidden；灰块不是数据，不违反「禁止用假数据填充」（规范 §11.2）。
+  纯装饰，故整块 aria-hidden；灰块不是数据，不违反「禁止用假数据填充」。
 -->
 <template>
   <div class="detail-skeleton" :class="{ 'detail-skeleton--wide': wide }" aria-hidden="true">

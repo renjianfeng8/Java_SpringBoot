@@ -97,7 +97,7 @@ onMounted(() => {
 .welcome-card span {
   font-size: var(--fs-md);
   color: var(--el-text-color-primary);
-  /* 中文文本按 §4.4 只能用 400 / 700 */
+  /* 中文文本只能用 400 / 700 */
   font-weight: var(--fw-bold);
 }
 

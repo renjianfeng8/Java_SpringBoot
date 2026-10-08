@@ -4,7 +4,7 @@
       <div class="card person-card">
         <h1 class="person-title">个人中心</h1>
         <!-- status-icon 打开「错误反馈三件套」的图标那一件；@submit.prevent 兜住原生提交，
-             回车由输入框上的 @keyup.enter 触发（只挂一处，避免一次回车发两次请求，规范 §9.3） -->
+             回车由输入框上的 @keyup.enter 触发（只挂一处，避免一次回车发两次请求） -->
         <el-form ref="formRef" :rules="rules" :model="formData" class="person-form" label-width="80px"
                  status-icon @submit.prevent>
           <el-form-item label="用户名" prop="username">
@@ -87,7 +87,7 @@ const updateUser = () => {
       request.put(API_PATHS.USERS, formData).then((res) => {
         if (res.code === "200") {
           ElMessage.success("更新成功");
-          // 登录态只能经 useAuth 变更（规则 76）：只写 storage 副本不更新内存里的
+          // 登录态只能经 useAuth 变更：只写 storage 副本不更新内存里的
           // user ref，顶栏的头像与用户名要等整页刷新才变。
           setUser({ ...user.value, ...formData });
         } else {
@@ -114,7 +114,7 @@ function saveAvatar(url) {
   formData.avatar = url
   request.put(API_PATHS.USERS, { id: formData.id, avatar: url }).then((res) => {
     if (res.code === '200') {
-      // 规则 76：登录态只经 useAuth 变更，顶栏头像才会立刻跟着变
+      // 登录态只经 useAuth 变更，顶栏头像才会立刻跟着变
       setUser({ ...user.value, avatar: url })
       ElMessage.success('头像已更新')
     } else {

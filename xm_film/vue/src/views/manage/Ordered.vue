@@ -144,7 +144,7 @@ function getRoomName(roomId) {
 
 const route = useRoute()
 
-/* 同 Cinema.vue：待办卡带 ?status=待取票 进来。watch 而非顶层读取，理由见规则 83。 */
+/* 同 Cinema.vue：待办卡带 ?status=待取票 进来。watch 而非顶层读取。 */
 watch(() => route.query.status, (status) => {
   if (status) searchForm.status = status
   onSearch()

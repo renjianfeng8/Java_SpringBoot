@@ -14,7 +14,7 @@ export function useFormDialog(crud, options = {}) {
     // 先清掉上一次 openEdit 留下的残留键：openEdit 把整行拷进 form，而这里只合默认值，
     // Object.assign 不删键。不清的话 form.id 会带着上一行的 id 一起提交，而
     // admin / area / type / notice / video 五张表的 insert 显式写 id，
-    // 「编辑 → 关闭 → 新增」就会撞主键冲突（规则 91）。
+    // 「编辑 → 关闭 → 新增」就会撞主键冲突。
     Object.keys(form).forEach((key) => {
       if (!(key in defaultForm)) delete form[key]
     })

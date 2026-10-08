@@ -122,7 +122,7 @@ const loading = reactive({
   mark: false,
 });
 
-// 失败必须与空区分（规范 §11.2）：请求挂了却渲染「暂无数据」，用户会以为库里确实没有，从而不去重试
+// 失败必须与空区分：请求挂了却渲染「暂无数据」，用户会以为库里确实没有，从而不去重试
 const error = reactive({
   boxOffice: false,
   mark: false,
@@ -130,7 +130,7 @@ const error = reactive({
 
 const typeText = formatFilmTypes;
 
-// 前三名用奖牌色，其余用中性底（规范 §3.6；名次同时由数字表达，不依赖颜色）
+// 前三名用奖牌色，其余用中性底（名次同时由数字表达，不依赖颜色）
 const rankBadgeClass = (index) =>
   index < 3 ? `rank-item__badge--top${index + 1}` : 'rank-item__badge--plain';
 

@@ -8,7 +8,7 @@ import lombok.NoArgsConstructor;
  * 一条评价在访问者眼中的样子。
  *
  * 刻意**不带 userId**：发送作者的 id 等于把"这条是不是我写的"下放给前端自己比对，
- * 这正是 BUG-040 的漏（/api/v1/orders/seats 曾直接下发他人订单号与 userId）。
+ * 这正是当初那处漏（/api/v1/orders/seats 曾直接下发他人订单号与 userId）。
  * 归属由后端算好，以 {@code mine} 布尔量下发；同理 liked 也是后端按访问者算好的。
  */
 @Data

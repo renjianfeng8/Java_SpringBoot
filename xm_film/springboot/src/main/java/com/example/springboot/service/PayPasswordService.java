@@ -58,7 +58,7 @@ public class PayPasswordService {
      * 写进库，而"写库"与"抛异常"如果在同一个事务里，异常会把刚写的计数一起回滚，
      * 错误次数永远记不下来、限次形同虚设 —— REQUIRES_NEW 也救不了这种自己抛自己回滚。
      * 所以这里的写法是：本方法在自己那个 REQUIRES_NEW 事务里写库、**正常返回**让它提交，
-     * 由调用方在它自己的事务里抛（Bug.md 规则 29）。
+     * 由调用方在它自己的事务里抛。
      *
      * @return {@code null} 表示校验通过；否则是调用方应当抛出的异常（错误码与提示都在里面）
      */
@@ -90,11 +90,11 @@ public class PayPasswordService {
      * 只验不写：设置页第一步「验证原支付密码」的闸门，供前端在两步之间过渡用。
      *
      * 走的是与支付、改密完全同一个 {@link #checkOldPassword}，因此失败照旧计数与锁定 ——
-     * 这条只验不写的路径不能变成一条不限次的试错通道（规则 93）。**它绝不写 pay_password**：
+     * 这条只验不写的路径不能变成一条不限次的试错通道。**它绝不写 pay_password**：
      * 第一步的通过只是 UI 闸门，真正的写仍由 {@link #changePayPassword} 在原码复验后完成。
      *
      * 注意本方法与 {@code checkOldPassword} 是同一个 bean 内的自调用，`REQUIRES_NEW` 会被
-     * 代理绕过（规则 92）。这里能成立是因为入口 {@code AccountController} 没有外层事务、
+     * 代理绕过。这里能成立是因为入口 {@code AccountController} 没有外层事务、
      * 计数靠自动提交落库 —— 不要把本方法挪进任何事务方法里调用。
      */
     public void verifyOldPassword(Integer userId, String rawOldPassword) {
@@ -122,7 +122,7 @@ public class PayPasswordService {
 
     /**
      * 登录密码比对。判定与 {@code UserService.login} / {@code updatePassword} 同口径：
-     * 先 BCrypt 比对，再退到明文相等（存量种子账号的密码是明文，见 data.sql）。
+     * 先 BCrypt 比对，再退到明文相等（存量种子账号的密码是明文）。
      * 重设与第一步的只验不写共用这一处，口径不会分叉。
      */
     private void checkLoginPassword(Integer userId, String rawLoginPassword) {

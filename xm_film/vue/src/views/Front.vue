@@ -25,7 +25,7 @@
       </div>
 
       <div class="front-header-right">
-        <!-- 搜索框带 aria-label：placeholder 一输入就消失，不构成可访问名称（规范 §9.3） -->
+        <!-- 搜索框带 aria-label：placeholder 一输入就消失，不构成可访问名称 -->
         <el-input v-model="searchKeyword" placeholder="请输入电影名称" aria-label="搜索电影名称"
                   class="search-input" @keyup.enter="handleSearch">
           <template #append>
@@ -213,7 +213,7 @@ const handleSearch = () => {
 </script>
 
 <style scoped>
-/* 前台外壳：消费端页面底色是白（规范 §6.2「前台页面背景 #ffffff」），
+/* 前台外壳：消费端页面底色是白（「前台页面背景 #ffffff」），
  * 而 body 默认取的是 --el-bg-color-page（灰）。所以在这里铺白，并让内容区撑满，
  * 短页面时页脚仍贴底。 */
 .front-container {
@@ -309,7 +309,7 @@ const handleSearch = () => {
   font-weight: var(--fw-bold);
 }
 
-/* 下划线是装饰（不承载文字），按 §3.2 取 --color-brand 的亮档 #ef4238 —— 与
+/* 下划线是装饰（不承载文字），取 --color-brand 的亮档 #ef4238 —— 与
  * 区块标题的短线（front-pages.scss .section-head::after）用同一条品牌强调语言。
  * 文字仍用 --el-color-primary：那是承载文字的档，两者不可互换。 */
 .nav-item.active::after {
@@ -323,7 +323,7 @@ const handleSearch = () => {
   border-radius: var(--el-border-radius-small);
 }
 
-/* 键盘焦点必须可见（§9.1 Focus） */
+/* 键盘焦点必须可见（Focus） */
 .nav-item:focus-visible {
   outline: 2px solid var(--el-color-primary);
   outline-offset: 2px;
@@ -496,7 +496,7 @@ const handleSearch = () => {
   color: var(--el-color-primary);
 }
 /* 登录 / 注册之间的分隔点：纯装饰，不承载信息。
- * 已加 aria-hidden 使其成为真正的"非文字装饰"，从而适用 §10.1 的装饰豁免；
+ * 已加 aria-hidden 使其成为真正的"非文字装饰"，从而适用装饰豁免；
  * 原用 --el-text-color-disabled 属语义误用（该元素并未禁用）。 */
 .header-divider {
   color: var(--el-text-color-placeholder);
@@ -507,7 +507,7 @@ const handleSearch = () => {
 
 /* ---------- 窄屏逐级收窄间距与搜索框基准宽，给导航让出空间 ----------
    媒体查询按视口宽度匹配：窗口 <1120px 时头部元素仍保持 1120px 宽，
-   但内部走最紧的一档规则，因此不会溢出也不会互相挤压 */
+   但内部走最紧的一档，因此不会溢出也不会互相挤压 */
 @media (max-width: 1400px) {
   .front-header {
     --nav-gap: 14px;
