@@ -3,8 +3,6 @@ package com.example.springboot.controller;
 import com.example.springboot.common.Result;
 import com.example.springboot.dto.request.TicketRedeemRequest;
 import com.example.springboot.service.OrderedService;
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -31,7 +29,6 @@ import org.springframework.web.bind.annotation.RestController;
  *
  * 新增任何其它匿名写端点都必须逐条回答上面五个问题，否则不要往白名单里加。
  */
-@Tag(name = "取票", description = "取票大厅自助核销（匿名可访问）")
 @RestController
 @RequestMapping("/api/v1/tickets")
 public class TicketController {
@@ -42,8 +39,6 @@ public class TicketController {
         this.orderedService = orderedService;
     }
 
-    @Operation(summary = "核销取票码",
-            description = "凭取票码出票，订单由 待取票 流转为 已取票；匿名可访问，码即凭证")
     @PostMapping("/redeem")
     public Result redeem(@Valid @RequestBody TicketRedeemRequest request) {
         return Result.success(orderedService.redeemByCode(request.getCode()));

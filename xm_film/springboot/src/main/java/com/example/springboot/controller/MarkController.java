@@ -7,8 +7,6 @@ import com.example.springboot.dto.request.MarkLikeRequest;
 import com.example.springboot.entity.Mark;
 import com.example.springboot.exception.CustomException;
 import com.example.springboot.service.MarkService;
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.context.request.RequestContextHolder;
@@ -16,7 +14,6 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.util.List;
 
-@Tag(name = "评价管理", description = "用户评价 CRUD（写操作限定归属：仅 USER 可发表，非 ADMIN 只能改删自己的评价）")
 @RestController
 @RequestMapping("/api/v1/marks")
 public class MarkController extends BaseController<Mark> {
@@ -28,7 +25,6 @@ public class MarkController extends BaseController<Mark> {
         this.markService = markService;
     }
 
-    @Operation(summary = "发表评价", description = "评价人取自 JWT，忽略请求体中的 userId")
     @Override
     @PostMapping
     public Result add(@RequestBody Mark mark) {
@@ -39,7 +35,6 @@ public class MarkController extends BaseController<Mark> {
         return Result.success();
     }
 
-    @Operation(summary = "修改评价", description = "仅本人或 ADMIN；评价人与目标影片不可改")
     @Override
     @PutMapping
     public Result update(@RequestBody Mark mark) {
@@ -50,7 +45,6 @@ public class MarkController extends BaseController<Mark> {
         return Result.success();
     }
 
-    @Operation(summary = "删除评价", description = "仅本人或 ADMIN")
     @Override
     @DeleteMapping("/{id}")
     public Result delete(@PathVariable Integer id) {
@@ -59,7 +53,6 @@ public class MarkController extends BaseController<Mark> {
         return Result.success();
     }
 
-    @Operation(summary = "批量删除评价", description = "仅本人或 ADMIN")
     @Override
     @DeleteMapping("/batch")
     public Result deleteBatch(@RequestBody List<Integer> ids) {
@@ -70,7 +63,6 @@ public class MarkController extends BaseController<Mark> {
         return Result.success();
     }
 
-    @Operation(summary = "按影片查询评价", description = "公开只读；liked/mine 由后端按 JWT 计算，匿名恒 false")
     @GetMapping("/by-film")
     public Result listByFilm(@RequestParam Integer filmId,
                              @RequestParam(defaultValue = "1") Integer pageNum,
@@ -78,7 +70,6 @@ public class MarkController extends BaseController<Mark> {
         return Result.success(markService.listByFilm(filmId, currentUserId(), currentRole(), pageNum, pageSize));
     }
 
-    @Operation(summary = "点赞/取消点赞", description = "仅 USER；liked 为显式意图，重复调用幂等")
     @PutMapping("/{id}/like")
     public Result like(@PathVariable Integer id, @RequestBody MarkLikeRequest body) {
         requireUser("点赞");
