@@ -94,6 +94,9 @@ export const ACCOUNT_API = {
   // 支付密码的两个写入口：CHANGE 验原支付密码，RESET 验登录密码（首次设置与忘记重设同一路径）
   PAY_PASSWORD: `${API_PATHS.ACCOUNT}/pay-password`,
   PAY_PASSWORD_RESET: `${API_PATHS.ACCOUNT}/pay-password/reset`,
+  // 两个只验不写的入口，供设置页第一步的「验证身份」用（写仍走上面对应的那个端点）
+  VERIFY_OLD_PASSWORD: `${API_PATHS.ACCOUNT}/pay-password/verify-old`,
+  VERIFY_LOGIN_PASSWORD: `${API_PATHS.ACCOUNT}/pay-password/verify-login`,
 }
 
 /** 充值单据：提交申请不改余额，回调成功才入账 */
