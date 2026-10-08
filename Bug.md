@@ -1097,8 +1097,8 @@
   4. `front/Person.vue` 补头像上传，并把保存后的状态变更从 `setStoredUser` 改为 `useAuth().setUser`（规则 76），登录态单一来源语义得以恢复。头像在该页**上传成功即落库**，不等用户再点「更新个人信息」—— 那页的按钮是整表单提交，头像若也等它，用户传完就离开会以为已经存了。落库只 PUT `avatar` 一个字段（整体 PUT 会把表单里尚未校验、尚未保存的其他改动一并写库），失败则把表单回退到服务端真值，不在页面上留一个"看着像已生效"的假象
   5. 顺带删掉 `front/Person.vue` `onMounted` 里包裹 `getStoredUser()` 的 try/catch —— `getStoredUser` 自己吞解析异常并返回 `null`，那段 catch 不可达
 - 相关文件: `xm_film/vue/src/views/manage/User.vue`、`xm_film/vue/src/views/manage/Admin.vue`、`xm_film/vue/src/views/manage/Cinema.vue`、`xm_film/vue/src/views/front/Person.vue`、`xm_film/vue/src/utils/upload.js`、`CLAUDE.md`、`Bug.md`
-- 提交记录: （未提交）
-- 状态: 已修复（待提交）
+- 提交记录: `82f1e7e1`（本轮修复，含本条目）
+- 状态: 已修复
 
 ### BUG-062: 全仓 el-upload 上传均 401，且失败完全静默
 
@@ -1115,8 +1115,8 @@
   3. 明确不采用"把 `/api/v1/files/upload` 加进 `excludePathPatterns`"的修法 —— 那等于开放匿名任意写文件（规则 33）
 - 验证: 不带 Authorization 实测 `POST http://localhost:9090/api/v1/files/upload` 返回 `401 {"code":"401","msg":"登录已过期，请重新登录"}`；"el-upload 只从 `headers` prop 取头""非 2xx 走 `on-error`""getter 每次发请求时求值"三条由 element-plus 源码确认（`ajax.mjs` 第 51 / 56-60 行）；改后 `npm run build` 通过，`grep` 核对 10 处 `el-upload` 全部带 `:headers` 与 `:on-error`。**未完成**: 带 Bearer 令牌的正向验证（应放行）未做 —— 本机 9090 在验证过程中已停止监听（会话开始时 `/api/v1/health` 还是 200，期间只发过只读探测与 `npm run build`，未发过任何终止命令）；浏览器行为未验证（UI 目视由用户自查）
 - 相关文件: `xm_film/vue/src/utils/upload.js`、`xm_film/vue/src/views/manage/Cinema.vue`、`xm_film/vue/src/views/manage/Actor.vue`、`xm_film/vue/src/views/manage/Film.vue`、`xm_film/vue/src/views/manage/Video.vue`、`xm_film/vue/src/views/manage/User.vue`、`xm_film/vue/src/views/manage/Admin.vue`、`xm_film/vue/src/views/front/Person.vue`
-- 提交记录: （未提交）
-- 状态: 已修复（待提交）
+- 提交记录: `82f1e7e1`（本轮修复，含本条目）
+- 状态: 已修复
 
 ### BUG-063: 先编辑后新增，表单带着上一行的主键 id 一起提交
 
@@ -1129,5 +1129,5 @@
 - 解决方案: 在 `useFormDialog.openAdd` 里先删掉不在 `defaultForm` 中的残留键，再合默认值。一处改动覆盖全部 13 个使用方，且对将来新增的页面自动生效 —— 不必指望每个页面都记得在 `defaultForm` 里补一个 `id: null` 之类的占位。`manage/Cinema.vue` 用残留 `form.id` 门控「审核状态」的显示错位是同一根因的另一副面孔，一并改判 `isEdit`（见 BUG-061）
 - 验证: `npm run build` 通过。**未完成**: 主键冲突既未实测复现、也未实测验证已消除 —— 后端 9090 在本次会话中已停止监听；结论由 SQL 列清单与 `Object.assign` 语义推导。另记一句现状: `useFormDialog` 没有单测，本次未新增（本仓无前端测试基建）
 - 相关文件: `xm_film/vue/src/composables/useFormDialog.js`、`xm_film/vue/src/views/manage/Admin.vue`、`xm_film/vue/src/views/manage/Area.vue`、`xm_film/vue/src/views/manage/Type.vue`、`xm_film/vue/src/views/manage/Notice.vue`、`xm_film/vue/src/views/manage/Video.vue`、`xm_film/vue/src/views/manage/Cinema.vue`、`Bug.md`
-- 提交记录: （未提交）
-- 状态: 已修复（待提交）
+- 提交记录: `82f1e7e1`（本轮修复，含本条目）
+- 状态: 已修复
