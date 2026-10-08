@@ -181,8 +181,8 @@ const userName = computed(() => user.value?.username || '')
 // 游客也要看得到（点击走登录引导），只对后台角色隐藏 —— 这些路由的 meta.roles 只认 USER
 const showUserEntries = computed(() => !isAdmin.value && !isCinema.value)
 
-// 头像与其余视图同为直接绑定：库里存的是 `/files/...` 相对路径，开发经 vite 的 /files 代理、
-// 生产同源，两者都能命中。**不要在这里拼 API_BASE_URL** —— 同源（`/`）时会拼出 `//files/...`，
+// 头像与其余视图同为直接绑定：库里存的是 `/files/...` 相对路径，开发经 vite 的 /files 代理，
+// 与同源情形都能命中。**不要在这里拼 API_BASE_URL** —— 同源（`/`）时会拼出 `//files/...`，
 // 浏览器按协议相对 URL 解析，反而指向不存在的 host（Back.vue / Manage.vue 亦不拼）。
 const userAvatar = computed(() => {
   return user.value?.avatar || null
