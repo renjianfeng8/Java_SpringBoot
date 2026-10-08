@@ -164,6 +164,17 @@
         SELECT COUNT(*) FROM ordered WHERE status = #{status}
     </select>
 
+    <!-- 大盘统计：订单状态分布（由 ordered 实时计数）。
+         **刻意不 include paidOrderStatuses** —— 那个片段是「已支付」口径
+         （待取票 + 已取票），而这里是全部五态的结构，过滤掉未支付 / 已取消 / 已退票
+         会让这张卡只剩两种颜色。别把它「顺手统一」回去。
+         未出现的状态不产生行，由前端按 ORDER_STATUS_OPTIONS 补 0。 -->
+    <select id="countGroupByStatus" resultType="java.util.Map">
+        SELECT status AS name, COUNT(*) AS value
+        FROM ordered
+        GROUP BY status
+    </select>
+
     <!-- 删除守卫引用计数 -->
     <select id="countByFilmId" resultType="int">
         SELECT COUNT(*) FROM ordered WHERE film_id = #{filmId}

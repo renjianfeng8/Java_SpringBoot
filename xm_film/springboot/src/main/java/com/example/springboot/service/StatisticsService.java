@@ -54,6 +54,9 @@ public class StatisticsService {
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("cinemaStatus", cinemaStatus);
         result.put("filmType", filmMapper.countGroupByType());
+        // 三组分布同构：都是「维度值 → 计数」的原样分组，后端不派生、不排序、
+        // 不补零，给什么维度值就是什么，由前端按自己的枚举补全并着色。
+        result.put("orderStatus", orderedMapper.countGroupByStatus());
         // 统计时刻取自今日票房那次查询：同一次观测，页面上只有一个「今天」
         result.put("updatedAt", today.get("updatedAt"));
         result.put("summary", summary(today, cinemaStatus));

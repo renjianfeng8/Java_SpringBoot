@@ -70,22 +70,41 @@
     <section class="dashboard__section" aria-label="分布拆解">
       <div class="chart-grid">
         <div class="card chart-card">
-          <h3 class="chart-card__title">影院审核进度</h3>
-          <div v-if="!cinemaTotal" class="empty-hint">
-            {{ failed.overview ? '数据加载失败，请稍后重试' : '暂无数据' }}
-          </div>
-          <div v-else class="audit">
-            <el-progress :percentage="approvedPercent" status="success" :stroke-width="12" :show-text="false" />
-            <p class="audit__percent">{{ approvedPercent }}%</p>
-            <p class="audit__detail">
-              共 {{ cinemaTotal }} 家 · 已审核 {{ approvedCount }} · 未审核 {{ overview.summary.pendingCinemas }}
-            </p>
+          <h3 class="chart-card__title">订单状态分布</h3>
+          <div v-if="failed.overview && !orderTotal" class="empty-hint">数据加载失败，请稍后重试</div>
+          <div v-else-if="!orderTotal && loading.overview" class="chart-card__skeleton"><el-skeleton :rows="4" animated /></div>
+          <div v-else-if="!orderTotal" class="empty-hint">暂无数据</div>
+          <div v-else class="status-card">
+            <div class="status-ring">
+              <!-- 画布只画图形：环内的总计与下方的图例都是真 DOM 文字，
+                   画布上不再画第二份（canvas 里的字选不中也读不出来），故整体对读屏隐藏 -->
+              <div ref="orderStatusChart" class="status-ring__chart" aria-hidden="true"></div>
+              <!-- 环内的总计就是各段占比的分母，让读者不必自己去加那五行 -->
+              <div class="status-ring__center">
+                <span class="status-ring__total">{{ orderTotal }}</span>
+                <span class="status-ring__unit">总计（笔）</span>
+              </div>
+            </div>
+            <ul class="status-list">
+              <li
+                v-for="row in orderStatusRows"
+                :key="row.name"
+                class="status-row"
+                :class="`status-row--${getOrderStatusType(row.name)}`"
+              >
+                <span class="status-row__dot" aria-hidden="true"></span>
+                <span class="status-row__name">{{ row.name }}</span>
+                <span class="status-row__value">{{ row.value }} 笔</span>
+                <span class="status-row__percent">{{ row.percent.toFixed(1) }}%</span>
+              </li>
+            </ul>
           </div>
         </div>
 
         <div class="card chart-card">
           <h3 class="chart-card__title">电影类型分布</h3>
           <div v-if="failed.overview && !overview.filmType.length" class="empty-hint">数据加载失败，请稍后重试</div>
+          <div v-else-if="!overview.filmType.length && loading.overview" class="chart-card__skeleton"><el-skeleton :rows="4" animated /></div>
           <div v-else-if="!overview.filmType.length" class="empty-hint">暂无数据</div>
           <div v-else ref="filmTypeChart" class="chart-card__body"></div>
         </div>
@@ -149,18 +168,20 @@ import { Refresh, Money, Tickets, User, OfficeBuilding, CreditCard, VideoCamera 
 // formatBoxOffice 给「累计票房」（榜单），0 表示该片还没有收入，渲染「暂无数据」。
 // 两者刻意不混用 —— 见 utils/format.js 里两个函数各自的注释。
 import { formatYuan, formatBoxOffice, formatScore } from "@/utils/format.js";
-import { FILM_API, STATISTICS_API } from "@/constants";
+import { FILM_API, STATISTICS_API, ORDER_STATUS_OPTIONS, getOrderStatusType } from "@/constants";
 import * as echarts from 'echarts/core';
-import { BarChart, LineChart } from 'echarts/charts';
+import { BarChart, LineChart, PieChart } from 'echarts/charts';
 import { GridComponent, TooltipComponent } from 'echarts/components';
 import { CanvasRenderer } from 'echarts/renderers';
 
-// 只注册用到的：此前那份还注册了 PieChart 与 LabelLayout（供饼图）。
-// 饼图换成 el-progress 后两者都不再进产物。
-// 想核对 pie 是否真的被摇掉，**不能**用 grep "pie" —— ECharts 的 lang 字典
-// （typeNames）与事件分发里始终有 "pie" 字样，与注册了哪些图表无关。
-// 判据是 pie 专有的实现符号在不在，例如 padAngle / avoidLabelOverlap。
-echarts.use([BarChart, LineChart, GridComponent, TooltipComponent, CanvasRenderer]);
+// 只注册用到的三种图表：折线（票房趋势）/ 横向条（影片类型）/ 环形（订单状态分布）。
+// PieChart 是被「请回来」的 —— 大盘早先用饼图，重构时换成 el-progress 顺手把它摇掉了；
+// 订单状态分布改回环形后它重新进场。LabelLayout 仍不注册：那是给 labelLayout 回调用的，
+// 本项目不开图表标签（文字一律由 DOM 承担），用不上。
+// 想核对某个图表类型在不在产物里，**不能**用 grep 图表名 —— ECharts 的 lang 字典
+// （typeNames）与事件分发里始终有 "pie" 这类字样，与注册了哪些图表无关。
+// 判据是类型专有的实现符号，例如 pie 的 padAngle。
+echarts.use([BarChart, LineChart, PieChart, GridComponent, TooltipComponent, CanvasRenderer]);
 
 /* 刷新反馈的最短展示时长：本机聚合查询几十毫秒就返回，不兜底的话转圈一闪而过，
    用户无从确认「点过了」（规则 86）。与前台 front/Home.vue 取同一个值。 */
@@ -182,6 +203,7 @@ const overview = reactive({
   summary: null as null | Record<string, any>,
   cinemaStatus: [] as Array<{ name: string; value: number }>,
   filmType: [] as Array<{ name: string; value: number }>,
+  orderStatus: [] as Array<{ name: string; value: number }>,
   revenueTrend: [] as Array<{ date: string; revenue: number; orders: number }>,
   updatedAt: '',
 });
@@ -194,6 +216,7 @@ const markTop = ref<any[]>([]);
 
 const trendChart = ref<HTMLElement | null>(null);
 const filmTypeChart = ref<HTMLElement | null>(null);
+const orderStatusChart = ref<HTMLElement | null>(null);
 
 // ECharts 用 canvas 渲染，不解析 CSS 变量，只能在运行期把令牌值读出来（规范 §3.7）
 const cssVar = (name: string, fallback = '') =>
@@ -203,16 +226,31 @@ const updatedTime = computed(() =>
   overview.updatedAt.length >= 19 ? overview.updatedAt.slice(11, 19) : '—'
 );
 
-/* 影院总数与已审核数都从同一份分组结果派生 —— 后端已经算好，前端不再取第二次 */
-const cinemaTotal = computed(() =>
-  overview.cinemaStatus.reduce((sum, row) => sum + Number(row.value), 0)
-);
+/* 已审核数从分组结果派生 —— 后端已经算好，前端不再取第二次。
+   影院总数不再在这里求和：它唯一的消费者是那张百分比卡，总数本身由
+   summary.totalCinemas 给出（后端同一份分组派生），前端再算一遍是对同一事实的第二种口径。 */
 const approvedCount = computed(() =>
   Number(overview.cinemaStatus.find((row) => row.name === APPROVED)?.value ?? 0)
 );
-const approvedPercent = computed(() =>
-  cinemaTotal.value ? Math.round((approvedCount.value / cinemaTotal.value) * 100) : 0
+
+/* 占比的分母 = 五态之和。与环上的扇区同源：同一份分组结果既画环又算占比，
+   两个数字永远对得上；基准显式写在卡脚上，不另发一次 COUNT（规则 89）。 */
+const orderTotal = computed(() =>
+  overview.orderStatus.reduce((sum, row) => sum + Number(row.value), 0)
 );
+
+/* 订单状态分布的行。行序与配色都从 ORDER_STATUS_OPTIONS 派生 —— 它的键序就是订单页
+   状态筛选下拉的顺序，颜色查同一张 ORDER_STATUS_MAP，于是这张卡、订单表格里的 el-tag、
+   筛选下拉三处不会各走各的。
+   GROUP BY 不返回没有订单的状态，这里补 0：图例的五行在任何数据下都稳定，
+   不会因为某个状态清零就少一行、让读者以为系统里不存在该状态。 */
+const orderStatusRows = computed(() => {
+  const total = orderTotal.value;
+  return ORDER_STATUS_OPTIONS.map((name) => {
+    const value = Number(overview.orderStatus.find((row) => row.name === name)?.value ?? 0);
+    return { name, value, percent: total ? (value / total) * 100 : 0 };
+  });
+});
 
 /**
  * 环比。基准是趋势的末点（= 昨天），不另发请求：同一份趋势数据既画折线又算环比，
@@ -289,6 +327,7 @@ const loadOverview = async () => {
       overview.summary = d.summary || null;
       overview.cinemaStatus = d.cinemaStatus || [];
       overview.filmType = d.filmType || [];
+      overview.orderStatus = d.orderStatus || [];
       overview.revenueTrend = d.revenueTrend || [];
       overview.updatedAt = d.updatedAt || '';
       failed.overview = false;
@@ -420,15 +459,58 @@ const initFilmTypeChart = () => {
   }, true);
 };
 
+/* 订单状态分布：环形图（甜甜圈）+ DOM 图例。
+   配色只可能来自令牌，而 canvas 不解析 CSS 变量，只能在运行期把值读出来（§3.7）；
+   状态 → 令牌名复用 constants 的 ORDER_STATUS_MAP，与图例色点、订单表格的 el-tag 同色。
+   环内总计与图例都用 DOM 写，画布上不开标签：一张环形图的结论全在文字里，
+   而 canvas 的文字选不中也读不出来，留给读屏用户的就只剩一片空白。 */
+const initOrderStatusChart = () => {
+  const el = orderStatusChart.value;
+  if (!el) return;
+  echarts.getInstanceByDom(el)?.dispose();
+
+  const rows = orderStatusRows.value;
+  const chart = echarts.init(el);
+
+  chart.setOption({
+    tooltip: {
+      trigger: 'item',
+      formatter: (params: any) =>
+        `${params.name}<br/>${params.value} 笔<br/>占比 ${Number(params.percent).toFixed(1)}%`,
+    },
+    series: [
+      {
+        type: 'pie',
+        radius: ['62%', '92%'],
+        center: ['50%', '50%'],
+        // 不开图表标签（含引导线）：文字一律由 DOM 给，画布上再画一份既不可读又重复
+        label: { show: false },
+        labelLine: { show: false },
+        // 扇区之间留一道卡底色的缝：待支付（warning）与已退票（danger）同属橙红，
+        // 单靠色相不足以分段，缝隙让每段的边界始终明确
+        itemStyle: { borderColor: cssVar('--el-bg-color', '#ffffff'), borderWidth: 2 },
+        // 悬停把当前扇区弹出一小段：环不大，这是唯一能把「这是哪一段」讲清楚的反馈
+        emphasis: { scale: true, scaleSize: 6 },
+        data: rows.map((row) => ({
+          name: row.name,
+          value: row.value,
+          itemStyle: { color: cssVar(`--el-color-${getOrderStatusType(row.name)}`) },
+        })),
+      },
+    ],
+  }, true);
+};
+
 /* 唯一的初始化路径：数据落位 → watch 触发 → 建图。
    页面挂载时不再单独调一次 —— 那样每次加载都会初始化两遍（旧实现的冗余，
    见 前端规范待办.md T-11）。空态时容器被 v-if 摘掉、ref 为 null，两函数各自挡掉。 */
 watch(
-  [() => overview.revenueTrend, () => overview.filmType],
+  [() => overview.revenueTrend, () => overview.filmType, () => overview.orderStatus],
   async () => {
     await nextTick();
     initTrendChart();
     initFilmTypeChart();
+    initOrderStatusChart();
   },
   { deep: true }
 );
@@ -436,6 +518,7 @@ watch(
 const handleResize = () => {
   if (trendChart.value) echarts.getInstanceByDom(trendChart.value)?.resize();
   if (filmTypeChart.value) echarts.getInstanceByDom(filmTypeChart.value)?.resize();
+  if (orderStatusChart.value) echarts.getInstanceByDom(orderStatusChart.value)?.resize();
 };
 
 onMounted(() => {
@@ -447,7 +530,7 @@ onMounted(() => {
 // 那段 DOM 已经不是页面的一部分，实例却继续挂着。
 onUnmounted(() => {
   window.removeEventListener('resize', handleResize);
-  [trendChart.value, filmTypeChart.value].forEach((el) => {
+  [trendChart.value, filmTypeChart.value, orderStatusChart.value].forEach((el) => {
     if (el) echarts.getInstanceByDom(el)?.dispose();
   });
 });
@@ -641,27 +724,124 @@ onUnmounted(() => {
   margin-left: auto;
 }
 
-/* ---------- 影院审核进度 ---------- */
+/* ---------- 订单状态分布 ---------- */
 
-.audit {
+/* 环形居中、图例在下通栏。不并排放：并排时环形与图例要分那点卡片宽，
+   图例的定宽列（笔数 / 占比）一挤就先塌，而上下排布让图例拿到整幅卡宽。
+   flex-grow 而不是写死高度：同排那张卡的内容自带固定高度（.chart-card__body 的 320px），
+   栅格把两张卡拉成等高，这里填满标题之下剩下的空间 —— 于是 320px 只需写在它的归属处。 */
+.status-card {
   display: flex;
+  flex: 1 1 auto;
   flex-direction: column;
-  gap: var(--space-12);
+  align-items: center;
+  gap: var(--space-16);
 }
 
-/* 百分比是这一块的主指标，取 28px 档与 KPI 一致；数字非中文，可用等宽数字 */
-.audit__percent {
-  margin: 0;
-  font-size: var(--fs-3xl);
+.status-ring {
+  position: relative;
+  flex-shrink: 0;
+  width: 160px;
+  height: 160px;
+}
+
+.status-ring__chart {
+  width: 100%;
+  height: 100%;
+}
+
+/* 环内的总计，叠在画布上：环心是空的不可能挡住图形，故这里不算「压淡层」；
+   pointer-events: none 把鼠标放回画布，别把环心的悬停吃掉。 */
+.status-ring__center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+  pointer-events: none;
+}
+
+/* 主数字取 24px 档：环心直径约 100px，28px 档会顶到内圈上 */
+.status-ring__total {
+  font-size: var(--fs-2xl);
   font-weight: var(--fw-bold);
+  line-height: var(--lh-loose);
   color: var(--el-text-color-primary);
   font-variant-numeric: tabular-nums;
 }
 
-.audit__detail {
-  margin: 0;
-  font-size: var(--fs-base);
+.status-ring__unit {
+  font-size: var(--fs-xs);
   color: var(--el-text-color-regular);
+}
+
+/* auto 基准而不是 0 基准：等高时靠 space-evenly 把五行摊开，内容量本身撑得住时
+   也不会被压塌（0 基准下这一列的高度完全由剩余空间决定）。
+   width: 100% 抵消父级的 align-items: center —— 否则这一列会缩到内容宽，
+   定宽列也就失去了「五行右对齐成一条竖线」的效果。 */
+.status-list {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  justify-content: space-evenly;
+  gap: var(--space-8);
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* 局部令牌：状态 → 颜色。类名取自 ORDER_STATUS_MAP 的 el-tag type，
+   故这五个类与订单表格里的标签色出自同一张表，不会各自漂移（§11.1 局部令牌）。 */
+.status-row--primary { --status-color: var(--el-color-primary); }
+.status-row--success { --status-color: var(--el-color-success); }
+.status-row--warning { --status-color: var(--el-color-warning); }
+.status-row--danger  { --status-color: var(--el-color-danger); }
+.status-row--info    { --status-color: var(--el-color-info); }
+
+.status-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-12);
+}
+
+/* 色点把图例行与环上那个扇区对应起来 —— 承载信息，不算装饰，
+   故取功能色基色（白底 4.56:1 ~ 5.46:1，过 §10.1 的 3:1）。 */
+.status-row__dot {
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: var(--el-border-radius-circle);
+  background-color: var(--status-color);
+}
+
+/* 状态名是这一行唯一的弹性列；窄到放不下时省略号收尾，而不是把定宽的两列挤走 */
+.status-row__name {
+  flex: 1;
+  min-width: 0;
+  color: var(--el-text-color-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 笔数与占比各占一列定宽：五行的小数点与单位成一条竖线，扫一眼就能比大小 */
+.status-row__value {
+  flex-shrink: 0;
+  width: 64px;
+  text-align: right;
+  color: var(--el-text-color-regular);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 占比是这一行的结论，比笔数重一档 */
+.status-row__percent {
+  flex-shrink: 0;
+  width: 56px;
+  text-align: right;
+  color: var(--el-text-color-primary);
   font-variant-numeric: tabular-nums;
 }
 

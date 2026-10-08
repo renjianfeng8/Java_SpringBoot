@@ -84,7 +84,7 @@ project_02/
 | 今日票房 | `OrderedMapper.selectTodayPaidRevenue` 按 `pay_time` 取日，**唯一实现**；两个消费者：`GET /api/v1/films/box-office/today`（匿名只读，前台用）与 `GET /api/v1/statistics/overview` 的 `summary.todayRevenue`（ADMIN，后台首页用） |
 | 影片评分 | `mark.score`；`film.score` 纯派生（`MarkService` → `recalculateScore`），无评价为 NULL |
 | 账户余额 | `user.balance`；`fund_flow` 只增审计副本 |
-| 后台大盘 | `StatisticsController` → `GET /api/v1/statistics/overview`（ADMIN），`GROUP BY` 实时聚合。两组分布之外还有 `summary`（计数，影院总数 / 待审核数由 `cinemaStatus` 派生不另取数）与 `revenueTrend`（近 7 个**完整日**，截至昨日，无销售的日期补 0） |
+| 后台大盘 | `StatisticsController` → `GET /api/v1/statistics/overview`（ADMIN），`GROUP BY` 实时聚合。三组分布（`cinemaStatus` · `filmType` · `orderStatus`，均为「维度值 → 计数」原样分组，后端不排序不补零，由前端按自己的枚举补全着色）之外还有 `summary`（计数，影院总数 / 待审核数由 `cinemaStatus` 派生不另取数）与 `revenueTrend`（近 7 个**完整日**，截至昨日，无销售的日期补 0） |
 
 ### 状态机
 
@@ -161,7 +161,7 @@ project_02/
 | `/api/v1/marks/by-film` | GET | 某片评价分页（赞数降序 → id 降序）`{total, reviewable, my, list}`，匿名可读 |
 | `/api/v1/marks/{id}/like` | PUT | 点赞 / 取消 `{liked}`，仅 USER，幂等 |
 | `/api/v1/cinemas/page` | GET | 影院分页；非管理员仅 `已审核` |
-| `/api/v1/statistics/overview` | GET | 后台大盘，仅 ADMIN（含 summary 计数与近 7 日趋势） |
+| `/api/v1/statistics/overview` | GET | 后台大盘，仅 ADMIN（含三组分布、summary 计数与近 7 日趋势） |
 | `/api/v1/tickets/redeem` | POST | 取票核销 `{code}`，免登录 |
 | `/api/v1/files/upload` | POST | 文件上传 |
 
