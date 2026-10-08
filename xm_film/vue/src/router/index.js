@@ -53,6 +53,8 @@ const router = createRouter({
         { path: 'buyTicket', meta: { requiresAuth: true, roles: ['USER'], name: '购票' }, component: () => import('../views/front/BuyTicket.vue') },
         { path: 'person', meta: { requiresAuth: true, roles: ['USER'], name: '个人中心' }, component: () => import('../views/front/Person.vue') },
         { path: 'password', meta: { requiresAuth: true, roles: ['USER'], name: '修改密码' }, component: () => import('../views/front/Password.vue') },
+        // 支付密码：设置 / 修改 / 忘记重设三态同页，余额支付的前置条件
+        { path: 'payPassword', meta: { requiresAuth: true, roles: ['USER'], name: '支付密码' }, component: () => import('../views/front/PayPassword.vue') },
         { path: 'movie', meta: { guest: true, name: '电影列表' }, component: () => import('../views/front/Movie.vue') },
         { path: 'cinema', meta: { guest: true, name: '影院列表' }, component: () => import('../views/front/Cinema.vue') },
         { path: 'rank', meta: { guest: true, name: '排行榜' }, component: () => import('../views/front/Rank.vue') },

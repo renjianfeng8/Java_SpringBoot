@@ -5,6 +5,7 @@ import com.example.springboot.common.Result;
 import com.example.springboot.common.enums.ErrorCode;
 import com.example.springboot.common.enums.PayResult;
 import com.example.springboot.dto.request.OrderCreateRequest;
+import com.example.springboot.dto.request.OrderPayRequest;
 import com.example.springboot.entity.Ordered;
 import com.example.springboot.exception.CustomException;
 import com.example.springboot.service.OrderedService;
@@ -88,8 +89,9 @@ public class OrderedController extends BaseController<Ordered> {
     }
 
     @PutMapping("/{id}/pay")
-    public Result pay(@PathVariable Integer id) {
-        if (orderedService.payOrder(id, currentRole(), currentUserId()) == PayResult.TIMEOUT_CANCELLED) {
+    public Result pay(@PathVariable Integer id, @Valid @RequestBody OrderPayRequest request) {
+        if (orderedService.payOrder(id, currentRole(), currentUserId(), request.getPayPassword())
+                == PayResult.TIMEOUT_CANCELLED) {
             // 超时取消必须已落库，因此服务层不抛异常回滚，由此处翻译成业务错误返回客户端
             return Result.error(ErrorCode.BUSINESS_CONFLICT.code(), "支付超时，订单已自动取消");
         }

@@ -16,6 +16,7 @@ import com.example.springboot.mapper.OrderedMapper;
 import com.example.springboot.mapper.RecordMapper;
 import com.example.springboot.mapper.RoomMapper;
 import com.example.springboot.service.OrderedService;
+import com.example.springboot.service.PayPasswordService;
 import com.example.springboot.service.WalletService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -70,6 +71,12 @@ class OrderedServiceTest {
 
     @MockBean
     WalletService walletService;
+
+    @MockBean
+    PayPasswordService payPasswordService;
+
+    /** 支付密码只在服务里被原样转交给 PayPasswordService 校验，测试里给个定值即可 */
+    private static final String PAY_PASSWORD = "123456";
 
     // ========== 反向用例 ==========
 
@@ -312,7 +319,7 @@ class OrderedServiceTest {
         Ordered ordered = pendingPaymentOrder();
         when(orderedMapper.selectByIdForUpdate(1)).thenReturn(ordered);
 
-        PayResult result = orderedService.payOrder(1, "USER", 100);
+        PayResult result = orderedService.payOrder(1, "USER", 100, PAY_PASSWORD);
 
         assertThat(result).isEqualTo(PayResult.PAID);
         verify(orderedMapper).updateById(argThat(u ->
@@ -334,7 +341,7 @@ class OrderedServiceTest {
         ordered.setPendingTimeoutAt(minutesFromNow(-1));
         when(orderedMapper.selectByIdForUpdate(1)).thenReturn(ordered);
 
-        PayResult result = orderedService.payOrder(1, "USER", 100);
+        PayResult result = orderedService.payOrder(1, "USER", 100, PAY_PASSWORD);
 
         assertThat(result).isEqualTo(PayResult.TIMEOUT_CANCELLED);
         verify(orderedMapper).updateById(argThat(u ->
@@ -350,7 +357,7 @@ class OrderedServiceTest {
         ordered.setStatus("待取票");
         when(orderedMapper.selectByIdForUpdate(1)).thenReturn(ordered);
 
-        assertThatThrownBy(() -> orderedService.payOrder(1, "USER", 100))
+        assertThatThrownBy(() -> orderedService.payOrder(1, "USER", 100, PAY_PASSWORD))
                 .isInstanceOf(CustomException.class)
                 .hasMessageContaining("不允许支付");
     }
@@ -509,7 +516,7 @@ class OrderedServiceTest {
         Ordered ordered = pendingPaymentOrder();
         when(orderedMapper.selectByIdForUpdate(1)).thenReturn(ordered);
 
-        orderedService.payOrder(1, "USER", 100);
+        orderedService.payOrder(1, "USER", 100, PAY_PASSWORD);
 
         verify(walletService).debitPurchase(eq(100), argThat(amountIs("90.00")), eq(1));
     }
@@ -526,11 +533,47 @@ class OrderedServiceTest {
         doThrow(new CustomException(ErrorCode.BUSINESS_CONFLICT, "账户余额不足，请先充值"))
                 .when(walletService).debitPurchase(anyInt(), any(), anyInt());
 
-        assertThatThrownBy(() -> orderedService.payOrder(1, "USER", 100))
+        assertThatThrownBy(() -> orderedService.payOrder(1, "USER", 100, PAY_PASSWORD))
                 .isInstanceOf(CustomException.class)
                 .hasMessageContaining("余额不足");
 
         verify(orderedMapper, never()).updateById(any());
+    }
+
+    /**
+     * 支付密码是扣款闸门：校验失败必须一分钱不动、订单状态不动。
+     * 这里同时钉住"验密码在扣款之前"这个顺序 —— 若实现把 debitPurchase 提到 verify 前面，
+     * 本用例会因为 debitPurchase 被调用而失败。
+     */
+    @Test
+    void payOrderStopsBeforeDebitWhenPaymentPasswordRejected() {
+        Ordered ordered = pendingPaymentOrder();
+        when(orderedMapper.selectByIdForUpdate(1)).thenReturn(ordered);
+        // 校验失败由「返回异常」表达（计数先由它自己的事务提交），这里还原成同样的形态
+        when(payPasswordService.checkForPayment(anyInt(), any()))
+                .thenReturn(new CustomException(ErrorCode.UNAUTHORIZED, "支付密码错误，还可重试 4 次"));
+
+        assertThatThrownBy(() -> orderedService.payOrder(1, "USER", 100, "000000"))
+                .isInstanceOf(CustomException.class)
+                .hasMessageContaining("支付密码错误");
+
+        verify(walletService, never()).debitPurchase(anyInt(), any(), anyInt());
+        verify(orderedMapper, never()).updateById(any());
+    }
+
+    /**
+     * 验的是**订单归属者**的支付密码，不是调用者传入的 id：扣的是 owner 的余额，
+     * 闸门就必须落在 owner 的密码上。ADMIN 能通过 ensureOrderAccess，但拿不出别人的密码。
+     */
+    @Test
+    void payOrderVerifiesPaymentPasswordOfOrderOwner() {
+        Ordered ordered = pendingPaymentOrder();
+        ordered.setUserId(100);
+        when(orderedMapper.selectByIdForUpdate(1)).thenReturn(ordered);
+
+        orderedService.payOrder(1, "ADMIN", 999, PAY_PASSWORD);
+
+        verify(payPasswordService).checkForPayment(eq(100), eq(PAY_PASSWORD));
     }
 
     @Test
@@ -695,7 +738,7 @@ class OrderedServiceTest {
     void payOrderGeneratesPickupCode() {
         when(orderedMapper.selectByIdForUpdate(1)).thenReturn(pendingPaymentOrder());
 
-        orderedService.payOrder(1, "USER", 100);
+        orderedService.payOrder(1, "USER", 100, PAY_PASSWORD);
 
         // 字母表刻意剔除 I/L/O/0/1 —— 人工从手机抄到自助机上时这几个最容易看错。
         // 正则写全字母表而不是 [A-Z2-9]，就是为了把"不许出现易混字符"钉住。

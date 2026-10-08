@@ -58,6 +58,7 @@
                   <el-dropdown-item @click="router.push('/front/person')">个人中心</el-dropdown-item>
                   <el-dropdown-item @click="router.push('/front/account')">我的账户</el-dropdown-item>
                   <el-dropdown-item @click="router.push('/front/password')">修改密码</el-dropdown-item>
+                  <el-dropdown-item @click="router.push('/front/payPassword')">支付密码</el-dropdown-item>
                 </template>
                 <el-dropdown-item @click="logout">退出登录</el-dropdown-item>
               </el-dropdown-menu>

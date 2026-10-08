@@ -4,6 +4,11 @@
   选座页（确认购票后立即支付）与订单列表页（待支付订单"继续支付"）共用同一套
   倒计时与支付/取消逻辑，避免两处各写一遍。
 
+  三态：支付态 →（点余额支付）输入支付密码态 → 凭证态。
+  支付密码不在前端验（前端拦一下等于没拦），这里只负责把 6 位密码收上来交给
+  后端 /orders/{id}/pay 一并校验；密码或锁定类失败一律清空重输、留在密码态，
+  不把用户弹回支付态让他从头再来。未设置支付密码则跳「支付密码」设置页。
+
   余额不足时不关闭弹窗：提示差额并给出去充值入口，订单留在待支付、座位继续锁定，
   用户充值回来后仍可从这个弹窗完成支付。
 
@@ -63,6 +68,44 @@
         </div>
       </template>
 
+      <!-- ============ 输入支付密码态 ============ -->
+      <template v-else-if="showPasswordInput">
+        <div class="pay-dialog__title">
+          输入支付密码
+        </div>
+        <div class="pay-dialog__body">
+          <div class="pay-row pay-row--amount">
+            <span class="pay-row__label">应付金额：</span>
+            <span class="pay-amount">¥{{ money(payable) }}</span>
+          </div>
+          <div class="pay-row pay-row--small">
+            <span class="pay-row__label">账户余额：</span>
+            <span class="pay-balance pay-balance--strong">{{ money(balance) }}</span>
+          </div>
+
+          <p class="pay-pwd-hint">请输入 6 位支付密码，输满自动提交</p>
+          <PayPasswordInput ref="pwdRef" v-model="payPassword" :disabled="submitting"
+                            @complete="submitPayment" />
+
+          <div v-if="countdown > 0" class="pay-countdown">
+            剩余支付时间：
+            <span :class="countdown <= 30 ? 'countdown--urgent' : 'countdown--normal'">
+              {{ formatCountdown(countdown) }}
+            </span>
+          </div>
+          <div v-else class="pay-timeout">
+            支付已超时
+          </div>
+        </div>
+        <div class="pay-dialog__actions">
+          <button @click="backToPayment"
+                  :disabled="submitting"
+                  class="pay-button pay-button--cancel">
+            返回
+          </button>
+        </div>
+      </template>
+
       <!-- ============ 支付态 ============ -->
       <template v-else>
         <div class="pay-dialog__title">
@@ -118,7 +161,7 @@
                   class="pay-button pay-button--primary">
             去充值
           </button>
-          <button v-else @click="submitPayment"
+          <button v-else @click="startPayment"
                   :disabled="countdown <= 0 || submitting || balance === null"
                   :class="(countdown > 0 && balance !== null) ? 'pay-button--primary' : 'pay-button--disabled'"
                   class="pay-button">
@@ -131,13 +174,17 @@
 </template>
 
 <script setup>
-import { computed, onUnmounted, ref, watch } from 'vue';
+import { computed, nextTick, onUnmounted, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import request from '@/utils/request.js';
 import { ACCOUNT_API, ORDER_API } from '@/constants';
+import PayPasswordInput from '@/components/PayPasswordInput.vue';
 
 const DEFAULT_PAY_SECONDS = 300;
+
+/** 支付密码位数，与后端 @Pattern(\d{6}) 一致 */
+const PAY_PASSWORD_LENGTH = 6;
 
 const props = defineProps({
   modelValue: { type: Boolean, default: false },
@@ -152,6 +199,14 @@ const countdown = ref(0);
 const submitting = ref(false);
 const balance = ref(null);
 let countdownTimer = null;
+
+// 支付密码态：点「余额支付」后不再直接扣款，先就地切到这一态收密码。
+// 默认 true —— 摘要接口没返回时宁可让用户输一次密码（输错会得到后端的明确提示），
+// 也不要因为一次网络抖动把人误送到「支付密码」设置页。
+const hasPayPassword = ref(true);
+const showPasswordInput = ref(false);
+const payPassword = ref('');
+const pwdRef = ref();
 
 // 支付成功后的凭证态：用支付后回查的订单明细（含 join 出的影片/影院/影厅名与取票码），
 // 不用 props.order —— 那是下单响应，只有 id/座位/金额这些下单时就有的字段
@@ -173,11 +228,16 @@ const stopCountdown = () => {
 
 const close = () => emit('update:modelValue', false);
 
-/** 余额取自后端，不在前端缓存，保证下单/退款后看到的都是当前值 */
+/** 余额与「是否已设支付密码」取自后端，不在前端缓存，保证下单/退款/改密后看到的都是当前值 */
 const loadBalance = async () => {
   try {
     const res = await request.get(ACCOUNT_API.SUMMARY);
-    balance.value = res.code === '200' ? Number(res.data?.balance ?? 0) : null;
+    if (res.code === '200') {
+      balance.value = Number(res.data?.balance ?? 0);
+      hasPayPassword.value = Boolean(res.data?.hasPayPassword);
+    } else {
+      balance.value = null;
+    }
   } catch (error) {
     balance.value = null;
   }
@@ -260,10 +320,13 @@ watch(
       if (visible && props.order?.id) {
         submitting.value = false;
         balance.value = null;
-        // 每次打开都退回支付态：上一单的凭证不能留在这一单上
+        // 每次打开都退回支付态：上一单的凭证与已输一半的密码都不能留在这一单上
         showVoucher.value = false;
         voucherOrder.value = null;
         voucherFailed.value = false;
+        showPasswordInput.value = false;
+        payPassword.value = '';
+        hasPayPassword.value = true;
         startCountdown();
         loadBalance();
       } else {
@@ -281,19 +344,49 @@ const formatCountdown = (seconds) => {
   return `${m}:${s.toString().padStart(2, '0')}`;
 };
 
+/**
+ * 「余额支付」不再直接扣款，而是先进支付密码态 —— 余额支付闸门在后端，
+ * 前端这一步只是把凭证收上来（收不收都得后端验，前端拦等于没拦）。
+ */
+const startPayment = () => {
+  if (!props.order?.id || submitting.value || countdown.value <= 0 || balance.value === null) return;
+  if (!hasPayPassword.value) {
+    // 未设置：不在这里做设置态，把人送到设置页去（与「余额不足 → 去充值」同一套跳转模式）。
+    // 订单仍是待支付、座位继续锁定，设置完回来从订单列表「继续支付」接着付。
+    close();
+    ElMessage.warning('尚未设置支付密码，请先设置后再支付');
+    router.push('/front/payPassword');
+    return;
+  }
+  payPassword.value = '';
+  showPasswordInput.value = true;
+  nextTick(() => pwdRef.value?.focus());
+};
+
+const backToPayment = () => {
+  if (submitting.value) return;
+  showPasswordInput.value = false;
+  payPassword.value = '';
+};
+
 const submitPayment = async () => {
-  if (!props.order?.id || submitting.value) return;
+  if (!props.order?.id || submitting.value || countdown.value <= 0) return;
+  if (payPassword.value.length !== PAY_PASSWORD_LENGTH) return;
   submitting.value = true;
   try {
-    const res = await request.put(ORDER_API.PAY(props.order.id));
+    const res = await request.put(ORDER_API.PAY(props.order.id), { payPassword: payPassword.value });
     if (res.code === '200') {
       stopCountdown();
+      showPasswordInput.value = false;
+      payPassword.value = '';
       ElMessage.success('支付成功');
       emit('paid');
       // 刻意不 close()：切到凭证态把取票码给用户看，支付不是流程的终点
       await loadVoucher();
     } else {
       ElMessage.error(res.msg || '支付失败');
+      // 密码类失败一律清空 6 格留在密码态重输，不要连输入框一起收掉
+      payPassword.value = '';
       if (res.msg && res.msg.includes('超时')) {
         stopCountdown();
         close();
@@ -429,6 +522,13 @@ const cancelOrder = async () => {
   margin: var(--space-16) 0;
   color: var(--el-color-danger);
   font-weight: var(--fw-bold);
+  text-align: center;
+}
+
+.pay-pwd-hint {
+  margin: var(--space-20) 0 var(--space-12);
+  font-size: var(--fs-sm);
+  color: var(--el-text-color-regular);
   text-align: center;
 }
 

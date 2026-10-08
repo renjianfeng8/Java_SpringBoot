@@ -81,6 +81,53 @@
         WHERE id = #{id}
     </update>
 
+    <!-- 支付密码：与余额同理不挂 User 实体（见 UserMapper.java 的注释）。
+         这三列的 SQL 只出现在本段，唯一调用方是 PayPasswordService。 -->
+
+    <select id="countPayPasswordSet" resultType="int">
+        SELECT COUNT(*) FROM user WHERE id = #{id} AND pay_password IS NOT NULL
+    </select>
+
+    <!-- 必须选出 id：未设置支付密码的用户，pay_password 与 locked_until 都是 NULL，
+         若不带上一个非空列，MyBatis 会把整行当作"没有行"返回 null，
+         「用户存在但没设过支付密码」就会被误判成「用户不存在」。 -->
+    <select id="selectPayPasswordState" resultType="com.example.springboot.dto.response.PayPasswordState">
+        SELECT id,
+               pay_password         AS payPassword,
+               pay_pwd_error_count  AS errorCount,
+               pay_pwd_locked_until AS lockedUntil
+        FROM user WHERE id = #{id}
+    </select>
+
+    <select id="selectPayPasswordErrorCount" resultType="java.lang.Integer">
+        SELECT pay_pwd_error_count FROM user WHERE id = #{id}
+    </select>
+
+    <update id="updatePayPassword">
+        UPDATE user
+        SET pay_password = #{payPassword},
+            pay_pwd_error_count = 0,
+            pay_pwd_locked_until = NULL
+        WHERE id = #{id}
+    </update>
+
+    <!-- 锁定判定写在前、计数自增写在后，两者顺序不可调换。
+         MySQL 的 UPDATE SET 是自左向右求值的，后面的赋值看到的是前面已写入的新值；
+         若先自增再判 IF(pay_pwd_error_count + 1 >= max)，读到的就是"新值 + 1"，会提前一次触发锁定。 -->
+    <update id="incrementPayPasswordFailure">
+        UPDATE user
+        SET pay_pwd_locked_until = IF(pay_pwd_error_count + 1 &gt;= #{maxAttempts}, #{lockedUntil}, pay_pwd_locked_until),
+            pay_pwd_error_count = pay_pwd_error_count + 1
+        WHERE id = #{id}
+    </update>
+
+    <update id="clearPayPasswordFailure">
+        UPDATE user
+        SET pay_pwd_error_count = 0,
+            pay_pwd_locked_until = NULL
+        WHERE id = #{id}
+    </update>
+
     <!-- 删除操作 -->
     <delete id="deleteById" parameterType="java.lang.Integer">
         DELETE FROM user WHERE id = #{id}

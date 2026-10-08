@@ -39,7 +39,12 @@ CREATE TABLE `user` (
     `avatar`   VARCHAR(500)                             COMMENT '头像URL',
     `phone`    VARCHAR(20)                              COMMENT '手机号',
     `email`    VARCHAR(100)                             COMMENT '邮箱',
-    `balance`  DECIMAL(10,2) NOT NULL DEFAULT 0.00       COMMENT '账户余额（元，资金唯一可信来源）'
+    `balance`  DECIMAL(10,2) NOT NULL DEFAULT 0.00       COMMENT '账户余额（元，资金唯一可信来源）',
+    -- 支付密码与登录密码是两套凭证：登录密码只证明"你是谁"，支付密码才是"这笔钱你同意付"。
+    -- 三列都不挂 User 实体（避免 selectAll 的 SELECT * 外泄），由 PayPasswordService 独占读写。
+    `pay_password`        VARCHAR(100)                    COMMENT '支付密码（BCrypt 存储；NULL = 未设置）',
+    `pay_pwd_error_count` INT NOT NULL DEFAULT 0          COMMENT '支付密码连续错误次数（达上限即锁定）',
+    `pay_pwd_locked_until` DATETIME                        COMMENT '支付密码锁定截止时刻（NULL = 未锁定）'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='用户表';
 
 -- ---------------------------
