@@ -23,10 +23,10 @@ export const API_PATHS = {
 }
 
 /**
- * API 基础路径：`/` = 同源（生产经 Nginx 反代 /api/ 到后端），其余为后端绝对地址。
+ * API 基础路径：`/` = 同源（请求发往页面所在的源），其余为后端绝对地址。
  * 开发环境由 `.env.development` 给出 http://localhost:9090 —— vite dev server 只代理 /files，不代理 /api。
  *
- * 回退值必须是 `/`：`.env` 不入库，全新克隆与 CI 构建拿不到该变量，
+ * 回退值必须是 `/`：`.env` 不入库，全新克隆拿不到该变量，
  * 若回退成 http://localhost:9090，上传与文件地址会指向使用者本机。
  * 本变量是全仓唯一读取点，`utils/request.js` 也从这里取。
  */

@@ -3,7 +3,7 @@
     <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
     <include resource="org/springframework/boot/logging/logback/console-appender.xml"/>
 
-    <!-- MyBatis SQL 日志（仅 DEBUG 级别输出，生产环境可关闭） -->
+    <!-- MyBatis SQL 日志（仅 DEBUG 级别输出，嫌吵时调高 level 即可关掉） -->
     <logger name="com.example.springboot.mapper" level="DEBUG" additivity="false">
         <appender-ref ref="CONSOLE"/>
     </logger>
