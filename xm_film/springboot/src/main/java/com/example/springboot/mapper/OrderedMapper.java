@@ -33,6 +33,13 @@ public interface OrderedMapper extends BaseMapper<Ordered> {
     /** 按状态计数（大盘的「待取票订单」等） */
     int countByStatus(@Param("status") String status);
 
+    /**
+     * 大盘统计：订单状态分布（全部状态，不限于「已支付」）。
+     * 与 countByStatus 的区别是一次取回五种状态，避免同一个页面对同一张表发五次 COUNT
+     * —— 五次采样各有自己的时刻，加起来可能不等于总数。
+     */
+    List<Map<String, Object>> countGroupByStatus();
+
     int countSeatInUse(@Param("recordId") Integer recordId, @Param("seat") String seat);
 
     Ordered selectByIdForUpdate(Integer id);

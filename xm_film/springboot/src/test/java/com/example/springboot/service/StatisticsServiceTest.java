@@ -79,6 +79,39 @@ class StatisticsServiceTest {
         assertEquals("2026-10-07 14:32:10", result.get("updatedAt"));
     }
 
+    /**
+     * 订单状态分布原样透传：后端不排序、不补零、不按「已支付」过滤。
+     * 后两条是这张卡能不能画出五种颜色的全部依据 —— 一旦有人给它套上
+     * paidOrderStatuses（待取票 / 已取票），未支付 / 已取消 / 已退票就会静默消失。
+     */
+    @Test
+    void overview_shouldPassOrderStatusGroupingThroughUnfiltered() {
+        when(cinemaMapper.countGroupByStatus()).thenReturn(List.of());
+        when(filmMapper.countGroupByType()).thenReturn(List.of());
+        when(orderedMapper.selectTodayPaidRevenue()).thenReturn(today(BigDecimal.ZERO, "2026-10-07 14:32:10"));
+        when(orderedMapper.countTodayPaidOrders()).thenReturn(0);
+        when(orderedMapper.countByStatus("待取票")).thenReturn(0);
+        when(orderedMapper.selectPaidRevenueByDay(any(), any())).thenReturn(List.of());
+        when(userMapper.countAll()).thenReturn(0);
+        when(orderedMapper.countGroupByStatus()).thenReturn(List.of(
+                grouped("待支付", 8L),
+                grouped("已取票", 61L),
+                grouped("已取消", 4L),
+                grouped("已退票", 2L)));
+
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> orderStatus =
+                (List<Map<String, Object>>) statisticsService.overview().get("orderStatus");
+
+        assertEquals(4, orderStatus.size());
+        // 含未支付态的两种：说明没有被「已支付」口径过滤
+        assertTrue(orderStatus.stream().anyMatch(row -> "待支付".equals(row.get("name"))));
+        assertTrue(orderStatus.stream().anyMatch(row -> "已取消".equals(row.get("name"))));
+        // 顺序是 mapper 给的顺序，服务层不重排 —— 排序属于展示层（图例按枚举补全）
+        assertEquals("待支付", orderStatus.get(0).get("name"));
+        assertEquals(61L, orderStatus.get(1).get("value"));
+    }
+
     /** 没有销售的日子必须补成 0：折线图缺一天会连成一条跨越两天的直线 */
     @Test
     void revenueTrend_shouldFillDaysWithoutSalesWithZero() {

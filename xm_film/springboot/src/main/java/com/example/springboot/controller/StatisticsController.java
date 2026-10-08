@@ -23,7 +23,7 @@ public class StatisticsController {
     }
 
     @Operation(summary = "大盘总览",
-            description = "影院状态分布 + 影片类型分布 + 核心计数 + 截至昨日的 7 日票房趋势，"
+            description = "影院状态分布 + 影片类型分布 + 订单状态分布 + 核心计数 + 截至昨日的 7 日票房趋势，"
                     + "均由数据库实时聚合；仅管理员可见")
     @GetMapping("/overview")
     public Result overview() {
