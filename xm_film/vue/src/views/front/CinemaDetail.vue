@@ -11,7 +11,7 @@
 
     <!-- 3. 核心内容：影院信息横幅 + 日期条 + 上映影片的场次 -->
     <template v-else>
-      <!-- 3.1 影院信息横幅（深色表面，见规范 §3.5） -->
+      <!-- 3.1 影院信息横幅（深色表面） -->
       <div class="cinema-hero">
         <!-- 模糊影院图铺底给纯色头图做出层次。纯装饰，故 alt 留空并 aria-hidden -->
         <img v-if="cinema.avatar" :src="cinema.avatar" alt="" aria-hidden="true" class="cinema-hero__backdrop">
@@ -46,7 +46,7 @@
               今日可购 {{ todaySessionCount }} 场
             </div>
 
-            <!-- 影院服务。底色走共享层的 .service-tag--*，与影院列表页同色（规范 §3.6） -->
+            <!-- 影院服务。底色走共享层的 .service-tag--*，与影院列表页同色 -->
             <div class="cinema-hero__services">
               <div class="service-item">
                 <div class="service-item__title service-tag--refund">
@@ -80,7 +80,7 @@
       <div class="films-section">
         <div class="films-inner">
           <!-- 日期条：7 天固定窗口，选中项由三通道（颜色 + 字重 + 下划线）表达，
-               视觉之外另挂 aria-pressed（规范 §3.7 禁止仅靠颜色传递状态） -->
+               视觉之外另挂 aria-pressed（禁止仅靠颜色传递状态） -->
           <div v-if="!filmsError && films.length" class="date-bar" role="group" aria-label="选择放映日期">
             <button
                 v-for="tab in dateTabs"
@@ -96,7 +96,7 @@
             </button>
           </div>
 
-          <!-- 影片列表加载失败：与「暂无排片」是两回事，文案必须分开（规则 72） -->
+          <!-- 影片列表加载失败：与「暂无排片」是两回事，文案必须分开 -->
           <div v-if="filmsError" class="empty-hint">数据加载失败，请稍后重试</div>
 
           <!-- 该影院一部片都没排 -->
@@ -257,7 +257,7 @@ const canBuy = (record) => {
 
 // 8. 影片副信息：时长 · 语言 · 格式
 // 刻意不含类型 —— films/by-cinema 不填 typeList（FilmService.selectByCinema 未调 fillFilmTypes），
-// 而类型是后端派生字段，前端没有第二种取法（见 Bug.md 规则 87）
+// 而类型是后端派生字段，前端没有第二种取法
 const filmMeta = (film) => {
   const parts = [];
   if (film.time) parts.push(`${film.time}分钟`);
@@ -316,7 +316,7 @@ const fetchCinemaInfo = async () => {
       errorMsg.value = `影院信息加载失败：${res.msg || '未找到该影院'}`;
     }
   } catch {
-    // 网络 / 超时 / 5xx 的提示由 request.js 的响应拦截器统一给出（规则 72），
+    // 网络 / 超时 / 5xx 的提示由 request.js 的响应拦截器统一给出，
     // 这里只落错误态 —— 页面内再弹一次就是同一次失败弹两遍
     errorMsg.value = '数据加载失败，请稍后重试';
   }
@@ -400,8 +400,8 @@ const applyFilmDeepLink = async () => {
 
 // 15. 加载编排
 // 首屏顺序：影院信息 → 影片列表 → 各片场次（并发）。任一步失败留着已取到的数据，
-// 由对应的错误态分支承接，不整页抹掉（规则 86 ②）
-// 最短骨架时长：本机三组请求百毫秒内就能回，骨架会一闪而过，读起来像没加载（规则 86）
+// 由对应的错误态分支承接，不整页抹掉
+// 最短骨架时长：本机三组请求百毫秒内就能回，骨架会一闪而过，读起来像没加载
 const MIN_SKELETON_MS = 400;
 
 const load = async () => {
@@ -479,14 +479,14 @@ watch([() => route.params.id, () => route.query.filmId], ([newCinemaId, newFilmI
   margin-top: var(--space-16);
 }
 
-/* ---------- 3.1 影院信息横幅（深色表面，见规范 §3.5） ---------- */
+/* ---------- 3.1 影院信息横幅（深色表面） ---------- */
 .cinema-hero {
   position: relative;
   overflow: hidden;
   background-color: var(--dark-bg-hero);
 }
 
-/* 模糊影院图铺底：把纯色块做出纵深。纯装饰块，故用 opacity 压淡（规则 80） */
+/* 模糊影院图铺底：把纯色块做出纵深。纯装饰块，故用 opacity 压淡 */
 .cinema-hero__backdrop {
   position: absolute;
   inset: 0;
@@ -497,7 +497,7 @@ watch([() => route.params.id, () => route.query.filmId], ([newCinemaId, newFilmI
   opacity: 0.3;
 }
 
-/* 叠影：左侧压暗保证文字底色稳定。渐变只含令牌与 transparent 关键字（§3.7） */
+/* 叠影：左侧压暗保证文字底色稳定。渐变只含令牌与 transparent 关键字 */
 .cinema-hero__scrim {
   position: absolute;
   inset: 0;
@@ -510,7 +510,7 @@ watch([() => route.params.id, () => route.query.filmId], ([newCinemaId, newFilmI
 }
 
 /* 内容层只需 position: relative 即可压在铺底与叠影之上：
-   三者 z-index 均为 auto，按 DOM 顺序绘制（§7.3） */
+   三者 z-index 均为 auto，按 DOM 顺序绘制 */
 .cinema-hero__inner {
   position: relative;
   display: flex;
@@ -561,7 +561,7 @@ watch([() => route.params.id, () => route.query.filmId], ([newCinemaId, newFilmI
   margin-right: var(--space-8);
 }
 
-/* 服务：横排三列小卡。深色底上不设面层 —— §3.5 的深色族里没有「深底上的浅色面层」，
+/* 服务：横排三列小卡。深色底上不设面层 —— 深色族里没有「深底上的浅色面层」，
    --surface-glass 是 80% 白、专供压照片，用在这里会过亮。
    分组感由彩色标题片与间距提供，不依赖面层 */
 .cinema-hero__services {
@@ -593,8 +593,8 @@ watch([() => route.params.id, () => route.query.filmId], ([newCinemaId, newFilmI
 }
 
 /* 用 --dark-text-secondary（10.94:1）而不是 opacity 压淡：
-   透明度是对比度的隐性扣减，令牌是可核对的档位（规则 80）。
-   小字用 --lh-loose（§4.3） */
+   透明度是对比度的隐性扣减，令牌是可核对的档位。
+   小字用 --lh-loose */
 .service-item__desc {
   font-size: var(--fs-xs);
   line-height: var(--lh-loose);
@@ -613,7 +613,7 @@ watch([() => route.params.id, () => route.query.filmId], ([newCinemaId, newFilmI
 }
 
 /* 日期条吸顶。前台顶栏没有定位、会随页面滚走（Front.vue），所以这里 top: 0
-   就是视口顶端。z-index 取内容层 1：自定义 z-index 必须 < 1000（§7.3）。
+   就是视口顶端。z-index 取内容层 1：自定义 z-index 必须 < 1000。
    必须自带底色，否则滚过的影片行会从文字缝隙里透出来 */
 .date-bar {
   position: sticky;
@@ -624,8 +624,8 @@ watch([() => route.params.id, () => route.query.filmId], ([newCinemaId, newFilmI
   background-color: var(--el-bg-color);
 }
 
-/* 筛选项用 <button> 而非 div —— 原生可 Tab 聚焦、可回车/Space 触发（规范 §10.2）；
-   也不禁掉浏览器默认聚焦描边（§9.1 要求焦点可见） */
+/* 筛选项用 <button> 而非 div —— 原生可 Tab 聚焦、可回车/Space 触发；
+   也不禁掉浏览器默认聚焦描边（要求焦点可见） */
 .date-tab {
   display: flex;
   flex: 1;
@@ -654,7 +654,7 @@ watch([() => route.params.id, () => route.query.filmId], ([newCinemaId, newFilmI
   font-size: var(--fs-xs);
 }
 
-/* 选中态三通道：颜色 + 字重 + 下划线。禁止仅靠颜色传递状态（§3.7） */
+/* 选中态三通道：颜色 + 字重 + 下划线。禁止仅靠颜色传递状态 */
 .date-tab--active {
   border-bottom-color: var(--el-color-primary);
   color: var(--el-color-primary);
@@ -727,8 +727,8 @@ watch([() => route.params.id, () => route.query.filmId], ([newCinemaId, newFilmI
   white-space: nowrap;
 }
 
-/* 评分文字：白底须用评分文字色（规范 §3.6，4.68:1）。数字可用 --fw-medium，故不参与
-   「含中文只能用 400/700」那条（§4.4） */
+/* 评分文字：白底须用评分文字色（4.68:1）。数字可用 --fw-medium，故不参与
+   「含中文只能用 400/700」那条 */
 .film-row__score {
   display: flex;
   align-items: center;
@@ -742,7 +742,7 @@ watch([() => route.params.id, () => route.query.filmId], ([newCinemaId, newFilmI
   margin-right: var(--space-4);
 }
 
-/* 场次加载失败：与「该日无场次」区分开，后者整行不渲染，前者保留并说明（规则 72） */
+/* 场次加载失败：与「该日无场次」区分开，后者整行不渲染，前者保留并说明 */
 .film-row__error {
   margin-top: var(--space-12);
   font-size: var(--fs-base);
@@ -782,7 +782,7 @@ watch([() => route.params.id, () => route.query.filmId], ([newCinemaId, newFilmI
   border-color: var(--el-color-primary-dark-2);
 }
 
-/* hover / active 时内部文字随边框一起走：文字态不能用 light-3（§3.7），
+/* hover / active 时内部文字随边框一起走：文字态不能用 light-3，
    主色 5.58:1 与 dark-2 均达 AA */
 .showtime:hover .showtime__time,
 .showtime:hover .showtime__room {
@@ -800,7 +800,7 @@ watch([() => route.params.id, () => route.query.filmId], ([newCinemaId, newFilmI
   color: var(--el-text-color-primary);
 }
 
-/* 影厅名承载文字，用常规文字色（6.11:1）；原来靠 opacity 压淡会把对比度降到 4.0:1 以下（§10.1） */
+/* 影厅名承载文字，用常规文字色（6.11:1）；原来靠 opacity 压淡会把对比度降到 4.0:1 以下 */
 .showtime__room {
   max-width: 100%;
   overflow: hidden;
@@ -811,7 +811,7 @@ watch([() => route.params.id, () => route.query.filmId], ([newCinemaId, newFilmI
 }
 
 /* 带标题与说明的虚线空态面板。刻意不叫 .empty-hint ——
-   那是共享层里「单行占位」的名字，同名装不同样式会按规则 79 玄学取胜负 */
+   那是共享层里「单行占位」的名字，同名装不同样式会按玄学取胜负 */
 .empty-panel {
   padding: var(--space-48);
   border: 1px dashed var(--el-border-color-lighter);

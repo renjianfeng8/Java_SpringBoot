@@ -41,7 +41,7 @@
     </select>
 
     <!-- 评价的项目投影：赞数用相关子查询聚合（mark_like 的主键前缀 (mark_id) 已覆盖），
-         liked / mine 都由 SQL 按访问者算好下发 —— 前端不做归属比对（见 BUG-040）。
+         liked / mine 都由 SQL 按访问者算好下发 —— 前端不做归属比对。
          mine 用 CASE 而非直接选 m.user_id，作者 id 因此不出现在投影里。 -->
     <sql id="markViewColumns">
         m.id AS id,

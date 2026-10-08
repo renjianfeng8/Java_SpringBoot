@@ -1,7 +1,7 @@
 package com.example.springboot.common.enums;
 
 /**
- * 影院审核状态词表 —— 与 schema 默认值、data.sql 种子数据保持同一套取值。
+ * 影院审核状态词表 —— 与数据库默认值、种子数据保持同一套取值。
  * 公开接口只放行「已审核」的影院；「未审核」既不可登录，也不对外展示。
  */
 public final class CinemaStatus {

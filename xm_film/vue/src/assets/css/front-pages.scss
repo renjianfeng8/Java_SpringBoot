@@ -6,7 +6,7 @@
  * 由 main.js 引入一次。 */
 
 .front-content {
-  /* 内容容器：详情 / 列表页统一 1200px 上限（规范 §6.2） */
+  /* 内容容器：详情 / 列表页统一 1200px 上限 */
   .page-narrow {
     width: 55%;
     max-width: 1200px;
@@ -22,7 +22,7 @@
   /* 成叠的卡片 */
   .page-card {
     margin-bottom: var(--space-8);
-    /* 前台是消费端，卡片内边距取宽松档（规范 §6.2：密度分端是有意决策）。
+    /* 前台是消费端，卡片内边距取宽松档（密度分端是有意决策）。
        只覆写这一处有分歧的属性 —— 底色 / 圆角 / 阴影仍由 global.css 的 .card 单点提供，
        不在这里重写一套，否则「卡片长什么样」就有了两个出处。 */
     padding: var(--space-24);
@@ -38,7 +38,7 @@
     border-bottom: 1px solid var(--el-border-color-lighter);
   }
 
-  /* 品牌短线是装饰元素（不承载文字），按 §3.2 用 --color-brand（前台 #ef4238，仅需 ≥3:1）；
+  /* 品牌短线是装饰元素（不承载文字），用 --color-brand（前台 #ef4238，仅需 ≥3:1）；
      标题文字用 --el-color-primary（前台 #BF352D，5.58:1），两者不可互换 */
   .section-head::after {
     content: '';
@@ -50,14 +50,14 @@
     background-color: var(--color-brand);
   }
 
-  /* 区块标题承载文字，含中文故字重只能用 400 / 700（§4.4） */
+  /* 区块标题承载文字，含中文故字重只能用 400 / 700 */
   .section-head__title {
     font-size: var(--fs-xl);
     font-weight: var(--fw-bold);
     color: var(--el-color-primary);
   }
 
-  /* 文字型链接：默认常规文字色 6.11:1，hover 到主色 5.58:1，两端都达 AA（§3.7） */
+  /* 文字型链接：默认常规文字色 6.11:1，hover 到主色 5.58:1，两端都达 AA */
   .section-head__more {
     margin-left: auto;
     font-size: var(--fs-sm);
@@ -78,7 +78,7 @@
     margin-top: var(--space-20);
   }
 
-  /* 无数据的占位（规范 §11.2：接口成功但结果为空 → 「暂无数据」；
+  /* 无数据的占位（接口成功但结果为空 → 「暂无数据」；
      请求失败 → 「数据加载失败，请稍后重试」。两者文案不同，样式相同） */
   .empty-hint {
     padding: var(--space-40) 0;
@@ -87,7 +87,7 @@
     text-align: center;
   }
 
-  /* 影院服务的统一配色：同一组服务在「影院列表」与「影院详情横幅」两处必须同色（§3.6）。
+  /* 影院服务的统一配色：同一组服务在「影院列表」与「影院详情横幅」两处必须同色。
      只共享底色 —— 两页的形状不同（列表是普通标签、详情是带图标的片），各自随页面写。
      底色一律取功能色基色并配 --color-on-accent 白字：该组合在浅底与深底上都达 AA。 */
   .service-tag--refund {
@@ -103,7 +103,7 @@
   }
 
   /* 详情页首屏骨架：影片详情 / 选择影院 / 影院详情三处共用，形状与真实头图一致，
-     数据到位时不会跳高。灰块不是数据，不违反「禁止用假数据填充」（§11.2）。 */
+     数据到位时不会跳高。灰块不是数据，不违反「禁止用假数据填充」。 */
   .detail-skeleton {
     display: flex;
     width: 60%;
@@ -174,7 +174,7 @@
 
   /* 一格放多个操作按钮时的按钮组：一律从同一左边缘起排。
    * EP 的按钮间距是 `.el-button + .el-button { margin-left: 12px }`，列宽不够折行时
-   * 第二个按钮会被这 12px 右推，两行左右错开（BUG-049）。改用 flex + gap 后，
+   * 第二个按钮会被这 12px 右推，两行左右错开。改用 flex + gap 后，
    * 间距与"是否折行"解耦，一行也好、折行也好都对齐。 */
   .row-actions {
     display: flex;
@@ -222,7 +222,7 @@
   }
 
   /* 筛选项是 <button> 而非 div —— 原生可 Tab 聚焦、可回车/Space 触发，
-     不需要额外补 role / tabindex / keydown（规范 §10.2：所有交互支持键盘） */
+     不需要额外补 role / tabindex / keydown（所有交互支持键盘） */
   .filter-chip {
     padding: var(--space-4) var(--space-12);
     border: 1px solid var(--el-border-color);
@@ -240,7 +240,7 @@
     }
   }
 
-  /* 选中态不仅要换色，还要加粗 —— 禁止仅靠颜色传递状态（§3.7）。
+  /* 选中态不仅要换色，还要加粗 —— 禁止仅靠颜色传递状态。
      底色用主色基色承载白字（前台 5.58:1 达 AA）。 */
   .filter-chip--active {
     border-color: var(--el-color-primary);
@@ -270,7 +270,7 @@
     /* 点赞：文字按钮。已赞用主色（5.58:1）、未赞用常规文字色（6.11:1），两态都达 AA。
      * 必须嵌在 .mark-item 里才够特异性：编译出 .front-content .mark-item .mark-item__like（0-3-0），
      * 压过 EP 的 .el-button.is-link（0-2-0）。若平铺成 .mark-item__like 就只有 0-2-0，与 EP 打平，
-     * 胜负交给样式表顺序 —— 那正是规范 §11.2 要求用特异性而非 !important 解决的场景。 */
+     * 胜负交给样式表顺序 —— 那正是要求用特异性而非 !important 解决的场景。 */
     .mark-item__like {
       color: var(--el-text-color-regular);
 
@@ -283,7 +283,7 @@
       }
 
       /* 上面三条（0-3-0 / 0-4-0）会压过 EP 的 .el-button.is-disabled（0-2-0），
-       * 所以禁用态必须显式补一条，否则请求进行中按钮看着还能点（§9.1 五态）。 */
+       * 所以禁用态必须显式补一条，否则请求进行中按钮看着还能点（五态）。 */
       &:disabled {
         color: var(--el-text-color-disabled);
       }
@@ -344,7 +344,7 @@
     flex: 0 0 auto;
   }
 
-  /* 评价列表的加载 / 空 / 失败提示（规范 §11.2：空态与失败态文案固定且必须区分） */
+  /* 评价列表的加载 / 空 / 失败提示（空态与失败态文案固定且必须区分） */
   .marks-hint {
     padding: var(--space-20) 0;
     color: var(--el-text-color-regular);

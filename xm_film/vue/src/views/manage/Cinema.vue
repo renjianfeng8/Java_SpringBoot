@@ -201,7 +201,7 @@ const { dialogVisible, isEdit, formRef, form, rules, openAdd, openEdit, submit, 
 const route = useRoute()
 
 /* 待办卡带着 ?status=未审核 跳进来，这里把它预置成筛选项。
-   必须 watch 参数本身而不能只写在顶层：站内跳转同页换参不会重挂组件（规则 83），
+   必须 watch 参数本身而不能只写在顶层：站内跳转同页换参不会重挂组件，
    从首页反复点待办卡时只有第一次会生效。immediate 让首屏也走同一条路径，
    于是 crud.load() 不再是独立的第二次取数。 */
 watch(() => route.query.status, (status) => {

@@ -857,8 +857,7 @@ class OrderedServiceTest {
      * 服务层只是转发：日期边界与统计时刻都由数据库时钟在同一条 SQL 里给出，
      * 这里不得再补一次查询、不得把金额转成 double、不得加额外的派生字段。
      * 谓词本身的正确性（pay_time 取日、status IN 待取票/已取票）Mockito 测不到 ——
-     * 打桩之后测的是桩，不是谓词。它只能在「备用端口 + 临时库」上打真实库验证
-     * （见 Bug.md BUG-047 的验证记录）。
+     * 打桩之后测的是桩，不是谓词。它只能在「备用端口 + 临时库」上打真实库验证。
      */
     @Test
     void todayPaidRevenuePassesMapperRowThroughUnchanged() {

@@ -18,8 +18,8 @@
       >
         <div class="film-row__poster">
           <img :src="film.img" :alt="`《${film.title}》海报`" class="film-row__img">
-          <!-- 评分压在图上（§3.6：--color-rating 可用于图片叠加）。
-               垫一层 --overlay-mask 就不需要给文字描边，也就不再手写 text-shadow（§7.2） -->
+          <!-- 评分压在图上（--color-rating 可用于图片叠加）。
+               垫一层 --overlay-mask 就不需要给文字描边，也就不再手写 text-shadow -->
           <span v-if="scoreText(film)" class="film-row__score">{{ scoreText(film) }}</span>
         </div>
 
@@ -32,7 +32,7 @@
       </router-link>
     </div>
 
-    <!-- 空态与失败态文案固定且必须区分（规范 §11.2）：请求失败时说「暂无数据」
+    <!-- 空态与失败态文案固定且必须区分：请求失败时说「暂无数据」
          会让用户以为库里确实没有，从而不去重试 -->
     <div v-else-if="error" class="empty-hint">数据加载失败，请稍后重试</div>
     <div v-else-if="!loading" class="search-empty">
@@ -171,7 +171,7 @@ watch(() => route.query.title, fetchSearchResults)
   background-color: var(--overlay-mask);
   color: var(--color-rating);
   font-size: var(--fs-xs);
-  /* 纯数字，可用 500（§4.4） */
+  /* 纯数字，可用 500 */
   font-weight: var(--fw-medium);
   line-height: var(--lh-loose);
 }

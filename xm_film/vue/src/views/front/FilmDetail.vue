@@ -16,7 +16,7 @@
         <!-- 模糊剧照铺底给纯色头图做出层次。纯装饰，故 alt 留空并 aria-hidden -->
         <img v-if="film.img" :src="film.img" alt="" aria-hidden="true" class="film-hero__backdrop">
         <!-- 叠影层：压在铺底之上、内容之下。三者都是定位元素且 z-index 为 auto，
-             因此按 DOM 顺序绘制，不需要为了层次自定义 z-index（§7.3） -->
+             因此按 DOM 顺序绘制，不需要为了层次自定义 z-index -->
         <div class="film-hero__scrim" aria-hidden="true"></div>
 
         <div class="film-hero__inner">
@@ -45,7 +45,7 @@
             </el-button>
           </div>
 
-          <!-- 评分和票房：前台数据大字，§4.2 指定 --fs-5xl 给「评分 / 票房」 -->
+          <!-- 评分和票房：前台数据大字，--fs-5xl 给「评分 / 票房」 -->
           <div class="film-hero__stats">
             <div class="film-hero__stat">
               <div class="film-hero__stat-label">影片口碑</div>
@@ -456,7 +456,7 @@ onMounted(() => {
   margin-top: var(--space-16);
 }
 
-/* ---------- 3.1 电影头部（深色表面，规范 §3.5） ---------- */
+/* ---------- 3.1 电影头部（深色表面） ---------- */
 .film-hero {
   position: relative;
   overflow: hidden;
@@ -475,7 +475,7 @@ onMounted(() => {
 }
 
 /* 叠影：左侧压暗保证文字底色稳定，右侧透出剧照。
-   渐变只含令牌与 transparent 关键字，无硬编码色值（§3.7） */
+   渐变只含令牌与 transparent 关键字，无硬编码色值 */
 .film-hero__scrim {
   position: absolute;
   inset: 0;
@@ -525,7 +525,7 @@ onMounted(() => {
   color: var(--dark-text-secondary);
 }
 
-/* CTA 走 EP 的 type="primary" + size="large"：hover / active / disabled 五态由组件库给出（§9.1） */
+/* CTA 走 EP 的 type="primary" + size="large"：hover / active / disabled 五态由组件库给出 */
 .film-hero__action {
   width: 70%;
   margin-top: var(--space-20);

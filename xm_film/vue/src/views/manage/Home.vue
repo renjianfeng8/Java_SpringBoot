@@ -19,7 +19,7 @@
               <span v-if="card.foot.value === null">较昨日 —</span>
               <template v-else>
                 <!-- 箭头是装饰（aria-hidden），方向由后面的 +/- 文字承载，
-                     不靠颜色或图形单独传信息（§3.7） -->
+                     不靠颜色或图形单独传信息 -->
                 <span aria-hidden="true">{{ card.foot.value >= 0 ? '▲' : '▼' }}</span>
                 <span :class="card.foot.value >= 0 ? 'kpi-card__delta--up' : 'kpi-card__delta--down'">
                   较昨日 {{ card.foot.value >= 0 ? '+' : '-' }}{{ Math.abs(card.foot.value) }}%
@@ -49,7 +49,7 @@
         <h2 class="section-head__title">近 7 日票房趋势</h2>
         <span class="dashboard__note">截至昨日</span>
         <el-button class="dashboard__refresh" link type="primary" :loading="refreshing" @click="reload">
-          <!-- loading 时 EP 自带转圈图标，再留一个 Refresh 就是一个按钮两个图标（规则 86） -->
+          <!-- loading 时 EP 自带转圈图标，再留一个 Refresh 就是一个按钮两个图标 -->
           <el-icon v-if="!refreshing"><Refresh /></el-icon>
           {{ refreshing ? '刷新中' : '刷新' }}
         </el-button>
@@ -184,7 +184,7 @@ import { CanvasRenderer } from 'echarts/renderers';
 echarts.use([BarChart, LineChart, PieChart, GridComponent, TooltipComponent, CanvasRenderer]);
 
 /* 刷新反馈的最短展示时长：本机聚合查询几十毫秒就返回，不兜底的话转圈一闪而过，
-   用户无从确认「点过了」（规则 86）。与前台 front/Home.vue 取同一个值。 */
+   用户无从确认「点过了」。与前台 front/Home.vue 取同一个值。 */
 const MIN_REFRESH_MS = 450;
 const RANK_LIMIT = 5;
 /* 与后端 CinemaStatus 枚举、constants/index.js 的 CINEMA_STATUS 同字面量。
@@ -218,7 +218,7 @@ const trendChart = ref<HTMLElement | null>(null);
 const filmTypeChart = ref<HTMLElement | null>(null);
 const orderStatusChart = ref<HTMLElement | null>(null);
 
-// ECharts 用 canvas 渲染，不解析 CSS 变量，只能在运行期把令牌值读出来（规范 §3.7）
+// ECharts 用 canvas 渲染，不解析 CSS 变量，只能在运行期把令牌值读出来
 const cssVar = (name: string, fallback = '') =>
   getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback;
 
@@ -234,7 +234,7 @@ const approvedCount = computed(() =>
 );
 
 /* 占比的分母 = 五态之和。与环上的扇区同源：同一份分组结果既画环又算占比，
-   两个数字永远对得上；基准显式写在卡脚上，不另发一次 COUNT（规则 89）。 */
+   两个数字永远对得上；基准显式写在卡脚上，不另发一次 COUNT。 */
 const orderTotal = computed(() =>
   overview.orderStatus.reduce((sum, row) => sum + Number(row.value), 0)
 );
@@ -316,7 +316,7 @@ const rankBadgeClass = (index: number) =>
 
 /* ---------- 取数 ---------- */
 
-/* 三个取数函数都遵守同一条：**失败不清空已展示的数据**（规则 86）。
+/* 三个取数函数都遵守同一条：**失败不清空已展示的数据**。
    瞬时故障不该把已知数值抹成错误文案，失败只翻 failed 标记，由各区块的次要行提示。 */
 const loadOverview = async () => {
   loading.overview = true;
@@ -460,7 +460,7 @@ const initFilmTypeChart = () => {
 };
 
 /* 订单状态分布：环形图（甜甜圈）+ DOM 图例。
-   配色只可能来自令牌，而 canvas 不解析 CSS 变量，只能在运行期把值读出来（§3.7）；
+   配色只可能来自令牌，而 canvas 不解析 CSS 变量，只能在运行期把值读出来；
    状态 → 令牌名复用 constants 的 ORDER_STATUS_MAP，与图例色点、订单表格的 el-tag 同色。
    环内总计与图例都用 DOM 写，画布上不开标签：一张环形图的结论全在文字里，
    而 canvas 的文字选不中也读不出来，留给读屏用户的就只剩一片空白。 */
@@ -502,8 +502,8 @@ const initOrderStatusChart = () => {
 };
 
 /* 唯一的初始化路径：数据落位 → watch 触发 → 建图。
-   页面挂载时不再单独调一次 —— 那样每次加载都会初始化两遍（旧实现的冗余，
-   见 前端规范待办.md T-11）。空态时容器被 v-if 摘掉、ref 为 null，两函数各自挡掉。 */
+   页面挂载时不再单独调一次 —— 那样每次加载都会初始化两遍（旧实现的冗余）。
+   空态时容器被 v-if 摘掉、ref 为 null，两函数各自挡掉。 */
 watch(
   [() => overview.revenueTrend, () => overview.filmType, () => overview.orderStatus],
   async () => {
@@ -538,7 +538,7 @@ onUnmounted(() => {
 
 <style scoped>
 /* 页面底色与内边距归外壳（.manage-content 已铺灰底 + 16px 内边距），
-   这里再声明 min-height: 100vh 会凭空多出外壳头部的高度、把页脚顶出视口（规则 81）。 */
+   这里再声明 min-height: 100vh 会凭空多出外壳头部的高度、把页脚顶出视口。 */
 .dashboard {
   display: flex;
   flex-direction: column;
@@ -586,8 +586,8 @@ onUnmounted(() => {
   color: var(--el-text-color-regular);
 }
 
-/* KPI 主指标取 §4.2 的 28px 档。字重只能是 700：formatYuan 返回的字符串含「元」，
-   含中文就落进 §4.4 的「只能 400 / 700」，500 会给中文触发伪粗体。
+/* KPI 主指标取 28px 档。字重只能是 700：formatYuan 返回的字符串含「元」，
+   含中文就落进「只能 400 / 700」，500 会给中文触发伪粗体。
    tabular-nums 让数字等宽，刷新前后不左右跳。 */
 .kpi-card__value {
   margin: 0;
@@ -610,7 +610,7 @@ onUnmounted(() => {
 }
 
 /* 涨跌按「有利性」着色：票房与订单都是越多越好，故升用功能色成功、降用危险。
-   这是状态通道，不是装饰 —— 且方向另有 +/- 文字与箭头承载，不单靠颜色（§3.7）。 */
+   这是状态通道，不是装饰 —— 且方向另有 +/- 文字与箭头承载，不单靠颜色。 */
 .kpi-card__delta--up {
   color: var(--el-color-success);
 }
@@ -685,7 +685,7 @@ onUnmounted(() => {
   padding: var(--space-16);
 }
 
-/* 标题含中文，字重只能用 400 / 700（§4.4） */
+/* 标题含中文，字重只能用 400 / 700 */
 .chart-card__title {
   margin: 0 0 var(--space-16);
   font-size: var(--fs-md);
@@ -794,7 +794,7 @@ onUnmounted(() => {
 }
 
 /* 局部令牌：状态 → 颜色。类名取自 ORDER_STATUS_MAP 的 el-tag type，
-   故这五个类与订单表格里的标签色出自同一张表，不会各自漂移（§11.1 局部令牌）。 */
+   故这五个类与订单表格里的标签色出自同一张表，不会各自漂移（局部令牌）。 */
 .status-row--primary { --status-color: var(--el-color-primary); }
 .status-row--success { --status-color: var(--el-color-success); }
 .status-row--warning { --status-color: var(--el-color-warning); }
@@ -808,7 +808,7 @@ onUnmounted(() => {
 }
 
 /* 色点把图例行与环上那个扇区对应起来 —— 承载信息，不算装饰，
-   故取功能色基色（白底 4.56:1 ~ 5.46:1，过 §10.1 的 3:1）。 */
+   故取功能色基色（白底 4.56:1 ~ 5.46:1，过 3:1）。 */
 .status-row__dot {
   flex-shrink: 0;
   width: 8px;
@@ -868,7 +868,7 @@ onUnmounted(() => {
   border-bottom: none;
 }
 
-/* 名次徽章用 §3.6 的扩展色板（白字压其上达标）；1~3 名金 / 银 / 铜 */
+/* 名次徽章用扩展色板（白字压其上达标）；1~3 名金 / 银 / 铜 */
 .rank-badge {
   flex-shrink: 0;
   width: 24px;
@@ -916,7 +916,7 @@ onUnmounted(() => {
   font-variant-numeric: tabular-nums;
 }
 
-/* 评分含「分」字（中文），字重必须 400 / 700；白底评分色 4.68:1 达 AA（§3.6） */
+/* 评分含「分」字（中文），字重必须 400 / 700；白底评分色 4.68:1 达 AA */
 .rank-row__value--score {
   color: var(--color-rating-text);
 }

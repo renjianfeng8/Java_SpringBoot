@@ -69,7 +69,7 @@ const updateUser = async () => {
   request.put(API_PATHS.ADMINS, data.form).then(res => {
     if (res.code === '200') {
       ElMessage.success('更新成功')
-      // 登录态只能经 useAuth 变更（规则 76）：只写 storage 副本不会更新内存里的
+      // 登录态只能经 useAuth 变更：只写 storage 副本不会更新内存里的
       // user，顶栏的用户名与头像要等整页刷新才变。
       setUser({ ...user.value, ...data.form })
     } else {

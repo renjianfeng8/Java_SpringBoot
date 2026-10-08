@@ -20,7 +20,7 @@
         输入订单的取票码自助出票。取票码在「购票记录」的待取票订单里，支付成功后也会直接展示。
       </p>
 
-      <!-- 表单形态遵循规范 §9.3：可见 label + status-icon + 回车提交 + @submit.prevent 兜底 -->
+      <!-- 表单形态：可见 label + status-icon + 回车提交 + @submit.prevent 兜底 -->
       <el-form ref="formRef"
                :model="form"
                :rules="rules"
@@ -29,7 +29,7 @@
                class="pickup-form"
                @submit.prevent>
         <el-form-item label="取票码" prop="code">
-          <!-- 图标必须用组件绑定：main.js 未全局注册图标集，字符串写法不会解析（BUG-043） -->
+          <!-- 图标必须用组件绑定：main.js 未全局注册图标集，字符串写法不会解析 -->
           <el-input v-model="form.code"
                     :prefix-icon="Ticket"
                     size="large"
@@ -37,7 +37,7 @@
                     @keyup.enter="submit" />
         </el-form-item>
         <!-- native-type="button"：避免 el-button 在 el-form 内触发原生提交，
-             与 @keyup.enter 叠加成两次请求（规范 §9.3 明确禁止一次回车发两次） -->
+             与 @keyup.enter 叠加成两次请求（明确禁止一次回车发两次） -->
         <el-button type="primary"
                    size="large"
                    native-type="button"
@@ -123,7 +123,7 @@ const submit = async () => {
     }
   } catch (error) {
     // 网络异常 / 超时 / 5xx 的提示已由 request.js 的响应拦截器统一给出，
-    // 页面内只落错误态，不再重复弹一次（规范 §11.2）
+    // 页面内只落错误态，不再重复弹一次
     console.error('取票接口请求异常：', error);
     errorText.value = '数据加载失败，请稍后重试';
   } finally {

@@ -2,7 +2,7 @@
   <div class="page-wide">
     <div>
       <div class="card page-card">
-        <!-- 搜索控件带 aria-label：placeholder 一输入就消失，不构成可访问名称（规范 §9.3） -->
+        <!-- 搜索控件带 aria-label：placeholder 一输入就消失，不构成可访问名称 -->
         <el-input v-model="data.orders" placeholder="请输入订单号" aria-label="订单号" class="search-input" :prefix-icon="Search"/>
         <el-select v-model="data.status" placeholder="请选择订单状态" aria-label="订单状态" class="search-input">
           <el-option v-for="status in ORDER_STATUS_OPTIONS" :key="status" :label="status" :value="status" />
@@ -85,7 +85,7 @@
           </el-table-column>
           <!-- 操作列必须定宽：el-table 把未指定宽度的列一律按 80px 起算，13 列挤在 1200px
                容器里操作列只剩 ~89px，装不下「继续支付 + 取消」这类两个文字按钮（需 ~100px），
-               折行后第二个按钮又被 EP 的 12px 兄弟边距推右错开（BUG-049）。
+               折行后第二个按钮又被 EP 的 12px 兄弟边距推右错开。
                140px 里的 30px 由展开列与单价列让出（它们的内容本来不需要 80px），
                表格最小总宽因此只从 1040px 涨到 1070px，横向滚动阈值几乎不动。 -->
           <el-table-column label="操作" width="140">
@@ -103,7 +103,7 @@
                   {{ markOf(scope.row.filmId) ? '修改评价' : '去评价' }}
                 </el-button>
                 <!-- 只有终态废单可删除；已成交订单必须走退票，与后端删除守卫同构。
-                     纯图标按钮必须带 aria-label，否则读屏软件只念出一个"按钮"（规范 §10.2） -->
+                     纯图标按钮必须带 aria-label，否则读屏软件只念出一个"按钮" -->
                 <el-button v-if="isOrderDeletable(scope.row.status)" class="row-action" link :icon="Delete"
                            aria-label="删除该订单"
                            @click="() => del(scope.row.id)" type="danger"></el-button>

@@ -8,7 +8,7 @@ import org.springframework.web.context.request.ServletRequestAttributes;
  * 取当前请求的登录态（AuthInterceptor 解析 JWT 后写入的 request 属性）。
  *
  * 注意：{@code WebMvcConfig.excludePathPatterns} 排除的路径不经过 AuthInterceptor，
- * 这两个属性为空，控制器里的角色判断会静默失效（见 Bug.md BUG-036）。
+ * 这两个属性为空，控制器里的角色判断会静默失效。
  * 公开访问统一交给 {@code AuthInterceptor.PUBLIC_READ_PREFIXES}，不要往排除表里加路径。
  */
 public final class AuthContext {
