@@ -1,12 +1,13 @@
+# 仅本机运行：所有配置直接写死，不经环境变量注入（不部署）。
 server:
   port: 9090  # 后端接口端口，只提供 /api/v1/** 的 JSON；前端页面访问端口见 vue/vite.config.js 的 server.port
 
 spring:
   datasource:
-    username: ${DB_USERNAME:root}
-    password: ${DB_PASSWORD:123456}
+    username: root
+    password: "123456"
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://${DB_HOST:localhost}:3306/${DB_NAME:xm-film}?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&characterEncoding=UTF-8
+    url: jdbc:mysql://localhost:3306/xm-film?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&characterEncoding=UTF-8
 
   servlet:
     multipart:
@@ -15,29 +16,21 @@ spring:
 
 mybatis:
   configuration:
-    log-impl: ${MYBATIS_LOG_IMPL:org.apache.ibatis.logging.slf4j.Slf4jImpl}
+    log-impl: org.apache.ibatis.logging.slf4j.Slf4jImpl
     map-underscore-to-camel-case: true
   mapper-locations: classpath:mapper/*.xml
 
 logging:
   level:
-    com.example.springboot.mapper: ${MYBATIS_LOG_LEVEL:DEBUG}
-
-
-
-
-fileBaseUrl: http://localhost:${server.port}
+    com.example.springboot.mapper: DEBUG
 
 cors:
-  allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
+  allowed-origins: http://localhost:5173
 
 jwt:
-  secret: ${JWT_SECRET:xm-film-secret-key-2024-springboot-vue3-jwt-auth}
-  expire: ${JWT_EXPIRE:86400000}
+  secret: xm-film-secret-key-2024-springboot-vue3-jwt-auth
+  expire: 86400000
 
 file:
-  upload-dir: ${FILE_UPLOAD_DIR:D:/project/picture}
-  access-prefix: ${fileBaseUrl}/files/
-
-
-
+  upload-dir: "D:/project/picture"
+  access-prefix: http://localhost:9090/files/
