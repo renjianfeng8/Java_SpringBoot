@@ -20,8 +20,13 @@
         SELECT * FROM area WHERE id = #{id}
     </select>
 
-    <!-- 插入操作 -->
-    <insert id="insert" parameterType="com.example.springboot.entity.Area">
+    <select id="selectByTitleExact" resultType="com.example.springboot.entity.Area">
+        SELECT * FROM area WHERE title = #{title} LIMIT 1
+    </select>
+
+    <!-- 插入操作。useGeneratedKeys 是 TMDB 导入的必需项：建完地区要拿回自增 id
+         才能填进表单的 areaId，缺了它 MyBatis 不写实体 id，导入会静默回填 null。 -->
+    <insert id="insert" parameterType="com.example.springboot.entity.Area" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO area (id, title)
         VALUES (#{id}, #{title})
     </insert>
