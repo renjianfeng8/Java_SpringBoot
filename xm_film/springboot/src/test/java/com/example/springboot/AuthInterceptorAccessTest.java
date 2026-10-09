@@ -336,4 +336,11 @@ class AuthInterceptorAccessTest {
     void anonymousCannotRunCinemaDirectoryImport() {
         assertThat(anonymousAllowed("/api/v1/cinema-directory/import", "POST")).isFalse();
     }
+
+    /** 过期令牌不构成后门：导入仍须有效 ADMIN 令牌 */
+    @Test
+    void brokenTokenCannotRunCinemaDirectoryImport() {
+        assertThat(withBrokenToken("/api/v1/cinema-directory/import", "POST")).isFalse();
+        assertThat(withBrokenToken("/api/v1/cinema-directory/import/preview", "POST")).isFalse();
+    }
 }
