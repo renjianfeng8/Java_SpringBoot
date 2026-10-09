@@ -140,7 +140,8 @@
           <el-input type="textarea" v-model="form.address" autocomplete="off" placeholder="请输入影院地址"/>
         </el-form-item>
         <el-form-item label="关联影院名录">
-          <el-select v-model="form.directoryId" filterable remote clearable
+          <el-select v-model="form.directoryId" filterable remote
+                     aria-label="关联影院名录"
                      :remote-method="searchDirectory" :loading="directoryLoading"
                      placeholder="输入影院名称搜索名录" class="field-full" @change="onDirectoryPick">
             <el-option v-for="o in directoryOptions" :key="o.id"
