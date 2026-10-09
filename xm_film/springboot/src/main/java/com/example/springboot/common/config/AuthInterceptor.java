@@ -35,7 +35,9 @@ public class AuthInterceptor implements HandlerInterceptor {
             "/api/v1/areas",
             "/api/v1/types",
             "/api/v1/notices",
-            "/api/v1/videos"
+            "/api/v1/videos",
+            // 影院名录导入：抓取会写库（建目录行），非管理员不得触发；前缀命中 /import 与 /import/preview
+            "/api/v1/cinema-directory/import"
     );
 
     private static final Set<String> PUBLIC_READ_PREFIXES = Set.of(
@@ -48,7 +50,9 @@ public class AuthInterceptor implements HandlerInterceptor {
             // 影院详情的放映场次列表需匿名可读，否则公开页会 401
             "/api/v1/records",
             // 影片详情页的评价列表是公开内容，需匿名可读
-            "/api/v1/marks"
+            "/api/v1/marks",
+            // 影院名录是公开资料，游客可读
+            "/api/v1/cinema-directory"
     );
 
     /**
