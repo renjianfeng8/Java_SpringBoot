@@ -44,7 +44,7 @@ class TmdbClientTest {
             ]}
             """;
 
-    /** 实测自 GET /movie/550?language=zh-CN&append_to_response=credits */
+    /** 实测自 GET /movie/550?language=zh-CN&append_to_response=credits,videos */
     private static final String DETAIL_JSON = """
             {"id":550,"title":"搏击俱乐部","original_title":"Fight Club",
              "overview":"杰克是一个充满中年危机意识的人。","release_date":"1999-10-15","runtime":139,
@@ -56,7 +56,26 @@ class TmdbClientTest {
              "credits":{"cast":[
                {"name":"爱德华·诺顿","character":"Narrator","profile_path":"/8nytsqL59SFJTVYVrN72k6qkGgJ.jpg","order":0},
                {"name":"布拉德·皮特","character":"Tyler Durden","profile_path":"/ajNaPmXVVMJFg9GWmu6MJzTaXdV.jpg","order":1}
+             ]},
+             "videos":{"results":[
+               {"iso_639_1":"en","iso_3166_1":"US","name":"片段","key":"CLIP0000001","site":"YouTube","size":1080,"type":"Clip","official":false},
+               {"iso_639_1":"en","iso_3166_1":"US","name":"预告（非官方）","key":"TRAILER0001","site":"YouTube","size":1080,"type":"Trailer","official":false},
+               {"iso_639_1":"en","iso_3166_1":"US","name":"Official Trailer","key":"BdJKm16Co6M","site":"YouTube","size":1080,"type":"Trailer","official":true}
              ]}}
+            """;
+
+    /** 未定档影片常常只有 Teaser，没有正式 Trailer —— 也应给出可播放的嵌入地址 */
+    private static final String DETAIL_JSON_TEASER_ONLY = """
+            {"id":1,"title":"只有预告","videos":{"results":[
+              {"iso_639_1":"en","name":"Teaser","key":"TEASER00001","site":"YouTube","type":"Teaser","official":false}
+            ]}}
+            """;
+
+    /** 只有非 YouTube 站点的视频：iframe 嵌不了，必须留空而不是存一个放不出来的地址 */
+    private static final String DETAIL_JSON_VIMEO_ONLY = """
+            {"id":2,"title":"只有 Vimeo","videos":{"results":[
+              {"iso_639_1":"en","name":"Trailer","key":"1234567","site":"Vimeo","type":"Trailer","official":true}
+            ]}}
             """;
 
     /** 冷门片可能整块缺字段：没有演职人员、没有语言、没有制片国家 */
@@ -121,7 +140,7 @@ class TmdbClientTest {
     void detailParsesEveryFieldTheImportBackfills() {
         server.expect(ExpectedCount.once(), request -> {
             assertThat(request.getURI().getPath()).isEqualTo("/3/movie/550");
-            assertThat(decodedQuery(request)).contains("language=zh-CN").contains("append_to_response=credits");
+            assertThat(decodedQuery(request)).contains("language=zh-CN").contains("append_to_response=credits,videos");
         }).andRespond(withSuccess(DETAIL_JSON, MediaType.APPLICATION_JSON));
 
         TmdbClient.MovieDetail detail = client.detail(550);
@@ -141,7 +160,29 @@ class TmdbClientTest {
         assertThat(detail.topCast().name()).isEqualTo("爱德华·诺顿");
         assertThat(detail.topCast().character()).isEqualTo("Narrator");
         assertThat(detail.topCast().profilePath()).isEqualTo("/8nytsqL59SFJTVYVrN72k6qkGgJ.jpg");
+        // 多条视频里要挑中官方 Trailer（跳过 Clip 与非官方），并拼成 YouTube 嵌入地址
+        assertThat(detail.trailerUrl()).isEqualTo("https://www.youtube.com/embed/BdJKm16Co6M");
         server.verify();
+    }
+
+    /** 没有正式 Trailer 时退而取 Teaser —— 否则未定档影片详情页的预告区永远是空的 */
+    @Test
+    void detailFallsBackToYouTubeTeaserWhenNoTrailer() {
+        server.expect(ExpectedCount.once(), request -> assertThat(request.getURI().getPath()).isEqualTo("/3/movie/1"))
+                .andRespond(withSuccess(DETAIL_JSON_TEASER_ONLY, MediaType.APPLICATION_JSON));
+
+        TmdbClient.MovieDetail detail = client.detail(1);
+
+        assertThat(detail.trailerUrl()).isEqualTo("https://www.youtube.com/embed/TEASER00001");
+    }
+
+    /** 非 YouTube 的视频拼不出 iframe 能放的地址，留空由前端降级，不能存一个放不出来的值 */
+    @Test
+    void detailReturnsNullTrailerWhenNoYouTubeVideo() {
+        server.expect(ExpectedCount.once(), request -> assertThat(request.getURI().getPath()).isEqualTo("/3/movie/2"))
+                .andRespond(withSuccess(DETAIL_JSON_VIMEO_ONLY, MediaType.APPLICATION_JSON));
+
+        assertThat(client.detail(2).trailerUrl()).isNull();
     }
 
     @Test
@@ -158,6 +199,7 @@ class TmdbClientTest {
         assertThat(detail.companyName()).isNull();
         assertThat(detail.topCast()).isNull();
         assertThat(detail.genreNames()).isEmpty();
+        assertThat(detail.trailerUrl()).isNull();
     }
 
     // ========== 国家名（地区的中文名来源） ==========

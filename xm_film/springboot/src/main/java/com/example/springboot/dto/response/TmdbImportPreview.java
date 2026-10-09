@@ -31,6 +31,9 @@ public class TmdbImportPreview {
     private String employee;
     private String status;
 
+    /** 预告片的 YouTube 嵌入地址（TMDB 只给 YouTube 视频 id，播放走 iframe）；该片没有可取用的则 null */
+    private String video;
+
     /** 已复用或新建的 region，可直接填进表单的 areaId */
     private Integer areaId;
 

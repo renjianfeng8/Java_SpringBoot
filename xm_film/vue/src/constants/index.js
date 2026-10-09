@@ -44,7 +44,8 @@ export const apiBatch = (base) => `${base}/batch`
 
 /**
  * TMDB 导入接口（后台影片页专用）。
- * 两个端点都是 GET，但在后端属 admin-only：详情那次会建类型/地区/演职人员行并下载图片。
+ * 全部在 /api/v1/tmdb 前缀下，后端属 admin-only：详情那次会建类型/地区/演职人员行并下载图片，
+ * 补预告片那次会改写已有影片的 video 列。
  * 这里没有「导入影片」的写入端点 —— 拿到预填值后仍走 FILMS 的保存，建影片只有一条路径。
  */
 export const TMDB_API = {
@@ -52,6 +53,8 @@ export const TMDB_API = {
   // 路径中间多一段 /movie，不能用 apiById（它只拼 `${base}/${id}`）——
   // 用它拼出来是 /api/v1/tmdb/550，后端映射的是 /api/v1/tmdb/movie/550，会 404。
   MOVIE: (tmdbId) => `${API_PATHS.TMDB}/movie/${tmdbId}`,
+  // 给 video 为空的历史影片补预告片（POST，幂等）
+  BACKFILL_VIDEOS: `${API_PATHS.TMDB}/backfill-videos`,
 }
 
 export const FILM_API = {

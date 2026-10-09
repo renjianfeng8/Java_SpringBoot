@@ -22,9 +22,10 @@ public class AuthInterceptor implements HandlerInterceptor {
 
     private static final Set<String> ADMIN_ONLY_PREFIXES = Set.of(
             "/api/v1/admins",
-            // TMDB 导入：两个端点都是 GET，但 /movie/{id} 会建类型/地区/演职人员行并下载图片。
-            // 放进这里而不是 ADMIN_WRITE_PREFIXES —— 后者只拦写方法，放不住 GET，
+            // TMDB 导入：/search 与 /movie/{id} 是 GET，/backfill-videos 是 POST。
+            // 放进这里而不是 ADMIN_WRITE_PREFIXES —— 后者只拦写方法，放不住那两个 GET，
             // 结果是任何登录用户都能触发建行与落盘（与选座越权读同一类缺陷）。
+            // 顺带也把 /backfill-videos 这个会改写影片数据的 POST 一并挡在非管理员之外。
             "/api/v1/tmdb"
     );
 

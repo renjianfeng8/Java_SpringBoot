@@ -160,13 +160,12 @@
           <!-- 右侧视频区 -->
           <div class="detail-panel__aside">
             <h3 class="section-title">预告视频</h3>
-            <!-- 关键修改：用video标签替代div，实现视频播放 -->
+            <!-- film.video 是 TMDB 导入的 YouTube 嵌入地址，必须用 iframe 播放：
+                 <video> 只认直链媒体文件（如本地上传的 mp4），放不了 YouTube 嵌入地址 -->
             <div class="video-frame">
-              <!-- 有视频URL时显示播放器 -->
-              <video v-if="film.video" :src="film.video" controls class="video-player">
-                <track kind="captions" src="/subtitles/trailer-zh.vtt" srclang="zh" label="中文字幕" />
-                您的浏览器不支持HTML5视频播放，请升级浏览器。
-              </video>
+              <iframe v-if="film.video" :src="film.video" class="video-player" title="预告视频"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowfullscreen></iframe>
               <!-- 无视频URL时显示提示 -->
               <div v-else class="video-placeholder">
                 暂无预告视频
@@ -643,7 +642,7 @@ onMounted(() => {
 .video-player {
   width: 100%;
   height: 200px;
-  object-fit: cover;
+  border: 0;
   background-color: var(--dark-bg-video);
 }
 

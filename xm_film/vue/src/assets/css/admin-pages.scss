@@ -345,4 +345,11 @@
     font-size: var(--fs-xs);
     color: var(--el-text-color-secondary);
   }
+
+  /* 补预告片结果弹窗里的说明行 */
+  .backfill-summary {
+    margin: 0 0 var(--space-12);
+    font-size: var(--fs-sm);
+    color: var(--el-text-color-regular);
+  }
 }

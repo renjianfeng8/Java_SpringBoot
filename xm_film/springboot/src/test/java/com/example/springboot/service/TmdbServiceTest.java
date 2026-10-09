@@ -42,6 +42,7 @@ class TmdbServiceTest {
     private static final String ACCESS_PREFIX = "http://localhost:9090/files/";
     private static final String POSTER_PATH = "/poster.jpg";
     private static final String AVATAR_PATH = "/avatar.jpg";
+    private static final String TRAILER_URL = "https://www.youtube.com/embed/BdJKm16Co6M";
 
     @TempDir
     Path uploadDir;
@@ -67,7 +68,7 @@ class TmdbServiceTest {
     private TmdbClient.MovieDetail detail(String releaseDate, List<String> genres, TmdbClient.CastMember cast) {
         return new TmdbClient.MovieDetail("搏击俱乐部", "Fight Club", releaseDate, 139,
                 "杰克是一个充满中年危机意识的人。", POSTER_PATH, "en", "DE", "Regency Enterprises",
-                genres, cast);
+                genres, cast, TRAILER_URL);
     }
 
     private TmdbClient.CastMember leadCast() {
@@ -118,7 +119,19 @@ class TmdbServiceTest {
         assertThat(preview.getAreaName()).isEqualTo("德国");
         assertThat(preview.getActorId()).isEqualTo(300);
         assertThat(preview.getActorName()).isEqualTo("爱德华·诺顿");
+        assertThat(preview.getVideo()).isEqualTo(TRAILER_URL);
         assertThat(preview.getWarnings()).isEmpty();
+    }
+
+    /** TMDB 该片没有可取用的 YouTube 预告片：video 留空由表单/前台降级，而不是塞个空串 */
+    @Test
+    void previewLeavesVideoNullWhenTmdbHasNoTrailer() {
+        when(client.detail(550)).thenReturn(new TmdbClient.MovieDetail("搏击俱乐部", "Fight Club",
+                "1999-10-15", 139, "简介", null, null, null, null, List.of(), null, null));
+        when(client.countryNames()).thenReturn(Map.of());
+        when(client.downloadImage(anyString(), anyString())).thenReturn(Optional.empty());
+
+        assertThat(service.preview(550).getVideo()).isNull();
     }
 
     /** 未定档影片：TMDB 给空串，导入留空交必填校验，而不是猜成已上映 */
@@ -147,7 +160,7 @@ class TmdbServiceTest {
     void previewLeavesLanguageBlankWhenTmdbHasNoSpokenLanguage() {
         // languageCode 为 null（TMDB 的 spoken_languages 整块缺失），映射应留空而不是猜「其他」
         when(client.detail(550)).thenReturn(new TmdbClient.MovieDetail("搏击俱乐部", "Fight Club",
-                "1999-10-15", 139, "简介", null, null, null, null, List.of(), null));
+                "1999-10-15", 139, "简介", null, null, null, null, List.of(), null, null));
         when(client.countryNames()).thenReturn(Map.of());
         when(client.downloadImage(anyString(), anyString())).thenReturn(Optional.empty());
 
