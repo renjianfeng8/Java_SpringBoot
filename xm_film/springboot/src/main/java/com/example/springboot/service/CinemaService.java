@@ -4,10 +4,12 @@ import com.example.springboot.common.BaseMapper;
 import com.example.springboot.common.BaseService;
 import com.example.springboot.entity.Account;
 import com.example.springboot.entity.Cinema;
+import com.example.springboot.entity.CinemaDirectory;
 import com.example.springboot.common.enums.CinemaStatus;
 import com.example.springboot.common.enums.ErrorCode;
 import com.example.springboot.dto.response.CinemaRegion;
 import com.example.springboot.exception.CustomException;
+import com.example.springboot.mapper.CinemaDirectoryMapper;
 import com.example.springboot.mapper.CinemaMapper;
 import com.github.pagehelper.PageInfo;
 import com.github.pagehelper.page.PageMethod;
@@ -19,9 +21,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @Service
 @Transactional(readOnly = true)
@@ -29,6 +33,11 @@ public class CinemaService extends BaseService<Cinema> {
 
     @Resource
     private CinemaMapper cinemaMapper;
+
+    @Resource
+    private CinemaDirectoryMapper directoryMapper;
+
+    private static final String DEFAULT_PASSWORD = "cinema123";
 
     private final PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
@@ -71,6 +80,36 @@ public class CinemaService extends BaseService<Cinema> {
         return result;
     }
 
+    /**
+     * 从影院名录批量生成影院，幂等：已关联过名录的影院跳过。
+     * 生成的影院只带 名称/电话/地址/区域，没有影厅与排片 —— 前台可见、不能真正购票。
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public int importFromDirectory(List<Integer> directoryIds) {
+        if (directoryIds == null || directoryIds.isEmpty()) {
+            return 0;
+        }
+        Set<Integer> linked = new HashSet<>(cinemaMapper.selectLinkedDirectoryIds(directoryIds));
+        int created = 0;
+        for (CinemaDirectory row : directoryMapper.selectByIds(directoryIds)) {
+            if (linked.contains(row.getId())) {
+                continue;
+            }
+            Cinema cinema = new Cinema();
+            cinema.setUsername("amap_" + row.getPoiId());
+            cinema.setPassword(passwordEncoder.encode(DEFAULT_PASSWORD));
+            cinema.setRole("CINEMA");
+            cinema.setStatus(CinemaStatus.APPROVED);
+            cinema.setName(row.getName());
+            cinema.setPhone(row.getPhone());
+            cinema.setAddress(row.getAddress());
+            cinema.setDirectoryId(row.getId());
+            cinemaMapper.insert(cinema);
+            created++;
+        }
+        return created;
+    }
+
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void add(Cinema cinema) {
@@ -84,7 +123,7 @@ public class CinemaService extends BaseService<Cinema> {
             throw new CustomException(ErrorCode.BUSINESS_CONFLICT.code(), "账号已存在,请更换别的账号");
         }
         if (cinema.getPassword() == null) {
-            cinema.setPassword("cinema123");
+            cinema.setPassword(DEFAULT_PASSWORD);
         }
         if (cinema.getName() == null) {
             cinema.setName(cinema.getUsername());
