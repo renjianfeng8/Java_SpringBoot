@@ -142,4 +142,10 @@
         ORDER BY d.city, d.district
     </select>
 
+    <select id="selectLinkedDirectoryIds" resultType="java.lang.Integer">
+        SELECT DISTINCT directory_id FROM cinema
+        WHERE directory_id IN
+        <foreach collection="ids" item="id" open="(" separator="," close=")">#{id}</foreach>
+    </select>
+
 </mapper>
