@@ -52,6 +52,12 @@ public class CinemaController extends BaseController<Cinema> {
         return Result.success(cinemaService.selectPage(cinema, filmId, pageNum, pageSize, !isAdmin()));
     }
 
+    /** 前台区域级联选项。前缀已在 AuthInterceptor 的 PUBLIC_READ_PREFIXES，游客可读 */
+    @GetMapping("/regions")
+    public Result regions() {
+        return Result.success(cinemaService.regions());
+    }
+
     @Override
     @GetMapping
     public Result list(Cinema cinema) {
