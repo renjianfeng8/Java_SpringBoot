@@ -89,6 +89,8 @@ public class CinemaService extends BaseService<Cinema> {
         if (directoryIds == null || directoryIds.isEmpty()) {
             return 0;
         }
+        // 所有生成影院共用同一默认密码，故一次性算出哈希复用：安全性等价，且避免逐行 bcrypt 的昂贵开销
+        String defaultHash = passwordEncoder.encode(DEFAULT_PASSWORD);
         Set<Integer> linked = new HashSet<>(cinemaMapper.selectLinkedDirectoryIds(directoryIds));
         int created = 0;
         for (CinemaDirectory row : directoryMapper.selectByIds(directoryIds)) {
@@ -97,7 +99,7 @@ public class CinemaService extends BaseService<Cinema> {
             }
             Cinema cinema = new Cinema();
             cinema.setUsername("amap_" + row.getPoiId());
-            cinema.setPassword(passwordEncoder.encode(DEFAULT_PASSWORD));
+            cinema.setPassword(defaultHash);
             cinema.setRole("CINEMA");
             cinema.setStatus(CinemaStatus.APPROVED);
             cinema.setName(row.getName());
