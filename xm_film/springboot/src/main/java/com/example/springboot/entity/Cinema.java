@@ -23,4 +23,10 @@ public class Cinema extends Account {
     private String status;
     private String phone;
     private String description;
+    /** 关联的影院名录 id（可空）；区域经它 JOIN 取得 */
+    private Integer directoryId;
+    /** 以下三者不由 cinema 表存储，查询时 JOIN cinema_directory 带出，只读 */
+    private String province;
+    private String city;
+    private String district;
 }
