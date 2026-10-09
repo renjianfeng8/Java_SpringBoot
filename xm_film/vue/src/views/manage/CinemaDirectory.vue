@@ -122,6 +122,7 @@ const doPreview = () => {
       if (res.code === '200') importDialog.preview = res.data
       else ElMessage.error(res.msg)
     })
+    .catch(() => {}) // 网络异常的错误提示由 request.js 拦截器统一弹出
     .finally(() => { importDialog.previewing = false })
 }
 
@@ -139,6 +140,7 @@ const doImport = () => {
         ElMessage.error(res.msg)
       }
     })
+    .catch(() => {}) // 网络异常的错误提示由 request.js 拦截器统一弹出
     .finally(() => { importDialog.importing = false })
 }
 
