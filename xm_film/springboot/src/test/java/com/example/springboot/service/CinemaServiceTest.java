@@ -236,4 +236,21 @@ class CinemaServiceTest {
         assertEquals(0, cinemaService.importFromDirectory(List.of()));
         verifyNoInteractions(cinemaMapper, directoryMapper);
     }
+
+    @Test
+    void importFromDirectory_whenAllAlreadyLinked_shouldCreateNone() {
+        when(cinemaMapper.selectLinkedDirectoryIds(List.of(1, 2))).thenReturn(List.of(1, 2));
+        CinemaDirectory row1 = new CinemaDirectory();
+        row1.setId(1); row1.setPoiId("p1");
+        when(directoryMapper.selectByIds(List.of(1, 2))).thenReturn(List.of(row1));
+
+        assertEquals(0, cinemaService.importFromDirectory(List.of(1, 2)));
+        verify(cinemaMapper, never()).insert(any(Cinema.class));
+    }
+
+    @Test
+    void importFromDirectory_withNullIds_shouldDoNothing() {
+        assertEquals(0, cinemaService.importFromDirectory(null));
+        verifyNoInteractions(cinemaMapper, directoryMapper);
+    }
 }
