@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.springboot.mapper.CinemaDirectoryMapper">
+
+    <select id="selectAll" resultType="com.example.springboot.entity.CinemaDirectory">
+        SELECT * FROM cinema_directory
+        <where>
+            <if test="name != null">AND name LIKE CONCAT('%', #{name}, '%')</if>
+            <if test="province != null">AND province = #{province}</if>
+            <if test="city != null">AND city = #{city}</if>
+            <if test="district != null">AND district = #{district}</if>
+            <if test="brand != null">AND brand = #{brand}</if>
+        </where>
+        ORDER BY id DESC
+    </select>
+
+    <insert id="insertIgnore" parameterType="com.example.springboot.entity.CinemaDirectory">
+        INSERT IGNORE INTO cinema_directory
+            (poi_id, name, brand, province, city, district, address, phone, source)
+        VALUES
+            (#{poiId}, #{name}, #{brand}, #{province}, #{city}, #{district}, #{address}, #{phone}, #{source})
+    </insert>
+
+    <select id="selectExistingPoiIds" resultType="java.lang.String">
+        SELECT poi_id FROM cinema_directory
+        WHERE poi_id IN
+        <foreach collection="poiIds" item="id" open="(" separator="," close=")">#{id}</foreach>
+    </select>
+
+    <select id="distinctCities" resultType="java.lang.String">
+        SELECT DISTINCT city FROM cinema_directory WHERE city IS NOT NULL AND city != '' ORDER BY city
+    </select>
+
+    <select id="distinctBrands" resultType="java.lang.String">
+        SELECT DISTINCT brand FROM cinema_directory WHERE brand IS NOT NULL AND brand != '' ORDER BY brand
+    </select>
+
+</mapper>
