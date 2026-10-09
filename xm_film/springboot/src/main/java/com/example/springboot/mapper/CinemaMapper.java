@@ -20,4 +20,7 @@ public interface CinemaMapper extends BaseMapper<Cinema> {
     /** 大盘统计：影院状态分布（[{name, value}]，由 cinema 实时计数） */
     List<Map<String, Object>> countGroupByStatus();
 
+    /** 前台区域级联：distinct 的 {city, district} 行，仅已审核已关联影院 */
+    List<Map<String, Object>> selectRegions();
+
 }
