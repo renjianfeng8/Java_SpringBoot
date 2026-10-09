@@ -286,12 +286,21 @@ class AmapClientTest {
             ]}
             """;
 
+    /** 直辖市实测形态：省级节点下多一层「北京城区」(level=city)，真实区县在 city 节点的 children 里 */
     private static final String DISTRICT_JSON = """
-            {"status":"1","info":"OK","districts":[{"name":"北京市","adcode":"110000",
-              "level":"province","districts":[
+            {"status":"1","info":"OK","districts":[
+              {"name":"北京市","adcode":"110000","level":"province","districts":[
+                {"name":"北京城区","adcode":"110100","level":"city","districts":[]}]},
+              {"name":"北京城区","adcode":"110100","level":"city","districts":[
                 {"name":"东城区","adcode":"110101","level":"district"},
-                {"name":"通州区","adcode":"110112","level":"district"}
-              ]}]}
+                {"name":"通州区","adcode":"110112","level":"district"}]}]}
+            """;
+
+    /** 地级市实测形态：第一层就是 level=city 节点 */
+    private static final String DISTRICT_JSON_PREFECTURE = """
+            {"status":"1","info":"OK","districts":[
+              {"name":"石家庄市","adcode":"130100","level":"city","districts":[
+                {"name":"长安区","adcode":"130102","level":"district"}]}]}
             """;
 
     private MockRestServiceServer server;
@@ -343,8 +352,9 @@ class AmapClientTest {
         assertThat(poi.tel()).isNull();
     }
 
+    /** 直辖市：多一层省级，必须跳过去取 level=city 节点的区县 */
     @Test
-    void districtsParsesSubDistricts() {
+    void districtsSkipsProvinceLayerForMunicipality() {
         server.expect(once(), r -> {
             assertThat(r.getURI().getPath()).isEqualTo("/v3/config/district");
             assertThat(q(r)).contains("keywords=北京").contains("subdistrict=1");
@@ -353,6 +363,17 @@ class AmapClientTest {
         assertThat(client.districts("北京"))
                 .extracting(AmapClient.District::adcode)
                 .containsExactly("110101", "110112");
+    }
+
+    /** 地级市：第一层即 city 节点，直接取之 */
+    @Test
+    void districtsReadsPrefectureCityDirectly() {
+        server.expect(once(), r -> assertThat(q(r)).contains("keywords=石家庄"))
+                .andRespond(withSuccess(DISTRICT_JSON_PREFECTURE, MediaType.APPLICATION_JSON));
+
+        assertThat(client.districts("石家庄"))
+                .extracting(AmapClient.District::adcode)
+                .containsExactly("130102");
     }
 }
 ```
@@ -445,7 +466,11 @@ public class AmapClient {
         return new PoiPage(intOrZero(root, "count"), pois);
     }
 
-    /** 取某市的区县列表（adcode），大城超 200 条时按区县细分抓取。 */
+    /**
+     * 取某市的区县列表（adcode），大城超 200 条时按区县细分抓取。
+     * 实测：地级市第一层即 level=city 节点；直辖市（北京/上海/天津/重庆）多一层省级，
+     * 真实区县在 city 节点下——故先挑 level=city 的那个，挑不到再退回第一个。
+     */
     public List<District> districts(String cityName) {
         URI uri = UriComponentsBuilder.fromHttpUrl(DISTRICT_URL)
                 .queryParam("key", key)
@@ -459,13 +484,21 @@ public class AmapClient {
         JsonNode root = get(uri);
         List<District> result = new ArrayList<>();
         JsonNode districts = root.path("districts");
-        if (districts.isArray() && !districts.isEmpty()) {
-            for (JsonNode d : districts.get(0).path("districts")) {
-                String adcode = text(d, "adcode");
-                String name = text(d, "name");
-                if (adcode != null && name != null) {
-                    result.add(new District(name, adcode));
-                }
+        if (!districts.isArray() || districts.isEmpty()) {
+            return result;
+        }
+        JsonNode city = districts.get(0);
+        for (JsonNode d : districts) {
+            if ("city".equals(text(d, "level"))) {
+                city = d;
+                break;
+            }
+        }
+        for (JsonNode d : city.path("districts")) {
+            String adcode = text(d, "adcode");
+            String name = text(d, "name");
+            if (adcode != null && name != null) {
+                result.add(new District(name, adcode));
             }
         }
         return result;
@@ -509,7 +542,7 @@ public class AmapClient {
 
 运行：`mvn -q -Dtest=AmapClientTest test`
 
-预期：3 个用例全绿。
+预期：4 个用例全绿。
 
 - [ ] Step 7: 提交。
 
