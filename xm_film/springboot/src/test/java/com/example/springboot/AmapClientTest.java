@@ -40,7 +40,7 @@ class AmapClientTest {
             ]}
             """;
 
-    /** 直辖市实测形态：省级节点下多一层「北京城区」(level=city)，真实区县在 city 节点的 children 里 */
+    /** 直辖市实测形态：顶层多一个省级条目「北京市」，真实区县挂在同级 level=city 的「北京城区」下 */
     private static final String DISTRICT_JSON = """
             {"status":"1","info":"OK","districts":[
               {"name":"北京市","adcode":"110000","level":"province","districts":[

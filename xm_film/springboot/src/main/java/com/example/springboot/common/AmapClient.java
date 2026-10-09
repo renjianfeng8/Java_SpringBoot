@@ -79,8 +79,9 @@ public class AmapClient {
 
     /**
      * 取某市的区县列表（adcode），大城超 200 条时按区县细分抓取。
-     * 实测：地级市第一层即 level=city 节点；直辖市（北京/上海/天津/重庆）多一层省级，
-     * 真实区县在 city 节点下——故先挑 level=city 的那个，挑不到再退回第一个。
+     * 实测：地级市的 districts[0] 就是 level=city 节点；直辖市（北京/上海/天津/重庆）顶层
+     * 多出一个省级条目（如「北京市」），真实区县挂在**同级**的 level=city 条目（「北京城区」）下，
+     * 而省级条目 children 里的同名 city 节点是空的——故按 level=city 取，而不是取 districts[0]。
      */
     public List<District> districts(String cityName) {
         URI uri = UriComponentsBuilder.fromHttpUrl(DISTRICT_URL)
