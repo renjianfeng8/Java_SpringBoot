@@ -1,5 +1,15 @@
 <template>
   <div class="page-narrow">
+    <div class="cinema-filters">
+      <el-select v-model="query.city" placeholder="全部城市" aria-label="城市" clearable
+                 class="cinema-filters__item" @change="onCityChange">
+        <el-option v-for="c in filters.cities" :key="c" :label="c" :value="c"/>
+      </el-select>
+      <el-select v-model="query.district" placeholder="全部区域" aria-label="区域" clearable
+                 class="cinema-filters__item" :disabled="!query.city" @change="reload">
+        <el-option v-for="d in districtOptions" :key="d" :label="d" :value="d"/>
+      </el-select>
+    </div>
     <!-- 影院列表：整卡是 router-link，可直接进入影院详情（此前整页没有任何跳转入口） -->
     <div class="cinema-list">
       <router-link
@@ -54,10 +64,10 @@
 </template>
 
 <script setup>
-import { reactive } from 'vue';
+import { reactive, computed } from 'vue';
 import request from "@/utils/request.js";
 import { ElMessage } from 'element-plus';
-import { API_PATHS, apiPage } from '@/constants';
+import { API_PATHS, apiPage, CINEMA_API } from '@/constants';
 
 const data = reactive({
   pageNum: 1,
@@ -67,12 +77,32 @@ const data = reactive({
   error: false
 })
 
+const query = reactive({ city: null, district: null })
+const filters = reactive({ cities: [], districtsByCity: {} })
+const districtOptions = computed(() =>
+    query.city ? (filters.districtsByCity[query.city] || []) : [])
+
+// 拉不到筛选项只留空下拉，不打断列表；网络错误提示由 request.js 统一弹
+const loadRegions = () => {
+  request.get(CINEMA_API.REGIONS).then(res => {
+    if (res.code === '200') {
+      filters.cities = res.data.map(r => r.city)
+      filters.districtsByCity = Object.fromEntries(res.data.map(r => [r.city, r.districts]))
+    }
+  }).catch(() => {})
+}
+
+const onCityChange = () => { query.district = null; reload() }
+const reload = () => { data.pageNum = 1; load() }
+
 const load = () => {
   data.error = false
   request.get(apiPage(API_PATHS.CINEMAS), {
     params: {
       pageNum: data.pageNum,
       pageSize: data.pageSize,
+      city: query.city || undefined,
+      district: query.district || undefined,
     }
   }).then(res => {
     if (res.code === '200') {
@@ -102,10 +132,21 @@ const handleCurrentChange = (newPage) => {
   load();
 };
 
+loadRegions()
 load()
 </script>
 
 <style scoped>
+.cinema-filters {
+  display: flex;
+  gap: var(--space-12);
+  padding: var(--space-16) 0;
+}
+
+.cinema-filters__item {
+  width: 200px;
+}
+
 .cinema-list {
   padding: var(--space-16) 0;
 }

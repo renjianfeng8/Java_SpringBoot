@@ -66,6 +66,11 @@ export const CINEMA_DIRECTORY_API = {
   IMPORT: `${API_PATHS.CINEMA_DIRECTORY}/import`,
 }
 
+/** 影院公开接口（区域级联） */
+export const CINEMA_API = {
+  REGIONS: `${API_PATHS.CINEMAS}/regions`,
+}
+
 /** 后台导入可选城市：一线 + 新一线 + 省会 */
 export const DIRECTORY_IMPORT_CITIES = [
   '北京','上海','广州','深圳','成都','重庆','杭州','武汉','西安','南京',
