@@ -3,6 +3,7 @@ package com.example.springboot.controller;
 import com.example.springboot.common.BaseController;
 import com.example.springboot.common.Result;
 import com.example.springboot.common.enums.ErrorCode;
+import com.example.springboot.dto.request.CinemaFromDirectoryRequest;
 import com.example.springboot.entity.Cinema;
 import com.example.springboot.exception.CustomException;
 import com.example.springboot.service.CinemaService;
@@ -56,6 +57,14 @@ public class CinemaController extends BaseController<Cinema> {
     @GetMapping("/regions")
     public Result regions() {
         return Result.success(cinemaService.regions());
+    }
+
+    /** 从名录批量生成影院（幂等）。仅管理员 —— 写角色门禁在方法内 */
+    @PostMapping("/from-directory")
+    public Result importFromDirectory(@RequestBody CinemaFromDirectoryRequest request) {
+        requireAdmin();
+        List<Integer> ids = request == null ? null : request.getDirectoryIds();
+        return Result.success(cinemaService.importFromDirectory(ids));
     }
 
     @Override

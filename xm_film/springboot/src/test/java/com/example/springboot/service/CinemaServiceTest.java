@@ -3,11 +3,14 @@ package com.example.springboot.service;
 import com.example.springboot.dto.response.CinemaRegion;
 import com.example.springboot.entity.Account;
 import com.example.springboot.entity.Cinema;
+import com.example.springboot.entity.CinemaDirectory;
 import com.example.springboot.exception.CustomException;
+import com.example.springboot.mapper.CinemaDirectoryMapper;
 import com.example.springboot.mapper.CinemaMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -26,6 +29,9 @@ class CinemaServiceTest {
 
     @Mock
     private CinemaMapper cinemaMapper;
+
+    @Mock
+    private CinemaDirectoryMapper directoryMapper;
 
     @InjectMocks
     private CinemaService cinemaService;
@@ -195,5 +201,39 @@ class CinemaServiceTest {
         assertEquals(1, regions.size());
         assertEquals("广州", regions.get(0).getCity());
         assertTrue(regions.get(0).getDistricts().isEmpty());
+    }
+
+    @Test
+    void importFromDirectory_shouldSkipLinkedAndCreateRest() {
+        CinemaDirectory row1 = new CinemaDirectory();
+        row1.setId(1); row1.setPoiId("p1"); row1.setName("A影院");
+        CinemaDirectory row2 = new CinemaDirectory();
+        row2.setId(2); row2.setPoiId("p2"); row2.setName("B影院");
+        row2.setPhone("021-1"); row2.setAddress("addr2");
+
+        when(cinemaMapper.selectLinkedDirectoryIds(List.of(1, 2))).thenReturn(List.of(1));
+        when(directoryMapper.selectByIds(List.of(1, 2))).thenReturn(List.of(row1, row2));
+
+        int created = cinemaService.importFromDirectory(List.of(1, 2));
+
+        assertEquals(1, created);
+        ArgumentCaptor<Cinema> captor = ArgumentCaptor.forClass(Cinema.class);
+        verify(cinemaMapper).insert(captor.capture());
+        Cinema c = captor.getValue();
+        assertEquals("amap_p2", c.getUsername());
+        assertEquals("CINEMA", c.getRole());
+        assertEquals("已审核", c.getStatus());
+        assertEquals("B影院", c.getName());
+        assertEquals("021-1", c.getPhone());
+        assertEquals("addr2", c.getAddress());
+        assertEquals(Integer.valueOf(2), c.getDirectoryId());
+        assertNotNull(c.getPassword());
+        assertNotEquals("cinema123", c.getPassword());
+    }
+
+    @Test
+    void importFromDirectory_withEmptyIds_shouldDoNothing() {
+        assertEquals(0, cinemaService.importFromDirectory(List.of()));
+        verifyNoInteractions(cinemaMapper, directoryMapper);
     }
 }
