@@ -18,10 +18,15 @@
           <el-option v-for="b in filterData.brands" :key="b" :label="b" :value="b"/>
         </el-select>
       </div>
+      <div class="list-toolbar__actions">
+        <span v-if="selectedIds.length" class="selection-count" aria-live="polite">已选 {{ selectedIds.length }} 项</span>
+        <el-button type="primary" :disabled="!selectedIds.length" @click="confirmImport">导入为影院</el-button>
+      </div>
     </div>
 
     <div class="card table-card">
-      <el-table v-loading="loading" stripe size="small" :data="rows">
+      <el-table v-loading="loading" stripe size="small" :data="rows" @selection-change="onSelectionChange">
+        <el-table-column type="selection" width="55"/>
         <el-table-column prop="name" label="影院名称" min-width="220"/>
         <el-table-column prop="brand" label="院线" width="140"/>
         <el-table-column prop="province" label="省" width="110"/>
@@ -66,11 +71,11 @@
 </template>
 
 <script setup>
-import { reactive, computed } from 'vue'
+import { reactive, computed, ref } from 'vue'
 import { Upload } from '@element-plus/icons-vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import request from '@/utils/request'
-import { CINEMA_DIRECTORY_API, DIRECTORY_IMPORT_CITIES } from '@/constants'
+import { CINEMA_DIRECTORY_API, CINEMA_API, DIRECTORY_IMPORT_CITIES } from '@/constants'
 
 const query = reactive({ city: null, brand: null, pageNum: 1, pageSize: 10 })
 const filterData = reactive({ cities: [], brands: [] })
@@ -79,6 +84,29 @@ const rows = computed(() => data.list)
 const total = computed(() => data.total)
 const loading = computed(() => data.loading)
 const error = computed(() => data.error)
+
+const selectedIds = ref([])
+const onSelectionChange = (rows) => { selectedIds.value = rows.map(r => r.id) }
+
+// 把选中的名录行生成为真实影院；幂等，已导入过的行不会重复建
+const confirmImport = () => {
+  ElMessageBox.confirm(
+    `将这 ${selectedIds.value.length} 条名录导入为影院吗？导入后前台立即可见（不含影厅/排片）。`,
+    '导入确认', { type: 'warning' }
+  ).then(async () => {
+    try {
+      const res = await request.post(CINEMA_API.FROM_DIRECTORY, { directoryIds: selectedIds.value })
+      if (res.code === '200') {
+        ElMessage.success(`新增 ${res.data} 条影院`)
+        load()
+      } else {
+        ElMessage.error(res.msg)
+      }
+    } catch (e) {
+      // 网络/HTTP 错误提示由 request.js 拦截器统一弹出
+    }
+  }).catch(() => {})
+}
 
 const importDialog = reactive({
   visible: false, cities: [], preview: null, previewing: false, importing: false,
