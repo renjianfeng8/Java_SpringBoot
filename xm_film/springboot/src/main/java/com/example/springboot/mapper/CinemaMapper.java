@@ -23,4 +23,7 @@ public interface CinemaMapper extends BaseMapper<Cinema> {
     /** 前台区域级联：distinct 的 {city, district} 行，仅已审核已关联影院 */
     List<Map<String, Object>> selectRegions();
 
+    /** 已在 cinema 中关联的这些名录 id（去重），供「从名录生成影院」跳过已导入行 */
+    List<Integer> selectLinkedDirectoryIds(@Param("ids") List<Integer> ids);
+
 }
