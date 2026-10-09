@@ -24,10 +24,10 @@ import java.util.Set;
 @Service
 public class CinemaDirectoryImportService {
 
-    /** 高德单组参数上限：page_size ≤ 25、翻页最多 200 条 */
+    /** 高德 v5 单组参数硬上限：page_size ≤ 25、翻页最多 8 页 = 200 条（实测第 9 页起恒空） */
     private static final int PAGE_SIZE = 25;
-    private static final int MAX_PAGES = 8; // 8 × 25 = 200
-    private static final int SUBDIVIDE_THRESHOLD = 200;
+    private static final int MAX_PAGES = 8;
+    private static final int PAGE_LIMIT = MAX_PAGES * PAGE_SIZE; // 200
     private static final int SAMPLE_SIZE = 10;
 
     private final AmapClient client;
@@ -84,40 +84,42 @@ public class CinemaDirectoryImportService {
         return new ArrayList<>(byId.values());
     }
 
+    /**
+     * 城市级抓取取满 200（= 硬上限）说明还有更多没取到，改用区县细分再抓。
+     * 高德 v5 响应没有总命中数字段，count 只是本页条数（实测恒等于本页返回数），
+     * 所以只能靠"是否触顶"来判断，不能拿 count 跟 200 比。
+     */
     private List<AmapClient.CinemaPoi> fetchCity(String city, List<String> warnings) {
-        AmapClient.PoiPage first = client.searchCinemas(city, 1, PAGE_SIZE);
-        if (first.count() <= SUBDIVIDE_THRESHOLD) {
-            return collectRemainingPages(city, 1, first);
+        List<AmapClient.CinemaPoi> all = fetchAllPages(city);
+        if (all.size() < PAGE_LIMIT) {
+            return all;
         }
 
         List<AmapClient.District> districts = client.districts(city);
         if (districts.isEmpty()) {
-            warnings.add(city + " 影院超过 " + SUBDIVIDE_THRESHOLD + " 条且取不到区县列表，结果可能不完整");
-            return collectRemainingPages(city, 1, first);
+            warnings.add(city + " 影院已达 " + PAGE_LIMIT + " 条上限且取不到区县列表，结果可能不完整");
+            return all;
         }
-        List<AmapClient.CinemaPoi> all = new ArrayList<>();
+        List<AmapClient.CinemaPoi> byDistrict = new ArrayList<>();
         for (AmapClient.District district : districts) {
-            AmapClient.PoiPage page = client.searchCinemas(district.adcode(), 1, PAGE_SIZE);
-            if (page.count() > SUBDIVIDE_THRESHOLD) {
-                warnings.add(city + district.name() + " 影院仍超 " + SUBDIVIDE_THRESHOLD + " 条，可能未取全");
+            List<AmapClient.CinemaPoi> sub = fetchAllPages(district.adcode());
+            if (sub.size() >= PAGE_LIMIT) {
+                warnings.add(city + district.name() + " 影院仍达 " + PAGE_LIMIT + " 条上限，可能未取全");
             }
-            all.addAll(collectRemainingPages(district.adcode(), 1, page));
+            byDistrict.addAll(sub);
         }
-        return all;
+        return byDistrict;
     }
 
-    /** first 是第 1 页，继续翻到第 2..min(MAX_PAGES, ceil(count/pageSize)) 页 */
-    private List<AmapClient.CinemaPoi> collectRemainingPages(String region, int firstPage,
-                                                             AmapClient.PoiPage first) {
-        List<AmapClient.CinemaPoi> result = new ArrayList<>(first.pois());
-        int totalPages = Math.min(MAX_PAGES,
-                (int) Math.ceil(first.count() / (double) PAGE_SIZE));
-        for (int page = firstPage + 1; page <= totalPages; page++) {
-            AmapClient.PoiPage next = client.searchCinemas(region, page, PAGE_SIZE);
-            if (next.pois().isEmpty()) {
+    /** 逐页抓到本页不满（或达 8 页硬上限）为止 —— 高德不给总数，只能这样收尾。 */
+    private List<AmapClient.CinemaPoi> fetchAllPages(String region) {
+        List<AmapClient.CinemaPoi> result = new ArrayList<>();
+        for (int page = 1; page <= MAX_PAGES; page++) {
+            List<AmapClient.CinemaPoi> pois = client.searchCinemas(region, page, PAGE_SIZE);
+            result.addAll(pois);
+            if (pois.size() < PAGE_SIZE) {
                 break;
             }
-            result.addAll(next.pois());
         }
         return result;
     }

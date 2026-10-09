@@ -9,6 +9,7 @@ import org.springframework.web.client.RestTemplate;
 
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.client.ExpectedCount.once;
@@ -50,6 +51,11 @@ class AmapClientTest {
                 {"name":"通州区","adcode":"110112","level":"district"}]}]}
             """;
 
+    /** 实测自并发超限时的响应体 */
+    private static final String QPS_JSON = """
+            {"status":"0","info":"CUQPS_HAS_EXCEEDED_THE_LIMIT","infocode":"10021"}
+            """;
+
     /** 地级市实测形态：第一层就是 level=city 节点 */
     private static final String DISTRICT_JSON_PREFECTURE = """
             {"status":"1","info":"OK","districts":[
@@ -80,11 +86,10 @@ class AmapClientTest {
                     .contains("show_fields=business");
         }).andRespond(withSuccess(TEXT_JSON, MediaType.APPLICATION_JSON));
 
-        AmapClient.PoiPage page = client.searchCinemas("北京", 1, 25);
+        List<AmapClient.CinemaPoi> page = client.searchCinemas("北京", 1, 25);
 
-        assertThat(page.count()).isEqualTo(2);
-        assertThat(page.pois()).hasSize(2);
-        AmapClient.CinemaPoi poi = page.pois().get(0);
+        assertThat(page).hasSize(2);
+        AmapClient.CinemaPoi poi = page.get(0);
         assertThat(poi.poiId()).isEqualTo("B0FFHF8BWF");
         assertThat(poi.name()).isEqualTo("万达影城(通州万达广场店)");
         assertThat(poi.province()).isEqualTo("北京市");
@@ -100,7 +105,7 @@ class AmapClientTest {
         server.expect(once(), r -> assertThat(q(r)).contains("region=石家庄"))
                 .andRespond(withSuccess(TEXT_JSON_SPARSE, MediaType.APPLICATION_JSON));
 
-        AmapClient.CinemaPoi poi = client.searchCinemas("石家庄", 1, 25).pois().get(0);
+        AmapClient.CinemaPoi poi = client.searchCinemas("石家庄", 1, 25).get(0);
 
         assertThat(poi.address()).isNull();
         assertThat(poi.tel()).isNull();
@@ -128,5 +133,16 @@ class AmapClientTest {
         assertThat(client.districts("石家庄"))
                 .extracting(AmapClient.District::adcode)
                 .containsExactly("130102");
+    }
+
+    /** 并发超限（CUQPS）是瞬时的：退避重试后应拿到数据，而不是让整次导入失败 */
+    @Test
+    void retriesWhenAmapReportsConcurrencyLimit() {
+        server.expect(once(), r -> { }).andRespond(withSuccess(QPS_JSON, MediaType.APPLICATION_JSON));
+        server.expect(once(), r -> { }).andRespond(withSuccess(QPS_JSON, MediaType.APPLICATION_JSON));
+        server.expect(once(), r -> { }).andRespond(withSuccess(TEXT_JSON, MediaType.APPLICATION_JSON));
+
+        assertThat(client.searchCinemas("北京", 1, 25)).hasSize(2);
+        server.verify();
     }
 }
