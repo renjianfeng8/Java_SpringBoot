@@ -47,13 +47,14 @@ const data = reactive({ list: [], total: 0, error: false })
 const rows = computed(() => data.list)
 const total = computed(() => data.total)
 
+// 拉不到筛选项只让下拉留空，不打断列表加载；错误提示由 request.js 拦截器统一弹出
 const loadFilters = () => {
   request.get(CINEMA_DIRECTORY_API.FILTERS).then(res => {
     if (res.code === '200') {
       filterData.cities = res.data.cities
       filterData.brands = res.data.brands
     }
-  })
+  }).catch(() => {})
 }
 
 const load = () => {
