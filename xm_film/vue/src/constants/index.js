@@ -21,6 +21,7 @@ export const API_PATHS = {
   FILES: '/api/v1/files/upload',
   YEARS: '/api/v1/auth/years',
   TMDB: '/api/v1/tmdb',
+  CINEMA_DIRECTORY: '/api/v1/cinema-directory',
 }
 
 /**
@@ -56,6 +57,23 @@ export const TMDB_API = {
   // 给 video 为空的历史影片补预告片（POST，幂等）
   BACKFILL_VIDEOS: `${API_PATHS.TMDB}/backfill-videos`,
 }
+
+/** 影院名录（高德导入的只读资料）。PAGE/FILTERS 匿名可读；IMPORT* 仅管理员 */
+export const CINEMA_DIRECTORY_API = {
+  PAGE: apiPage(API_PATHS.CINEMA_DIRECTORY),
+  FILTERS: `${API_PATHS.CINEMA_DIRECTORY}/filters`,
+  IMPORT_PREVIEW: `${API_PATHS.CINEMA_DIRECTORY}/import/preview`,
+  IMPORT: `${API_PATHS.CINEMA_DIRECTORY}/import`,
+}
+
+/** 后台导入可选城市：一线 + 新一线 + 省会 */
+export const DIRECTORY_IMPORT_CITIES = [
+  '北京','上海','广州','深圳','成都','重庆','杭州','武汉','西安','南京',
+  '天津','苏州','长沙','郑州','东莞','青岛','沈阳','宁波','昆明','合肥',
+  '佛山','福州','厦门','哈尔滨','济南','大连','南宁','石家庄','长春','泉州',
+  '贵阳','南昌','常州','南通','嘉兴','徐州','太原','烟台','兰州','珠海',
+  '海口','乌鲁木齐','呼和浩特','银川','西宁',
+]
 
 export const FILM_API = {
   SEARCH: `${API_PATHS.FILMS}/search`,
