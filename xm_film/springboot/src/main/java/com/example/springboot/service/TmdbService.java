@@ -77,6 +77,7 @@ public class TmdbService {
         preview.setEmployee(detail.companyName());
         preview.setLanguage(TmdbMapping.languageFormOption(detail.languageCode()));
         preview.setStatus(TmdbMapping.deriveStatus(detail.releaseDate(), LocalDate.now()));
+        preview.setVideo(detail.trailerUrl());
         preview.setImg(download("海报", detail.posterPath(), TmdbClient.POSTER_SIZE, warnings));
 
         preview.setTypeIds(resolveTypes(detail.genreNames(), warnings));

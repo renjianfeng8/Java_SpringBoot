@@ -4,6 +4,7 @@
       <h2 class="page-head__title">电影信息</h2>
       <div class="page-head__action">
         <el-button :icon="Download" @click="openImport">从 TMDB 导入</el-button>
+        <el-button :icon="VideoPlay" :loading="backfilling" @click="runBackfill">补预告片</el-button>
         <el-button type="primary" :icon="Plus" @click="openAdd">新 增</el-button>
       </div>
     </div>
@@ -169,6 +170,9 @@
         <el-form-item label="电影简介" prop="content">
           <el-input type="textarea" :rows="4" v-model="form.content" autocomplete="off" placeholder="请输入电影简介"/>
         </el-form-item>
+        <el-form-item label="预告视频" prop="video">
+          <el-input v-model="form.video" autocomplete="off" placeholder="YouTube 链接，从 TMDB 导入时自动填充"/>
+        </el-form-item>
         <el-form-item label="制作公司" prop="employee">
           <el-input v-model="form.employee" autocomplete="off" placeholder="请输入制作公司" @keyup.enter="submit"/>
         </el-form-item>
@@ -231,12 +235,27 @@
         </div>
       </template>
     </el-dialog>
+
+    <!-- 补预告片：给 video 为空的历史影片按片名回查 TMDB。结果里列出没补上的影片及原因 -->
+    <el-dialog v-model="backfillVisible" title="补预告片结果" width="520">
+      <p class="backfill-summary">
+        共处理 {{ backfillResult.scanned }} 部，补上 {{ backfillResult.updated }} 部。
+      </p>
+      <el-table v-if="backfillResult.missed.length" :data="backfillResult.missed" size="small" max-height="320">
+        <el-table-column label="影片" prop="title" show-overflow-tooltip/>
+        <el-table-column label="未补原因" prop="reason" width="160"/>
+      </el-table>
+      <p v-else class="backfill-summary">其余均已有预告片或本次已补上。</p>
+      <template #footer>
+        <el-button type="primary" @click="backfillVisible = false">知道了</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue'
-import { Delete, Download, Edit, Plus, Search } from '@element-plus/icons-vue'
+import { ref, reactive } from 'vue'
+import { Delete, Download, Edit, Plus, Search, VideoPlay } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { useCrud } from '@/composables/useCrud'
 import { useFormDialog } from '@/composables/useFormDialog'
@@ -251,7 +270,7 @@ const { dialogVisible, formRef, form, rules, openAdd, openEdit, submit, close } 
   defaultForm: {
     title: '', english: '', img: '', start: '', time: undefined,
     language: '', content: '', resolution: '', employee: '',
-    areaId: undefined, actorId: undefined, status: '', typeIds: []
+    areaId: undefined, actorId: undefined, status: '', typeIds: [], video: ''
   },
   rules: {
     title: [{ required: true, message: '请输入电影名称', trigger: 'blur' }],
@@ -381,7 +400,8 @@ async function applyImport() {
       status: preview.status ?? '',
       areaId: preview.areaId ?? undefined,
       actorId: preview.actorId ?? undefined,
-      typeIds: preview.typeIds ?? []
+      typeIds: preview.typeIds ?? [],
+      video: preview.video ?? ''
     })
     importVisible.value = false
 
@@ -394,6 +414,30 @@ async function applyImport() {
     // request.js 已统一弹提示
   } finally {
     importing.value = false
+  }
+}
+
+// ===== 补预告片 =====
+// 给 video 为空的历史影片按片名回查 TMDB。后端幂等：已有预告片的会跳过，重复点不会覆盖。
+const backfilling = ref(false)
+const backfillVisible = ref(false)
+const backfillResult = reactive({ scanned: 0, updated: 0, missed: [] })
+
+async function runBackfill() {
+  backfilling.value = true
+  try {
+    const res = await request.post(TMDB_API.BACKFILL_VIDEOS)
+    if (res.code === '200') {
+      Object.assign(backfillResult, { scanned: 0, updated: 0, missed: [] }, res.data)
+      backfillVisible.value = true
+      ElMessage.success(`已补 ${backfillResult.updated} 部预告片`)
+    } else {
+      ElMessage.error(res.msg || '补预告片失败')
+    }
+  } catch {
+    // request.js 已统一弹提示
+  } finally {
+    backfilling.value = false
   }
 }
 </script>

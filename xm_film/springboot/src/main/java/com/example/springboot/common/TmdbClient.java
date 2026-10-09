@@ -34,6 +34,10 @@ public class TmdbClient {
     private static final String IMAGE_BASE = "https://image.tmdb.org/t/p";
     private static final String LANGUAGE = "zh-CN";
 
+    /** TMDB 的预告片只给 YouTube 视频 id，播放要走 iframe 嵌入，故存成嵌入地址而非文件地址 */
+    private static final String YOUTUBE_EMBED_BASE = "https://www.youtube.com/embed/";
+    private static final String YOUTUBE = "YouTube";
+
     /** 导入时下载入库的海报尺寸：w500 一张约 50–100KB，original 单张好几 MB，不用 */
     public static final String POSTER_SIZE = "w500";
     /** 搜索结果缩略图，只用于弹窗里挑片，不进库 */
@@ -65,7 +69,8 @@ public class TmdbClient {
     /** 影片详情。只保留导入要用到的字段，其余 TMDB 数据一律不取。 */
     public record MovieDetail(String title, String originalTitle, String releaseDate, Integer runtime,
                              String overview, String posterPath, String languageCode, String countryCode,
-                             String companyName, List<String> genreNames, CastMember topCast) {
+                             String companyName, List<String> genreNames, CastMember topCast,
+                             String trailerUrl) {
     }
 
     /** 按片名搜索。TMDB 侧的中文检索对中文片名有效，对英文片名同样有效。 */
@@ -93,13 +98,13 @@ public class TmdbClient {
     }
 
     /**
-     * 影片详情。append_to_response=credits 让演职人员随详情一次返回 ——
-     * 实测有效，省掉第二次请求，也让「详情拿到一半、演员没拿到」这种中间态不存在。
+     * 影片详情。append_to_response=credits,videos —— 演职人员与预告片随详情一次返回，
+     * 省掉后两次请求，也让「详情拿到一半、预告片没拿到」这种中间态不存在。
      */
     public MovieDetail detail(int tmdbId) {
         URI uri = UriComponentsBuilder.fromHttpUrl(API_BASE + "/movie/" + tmdbId)
                 .queryParam("language", LANGUAGE)
-                .queryParam("append_to_response", "credits")
+                .queryParam("append_to_response", "credits,videos")
                 .build()
                 .encode()
                 .toUri();
@@ -116,7 +121,8 @@ public class TmdbClient {
                 firstField(root, "production_countries", "iso_3166_1"),
                 firstField(root, "production_companies", "name"),
                 arrayField(root.path("genres"), "name"),
-                topCast(root));
+                topCast(root),
+                trailerUrl(root));
     }
 
     /**
@@ -230,5 +236,47 @@ public class TmdbClient {
         }
         JsonNode first = cast.get(0);
         return new CastMember(text(first, "name"), text(first, "character"), text(first, "profile_path"));
+    }
+
+    /**
+     * 从 videos.results 里挑一条可嵌入的预告片，拼成 YouTube 嵌入地址。
+     * 只有 YouTube 站点能拼 —— 其它站点（Vimeo 等）拼出的地址 iframe 放不出来，一律跳过留空。
+     * 没有正式 Trailer 的未定档影片常常只有 Teaser，故 Trailer 之后退而取 Teaser。
+     */
+    private static String trailerUrl(JsonNode root) {
+        JsonNode results = root.path("videos").path("results");
+        if (!results.isArray()) {
+            return null;
+        }
+        JsonNode best = null;
+        int bestRank = 0;
+        for (JsonNode item : results) {
+            if (!YOUTUBE.equals(text(item, "site"))) {
+                continue;
+            }
+            int rank = videoRank(text(item, "type"), item.path("official").asBoolean(false));
+            if (rank > bestRank) {
+                bestRank = rank;
+                best = item;
+            }
+        }
+        if (best == null) {
+            return null;
+        }
+        String key = text(best, "key");
+        return (key == null || key.isBlank()) ? null : YOUTUBE_EMBED_BASE + key;
+    }
+
+    /** Trailer 优于 Teaser，同类下官方优于非官方；Clip / Featurette 等不可用，记 0 分。 */
+    private static int videoRank(String type, boolean official) {
+        int base;
+        if ("Trailer".equals(type)) {
+            base = 2;
+        } else if ("Teaser".equals(type)) {
+            base = 1;
+        } else {
+            return 0;
+        }
+        return base * 2 + (official ? 1 : 0);
     }
 }
