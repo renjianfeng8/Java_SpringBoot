@@ -312,4 +312,28 @@ class AuthInterceptorAccessTest {
     void brokenTokenStillReachesTicketRedeem() {
         assertThat(withBrokenToken("/api/v1/tickets/redeem", "POST")).isTrue();
     }
+
+    // ========== 影院名录：GET 公开，导入仅管理员 ==========
+
+    @Test
+    void anonymousCanReadCinemaDirectory() {
+        assertThat(anonymousAllowed("/api/v1/cinema-directory/page", "GET")).isTrue();
+    }
+
+    @Test
+    void userAndCinemaCannotRunCinemaDirectoryImport() {
+        assertThat(hasAccess(newInterceptor(), "/api/v1/cinema-directory/import", "POST", "USER")).isFalse();
+        assertThat(hasAccess(newInterceptor(), "/api/v1/cinema-directory/import", "POST", "CINEMA")).isFalse();
+        assertThat(hasAccess(newInterceptor(), "/api/v1/cinema-directory/import/preview", "POST", "USER")).isFalse();
+    }
+
+    @Test
+    void adminCanRunCinemaDirectoryImport() {
+        assertThat(hasAccess(newInterceptor(), "/api/v1/cinema-directory/import", "POST", "ADMIN")).isTrue();
+    }
+
+    @Test
+    void anonymousCannotRunCinemaDirectoryImport() {
+        assertThat(anonymousAllowed("/api/v1/cinema-directory/import", "POST")).isFalse();
+    }
 }
