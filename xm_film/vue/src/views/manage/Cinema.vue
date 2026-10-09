@@ -38,6 +38,9 @@
               <el-descriptions-item label="手机号">{{ props.row.phone }}</el-descriptions-item>
               <el-descriptions-item label="邮箱">{{ props.row.email }}</el-descriptions-item>
               <el-descriptions-item label="影院地址">{{ props.row.address }}</el-descriptions-item>
+              <el-descriptions-item label="所在区域">
+                {{ [props.row.province, props.row.city, props.row.district].filter(Boolean).join(' / ') || '未关联名录' }}
+              </el-descriptions-item>
               <el-descriptions-item label="负责人姓名">{{ props.row.leader }}</el-descriptions-item>
               <el-descriptions-item label="身份证号">
                 <el-popover placement="top-start" title="身份证号码" :width="200" trigger="hover" :content="props.row.code">
@@ -136,6 +139,15 @@
         <el-form-item label="地址" prop="address">
           <el-input type="textarea" v-model="form.address" autocomplete="off" placeholder="请输入影院地址"/>
         </el-form-item>
+        <el-form-item label="关联影院名录">
+          <el-select v-model="form.directoryId" filterable remote clearable
+                     :remote-method="searchDirectory" :loading="directoryLoading"
+                     placeholder="输入影院名称搜索名录" class="field-full" @change="onDirectoryPick">
+            <el-option v-for="o in directoryOptions" :key="o.id"
+                       :label="`${o.name}（${[o.city, o.district].filter(Boolean).join(' ')}）`"
+                       :value="o.id"/>
+          </el-select>
+        </el-form-item>
         <el-form-item label="负责人" prop="leader">
           <el-input v-model="form.leader" autocomplete="off" placeholder="请输入负责人姓名" @keyup.enter="submit"/>
         </el-form-item>
@@ -167,7 +179,7 @@
 </template>
 
 <script setup>
-import { watch } from 'vue'
+import { ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { Delete, Edit, Plus, Search } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -176,7 +188,7 @@ import { useFormDialog } from '@/composables/useFormDialog'
 import request from '@/utils/request'
 import { uploadHeaders, handleUploadError } from '@/utils/upload'
 import {
-  API_PATHS, CINEMA_STATUS, CINEMA_STATUS_OPTIONS, FILE_UPLOAD_URL,
+  API_PATHS, CINEMA_DIRECTORY_API, CINEMA_STATUS, CINEMA_STATUS_OPTIONS, FILE_UPLOAD_URL,
   getCinemaStatusType as getStatusType
 } from '@/constants'
 
@@ -184,7 +196,7 @@ const crud = useCrud(API_PATHS.CINEMAS)
 const { dataList, total, pageNum, pageSize, searchForm, selectedIds, loading, error,
         confirmDel, confirmDelBatch, onSearch, onReset, onPageChange, onSizeChange, onSelectionChange } = crud
 const { dialogVisible, isEdit, formRef, form, rules, openAdd, openEdit, submit, close } = useFormDialog(crud, {
-  defaultForm: { username: '', password: '', name: '', phone: '', email: '', address: '', leader: '', code: '', certificate: '', avatar: '', status: CINEMA_STATUS.UNAUDITED },
+  defaultForm: { username: '', password: '', name: '', phone: '', email: '', address: '', leader: '', code: '', certificate: '', avatar: '', status: CINEMA_STATUS.UNAUDITED, directoryId: null },
   rules: {
     username: [{ required: true, message: '请输入账号', trigger: 'blur' }],
     // 只在新增态生效：编辑态的密码框被 v-if 卸载，CinemaService.update 又显式置空 password
@@ -196,6 +208,36 @@ const { dialogVisible, isEdit, formRef, form, rules, openAdd, openEdit, submit, 
     code: [{ required: true, message: '请输入身份证号', trigger: 'blur' }],
     certificate: [{ required: true, message: '请上传营业执照', trigger: 'change' }]
   }
+})
+
+const directoryOptions = ref([])
+const directoryLoading = ref(false)
+
+// 远程搜索名录：未输入不请求；错误提示由 request.js 统一弹
+const searchDirectory = (keyword) => {
+  if (!keyword) { directoryOptions.value = []; return }
+  directoryLoading.value = true
+  request.get(CINEMA_DIRECTORY_API.PAGE, { params: { name: keyword, pageNum: 1, pageSize: 20 } })
+    .then(res => { if (res.code === '200') directoryOptions.value = res.data.list })
+    .catch(() => {})
+    .finally(() => { directoryLoading.value = false })
+}
+
+// 选中名录条目：预填名称/电话/地址（名录侧为空则保留原值）
+const onDirectoryPick = (id) => {
+  const row = directoryOptions.value.find(o => o.id === id)
+  if (!row) return
+  if (row.name) form.name = row.name
+  if (row.phone) form.phone = row.phone
+  if (row.address) form.address = row.address
+}
+
+// 打开弹窗时，把当前已关联条目作为一条候选塞进去，否则编辑态下拉显示为空
+watch(dialogVisible, (visible) => {
+  if (!visible) return
+  directoryOptions.value = form.directoryId
+    ? [{ id: form.directoryId, name: form.name, city: form.city, district: form.district }]
+    : []
 })
 
 const route = useRoute()
