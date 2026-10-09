@@ -69,6 +69,7 @@ export const CINEMA_DIRECTORY_API = {
 /** 影院公开接口（区域级联） */
 export const CINEMA_API = {
   REGIONS: `${API_PATHS.CINEMAS}/regions`,
+  FROM_DIRECTORY: `${API_PATHS.CINEMAS}/from-directory`,
 }
 
 /** 后台导入可选城市：一线 + 新一线 + 省会 */
