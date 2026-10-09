@@ -28,6 +28,11 @@ public class AmapClient {
     /** 高德「电影院」分类码 */
     public static final String CINEMA_TYPE = "080601";
 
+    /** 高德返回的并发超限标记。QPS 是瞬时的，退避重试即可，不该让整次导入失败。 */
+    private static final String QPS_LIMIT_MARK = "QPS";
+    private static final int QPS_RETRIES = 3;
+    private static final long QPS_RETRY_BASE_MS = 200;
+
     private final RestTemplate restTemplate;
     private final String key;
 
@@ -42,15 +47,16 @@ public class AmapClient {
                             String district, String address, String tel) {
     }
 
-    /** 一页结果：count 是该 group 参数下的总命中数（用于判断是否超 200） */
-    public record PoiPage(int count, List<CinemaPoi> pois) {
-    }
-
     public record District(String name, String adcode) {
     }
 
-    /** 按区划搜影院。region 可传城市名或 adcode。 */
-    public PoiPage searchCinemas(String region, int pageNum, int pageSize) {
+    /**
+     * 按区划搜影院，返回**该页**的 POI 列表。region 可传城市名或 adcode。
+     * 注意：高德 v5 响应里的 count 是本页条数（恒等于返回条数），不是总命中数——
+     * 实测北京 page_size=25 时 page1/2/3 各自 count=25，顶层也没有总数字段。
+     * 故翻页只能靠"本页不满"或"响应当空"来终止，见 CinemaDirectoryImportService。
+     */
+    public List<CinemaPoi> searchCinemas(String region, int pageNum, int pageSize) {
         URI uri = UriComponentsBuilder.fromHttpUrl(PLACE_TEXT_URL)
                 .queryParam("key", key)
                 .queryParam("types", CINEMA_TYPE)
@@ -74,7 +80,7 @@ public class AmapClient {
                     text(item, "address"),
                     text(item.path("business"), "tel")));
         }
-        return new PoiPage(intOrZero(root, "count"), pois);
+        return pois;
     }
 
     /**
@@ -116,19 +122,32 @@ public class AmapClient {
         return result;
     }
 
-    /** status != "1" 一律抛业务异常，让管理员看到高德给的原话（Key 无效/额度用尽等） */
+    /**
+     * status != "1" 一律抛业务异常，让管理员看到高德给的原话（Key 无效/额度用尽等）；
+     * 唯一的例外是并发超限：它是瞬时的，退避重试几次，仍不行才抛。
+     */
     private JsonNode get(URI uri) {
-        JsonNode root;
-        try {
-            root = restTemplate.getForObject(uri, JsonNode.class);
-        } catch (RestClientException e) {
-            throw new CustomException(ErrorCode.SYSTEM_ERROR, "高德接口不可达，请检查网络与 amap.key");
-        }
-        if (root == null || !"1".equals(text(root, "status"))) {
+        for (int attempt = 0; ; attempt++) {
+            JsonNode root;
+            try {
+                root = restTemplate.getForObject(uri, JsonNode.class);
+            } catch (RestClientException e) {
+                throw new CustomException(ErrorCode.SYSTEM_ERROR, "高德接口不可达，请检查网络与 amap.key");
+            }
+            if (root != null && "1".equals(text(root, "status"))) {
+                return root;
+            }
             String info = (root == null) ? "无响应" : text(root, "info");
-            throw new CustomException(ErrorCode.SYSTEM_ERROR, "高德接口返回异常：" + info);
+            if (info == null || !info.contains(QPS_LIMIT_MARK) || attempt >= QPS_RETRIES) {
+                throw new CustomException(ErrorCode.SYSTEM_ERROR, "高德接口返回异常：" + info);
+            }
+            try {
+                Thread.sleep(QPS_RETRY_BASE_MS << attempt);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new CustomException(ErrorCode.SYSTEM_ERROR, "高德接口请求被中断");
+            }
         }
-        return root;
     }
 
     /** 高德缺字段时会返回空数组 [] 而非 null，asText() 会把它写成 "[]"，故排除数组 */
@@ -139,10 +158,5 @@ public class AmapClient {
         }
         String s = value.asText();
         return (s == null || s.isBlank()) ? null : s;
-    }
-
-    private static int intOrZero(JsonNode node, String field) {
-        JsonNode value = node.get(field);
-        return (value == null || value.isNull()) ? 0 : value.asInt(0);
     }
 }

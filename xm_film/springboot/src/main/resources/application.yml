@@ -51,3 +51,6 @@ tmdb:
 # 国内直连，不经代理（与 TMDB 不同）。Key 在 console.amap.com 申请，服务平台选「Web服务」。
 amap:
   key: ae7b0a1d300faca59c5b1c19bbd98039
+  # 相邻高德请求的最小间隔（毫秒）。个人 Key 的 QPS 上限实测约 5 次/秒，
+  # 导入会背靠背发几十个请求，间隔 300ms（≈3.3 QPS）留出余量。
+  request-interval-ms: 300
