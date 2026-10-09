@@ -113,6 +113,10 @@
               <el-icon><Tickets /></el-icon>
               <span>影厅房间</span>
             </el-menu-item>
+            <el-menu-item index="/manage/cinemaDirectory">
+              <el-icon><OfficeBuilding /></el-icon>
+              <span>影院名录</span>
+            </el-menu-item>
             <el-menu-item index="/manage/record">
               <el-icon><Calendar /></el-icon>
               <span>放映记录</span>

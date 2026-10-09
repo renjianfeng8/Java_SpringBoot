@@ -155,6 +155,7 @@ const NAV_ITEMS = [
     sections: ['/front/movie', '/front/search', '/front/filmDetail', '/front/filmCinema', '/front/filmMarks'],
   },
   { path: '/front/cinema', label: '影院', sections: ['/front/cinema', '/front/cinemaDetail'] },
+  { path: '/front/cinemaDirectory', label: '影院名录', sections: ['/front/cinemaDirectory'] },
   { path: '/front/rank', label: '排行榜', sections: ['/front/rank'] },
   { path: '/front/pickup', label: '取票大厅', sections: ['/front/pickup'] },
   { path: '/front/orders', label: '购票记录', sections: ['/front/orders'], requiresUser: true },

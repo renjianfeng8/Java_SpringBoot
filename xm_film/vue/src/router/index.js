@@ -24,6 +24,7 @@ const router = createRouter({
         { path: 'video', meta: { name: '电影预告' }, component: () => import('../views/manage/Video.vue') },
         { path: 'actor', meta: { name: '演职人员' }, component: () => import('../views/manage/Actor.vue') },
         { path: 'room', meta: { name: '影厅管理' }, component: () => import('../views/manage/Room.vue') },
+        { path: 'cinemaDirectory', meta: { name: '影院名录' }, component: () => import('../views/manage/CinemaDirectory.vue') },
         { path: 'record', meta: { name: '放映记录' }, component: () => import('../views/manage/Record.vue') },
         { path: 'ordered', meta: { name: '购票订单' }, component: () => import('../views/manage/Ordered.vue') },
         { path: 'mark', meta: { name: '用户评价' }, component: () => import('../views/manage/Mark.vue') },
@@ -57,6 +58,7 @@ const router = createRouter({
         { path: 'payPassword', meta: { requiresAuth: true, roles: ['USER'], name: '支付密码' }, component: () => import('../views/front/PayPassword.vue') },
         { path: 'movie', meta: { guest: true, name: '电影列表' }, component: () => import('../views/front/Movie.vue') },
         { path: 'cinema', meta: { guest: true, name: '影院列表' }, component: () => import('../views/front/Cinema.vue') },
+        { path: 'cinemaDirectory', meta: { guest: true, name: '影院名录' }, component: () => import('../views/front/CinemaDirectory.vue') },
         { path: 'rank', meta: { guest: true, name: '排行榜' }, component: () => import('../views/front/Rank.vue') },
         // 取票大厅是自助机口径：免登录，凭取票码核销（见后端 TicketController）
         { path: 'pickup', meta: { guest: true, name: '取票大厅' }, component: () => import('../views/front/Pickup.vue') },
