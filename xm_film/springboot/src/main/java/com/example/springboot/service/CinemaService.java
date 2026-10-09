@@ -6,6 +6,7 @@ import com.example.springboot.entity.Account;
 import com.example.springboot.entity.Cinema;
 import com.example.springboot.common.enums.CinemaStatus;
 import com.example.springboot.common.enums.ErrorCode;
+import com.example.springboot.dto.response.CinemaRegion;
 import com.example.springboot.exception.CustomException;
 import com.example.springboot.mapper.CinemaMapper;
 import com.github.pagehelper.PageInfo;
@@ -17,7 +18,10 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @Transactional(readOnly = true)
@@ -46,6 +50,25 @@ public class CinemaService extends BaseService<Cinema> {
      */
     public List<Cinema> selectAll(Cinema cinema, boolean approvedOnly) {
         return cinemaMapper.selectByFilmId(cinema, null, approvedOnly);
+    }
+
+    /** 前台区域级联：把 distinct(city,district) 行按城市归组，保持 SQL 的排序 */
+    public List<CinemaRegion> regions() {
+        Map<String, List<String>> byCity = new LinkedHashMap<>();
+        for (Map<String, Object> row : cinemaMapper.selectRegions()) {
+            String city = (String) row.get("city");
+            if (city == null || city.isBlank()) {
+                continue;
+            }
+            String district = (String) row.get("district");
+            List<String> districts = byCity.computeIfAbsent(city, k -> new ArrayList<>());
+            if (district != null && !district.isBlank()) {
+                districts.add(district);
+            }
+        }
+        List<CinemaRegion> result = new ArrayList<>();
+        byCity.forEach((city, districts) -> result.add(new CinemaRegion(city, districts)));
+        return result;
     }
 
     @Override

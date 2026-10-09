@@ -1,5 +1,6 @@
 package com.example.springboot.service;
 
+import com.example.springboot.dto.response.CinemaRegion;
 import com.example.springboot.entity.Account;
 import com.example.springboot.entity.Cinema;
 import com.example.springboot.exception.CustomException;
@@ -12,7 +13,9 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
@@ -162,5 +165,35 @@ class CinemaServiceTest {
         assertNull(cinema.getPassword());
         assertNull(cinema.getRole());
         verify(cinemaMapper).updateById(cinema);
+    }
+
+    @Test
+    void regions_shouldGroupDistrictsByCity() {
+        when(cinemaMapper.selectRegions()).thenReturn(List.of(
+                Map.of("city", "北京", "district", "朝阳区"),
+                Map.of("city", "北京", "district", "海淀区"),
+                Map.of("city", "上海", "district", "浦东新区")));
+
+        List<CinemaRegion> regions = cinemaService.regions();
+
+        assertEquals(2, regions.size());
+        assertEquals("北京", regions.get(0).getCity());
+        assertEquals(List.of("朝阳区", "海淀区"), regions.get(0).getDistricts());
+        assertEquals("上海", regions.get(1).getCity());
+        assertEquals(List.of("浦东新区"), regions.get(1).getDistricts());
+    }
+
+    @Test
+    void regions_withNullDistrict_shouldYieldEmptyDistrictList() {
+        Map<String, Object> row = new HashMap<>();
+        row.put("city", "广州");
+        row.put("district", null);
+        when(cinemaMapper.selectRegions()).thenReturn(List.of(row));
+
+        List<CinemaRegion> regions = cinemaService.regions();
+
+        assertEquals(1, regions.size());
+        assertEquals("广州", regions.get(0).getCity());
+        assertTrue(regions.get(0).getDistricts().isEmpty());
     }
 }
