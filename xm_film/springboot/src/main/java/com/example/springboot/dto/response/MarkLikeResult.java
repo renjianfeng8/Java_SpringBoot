@@ -17,8 +17,8 @@ import lombok.NoArgsConstructor;
 public class MarkLikeResult {
 
     /** 操作后的权威状态：当前访问者是否赞过 */
-    private boolean liked;
+    private Boolean liked;
 
     /** 操作后的权威赞数 */
-    private int likeCount;
+    private Integer likeCount;
 }

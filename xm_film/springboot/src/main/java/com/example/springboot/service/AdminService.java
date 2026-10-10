@@ -5,6 +5,7 @@ import com.example.springboot.common.BaseService;
 import com.example.springboot.entity.Account;
 import com.example.springboot.entity.Admin;
 import com.example.springboot.common.enums.ErrorCode;
+import com.example.springboot.common.enums.RoleEnum;
 import com.example.springboot.exception.CustomException;
 import com.example.springboot.mapper.AdminMapper;
 import jakarta.annotation.Resource;
@@ -13,6 +14,10 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * 管理员账号的登录与密码维护。管理员只由后台创建，没有自助注册入口；
+ * 密码一律经 BCrypt 存储，更新资料时不允许改动密码与角色字段。
+ */
 @Service
 @Transactional(readOnly = true)
 public class AdminService extends BaseService<Admin> {
@@ -41,7 +46,7 @@ public class AdminService extends BaseService<Admin> {
         if (admin.getName() == null) {
             admin.setName(admin.getUsername());
         }
-        admin.setRole("ADMIN");
+        admin.setRole(RoleEnum.ADMIN.name());
         admin.setPassword(passwordEncoder.encode(admin.getPassword()));
         mapper().insert(admin);
     }
@@ -62,7 +67,7 @@ public class AdminService extends BaseService<Admin> {
         }
         String password = account.getPassword();
         if (!passwordEncoder.matches(password, dbAdmin.getPassword())
-                && !dbAdmin.getPassword().equals(password)) {
+                && !password.equals(dbAdmin.getPassword())) {
             throw new CustomException(ErrorCode.UNAUTHORIZED.code(), "账号或密码错误");
         }
         return dbAdmin;

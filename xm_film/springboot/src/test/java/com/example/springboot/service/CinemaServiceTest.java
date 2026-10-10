@@ -20,9 +20,19 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class CinemaServiceTest {
@@ -51,7 +61,7 @@ class CinemaServiceTest {
     }
 
     @Test
-    void login_withCorrectCredentials_shouldSucceed() {
+    void loginWithCorrectCredentialsShouldSucceed() {
         Account account = new Account();
         account.setUsername("asks");
         account.setPassword("cinema123");
@@ -65,7 +75,7 @@ class CinemaServiceTest {
     }
 
     @Test
-    void login_withNonExistentUsername_shouldThrow() {
+    void loginWithNonExistentUsernameShouldThrow() {
         when(cinemaMapper.selectByUsername("ghost")).thenReturn(null);
 
         Account account = new Account();
@@ -75,7 +85,7 @@ class CinemaServiceTest {
     }
 
     @Test
-    void login_withWrongPassword_shouldThrow() {
+    void loginWithWrongPasswordShouldThrow() {
         when(cinemaMapper.selectByUsername("asks")).thenReturn(mockCinema);
 
         Account account2 = new Account();
@@ -85,7 +95,7 @@ class CinemaServiceTest {
     }
 
     @Test
-    void register_shouldCreateCinema() {
+    void registerShouldCreateCinema() {
         Account account = new Account();
         account.setUsername("newcinema");
         account.setPassword("pwd123");
@@ -97,7 +107,7 @@ class CinemaServiceTest {
     }
 
     @Test
-    void register_withExistingUsername_shouldThrow() {
+    void registerWithExistingUsernameShouldThrow() {
         when(cinemaMapper.selectByUsername("asks")).thenReturn(mockCinema);
 
         Account account3 = new Account();
@@ -108,7 +118,7 @@ class CinemaServiceTest {
     }
 
     @Test
-    void add_shouldSetDefaultValues() {
+    void addShouldSetDefaultValues() {
         Cinema cinema = new Cinema();
         cinema.setUsername("newcinema");
         cinema.setPassword("pwd123");
@@ -125,7 +135,7 @@ class CinemaServiceTest {
     }
 
     @Test
-    void login_withUnauditedCinema_shouldThrow() {
+    void loginWithUnauditedCinemaShouldThrow() {
         mockCinema.setStatus("未审核");
         when(cinemaMapper.selectByUsername("asks")).thenReturn(mockCinema);
 
@@ -138,7 +148,7 @@ class CinemaServiceTest {
     }
 
     @Test
-    void selectPage_shouldForwardApprovedOnlyFlag() {
+    void selectPageShouldForwardApprovedOnlyFlag() {
         when(cinemaMapper.selectByFilmId(any(Cinema.class), isNull(), eq(true)))
                 .thenReturn(List.of(mockCinema));
 
@@ -149,7 +159,7 @@ class CinemaServiceTest {
     }
 
     @Test
-    void selectAll_shouldForwardApprovedOnlyFlag() {
+    void selectAllShouldForwardApprovedOnlyFlag() {
         when(cinemaMapper.selectByFilmId(any(Cinema.class), isNull(), eq(false)))
                 .thenReturn(List.of(mockCinema));
 
@@ -160,7 +170,7 @@ class CinemaServiceTest {
     }
 
     @Test
-    void update_shouldClearPasswordAndRole() {
+    void updateShouldClearPasswordAndRole() {
         Cinema cinema = new Cinema();
         cinema.setId(1);
         cinema.setPassword("should-be-cleared");
@@ -174,7 +184,7 @@ class CinemaServiceTest {
     }
 
     @Test
-    void regions_shouldGroupDistrictsByCity() {
+    void regionsShouldGroupDistrictsByCity() {
         when(cinemaMapper.selectRegions()).thenReturn(List.of(
                 Map.of("city", "北京", "district", "朝阳区"),
                 Map.of("city", "北京", "district", "海淀区"),
@@ -190,7 +200,7 @@ class CinemaServiceTest {
     }
 
     @Test
-    void regions_withNullDistrict_shouldYieldEmptyDistrictList() {
+    void regionsWithNullDistrictShouldYieldEmptyDistrictList() {
         Map<String, Object> row = new HashMap<>();
         row.put("city", "广州");
         row.put("district", null);
@@ -204,7 +214,7 @@ class CinemaServiceTest {
     }
 
     @Test
-    void importFromDirectory_shouldSkipLinkedAndCreateRest() {
+    void importFromDirectoryShouldSkipLinkedAndCreateRest() {
         CinemaDirectory row1 = new CinemaDirectory();
         row1.setId(1); row1.setPoiId("p1"); row1.setName("A影院");
         CinemaDirectory row2 = new CinemaDirectory();
@@ -232,13 +242,13 @@ class CinemaServiceTest {
     }
 
     @Test
-    void importFromDirectory_withEmptyIds_shouldDoNothing() {
+    void importFromDirectoryWithEmptyIdsShouldDoNothing() {
         assertEquals(0, cinemaService.importFromDirectory(List.of()));
         verifyNoInteractions(cinemaMapper, directoryMapper);
     }
 
     @Test
-    void importFromDirectory_whenAllAlreadyLinked_shouldCreateNone() {
+    void importFromDirectoryWhenAllAlreadyLinkedShouldCreateNone() {
         when(cinemaMapper.selectLinkedDirectoryIds(List.of(1, 2))).thenReturn(List.of(1, 2));
         CinemaDirectory row1 = new CinemaDirectory();
         row1.setId(1); row1.setPoiId("p1");
@@ -249,7 +259,7 @@ class CinemaServiceTest {
     }
 
     @Test
-    void importFromDirectory_withNullIds_shouldDoNothing() {
+    void importFromDirectoryWithNullIdsShouldDoNothing() {
         assertEquals(0, cinemaService.importFromDirectory(null));
         verifyNoInteractions(cinemaMapper, directoryMapper);
     }

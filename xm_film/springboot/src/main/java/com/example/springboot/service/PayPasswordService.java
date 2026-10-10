@@ -131,7 +131,7 @@ public class PayPasswordService {
             throw new CustomException(ErrorCode.UNAUTHORIZED, "账号不存在");
         }
         String stored = user.getPassword();
-        if (!passwordEncoder.matches(rawLoginPassword, stored) && !stored.equals(rawLoginPassword)) {
+        if (!passwordEncoder.matches(rawLoginPassword, stored) && !rawLoginPassword.equals(stored)) {
             throw new CustomException(ErrorCode.UNAUTHORIZED, "登录密码错误");
         }
     }

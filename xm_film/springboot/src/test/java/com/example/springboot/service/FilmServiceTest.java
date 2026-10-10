@@ -11,9 +11,13 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.util.Collections;
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class FilmServiceTest {
@@ -25,7 +29,7 @@ class FilmServiceTest {
     private FilmService filmService;
 
     @Test
-    void selectByTitle_shouldDelegateToMapper() {
+    void selectByTitleShouldDelegateToMapper() {
         when(filmMapper.selectByTitle("测试")).thenReturn(List.of(new Film()));
 
         List<Film> result = filmService.selectByTitle("测试");
@@ -35,7 +39,7 @@ class FilmServiceTest {
     }
 
     @Test
-    void selectByTitle_withEmptyResult_shouldReturnEmptyList() {
+    void selectByTitleWithEmptyResultShouldReturnEmptyList() {
         when(filmMapper.selectByTitle("不存在")).thenReturn(Collections.emptyList());
 
         List<Film> result = filmService.selectByTitle("不存在");
@@ -44,7 +48,7 @@ class FilmServiceTest {
     }
 
     @Test
-    void selectByCinema_shouldDelegateToMapper() {
+    void selectByCinemaShouldDelegateToMapper() {
         when(filmMapper.selectByCinema(1, null)).thenReturn(List.of(new Film()));
 
         List<Film> result = filmService.selectByCinema(1, null);
@@ -54,7 +58,7 @@ class FilmServiceTest {
     }
 
     @Test
-    void getBoxOfficeTop_withDefaultTopNum_shouldReturn10() {
+    void getBoxOfficeTopWithDefaultTopNumShouldReturn10() {
         Film param = new Film();
         when(filmMapper.selectBoxOfficeTop(10)).thenReturn(List.of(new Film(), new Film()));
         when(filmMapper.selectFilmTypeJoin(anyList())).thenReturn(Collections.emptyList());
@@ -66,7 +70,7 @@ class FilmServiceTest {
     }
 
     @Test
-    void getBoxOfficeTop_withCustomTopNum_shouldRespectIt() {
+    void getBoxOfficeTopWithCustomTopNumShouldRespectIt() {
         Film param = new Film();
         param.setTopNum(5);
         when(filmMapper.selectBoxOfficeTop(5)).thenReturn(List.of(new Film()));
@@ -79,7 +83,7 @@ class FilmServiceTest {
     }
 
     @Test
-    void getMarkTop_shouldReturnOrderedByScore() {
+    void getMarkTopShouldReturnOrderedByScore() {
         Film param = new Film();
         param.setTopNum(3);
         when(filmMapper.selectMarkTop(3)).thenReturn(List.of(new Film(), new Film(), new Film()));
@@ -92,7 +96,7 @@ class FilmServiceTest {
     }
 
     @Test
-    void add_withTypeIds_shouldInsertFilmTypes() {
+    void addWithTypeIdsShouldInsertFilmTypes() {
         Film film = new Film();
         film.setTitle("新电影");
         film.setTypeIds(List.of(1, 2, 3));
@@ -104,7 +108,7 @@ class FilmServiceTest {
     }
 
     @Test
-    void add_withoutTypeIds_shouldNotInsertFilmTypes() {
+    void addWithoutTypeIdsShouldNotInsertFilmTypes() {
         Film film = new Film();
         film.setTitle("新电影");
 
@@ -115,7 +119,7 @@ class FilmServiceTest {
     }
 
     @Test
-    void update_withTypeIds_shouldSyncFilmTypes() {
+    void updateWithTypeIdsShouldSyncFilmTypes() {
         Film film = new Film();
         film.setId(1);
         film.setTitle("更新电影");
@@ -129,7 +133,7 @@ class FilmServiceTest {
     }
 
     @Test
-    void update_withEmptyTypeIds_shouldDeleteOnly() {
+    void updateWithEmptyTypeIdsShouldDeleteOnly() {
         Film film = new Film();
         film.setId(1);
         film.setTypeIds(Collections.emptyList());
@@ -141,7 +145,7 @@ class FilmServiceTest {
     }
 
     @Test
-    void update_withNullTypeIds_shouldNotTouchFilmTypes() {
+    void updateWithNullTypeIdsShouldNotTouchFilmTypes() {
         Film film = new Film();
         film.setId(1);
         film.setTypeIds(null);

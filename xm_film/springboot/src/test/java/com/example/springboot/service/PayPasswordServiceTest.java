@@ -59,7 +59,7 @@ class PayPasswordServiceTest {
     }
 
     @Test
-    void verifyOldPassword_withCorrectPassword_passesWithoutWriting() {
+    void verifyOldPasswordWithCorrectPasswordPassesWithoutWriting() {
         when(userMapper.selectPayPasswordState(USER_ID)).thenReturn(stateWith("123456"));
 
         payPasswordService.verifyOldPassword(USER_ID, "123456");
@@ -68,7 +68,7 @@ class PayPasswordServiceTest {
     }
 
     @Test
-    void verifyOldPassword_withWrongPassword_throwsAndCountsTheFailure() {
+    void verifyOldPasswordWithWrongPasswordThrowsAndCountsTheFailure() {
         when(userMapper.selectPayPasswordState(USER_ID)).thenReturn(stateWith("123456"));
         when(userMapper.selectPayPasswordErrorCount(USER_ID)).thenReturn(1);
 
@@ -81,7 +81,7 @@ class PayPasswordServiceTest {
     }
 
     @Test
-    void verifyOldPassword_whenLocked_throwsLockMessageAndDoesNotCountAgain() {
+    void verifyOldPasswordWhenLockedThrowsLockMessageAndDoesNotCountAgain() {
         PayPasswordState state = stateWith("123456");
         state.setLockedUntil(LocalDateTime.now(ZoneId.systemDefault())
                 .plusMinutes(10)
@@ -96,7 +96,7 @@ class PayPasswordServiceTest {
     }
 
     @Test
-    void verifyOldPassword_beforeAnyPasswordWasSet_throws() {
+    void verifyOldPasswordBeforeAnyPasswordWasSetThrows() {
         PayPasswordState state = new PayPasswordState();
         state.setId(USER_ID);
         when(userMapper.selectPayPasswordState(USER_ID)).thenReturn(state);
@@ -107,7 +107,7 @@ class PayPasswordServiceTest {
     }
 
     @Test
-    void verifyLoginPassword_withCorrectPassword_passesWithoutWriting() {
+    void verifyLoginPasswordWithCorrectPasswordPassesWithoutWriting() {
         when(userMapper.selectById(USER_ID)).thenReturn(userWith(encoder.encode("user123")));
 
         payPasswordService.verifyLoginPassword(USER_ID, "user123");
@@ -117,7 +117,7 @@ class PayPasswordServiceTest {
 
     /** 存量种子账号的登录密码是明文，判定口径必须与 login / reset 一致 */
     @Test
-    void verifyLoginPassword_withPlaintextStoredPassword_passes() {
+    void verifyLoginPasswordWithPlaintextStoredPasswordPasses() {
         when(userMapper.selectById(USER_ID)).thenReturn(userWith("123"));
 
         payPasswordService.verifyLoginPassword(USER_ID, "123");
@@ -126,7 +126,7 @@ class PayPasswordServiceTest {
     }
 
     @Test
-    void verifyLoginPassword_withWrongPassword_throwsWithoutWriting() {
+    void verifyLoginPasswordWithWrongPasswordThrowsWithoutWriting() {
         when(userMapper.selectById(USER_ID)).thenReturn(userWith(encoder.encode("user123")));
 
         assertThatThrownBy(() -> payPasswordService.verifyLoginPassword(USER_ID, "nope"))
@@ -138,7 +138,7 @@ class PayPasswordServiceTest {
 
     /** 设置 / 重设仍然是一条原子路径：登录密码对了才写，且写完就是新码 */
     @Test
-    void resetWithLoginPassword_withCorrectPassword_stillWritesTheNewPassword() {
+    void resetWithLoginPasswordWithCorrectPasswordStillWritesTheNewPassword() {
         when(userMapper.selectById(USER_ID)).thenReturn(userWith(encoder.encode("user123")));
 
         assertThatCode(() -> payPasswordService.resetWithLoginPassword(USER_ID, "user123", "654321"))

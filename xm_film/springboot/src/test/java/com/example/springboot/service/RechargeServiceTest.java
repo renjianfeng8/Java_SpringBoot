@@ -15,9 +15,18 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.math.BigDecimal;
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
 
 /**
  * 充值单据状态机。四条契约：
@@ -41,7 +50,7 @@ class RechargeServiceTest {
     private RechargeService rechargeService;
 
     @Test
-    void createRecharge_shouldCreateProcessingOrderWithoutTouchingBalance() {
+    void createRechargeShouldCreateProcessingOrderWithoutTouchingBalance() {
         RechargeOrder created = rechargeService.createRecharge(USER_ID, "USER", new BigDecimal("200.00"));
 
         ArgumentCaptor<RechargeOrder> captor = ArgumentCaptor.forClass(RechargeOrder.class);
@@ -60,7 +69,7 @@ class RechargeServiceTest {
     }
 
     @Test
-    void createRecharge_withNonUserRole_shouldThrow() {
+    void createRechargeWithNonUserRoleShouldThrow() {
         BigDecimal amount = new BigDecimal("200.00");
         CustomException ex = assertThrows(CustomException.class,
                 () -> rechargeService.createRecharge(USER_ID, "CINEMA", amount));
@@ -71,7 +80,7 @@ class RechargeServiceTest {
     }
 
     @Test
-    void createRecharge_withNonPositiveAmount_shouldThrow() {
+    void createRechargeWithNonPositiveAmountShouldThrow() {
         CustomException ex = assertThrows(CustomException.class,
                 () -> rechargeService.createRecharge(USER_ID, "USER", BigDecimal.ZERO));
 
@@ -80,7 +89,7 @@ class RechargeServiceTest {
     }
 
     @Test
-    void createRecharge_withAmountAboveLimit_shouldThrow() {
+    void createRechargeWithAmountAboveLimitShouldThrow() {
         BigDecimal amount = new BigDecimal("50000.01");
         CustomException ex = assertThrows(CustomException.class,
                 () -> rechargeService.createRecharge(USER_ID, "USER", amount));
@@ -90,7 +99,7 @@ class RechargeServiceTest {
     }
 
     @Test
-    void handleCallback_success_shouldMarkDoneAndCreditBalance() {
+    void handleCallbackSuccessShouldMarkDoneAndCreditBalance() {
         when(rechargeOrderMapper.selectByIdForUpdate(7)).thenReturn(processingOrder());
 
         rechargeService.handleCallback(7, true, null, "USER", USER_ID);
@@ -103,7 +112,7 @@ class RechargeServiceTest {
     }
 
     @Test
-    void handleCallback_failure_shouldMarkFailedWithoutCrediting() {
+    void handleCallbackFailureShouldMarkFailedWithoutCrediting() {
         when(rechargeOrderMapper.selectByIdForUpdate(7)).thenReturn(processingOrder());
 
         rechargeService.handleCallback(7, false, "余额不足", "USER", USER_ID);
@@ -117,7 +126,7 @@ class RechargeServiceTest {
     }
 
     @Test
-    void handleCallback_onAlreadyDoneOrder_shouldThrow() {
+    void handleCallbackOnAlreadyDoneOrderShouldThrow() {
         RechargeOrder done = processingOrder();
         done.setStatus(RechargeStatus.SUCCESS);
         when(rechargeOrderMapper.selectByIdForUpdate(7)).thenReturn(done);
@@ -131,7 +140,7 @@ class RechargeServiceTest {
     }
 
     @Test
-    void handleCallback_onAlreadyFailedOrder_shouldThrow() {
+    void handleCallbackOnAlreadyFailedOrderShouldThrow() {
         RechargeOrder failed = processingOrder();
         failed.setStatus(RechargeStatus.FAILED);
         when(rechargeOrderMapper.selectByIdForUpdate(7)).thenReturn(failed);
@@ -143,7 +152,7 @@ class RechargeServiceTest {
     }
 
     @Test
-    void handleCallback_whenNotOwnerAndNotAdmin_shouldThrow() {
+    void handleCallbackWhenNotOwnerAndNotAdminShouldThrow() {
         when(rechargeOrderMapper.selectByIdForUpdate(7)).thenReturn(processingOrder());
 
         CustomException ex = assertThrows(CustomException.class,
@@ -155,7 +164,7 @@ class RechargeServiceTest {
     }
 
     @Test
-    void handleCallback_whenOrderMissing_shouldThrowNotFound() {
+    void handleCallbackWhenOrderMissingShouldThrowNotFound() {
         CustomException ex = assertThrows(CustomException.class,
                 () -> rechargeService.handleCallback(7, true, null, "USER", USER_ID));
 
@@ -164,7 +173,7 @@ class RechargeServiceTest {
     }
 
     @Test
-    void selectScoped_asUser_shouldForceOwnUserIdIgnoringRequestParam() {
+    void selectScopedAsUserShouldForceOwnUserIdIgnoringRequestParam() {
         RechargeOrder query = new RechargeOrder();
         query.setUserId(999);
         when(rechargeOrderMapper.selectAll(any())).thenReturn(List.of());
@@ -175,7 +184,7 @@ class RechargeServiceTest {
     }
 
     @Test
-    void selectScoped_asAdmin_shouldNotFilterByUser() {
+    void selectScopedAsAdminShouldNotFilterByUser() {
         when(rechargeOrderMapper.selectAll(any())).thenReturn(List.of());
 
         rechargeService.selectScoped(null, "ADMIN", 1);
@@ -184,7 +193,7 @@ class RechargeServiceTest {
     }
 
     @Test
-    void selectScoped_asCinema_shouldThrowForbidden() {
+    void selectScopedAsCinemaShouldThrowForbidden() {
         CustomException ex = assertThrows(CustomException.class,
                 () -> rechargeService.selectScoped(null, "CINEMA", 5));
 

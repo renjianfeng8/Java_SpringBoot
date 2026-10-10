@@ -13,9 +13,13 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 /**
  * 资金流水的可见范围：普通用户只能看自己的，且不受请求参数影响
@@ -33,7 +37,7 @@ class FundFlowServiceTest {
     private FundFlowService fundFlowService;
 
     @Test
-    void selectScoped_asUser_shouldForceOwnUserIdIgnoringRequestParam() {
+    void selectScopedAsUserShouldForceOwnUserIdIgnoringRequestParam() {
         FundFlow query = new FundFlow();
         query.setUserId(999);
         when(fundFlowMapper.selectAll(any())).thenReturn(List.of());
@@ -44,7 +48,7 @@ class FundFlowServiceTest {
     }
 
     @Test
-    void selectScoped_asUser_withNullQuery_shouldStillScopeToSelf() {
+    void selectScopedAsUserWithNullQueryShouldStillScopeToSelf() {
         when(fundFlowMapper.selectAll(any())).thenReturn(List.of());
 
         fundFlowService.selectScoped(null, "USER", USER_ID);
@@ -53,7 +57,7 @@ class FundFlowServiceTest {
     }
 
     @Test
-    void selectScoped_asAdmin_shouldNotFilterByUser() {
+    void selectScopedAsAdminShouldNotFilterByUser() {
         when(fundFlowMapper.selectAll(any())).thenReturn(List.of());
 
         fundFlowService.selectScoped(null, "ADMIN", 1);
@@ -62,7 +66,7 @@ class FundFlowServiceTest {
     }
 
     @Test
-    void selectScoped_asCinema_shouldThrowForbidden() {
+    void selectScopedAsCinemaShouldThrowForbidden() {
         CustomException ex = assertThrows(CustomException.class,
                 () -> fundFlowService.selectScoped(null, "CINEMA", 5));
 

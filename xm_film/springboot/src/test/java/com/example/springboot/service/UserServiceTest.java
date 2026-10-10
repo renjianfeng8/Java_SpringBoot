@@ -12,9 +12,14 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class UserServiceTest {
@@ -39,7 +44,7 @@ class UserServiceTest {
     }
 
     @Test
-    void login_withCorrectCredentials_shouldSucceed() {
+    void loginWithCorrectCredentialsShouldSucceed() {
         Account account = new Account();
         account.setUsername("zhangsan");
         account.setPassword("user123");
@@ -53,7 +58,7 @@ class UserServiceTest {
     }
 
     @Test
-    void login_withNonExistentUsername_shouldThrow() {
+    void loginWithNonExistentUsernameShouldThrow() {
         Account account = new Account();
         account.setUsername("ghost");
         account.setPassword("pwd");
@@ -63,7 +68,7 @@ class UserServiceTest {
     }
 
     @Test
-    void login_withWrongPassword_shouldThrow() {
+    void loginWithWrongPasswordShouldThrow() {
         Account account = new Account();
         account.setUsername("zhangsan");
         account.setPassword("wrong-pwd");
@@ -73,7 +78,7 @@ class UserServiceTest {
     }
 
     @Test
-    void register_withNewUsername_shouldSucceed() {
+    void registerWithNewUsernameShouldSucceed() {
         Account account = new Account();
         account.setUsername("newuser");
         account.setPassword("pwd123");
@@ -86,7 +91,7 @@ class UserServiceTest {
     }
 
     @Test
-    void register_withExistingUsername_shouldThrow() {
+    void registerWithExistingUsernameShouldThrow() {
         Account account = new Account();
         account.setUsername("zhangsan");
         account.setPassword("pwd123");
@@ -98,7 +103,7 @@ class UserServiceTest {
     }
 
     @Test
-    void update_shouldClearPasswordAndRole() {
+    void updateShouldClearPasswordAndRole() {
         User user = new User();
         user.setId(1);
         user.setPassword("should-be-cleared");

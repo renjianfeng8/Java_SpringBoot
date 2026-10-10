@@ -3,6 +3,7 @@ package com.example.springboot.controller;
 import com.example.springboot.common.AuthContext;
 import com.example.springboot.common.Result;
 import com.example.springboot.common.enums.ErrorCode;
+import com.example.springboot.common.enums.RoleEnum;
 import com.example.springboot.exception.CustomException;
 import com.example.springboot.service.StatisticsService;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -21,7 +22,7 @@ public class StatisticsController {
 
     @GetMapping("/overview")
     public Result overview() {
-        if (!"ADMIN".equals(AuthContext.role())) {
+        if (!RoleEnum.ADMIN.name().equals(AuthContext.role())) {
             throw new CustomException(ErrorCode.FORBIDDEN, "仅管理员可查看统计数据");
         }
         return Result.success(statisticsService.overview());

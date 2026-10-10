@@ -7,6 +7,7 @@ import com.example.springboot.entity.Cinema;
 import com.example.springboot.entity.CinemaDirectory;
 import com.example.springboot.common.enums.CinemaStatus;
 import com.example.springboot.common.enums.ErrorCode;
+import com.example.springboot.common.enums.RoleEnum;
 import com.example.springboot.dto.response.CinemaRegion;
 import com.example.springboot.exception.CustomException;
 import com.example.springboot.mapper.CinemaDirectoryMapper;
@@ -27,6 +28,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+/**
+ * 影院账号与资料的读写：登录/注册/密码维护、按影片与区域分页查询、区域树聚合，
+ * 以及从影院名录批量导入。影院分「已审核 / 未审核」，公开列表只出已审核的。
+ */
 @Service
 @Transactional(readOnly = true)
 public class CinemaService extends BaseService<Cinema> {
@@ -100,7 +105,7 @@ public class CinemaService extends BaseService<Cinema> {
             Cinema cinema = new Cinema();
             cinema.setUsername("amap_" + row.getPoiId());
             cinema.setPassword(defaultHash);
-            cinema.setRole("CINEMA");
+            cinema.setRole(RoleEnum.CINEMA.name());
             cinema.setStatus(CinemaStatus.APPROVED);
             cinema.setName(row.getName());
             cinema.setPhone(row.getPhone());
@@ -130,7 +135,7 @@ public class CinemaService extends BaseService<Cinema> {
         if (cinema.getName() == null) {
             cinema.setName(cinema.getUsername());
         }
-        cinema.setRole("CINEMA");
+        cinema.setRole(RoleEnum.CINEMA.name());
         cinema.setStatus(CinemaStatus.UNAUDITED);
         cinema.setPassword(passwordEncoder.encode(cinema.getPassword()));
         mapper().insert(cinema);
@@ -152,7 +157,7 @@ public class CinemaService extends BaseService<Cinema> {
         }
         String password = account.getPassword();
         if (!passwordEncoder.matches(password, dbCinema.getPassword())
-                && !dbCinema.getPassword().equals(password)) {
+                && !password.equals(dbCinema.getPassword())) {
             throw new CustomException(ErrorCode.UNAUTHORIZED.code(), "账号或密码错误");
         }
         if (!CinemaStatus.APPROVED.equals(dbCinema.getStatus())) {

@@ -20,10 +20,19 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class MarkServiceTest {
@@ -58,7 +67,7 @@ class MarkServiceTest {
     }
 
     @Test
-    void add_shouldInsertAndRecalculateFilmScore() {
+    void addShouldInsertAndRecalculateFilmScore() {
         Mark mark = request(6, 10, 9.5);
         givenPickedUpTicket(6, 10);
         when(markMapper.countByUserAndFilm(6, 10)).thenReturn(0);
@@ -71,7 +80,7 @@ class MarkServiceTest {
     }
 
     @Test
-    void add_withoutFilmId_shouldThrow() {
+    void addWithoutFilmIdShouldThrow() {
         Mark mark = request(6, null, 9.5);
 
         assertThrows(CustomException.class, () -> markService.add(mark));
@@ -79,7 +88,7 @@ class MarkServiceTest {
     }
 
     @Test
-    void add_withoutUserId_shouldThrow() {
+    void addWithoutUserIdShouldThrow() {
         Mark mark = request(null, 10, 9.5);
 
         assertThrows(CustomException.class, () -> markService.add(mark));
@@ -87,7 +96,7 @@ class MarkServiceTest {
     }
 
     @Test
-    void add_withoutScore_shouldThrow() {
+    void addWithoutScoreShouldThrow() {
         Mark mark = request(6, 10, null);
 
         assertThrows(CustomException.class, () -> markService.add(mark));
@@ -95,7 +104,7 @@ class MarkServiceTest {
     }
 
     @Test
-    void add_withScoreAboveMax_shouldThrow() {
+    void addWithScoreAboveMaxShouldThrow() {
         Mark mark = request(6, 10, 10.1);
 
         assertThrows(CustomException.class, () -> markService.add(mark));
@@ -103,7 +112,7 @@ class MarkServiceTest {
     }
 
     @Test
-    void add_withNegativeScore_shouldThrow() {
+    void addWithNegativeScoreShouldThrow() {
         Mark mark = request(6, 10, -0.1);
 
         assertThrows(CustomException.class, () -> markService.add(mark));
@@ -111,7 +120,7 @@ class MarkServiceTest {
     }
 
     @Test
-    void add_shouldAcceptBoundaryScores() {
+    void addShouldAcceptBoundaryScores() {
         Mark lowest = request(6, 10, 0.0);
         givenPickedUpTicket(6, 10);
         when(markMapper.countByUserAndFilm(6, 10)).thenReturn(0);
@@ -126,7 +135,7 @@ class MarkServiceTest {
     }
 
     @Test
-    void add_duplicateReviewBySameUser_shouldThrow() {
+    void addDuplicateReviewBySameUserShouldThrow() {
         Mark mark = request(6, 10, 9.5);
         givenPickedUpTicket(6, 10);
         when(markMapper.countByUserAndFilm(6, 10)).thenReturn(1);
@@ -141,7 +150,7 @@ class MarkServiceTest {
      * 已取票订单渲染「去评价」），直接 POST /api/v1/marks 能给没买过票的影片打分。
      */
     @Test
-    void add_withoutPickedUpTicket_shouldThrow() {
+    void addWithoutPickedUpTicketShouldThrow() {
         Mark mark = request(6, 10, 9.5);
         when(orderedMapper.countPickedUpByUserAndFilm(6, 10)).thenReturn(0);
 
@@ -152,7 +161,7 @@ class MarkServiceTest {
 
     /** 门禁按"该片是否取过票"判定，不看别的影片的票 —— 取过 A 片不能评 B 片 */
     @Test
-    void add_withPickedUpTicketForAnotherFilm_shouldThrow() {
+    void addWithPickedUpTicketForAnotherFilmShouldThrow() {
         Mark mark = request(6, 11, 9.5);
         when(orderedMapper.countPickedUpByUserAndFilm(6, 11)).thenReturn(0);
 
@@ -161,7 +170,7 @@ class MarkServiceTest {
     }
 
     @Test
-    void add_withOverlongComment_shouldThrow() {
+    void addWithOverlongCommentShouldThrow() {
         Mark mark = request(6, 10, 9.5);
         mark.setMark("评".repeat(256));
 
@@ -170,7 +179,7 @@ class MarkServiceTest {
     }
 
     @Test
-    void update_withMissingMark_shouldThrow() {
+    void updateWithMissingMarkShouldThrow() {
         when(markMapper.selectById(99)).thenReturn(null);
         Mark mark = new Mark();
         mark.setId(99);
@@ -180,7 +189,7 @@ class MarkServiceTest {
     }
 
     @Test
-    void update_shouldDropIdentityAndRecalculateStoredFilm() {
+    void updateShouldDropIdentityAndRecalculateStoredFilm() {
         Mark stored = new Mark();
         stored.setId(5);
         stored.setUserId(6);
@@ -204,7 +213,7 @@ class MarkServiceTest {
     }
 
     @Test
-    void delete_shouldRecalculateFilmScore() {
+    void deleteShouldRecalculateFilmScore() {
         Mark stored = new Mark();
         stored.setId(5);
         stored.setFilmId(10);
@@ -217,7 +226,7 @@ class MarkServiceTest {
     }
 
     @Test
-    void deleteBatch_shouldRecalculateEachAffectedFilmOnce() {
+    void deleteBatchShouldRecalculateEachAffectedFilmOnce() {
         Mark first = new Mark();
         first.setId(1);
         first.setFilmId(10);
@@ -257,7 +266,7 @@ class MarkServiceTest {
     }
 
     @Test
-    void setLike_whenNotYetLiked_shouldInsertAndReportReadBackState() {
+    void setLikeWhenNotYetLikedShouldInsertAndReportReadBackState() {
         when(markMapper.selectById(5)).thenReturn(storedMark(5, 6, 10));
         when(markLikeMapper.countByMarkAndUser(5, 6)).thenReturn(1);
         when(markLikeMapper.countByMarkId(5)).thenReturn(1);
@@ -267,7 +276,7 @@ class MarkServiceTest {
         verify(markLikeMapper).insertIfAbsent(5, 6);
         verify(markLikeMapper, never()).deleteByMarkAndUser(anyInt(), anyInt());
         // 返回值是回读的权威状态，不是"假定生效"
-        assertTrue(result.isLiked());
+        assertTrue(result.getLiked());
         assertEquals(1, result.getLikeCount());
     }
 
@@ -276,7 +285,7 @@ class MarkServiceTest {
      * 赞数不变。这正是"回读权威状态"而非用返回值判断的原因。
      */
     @Test
-    void setLike_whenAlreadyLiked_shouldStayLikedWithUnchangedCount() {
+    void setLikeWhenAlreadyLikedShouldStayLikedWithUnchangedCount() {
         when(markMapper.selectById(5)).thenReturn(storedMark(5, 6, 10));
         when(markLikeMapper.countByMarkAndUser(5, 6)).thenReturn(1);
         when(markLikeMapper.countByMarkId(5)).thenReturn(1);
@@ -284,12 +293,12 @@ class MarkServiceTest {
         MarkLikeResult result = markService.setLike(5, 6, true);
 
         verify(markLikeMapper).insertIfAbsent(5, 6);
-        assertTrue(result.isLiked());
+        assertTrue(result.getLiked());
         assertEquals(1, result.getLikeCount());
     }
 
     @Test
-    void setLike_unlike_shouldDeleteAndReportZero() {
+    void setLikeUnlikeShouldDeleteAndReportZero() {
         when(markMapper.selectById(5)).thenReturn(storedMark(5, 6, 10));
         when(markLikeMapper.countByMarkAndUser(5, 6)).thenReturn(0);
         when(markLikeMapper.countByMarkId(5)).thenReturn(0);
@@ -298,25 +307,25 @@ class MarkServiceTest {
 
         verify(markLikeMapper).deleteByMarkAndUser(5, 6);
         verify(markLikeMapper, never()).insertIfAbsent(anyInt(), anyInt());
-        assertFalse(result.isLiked());
+        assertFalse(result.getLiked());
         assertEquals(0, result.getLikeCount());
     }
 
     /** 取消一个从未点过的赞：删除影响 0 行，不报错，如实回报未赞 */
     @Test
-    void setLike_unlikeNeverLiked_shouldNotThrow() {
+    void setLikeUnlikeNeverLikedShouldNotThrow() {
         when(markMapper.selectById(5)).thenReturn(storedMark(5, 6, 10));
         when(markLikeMapper.countByMarkAndUser(5, 6)).thenReturn(0);
 
         MarkLikeResult result = markService.setLike(5, 6, false);
 
         verify(markLikeMapper).deleteByMarkAndUser(5, 6);
-        assertFalse(result.isLiked());
+        assertFalse(result.getLiked());
         assertEquals(0, result.getLikeCount());
     }
 
     @Test
-    void setLike_withMissingMark_shouldThrowNotFound() {
+    void setLikeWithMissingMarkShouldThrowNotFound() {
         when(markMapper.selectById(99)).thenReturn(null);
 
         CustomException ex = assertThrows(CustomException.class, () -> markService.setLike(99, 6, true));
@@ -328,7 +337,7 @@ class MarkServiceTest {
     // ==================== 按影片查询评价 ====================
 
     @Test
-    void listByFilm_anonymous_shouldQueryWithoutViewerAndSkipEligibility() {
+    void listByFilmAnonymousShouldQueryWithoutViewerAndSkipEligibility() {
         when(filmMapper.selectById(10)).thenReturn(storedFilm(10));
         when(markMapper.selectFilmMarks(10, null)).thenReturn(List.of(new MarkView()));
 
@@ -337,14 +346,14 @@ class MarkServiceTest {
         verify(markMapper).selectFilmMarks(10, null);
         verify(markMapper, never()).selectFilmMarkOfUser(anyInt(), any());
         assertNull(view.getMy());
-        assertFalse(view.isReviewable());
+        assertFalse(view.getReviewable());
         // 匿名既无"我的评价"也无"我是否够格"，不该白跑一次已取票统计
         verifyNoInteractions(orderedMapper);
     }
 
     /** 非 USER 角色没有用户身份，按匿名口径查，同样不碰已取票统计 */
     @Test
-    void listByFilm_byCinemaRole_shouldBeTreatedAsAnonymous() {
+    void listByFilmByCinemaRoleShouldBeTreatedAsAnonymous() {
         when(filmMapper.selectById(10)).thenReturn(storedFilm(10));
         when(markMapper.selectFilmMarks(10, null)).thenReturn(List.of());
 
@@ -352,12 +361,12 @@ class MarkServiceTest {
 
         verify(markMapper).selectFilmMarks(10, null);
         assertNull(view.getMy());
-        assertFalse(view.isReviewable());
+        assertFalse(view.getReviewable());
         verifyNoInteractions(orderedMapper);
     }
 
     @Test
-    void listByFilm_byUserWithoutPickedTicket_shouldNotBeReviewable() {
+    void listByFilmByUserWithoutPickedTicketShouldNotBeReviewable() {
         when(filmMapper.selectById(10)).thenReturn(storedFilm(10));
         when(markMapper.selectFilmMarks(10, 6)).thenReturn(List.of());
         when(markMapper.selectFilmMarkOfUser(10, 6)).thenReturn(null);
@@ -366,12 +375,12 @@ class MarkServiceTest {
         FilmMarksView view = markService.listByFilm(10, 6, "USER", 1, 10);
 
         verify(markMapper).selectFilmMarks(10, 6);
-        assertFalse(view.isReviewable());
+        assertFalse(view.getReviewable());
         assertNull(view.getMy());
     }
 
     @Test
-    void listByFilm_byUserWithPickedTicketAndReview_shouldExposeOwnReview() {
+    void listByFilmByUserWithPickedTicketAndReviewShouldExposeOwnReview() {
         when(filmMapper.selectById(10)).thenReturn(storedFilm(10));
         MarkView mine = new MarkView();
         mine.setId(5);
@@ -381,13 +390,13 @@ class MarkServiceTest {
 
         FilmMarksView view = markService.listByFilm(10, 6, "USER", 1, 10);
 
-        assertTrue(view.isReviewable());
+        assertTrue(view.getReviewable());
         assertNotNull(view.getMy());
         assertEquals(1, view.getTotal());
     }
 
     @Test
-    void listByFilm_withMissingFilm_shouldThrowNotFound() {
+    void listByFilmWithMissingFilmShouldThrowNotFound() {
         when(filmMapper.selectById(99)).thenReturn(null);
 
         CustomException ex = assertThrows(CustomException.class,
@@ -398,7 +407,7 @@ class MarkServiceTest {
     }
 
     @Test
-    void listByFilm_withoutFilmId_shouldThrowParamInvalid() {
+    void listByFilmWithoutFilmIdShouldThrowParamInvalid() {
         CustomException ex = assertThrows(CustomException.class,
                 () -> markService.listByFilm(null, 6, "USER", 1, 10));
 
@@ -411,7 +420,7 @@ class MarkServiceTest {
      * 归属判定必须在后端完成，以 mine 布尔量下发。
      */
     @Test
-    void markView_shouldNotSerializeAuthorUserId() throws Exception {
+    void markViewShouldNotSerializeAuthorUserId() throws Exception {
         MarkView view = new MarkView(5, "张三", "avatar.png", 9.5, "很好看", 3, true, false);
 
         String json = new ObjectMapper().writeValueAsString(view);

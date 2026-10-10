@@ -22,6 +22,10 @@ import java.time.format.DateTimeFormatterBuilder;
 import java.time.format.DateTimeParseException;
 import java.time.temporal.ChronoField;
 
+/**
+ * 放映场次的增删改查，含排期时间的多种写法兼容解析、片长兜底与票价规范化
+ * （票价以两位小数的 BigDecimal 落库）。
+ */
 @Service
 @Transactional(readOnly = true)
 public class RecordService extends BaseService<Record> {
@@ -152,8 +156,8 @@ public class RecordService extends BaseService<Record> {
     private static BigDecimal parsePrice(String price) {
         try {
             return new BigDecimal(price).setScale(2, RoundingMode.HALF_UP);
-        } catch (Exception e) {
-            throw new CustomException(ErrorCode.PARAM_INVALID, "票价格式错误");
+        } catch (NumberFormatException e) {
+            throw new CustomException(ErrorCode.PARAM_INVALID, "票价格式错误", e);
         }
     }
 }

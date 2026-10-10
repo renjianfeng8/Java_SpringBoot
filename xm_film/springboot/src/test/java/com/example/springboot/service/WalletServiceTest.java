@@ -15,9 +15,13 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 /**
  * 账户余额的唯一出处。四条契约：
@@ -41,7 +45,7 @@ class WalletServiceTest {
     private WalletService walletService;
 
     @Test
-    void debitPurchase_withSufficientBalance_shouldDeductAndWritePurchaseFlow() {
+    void debitPurchaseWithSufficientBalanceShouldDeductAndWritePurchaseFlow() {
         when(userMapper.selectBalanceForUpdate(USER_ID)).thenReturn(new BigDecimal("100.00"));
         when(userMapper.deductBalance(USER_ID, new BigDecimal("60.00"))).thenReturn(1);
 
@@ -59,7 +63,7 @@ class WalletServiceTest {
     }
 
     @Test
-    void debitPurchase_withInsufficientBalance_shouldThrowAndChangeNothing() {
+    void debitPurchaseWithInsufficientBalanceShouldThrowAndChangeNothing() {
         when(userMapper.selectBalanceForUpdate(USER_ID)).thenReturn(new BigDecimal("10.00"));
 
         BigDecimal amount = new BigDecimal("60.00");
@@ -72,7 +76,7 @@ class WalletServiceTest {
     }
 
     @Test
-    void debitPurchase_whenUserMissing_shouldThrowNotFound() {
+    void debitPurchaseWhenUserMissingShouldThrowNotFound() {
         BigDecimal amount = new BigDecimal("60.00");
         CustomException ex = assertThrows(CustomException.class,
                 () -> walletService.debitPurchase(USER_ID, amount, 99));
@@ -82,7 +86,7 @@ class WalletServiceTest {
     }
 
     @Test
-    void debitPurchase_withNonPositiveAmount_shouldThrowAndChangeNothing() {
+    void debitPurchaseWithNonPositiveAmountShouldThrowAndChangeNothing() {
         assertThrows(CustomException.class,
                 () -> walletService.debitPurchase(USER_ID, BigDecimal.ZERO, 99));
 
@@ -91,7 +95,7 @@ class WalletServiceTest {
     }
 
     @Test
-    void creditRecharge_shouldAddBalanceAndWriteRechargeFlow() {
+    void creditRechargeShouldAddBalanceAndWriteRechargeFlow() {
         when(userMapper.selectBalanceForUpdate(USER_ID)).thenReturn(new BigDecimal("100.00"));
 
         walletService.creditRecharge(USER_ID, new BigDecimal("200.00"), 7);
@@ -107,7 +111,7 @@ class WalletServiceTest {
     }
 
     @Test
-    void creditRecharge_withNonPositiveAmount_shouldThrowAndChangeNothing() {
+    void creditRechargeWithNonPositiveAmountShouldThrowAndChangeNothing() {
         BigDecimal amount = new BigDecimal("-50.00");
         assertThrows(CustomException.class,
                 () -> walletService.creditRecharge(USER_ID, amount, 7));
@@ -117,7 +121,7 @@ class WalletServiceTest {
     }
 
     @Test
-    void creditRefund_shouldAddBalanceAndWriteRefundFlow() {
+    void creditRefundShouldAddBalanceAndWriteRefundFlow() {
         when(userMapper.selectBalanceForUpdate(USER_ID)).thenReturn(new BigDecimal("40.00"));
 
         walletService.creditRefund(USER_ID, new BigDecimal("60.00"), 99);
@@ -133,7 +137,7 @@ class WalletServiceTest {
     }
 
     @Test
-    void getBalance_shouldReturnMapperValue() {
+    void getBalanceShouldReturnMapperValue() {
         when(userMapper.selectBalance(USER_ID)).thenReturn(new BigDecimal("100.00"));
 
         assertEquals(0, new BigDecimal("100.00").compareTo(walletService.getBalance(USER_ID)));

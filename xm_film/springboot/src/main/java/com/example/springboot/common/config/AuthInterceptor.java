@@ -1,6 +1,7 @@
 package com.example.springboot.common.config;
 
 import com.example.springboot.common.JwtUtils;
+import com.example.springboot.common.enums.RoleEnum;
 import io.jsonwebtoken.Claims;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
@@ -149,7 +150,7 @@ public class AuthInterceptor implements HandlerInterceptor {
     }
 
     private boolean hasAccess(String path, String method, String role) {
-        if ("ADMIN".equals(role)) {
+        if (RoleEnum.ADMIN.name().equals(role)) {
             return true;
         }
         if (ADMIN_ONLY_PREFIXES.stream().anyMatch(path::startsWith)) {

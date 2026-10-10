@@ -18,10 +18,10 @@ import java.util.List;
 public class FilmMarksView {
 
     /** 该片评价总数（含本人），由 PageInfo 给出 */
-    private long total;
+    private Long total;
 
     /** 当前 USER 是否够格发表评价（= 对该片有已取票订单）；是否**已**评过看 my 是否为 null */
-    private boolean reviewable;
+    private Boolean reviewable;
 
     /** 本人对该片的评价，未评过为 null */
     private MarkView my;
