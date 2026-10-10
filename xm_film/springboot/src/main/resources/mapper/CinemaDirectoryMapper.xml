@@ -5,16 +5,29 @@
 
 <mapper namespace="com.example.springboot.mapper.CinemaDirectoryMapper">
 
+    <!-- linked 是派生列：由 cinema 是否引用本行决定，不是 cinema_directory 的列。
+         用 EXISTS 而非 LEFT JOIN —— cinema.directory_id 无唯一索引，同一条名录若被两行
+         影院引用，JOIN 会把名录行翻倍、连带把分页与计数一起带错。
+         筛选列一律加 d. 前缀：id 两张表都有，不加前缀的 SELECT * 会有歧义。
+         query 的非空字段即筛选条件，linked 复用为本行的筛选入参（null=全部）。 -->
     <select id="selectAll" resultType="com.example.springboot.entity.CinemaDirectory">
-        SELECT * FROM cinema_directory
+        SELECT d.*,
+               EXISTS(SELECT 1 FROM cinema c WHERE c.directory_id = d.id) AS linked
+        FROM cinema_directory d
         <where>
-            <if test="name != null">AND name LIKE CONCAT('%', #{name}, '%')</if>
-            <if test="province != null">AND province = #{province}</if>
-            <if test="city != null">AND city = #{city}</if>
-            <if test="district != null">AND district = #{district}</if>
-            <if test="brand != null">AND brand = #{brand}</if>
+            <if test="name != null">AND d.name LIKE CONCAT('%', #{name}, '%')</if>
+            <if test="province != null">AND d.province = #{province}</if>
+            <if test="city != null">AND d.city = #{city}</if>
+            <if test="district != null">AND d.district = #{district}</if>
+            <if test="brand != null">AND d.brand = #{brand}</if>
+            <if test="linked != null">
+                <choose>
+                    <when test="linked">AND EXISTS(SELECT 1 FROM cinema lc WHERE lc.directory_id = d.id)</when>
+                    <otherwise>AND NOT EXISTS(SELECT 1 FROM cinema lc WHERE lc.directory_id = d.id)</otherwise>
+                </choose>
+            </if>
         </where>
-        ORDER BY id DESC
+        ORDER BY d.id DESC
     </select>
 
     <insert id="insertIgnore" parameterType="com.example.springboot.entity.CinemaDirectory">
