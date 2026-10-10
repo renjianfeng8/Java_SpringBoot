@@ -3,6 +3,7 @@ package com.example.springboot.controller;
 import com.example.springboot.common.BaseController;
 import com.example.springboot.common.Result;
 import com.example.springboot.common.enums.ErrorCode;
+import com.example.springboot.common.enums.RoleEnum;
 import com.example.springboot.dto.request.CinemaFromDirectoryRequest;
 import com.example.springboot.entity.Cinema;
 import com.example.springboot.exception.CustomException;
@@ -11,7 +12,15 @@ import com.example.springboot.service.OrderedService;
 import com.example.springboot.service.RecordService;
 import com.example.springboot.service.RoomService;
 import jakarta.servlet.http.HttpServletRequest;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
@@ -130,11 +139,11 @@ public class CinemaController extends BaseController<Cinema> {
     }
 
     private boolean isAdmin() {
-        return "ADMIN".equals(currentRole());
+        return RoleEnum.ADMIN.name().equals(currentRole());
     }
 
     private boolean isCinema() {
-        return "CINEMA".equals(currentRole());
+        return RoleEnum.CINEMA.name().equals(currentRole());
     }
 
     private void requireAdmin() {

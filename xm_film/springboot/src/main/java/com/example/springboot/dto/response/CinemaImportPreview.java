@@ -16,13 +16,13 @@ import java.util.List;
 public class CinemaImportPreview {
 
     /** 抓取到的唯一 POI 数（按 poi_id 去重后） */
-    private int total;
+    private Integer total;
 
     /** 其中库中不存在、将被新增的条数 */
-    private int freshCount;
+    private Integer freshCount;
 
     /** 其中库中已存在、将被跳过的条数 */
-    private int duplicateCount;
+    private Integer duplicateCount;
 
     /** 前若干条名称，供管理员核对抓的是不是影院 */
     private List<String> sample;

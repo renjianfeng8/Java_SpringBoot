@@ -11,9 +11,17 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
@@ -39,7 +47,7 @@ class AdminServiceTest {
     }
 
     @Test
-    void login_withCorrectCredentials_shouldSucceed() {
+    void loginWithCorrectCredentialsShouldSucceed() {
         Account account = new Account();
         account.setUsername("999");
         account.setPassword("999");
@@ -54,7 +62,7 @@ class AdminServiceTest {
     }
 
     @Test
-    void login_withNonExistentUsername_shouldThrow() {
+    void loginWithNonExistentUsernameShouldThrow() {
         Account account = new Account();
         account.setUsername("ghost");
         account.setPassword("pwd");
@@ -67,7 +75,7 @@ class AdminServiceTest {
     }
 
     @Test
-    void login_withWrongPassword_shouldThrow() {
+    void loginWithWrongPasswordShouldThrow() {
         Account account = new Account();
         account.setUsername("999");
         account.setPassword("wrong-password");
@@ -80,7 +88,7 @@ class AdminServiceTest {
     }
 
     @Test
-    void add_withNewUsername_shouldSucceed() {
+    void addWithNewUsernameShouldSucceed() {
         Admin newAdmin = new Admin();
         newAdmin.setUsername("newadmin");
         newAdmin.setPassword("pwd123");
@@ -96,7 +104,7 @@ class AdminServiceTest {
     }
 
     @Test
-    void add_withExistingUsername_shouldThrow() {
+    void addWithExistingUsernameShouldThrow() {
         Admin newAdmin = new Admin();
         newAdmin.setUsername("999");
         newAdmin.setPassword("pwd123");
@@ -109,7 +117,7 @@ class AdminServiceTest {
     }
 
     @Test
-    void update_shouldClearPasswordAndRole() {
+    void updateShouldClearPasswordAndRole() {
         Admin update = new Admin();
         update.setId(1);
         update.setPassword("should-be-cleared");
@@ -125,7 +133,7 @@ class AdminServiceTest {
     }
 
     @Test
-    void updatePassword_withCorrectOldPassword_shouldSucceed() {
+    void updatePasswordWithCorrectOldPasswordShouldSucceed() {
         Account account = new Account();
         account.setId(1);
         account.setPassword("999");
@@ -144,7 +152,7 @@ class AdminServiceTest {
     }
 
     @Test
-    void updatePassword_withWrongOldPassword_shouldThrow() {
+    void updatePasswordWithWrongOldPasswordShouldThrow() {
         Account account = new Account();
         account.setId(1);
         account.setPassword("wrong-old-password");
@@ -157,7 +165,7 @@ class AdminServiceTest {
     }
 
     @Test
-    void updatePassword_withNonExistentUser_shouldThrow() {
+    void updatePasswordWithNonExistentUserShouldThrow() {
         Account account = new Account();
         account.setId(999);
         account.setPassword("pwd");

@@ -8,6 +8,9 @@ import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * 影厅的通用增删改查，外加按影院计数（统计与删除前置校验用）。
+ */
 @Service
 @Transactional(readOnly = true)
 public class RoomService extends BaseService<Room> {

@@ -15,8 +15,8 @@ import java.util.List;
 @AllArgsConstructor
 public class TmdbBackfillResult {
 
-    private int scanned;
-    private int updated;
+    private Integer scanned;
+    private Integer updated;
     private List<Miss> missed;
 
     /** 一部没补上的影片及原因（TMDB 无匹配 / TMDB 无预告片 / TMDB 请求失败） */

@@ -3,12 +3,21 @@ package com.example.springboot.controller;
 import com.example.springboot.common.BaseController;
 import com.example.springboot.common.Result;
 import com.example.springboot.common.enums.ErrorCode;
+import com.example.springboot.common.enums.RoleEnum;
 import com.example.springboot.dto.request.MarkLikeRequest;
 import com.example.springboot.entity.Mark;
 import com.example.springboot.exception.CustomException;
 import com.example.springboot.service.MarkService;
 import jakarta.servlet.http.HttpServletRequest;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
@@ -100,13 +109,13 @@ public class MarkController extends BaseController<Mark> {
 
     /** 评价的 user_id 外键指向 user 表，影院/管理员账号的 id 不是用户 id，故只允许 USER 发表 / 点赞 */
     private void requireUser(String action) {
-        if (!"USER".equals(currentRole())) {
+        if (!RoleEnum.USER.name().equals(currentRole())) {
             throw new CustomException(ErrorCode.FORBIDDEN, "仅用户可" + action);
         }
     }
 
     private boolean isAdmin() {
-        return "ADMIN".equals(currentRole());
+        return RoleEnum.ADMIN.name().equals(currentRole());
     }
 
     private String currentRole() {

@@ -11,6 +11,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * 影片类型的增删改查，外加按 id 批量取值；空入参直接返回空表，不下发 {@code IN ()}。
+ */
 @Service
 @Transactional(readOnly = true)
 public class TypeService extends BaseService<Type> {

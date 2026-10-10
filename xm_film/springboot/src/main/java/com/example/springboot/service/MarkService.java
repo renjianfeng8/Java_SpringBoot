@@ -3,6 +3,7 @@ package com.example.springboot.service;
 import com.example.springboot.common.BaseMapper;
 import com.example.springboot.common.BaseService;
 import com.example.springboot.common.enums.ErrorCode;
+import com.example.springboot.common.enums.RoleEnum;
 import com.example.springboot.dto.response.FilmMarksView;
 import com.example.springboot.dto.response.MarkLikeResult;
 import com.example.springboot.dto.response.MarkView;
@@ -23,6 +24,10 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+/**
+ * 影片评价与点赞的唯一出处：评分区间、评语长度、购票资格在此校验，发表/删除后
+ * 回算影片分数。点赞状态一律以写库后回读为准，不假定请求已生效。
+ */
 @Service
 @Transactional(readOnly = true)
 public class MarkService extends BaseService<Mark> {
@@ -155,7 +160,7 @@ public class MarkService extends BaseService<Mark> {
             throw new CustomException(ErrorCode.NOT_FOUND, "影片不存在");
         }
         // 非 USER 不查本人评价，也免得白跑一次已取票统计
-        boolean isUser = "USER".equals(role) && viewerId != null;
+        boolean isUser = RoleEnum.USER.name().equals(role) && viewerId != null;
         Integer viewer = isUser ? viewerId : null;
         PageMethod.startPage(pageNum, pageSize);
         List<MarkView> list = markMapper.selectFilmMarks(filmId, viewer);

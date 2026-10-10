@@ -3,6 +3,7 @@ package com.example.springboot.controller;
 import com.example.springboot.common.AuthContext;
 import com.example.springboot.common.Result;
 import com.example.springboot.common.enums.ErrorCode;
+import com.example.springboot.common.enums.RoleEnum;
 import com.example.springboot.dto.request.PayPasswordChangeRequest;
 import com.example.springboot.dto.request.PayPasswordResetRequest;
 import com.example.springboot.dto.request.PayPasswordVerifyLoginRequest;
@@ -80,7 +81,7 @@ public class AccountController {
 
     /** admin / cinema 表与 user 表是两套主体，只有 USER 有账户余额与支付密码 */
     private Integer requireUser() {
-        if (!"USER".equals(AuthContext.role())) {
+        if (!RoleEnum.USER.name().equals(AuthContext.role())) {
             throw new CustomException(ErrorCode.FORBIDDEN, "仅普通用户有账户余额");
         }
         return AuthContext.userId();

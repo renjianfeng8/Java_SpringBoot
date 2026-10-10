@@ -5,6 +5,7 @@ import com.example.springboot.common.BaseService;
 import com.example.springboot.entity.Account;
 import com.example.springboot.entity.User;
 import com.example.springboot.common.enums.ErrorCode;
+import com.example.springboot.common.enums.RoleEnum;
 import com.example.springboot.exception.CustomException;
 import com.example.springboot.mapper.UserMapper;
 import jakarta.annotation.Resource;
@@ -14,6 +15,10 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * 普通用户账号的注册、登录与密码维护。注册时固定角色为 USER、缺省密码兜底，
+ * 密码一律经 BCrypt 存储；更新资料时不允许改动密码与角色字段。
+ */
 @Service
 @Transactional(readOnly = true)
 public class UserService extends BaseService<User> {
@@ -46,7 +51,7 @@ public class UserService extends BaseService<User> {
         if (user.getName() == null) {
             user.setName(user.getUsername());
         }
-        user.setRole("USER");
+        user.setRole(RoleEnum.USER.name());
         user.setPassword(passwordEncoder.encode(user.getPassword()));
         mapper().insert(user);
     }
@@ -67,7 +72,7 @@ public class UserService extends BaseService<User> {
         }
         String password = account.getPassword();
         if (!passwordEncoder.matches(password, dbUser.getPassword())
-                && !dbUser.getPassword().equals(password)) {
+                && !password.equals(dbUser.getPassword())) {
             throw new CustomException(ErrorCode.UNAUTHORIZED.code(), "账号或密码错误");
         }
         return dbUser;

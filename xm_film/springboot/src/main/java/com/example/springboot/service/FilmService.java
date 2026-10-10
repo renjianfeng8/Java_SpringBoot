@@ -11,8 +11,15 @@ import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 
+/**
+ * 影片的增删改查，外加类型关联的同步读写与按票房/评分的榜单查询。
+ * 类型详情在此一次性批量填充，避免逐条影片各查一轮。
+ */
 @Service
 @Transactional(readOnly = true)
 public class FilmService extends BaseService<Film> {

@@ -683,7 +683,7 @@ class OrderedServiceTest {
 
         assertThat(view).hasSize(1);
         assertThat(view.get(0).getSeat()).isEqualTo("1排1座");
-        assertThat(view.get(0).isMine()).isFalse();
+        assertThat(view.get(0).getMine()).isFalse();
         assertThat(view.get(0).getOrderId()).isNull();
         assertThat(view.get(0).getOrders()).isNull();
         assertThat(view.get(0).getStatus()).isNull();
@@ -708,7 +708,7 @@ class OrderedServiceTest {
 
         assertThat(view).hasSize(1);
         assertThat(view.get(0).getSeat()).isEqualTo("1排1座");
-        assertThat(view.get(0).isMine()).isTrue();
+        assertThat(view.get(0).getMine()).isTrue();
         assertThat(view.get(0).getOrderId()).isEqualTo(11);
         assertThat(view.get(0).getOrders()).isEqualTo("20260928DEADBEEF");
         assertThat(view.get(0).getStatus()).isEqualTo("待支付");
@@ -728,7 +728,7 @@ class OrderedServiceTest {
         List<SeatOccupancy> view = orderedService.selectSeatOccupancy(1, null);
 
         assertThat(view).hasSize(1);
-        assertThat(view.get(0).isMine()).isFalse();
+        assertThat(view.get(0).getMine()).isFalse();
         assertThat(view.get(0).getOrderId()).isNull();
     }
 

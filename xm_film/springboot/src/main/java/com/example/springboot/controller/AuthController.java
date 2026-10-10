@@ -15,7 +15,12 @@ import com.example.springboot.service.UserService;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -89,11 +94,11 @@ public class AuthController {
             account.setId(Integer.valueOf(userId));
         }
         account.setRole(role);
-        if ("ADMIN".equals(role)) {
+        if (RoleEnum.ADMIN.name().equals(role)) {
             adminService.updatePassword(account);
-        } else if ("CINEMA".equals(role)) {
+        } else if (RoleEnum.CINEMA.name().equals(role)) {
             cinemaService.updatePassword(account);
-        } else if ("USER".equals(role)) {
+        } else if (RoleEnum.USER.name().equals(role)) {
             userService.updatePassword(account);
         } else {
             throw new CustomException(ErrorCode.SYSTEM_ERROR, "非法输入");

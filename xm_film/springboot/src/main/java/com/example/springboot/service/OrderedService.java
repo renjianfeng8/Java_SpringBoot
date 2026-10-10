@@ -6,6 +6,7 @@ import com.example.springboot.common.enums.ErrorCode;
 import com.example.springboot.common.enums.OrderStatus;
 import com.example.springboot.common.enums.PayResult;
 import com.example.springboot.common.enums.RecordStatus;
+import com.example.springboot.common.enums.RoleEnum;
 import com.example.springboot.dto.response.SeatOccupancy;
 import com.example.springboot.dto.response.TicketVoucher;
 import com.example.springboot.entity.Cinema;
@@ -40,6 +41,10 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+/**
+ * 订单状态机与座位占用的唯一出处：选座建单（锁座、超时废单）、支付、取消、退票、
+ * 取票（柜台核销与凭码自助）全部经此流转，订单号与取票码也在这里生成。
+ */
 @Service
 @Transactional(readOnly = true)
 public class OrderedService extends BaseService<Ordered> {
@@ -75,9 +80,6 @@ public class OrderedService extends BaseService<Ordered> {
     private static final Set<String> DELETABLE_STATUSES =
             Set.of(OrderStatus.CANCELLED, OrderStatus.REFUNDED);
 
-    private static final String ROLE_CINEMA = "CINEMA";
-    private static final String ROLE_USER = "USER";
-
     @Resource
     private OrderedMapper orderedMapper;
 
@@ -108,9 +110,9 @@ public class OrderedService extends BaseService<Ordered> {
         if (ordered == null || role == null || userId == null) {
             return;
         }
-        if (ROLE_USER.equals(role)) {
+        if (RoleEnum.USER.name().equals(role)) {
             ordered.setUserId(userId);
-        } else if (ROLE_CINEMA.equals(role)) {
+        } else if (RoleEnum.CINEMA.name().equals(role)) {
             ordered.setCinemaId(userId);
         }
     }
@@ -127,7 +129,7 @@ public class OrderedService extends BaseService<Ordered> {
     }
 
     private void insertOrder(Ordered ordered, String role, Integer tokenUserId) {
-        if (role != null && !ROLE_USER.equals(role)) {
+        if (role != null && !RoleEnum.USER.name().equals(role)) {
             throw new CustomException(ErrorCode.FORBIDDEN, "仅普通用户可创建订单");
         }
         if (ordered == null || ordered.getRecordId() == null) {
@@ -493,7 +495,7 @@ public class OrderedService extends BaseService<Ordered> {
         // 一起授予新角色，这正是 MarkService 那轮"只有前端按钮在守"的同一种漏。
         //
         // 用户的自助通路是 redeemByCode（凭取票码在取票大厅核销），两者共用同一个状态迁移。
-        if (!ROLE_CINEMA.equals(role)) {
+        if (!RoleEnum.CINEMA.name().equals(role)) {
             throw new CustomException(ErrorCode.FORBIDDEN, "取票为影院柜台操作，请到取票大厅凭取票码自助取票");
         }
         if (!OrderStatus.PENDING.equals(ordered.getStatus())) {
@@ -538,13 +540,13 @@ public class OrderedService extends BaseService<Ordered> {
         if (ordered == null) {
             throw new CustomException(ErrorCode.NOT_FOUND, "订单不存在");
         }
-        if ("ADMIN".equals(role)) {
+        if (RoleEnum.ADMIN.name().equals(role)) {
             return;
         }
-        if (ROLE_USER.equals(role) && userId != null && userId.equals(ordered.getUserId())) {
+        if (RoleEnum.USER.name().equals(role) && userId != null && userId.equals(ordered.getUserId())) {
             return;
         }
-        if (ROLE_CINEMA.equals(role) && userId != null && userId.equals(ordered.getCinemaId())) {
+        if (RoleEnum.CINEMA.name().equals(role) && userId != null && userId.equals(ordered.getCinemaId())) {
             return;
         }
         throw new CustomException(ErrorCode.FORBIDDEN, "无权操作该订单");
@@ -592,8 +594,8 @@ public class OrderedService extends BaseService<Ordered> {
     private BigDecimal parsePrice(String price) {
         try {
             return new BigDecimal(price).setScale(2, RoundingMode.HALF_UP);
-        } catch (Exception e) {
-            throw new CustomException(ErrorCode.SYSTEM_ERROR, "场次票价配置错误");
+        } catch (NumberFormatException e) {
+            throw new CustomException(ErrorCode.SYSTEM_ERROR, "场次票价配置错误", e);
         }
     }
 

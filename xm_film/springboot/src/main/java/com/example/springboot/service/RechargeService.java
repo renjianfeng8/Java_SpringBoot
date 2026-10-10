@@ -2,6 +2,7 @@ package com.example.springboot.service;
 
 import com.example.springboot.common.enums.ErrorCode;
 import com.example.springboot.common.enums.RechargeStatus;
+import com.example.springboot.common.enums.RoleEnum;
 import com.example.springboot.entity.RechargeOrder;
 import com.example.springboot.exception.CustomException;
 import com.example.springboot.mapper.RechargeOrderMapper;
@@ -41,7 +42,7 @@ public class RechargeService {
      */
     @Transactional(rollbackFor = Exception.class)
     public RechargeOrder createRecharge(Integer tokenUserId, String role, BigDecimal amount) {
-        if (role != null && !"USER".equals(role)) {
+        if (role != null && !RoleEnum.USER.name().equals(role)) {
             throw new CustomException(ErrorCode.FORBIDDEN, "仅普通用户可发起充值");
         }
         if (tokenUserId == null) {
@@ -60,10 +61,10 @@ public class RechargeService {
     /** 充值单据查询：USER 只看自己的，ADMIN 看全部 */
     public List<RechargeOrder> selectScoped(RechargeOrder query, String role, Integer tokenUserId) {
         RechargeOrder condition = query == null ? new RechargeOrder() : query;
-        if ("ADMIN".equals(role)) {
+        if (RoleEnum.ADMIN.name().equals(role)) {
             return rechargeOrderMapper.selectAll(condition);
         }
-        if ("USER".equals(role)) {
+        if (RoleEnum.USER.name().equals(role)) {
             condition.setUserId(tokenUserId);
             return rechargeOrderMapper.selectAll(condition);
         }
@@ -80,8 +81,8 @@ public class RechargeService {
         if (order == null) {
             throw new CustomException(ErrorCode.NOT_FOUND, "充值单据不存在");
         }
-        if (!"ADMIN".equals(role)
-                && !("USER".equals(role) && tokenUserId != null && tokenUserId.equals(order.getUserId()))) {
+        if (!RoleEnum.ADMIN.name().equals(role)
+                && !(RoleEnum.USER.name().equals(role) && tokenUserId != null && tokenUserId.equals(order.getUserId()))) {
             throw new CustomException(ErrorCode.FORBIDDEN, "无权操作该充值单据");
         }
         if (!RechargeStatus.PROCESSING.equals(order.getStatus())) {

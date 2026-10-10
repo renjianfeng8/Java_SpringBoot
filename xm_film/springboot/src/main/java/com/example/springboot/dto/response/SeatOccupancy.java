@@ -16,7 +16,7 @@ public class SeatOccupancy {
     private String seat;
 
     /** 是否当前登录用户本人的订单 */
-    private boolean mine;
+    private Boolean mine;
 
     /* 以下字段仅本人订单才有值，供"继续支付 / 取消锁座"使用 */
 

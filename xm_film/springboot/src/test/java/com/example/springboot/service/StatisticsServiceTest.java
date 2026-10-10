@@ -16,7 +16,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
@@ -54,7 +55,7 @@ class StatisticsServiceTest {
 
     /** 影院总数与待审核数必须从**同一份** cinemaStatus 派生，不另发一次 COUNT 查询 */
     @Test
-    void overview_shouldDeriveCinemaCountsFromTheStatusGrouping() {
+    void overviewShouldDeriveCinemaCountsFromTheStatusGrouping() {
         when(cinemaMapper.countGroupByStatus())
                 .thenReturn(List.of(grouped("已审核", 15L), grouped("未审核", 3L)));
         when(filmMapper.countGroupByType()).thenReturn(List.of());
@@ -85,7 +86,7 @@ class StatisticsServiceTest {
      * paidOrderStatuses（待取票 / 已取票），未支付 / 已取消 / 已退票就会静默消失。
      */
     @Test
-    void overview_shouldPassOrderStatusGroupingThroughUnfiltered() {
+    void overviewShouldPassOrderStatusGroupingThroughUnfiltered() {
         when(cinemaMapper.countGroupByStatus()).thenReturn(List.of());
         when(filmMapper.countGroupByType()).thenReturn(List.of());
         when(orderedMapper.selectTodayPaidRevenue()).thenReturn(today(BigDecimal.ZERO, "2026-10-07 14:32:10"));
@@ -114,7 +115,7 @@ class StatisticsServiceTest {
 
     /** 没有销售的日子必须补成 0：折线图缺一天会连成一条跨越两天的直线 */
     @Test
-    void revenueTrend_shouldFillDaysWithoutSalesWithZero() {
+    void revenueTrendShouldFillDaysWithoutSalesWithZero() {
         LocalDate end = LocalDate.of(2026, 10, 7);   // 窗口 = 09-30 .. 10-06
         when(orderedMapper.selectPaidRevenueByDay(LocalDate.of(2026, 9, 30), end))
                 .thenReturn(List.of(day("2026-10-01", "5000.00", 40L)));
@@ -133,7 +134,7 @@ class StatisticsServiceTest {
 
     /** 窗口是 [今天-7, 今天)：今天只过了一半，画进折线会让曲线每天上午都"断崖下跌" */
     @Test
-    void revenueTrend_shouldNotIncludeToday() {
+    void revenueTrendShouldNotIncludeToday() {
         when(orderedMapper.selectPaidRevenueByDay(any(), any())).thenReturn(List.of());
 
         List<Map<String, Object>> trend = statisticsService.revenueTrend(LocalDate.of(2026, 10, 7), 7);
@@ -144,7 +145,7 @@ class StatisticsServiceTest {
 
     /** 影院表为空时不得抛异常：求和与取值都要在空列表上返回 0 */
     @Test
-    void overview_withNoCinemas_shouldReportZeroCounts() {
+    void overviewWithNoCinemasShouldReportZeroCounts() {
         when(cinemaMapper.countGroupByStatus()).thenReturn(List.of());
         when(filmMapper.countGroupByType()).thenReturn(List.of());
         when(orderedMapper.selectTodayPaidRevenue()).thenReturn(today(BigDecimal.ZERO, "2026-10-07 14:32:10"));
