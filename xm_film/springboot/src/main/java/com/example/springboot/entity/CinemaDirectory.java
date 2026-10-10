@@ -22,4 +22,9 @@ public class CinemaDirectory {
     private String phone;
     private String source;
     private LocalDateTime createTime;
+    /**
+     * 是否已被 cinema 收录（存在引用本行 id 的影院）。查询时派生，非本表列；
+     * 同时充当筛选入参：null=全部，true=已收录，false=未收录。
+     */
+    private Boolean linked;
 }
