@@ -5,7 +5,6 @@ import com.example.springboot.common.enums.RoleEnum;
 import com.example.springboot.entity.Account;
 import com.example.springboot.entity.User;
 import com.example.springboot.exception.CustomException;
-import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 
 /**
@@ -15,14 +14,17 @@ import org.springframework.stereotype.Service;
 @Service
 public class AuthService {
 
-    @Resource
-    private AdminService adminService;
+    private final AdminService adminService;
 
-    @Resource
-    private CinemaService cinemaService;
+    private final CinemaService cinemaService;
 
-    @Resource
-    private UserService userService;
+    private final UserService userService;
+
+    public AuthService(AdminService adminService, CinemaService cinemaService, UserService userService) {
+        this.adminService = adminService;
+        this.cinemaService = cinemaService;
+        this.userService = userService;
+    }
 
     /** 按角色校验账号密码并返回对应主体；角色非法或未取到主体时报参数错误 */
     public Account login(Account account) {

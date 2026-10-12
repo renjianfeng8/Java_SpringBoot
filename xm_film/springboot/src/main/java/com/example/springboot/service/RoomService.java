@@ -8,7 +8,6 @@ import com.example.springboot.entity.Cinema;
 import com.example.springboot.entity.Room;
 import com.example.springboot.exception.CustomException;
 import com.example.springboot.mapper.RoomMapper;
-import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,17 +25,21 @@ public class RoomService extends BaseService<Room> {
     private static final int MIN_SEAT_DIMENSION = 1;
     private static final int MAX_SEAT_DIMENSION = 50;
 
-    @Resource
-    private RoomMapper roomMapper;
+    private final RoomMapper roomMapper;
 
-    @Resource
-    private RecordService recordService;
+    private final RecordService recordService;
 
-    @Resource
-    private OrderedService orderedService;
+    private final OrderedService orderedService;
 
-    @Resource
-    private CinemaService cinemaService;
+    private final CinemaService cinemaService;
+
+    public RoomService(RoomMapper roomMapper, RecordService recordService,
+                       OrderedService orderedService, CinemaService cinemaService) {
+        this.roomMapper = roomMapper;
+        this.recordService = recordService;
+        this.orderedService = orderedService;
+        this.cinemaService = cinemaService;
+    }
 
     @Override
     protected BaseMapper<Room> mapper() {

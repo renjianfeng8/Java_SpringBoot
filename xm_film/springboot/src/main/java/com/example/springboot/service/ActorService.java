@@ -4,7 +4,6 @@ import com.example.springboot.common.BaseMapper;
 import com.example.springboot.common.BaseService;
 import com.example.springboot.entity.Actor;
 import com.example.springboot.mapper.ActorMapper;
-import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -15,8 +14,11 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class ActorService extends BaseService<Actor> {
 
-    @Resource
-    private ActorMapper actorMapper;
+    private final ActorMapper actorMapper;
+
+    public ActorService(ActorMapper actorMapper) {
+        this.actorMapper = actorMapper;
+    }
 
     @Override
     protected BaseMapper<Actor> mapper() {

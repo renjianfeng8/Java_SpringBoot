@@ -21,8 +21,10 @@
 	<!-- 环境属性配置 -->
 	<properties>
 		<java.version>17</java.version>
-		<!-- jjwt 不在 Spring Boot BOM 托管范围，需显式锁定版本 -->
+		<!-- 以下三者不在 Spring Boot BOM 托管范围，需显式锁定版本，统一抽为属性 -->
 		<jjwt.version>0.11.5</jjwt.version>
+		<mybatis-spring-boot.version>3.0.4</mybatis-spring-boot.version>
+		<pagehelper-spring-boot.version>1.4.6</pagehelper-spring-boot.version>
 	</properties>
 
 	<!-- 依赖管理 -->
@@ -45,7 +47,7 @@
 		<dependency>
 			<groupId>org.mybatis.spring.boot</groupId>
 			<artifactId>mybatis-spring-boot-starter</artifactId>
-			<version>3.0.4</version>
+			<version>${mybatis-spring-boot.version}</version>
 		</dependency>
 
 		<!-- MySQL驱动 -->
@@ -59,7 +61,7 @@
 		<dependency>
 			<groupId>com.github.pagehelper</groupId>
 			<artifactId>pagehelper-spring-boot-starter</artifactId>
-			<version>1.4.6</version>
+			<version>${pagehelper-spring-boot.version}</version>
 			<exclusions>
 				<exclusion>
 					<groupId>org.mybatis</groupId>
@@ -156,11 +158,22 @@
 			</plugin>
 		</plugins>
 
-		<!-- 资源文件过滤 -->
+		<!-- 资源文件过滤：mapper/*.xml 是 MyBatis 映射，不得经 ${} 过滤（当前虽无 ${}，
+			 一旦过滤范围覆盖到它，SQL 里的占位符就会被误替换）。收窄过滤范围，只过滤其余资源 -->
 		<resources>
 			<resource>
 				<directory>src/main/resources</directory>
 				<filtering>true</filtering>
+				<excludes>
+					<exclude>mapper/**</exclude>
+				</excludes>
+			</resource>
+			<resource>
+				<directory>src/main/resources</directory>
+				<filtering>false</filtering>
+				<includes>
+					<include>mapper/**</include>
+				</includes>
 			</resource>
 		</resources>
 	</build>

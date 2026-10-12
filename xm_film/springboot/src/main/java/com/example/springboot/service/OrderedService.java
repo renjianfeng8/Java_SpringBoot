@@ -21,7 +21,6 @@ import com.example.springboot.mapper.FilmMapper;
 import com.example.springboot.mapper.OrderedMapper;
 import com.example.springboot.mapper.RecordMapper;
 import com.example.springboot.mapper.RoomMapper;
-import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -80,26 +79,31 @@ public class OrderedService extends BaseService<Ordered> {
     private static final Set<String> DELETABLE_STATUSES =
             Set.of(OrderStatus.CANCELLED, OrderStatus.REFUNDED);
 
-    @Resource
-    private OrderedMapper orderedMapper;
+    private final OrderedMapper orderedMapper;
 
-    @Resource
-    private RecordMapper recordMapper;
+    private final RecordMapper recordMapper;
 
-    @Resource
-    private FilmMapper filmMapper;
+    private final FilmMapper filmMapper;
 
-    @Resource
-    private RoomMapper roomMapper;
+    private final RoomMapper roomMapper;
 
-    @Resource
-    private CinemaMapper cinemaMapper;
+    private final CinemaMapper cinemaMapper;
 
-    @Resource
-    private WalletService walletService;
+    private final WalletService walletService;
 
-    @Resource
-    private PayPasswordService payPasswordService;
+    private final PayPasswordService payPasswordService;
+
+    public OrderedService(OrderedMapper orderedMapper, RecordMapper recordMapper, FilmMapper filmMapper,
+                          RoomMapper roomMapper, CinemaMapper cinemaMapper, WalletService walletService,
+                          PayPasswordService payPasswordService) {
+        this.orderedMapper = orderedMapper;
+        this.recordMapper = recordMapper;
+        this.filmMapper = filmMapper;
+        this.roomMapper = roomMapper;
+        this.cinemaMapper = cinemaMapper;
+        this.walletService = walletService;
+        this.payPasswordService = payPasswordService;
+    }
 
     @Override
     protected BaseMapper<Ordered> mapper() {

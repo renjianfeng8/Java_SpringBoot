@@ -8,7 +8,6 @@ import com.example.springboot.entity.Type;
 import com.example.springboot.mapper.FilmMapper;
 import com.github.pagehelper.PageInfo;
 import com.github.pagehelper.page.PageMethod;
-import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,8 +24,11 @@ import java.util.Map;
 @Transactional(readOnly = true)
 public class FilmService extends BaseService<Film> {
 
-    @Resource
-    private FilmMapper filmMapper;
+    private final FilmMapper filmMapper;
+
+    public FilmService(FilmMapper filmMapper) {
+        this.filmMapper = filmMapper;
+    }
 
     @Override
     protected BaseMapper<Film> mapper() {

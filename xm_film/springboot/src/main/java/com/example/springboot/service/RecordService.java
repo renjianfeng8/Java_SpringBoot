@@ -12,7 +12,6 @@ import com.example.springboot.exception.CustomException;
 import com.example.springboot.mapper.FilmMapper;
 import com.example.springboot.mapper.RecordMapper;
 import com.example.springboot.mapper.RoomMapper;
-import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -48,18 +47,22 @@ public class RecordService extends BaseService<Record> {
 
     private static final DateTimeFormatter STORE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
-    @Resource
-    private RecordMapper recordMapper;
+    private final RecordMapper recordMapper;
 
-    @Resource
-    private FilmMapper filmMapper;
+    private final FilmMapper filmMapper;
 
     /** 影厅归属校验直接查 Mapper，避免与 RoomService 形成互相注入的环 */
-    @Resource
-    private RoomMapper roomMapper;
+    private final RoomMapper roomMapper;
 
-    @Resource
-    private OrderedService orderedService;
+    private final OrderedService orderedService;
+
+    public RecordService(RecordMapper recordMapper, FilmMapper filmMapper,
+                         RoomMapper roomMapper, OrderedService orderedService) {
+        this.recordMapper = recordMapper;
+        this.filmMapper = filmMapper;
+        this.roomMapper = roomMapper;
+        this.orderedService = orderedService;
+    }
 
     @Override
     protected BaseMapper<Record> mapper() {

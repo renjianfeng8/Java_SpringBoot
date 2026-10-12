@@ -1,7 +1,6 @@
 package com.example.springboot.task;
 
 import com.example.springboot.service.OrderedService;
-import jakarta.annotation.Resource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -12,8 +11,11 @@ public class OrderCleanupTask {
 
     private static final Logger log = LoggerFactory.getLogger(OrderCleanupTask.class);
 
-    @Resource
-    private OrderedService orderedService;
+    private final OrderedService orderedService;
+
+    public OrderCleanupTask(OrderedService orderedService) {
+        this.orderedService = orderedService;
+    }
 
     @Scheduled(fixedDelay = 15_000)
     public void cleanupExpiredPendingPayments() {
