@@ -1,6 +1,7 @@
 package com.example.springboot.service;
 
 import com.example.springboot.common.enums.ErrorCode;
+import com.example.springboot.common.enums.RoleEnum;
 import com.example.springboot.dto.response.FilmMarksView;
 import com.example.springboot.dto.response.MarkLikeView;
 import com.example.springboot.dto.response.MarkView;
@@ -357,7 +358,7 @@ class MarkServiceTest {
         when(filmMapper.selectById(10)).thenReturn(storedFilm(10));
         when(markMapper.selectFilmMarks(10, null)).thenReturn(List.of());
 
-        FilmMarksView view = markService.listByFilm(10, 7, "CINEMA", 1, 10);
+        FilmMarksView view = markService.listByFilm(10, 7, RoleEnum.CINEMA.name(), 1, 10);
 
         verify(markMapper).selectFilmMarks(10, null);
         assertNull(view.getMy());
@@ -372,7 +373,7 @@ class MarkServiceTest {
         when(markMapper.selectFilmMarkOfUser(10, 6)).thenReturn(null);
         when(orderedMapper.countPickedUpByUserAndFilm(6, 10)).thenReturn(0);
 
-        FilmMarksView view = markService.listByFilm(10, 6, "USER", 1, 10);
+        FilmMarksView view = markService.listByFilm(10, 6, RoleEnum.USER.name(), 1, 10);
 
         verify(markMapper).selectFilmMarks(10, 6);
         assertFalse(view.getReviewable());
@@ -388,7 +389,7 @@ class MarkServiceTest {
         when(markMapper.selectFilmMarkOfUser(10, 6)).thenReturn(mine);
         when(orderedMapper.countPickedUpByUserAndFilm(6, 10)).thenReturn(1);
 
-        FilmMarksView view = markService.listByFilm(10, 6, "USER", 1, 10);
+        FilmMarksView view = markService.listByFilm(10, 6, RoleEnum.USER.name(), 1, 10);
 
         assertTrue(view.getReviewable());
         assertNotNull(view.getMy());
@@ -400,7 +401,7 @@ class MarkServiceTest {
         when(filmMapper.selectById(99)).thenReturn(null);
 
         CustomException ex = assertThrows(CustomException.class,
-                () -> markService.listByFilm(99, 6, "USER", 1, 10));
+                () -> markService.listByFilm(99, 6, RoleEnum.USER.name(), 1, 10));
 
         assertEquals(ErrorCode.NOT_FOUND.code(), ex.getCode());
         verifyNoInteractions(markMapper);
@@ -409,7 +410,7 @@ class MarkServiceTest {
     @Test
     void listByFilmWithoutFilmIdShouldThrowParamInvalid() {
         CustomException ex = assertThrows(CustomException.class,
-                () -> markService.listByFilm(null, 6, "USER", 1, 10));
+                () -> markService.listByFilm(null, 6, RoleEnum.USER.name(), 1, 10));
 
         assertEquals(ErrorCode.PARAM_INVALID.code(), ex.getCode());
         verifyNoInteractions(filmMapper, markMapper, orderedMapper);

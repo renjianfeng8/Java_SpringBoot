@@ -1,5 +1,6 @@
 package com.example.springboot.service;
 
+import com.example.springboot.common.enums.RoleEnum;
 import com.example.springboot.entity.Account;
 import com.example.springboot.entity.Admin;
 import com.example.springboot.exception.CustomException;
@@ -43,7 +44,7 @@ class AdminServiceTest {
         mockAdmin.setUsername("999");
         mockAdmin.setPassword(new BCryptPasswordEncoder().encode("999"));
         mockAdmin.setName("管理员");
-        mockAdmin.setRole("ADMIN");
+        mockAdmin.setRole(RoleEnum.ADMIN.name());
     }
 
     @Test
@@ -97,7 +98,7 @@ class AdminServiceTest {
 
         adminService.add(newAdmin);
 
-        assertEquals("ADMIN", newAdmin.getRole());
+        assertEquals(RoleEnum.ADMIN.name(), newAdmin.getRole());
         assertNotNull(newAdmin.getPassword());
         assertNotEquals("pwd123", newAdmin.getPassword());
         verify(adminMapper).insert(newAdmin);

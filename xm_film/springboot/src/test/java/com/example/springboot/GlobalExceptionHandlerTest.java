@@ -1,6 +1,7 @@
 package com.example.springboot;
 
 import com.example.springboot.common.JwtUtils;
+import com.example.springboot.common.enums.RoleEnum;
 import com.example.springboot.controller.AuthController;
 import com.example.springboot.entity.Account;
 import com.example.springboot.entity.User;
@@ -19,6 +20,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
+import static org.hamcrest.Matchers.containsString;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -52,8 +54,8 @@ class GlobalExceptionHandlerTest {
     @Test
     void loginRejectsBlankUsernameWithParamInvalidCode() throws Exception {
         String body = """
-                {"username":"","password":"123456","role":"USER"}
-                """;
+                {"username":"","password":"123456","role":"%s"}
+                """.formatted(RoleEnum.USER.name());
 
         mockMvc.perform(post("/api/v1/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -66,15 +68,15 @@ class GlobalExceptionHandlerTest {
     @Test
     void loginRejectsBlankPassword() throws Exception {
         String body = """
-                {"username":"zhangsan","password":"","role":"USER"}
-                """;
+                {"username":"zhangsan","password":"","role":"%s"}
+                """.formatted(RoleEnum.USER.name());
 
         mockMvc.perform(post("/api/v1/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value("400"))
-                .andExpect(jsonPath("$.msg").value(org.hamcrest.Matchers.containsString("密码")));
+                .andExpect(jsonPath("$.msg").value(containsString("密码")));
     }
 
     @Test
@@ -88,7 +90,7 @@ class GlobalExceptionHandlerTest {
                         .content(body))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value("400"))
-                .andExpect(jsonPath("$.msg").value(org.hamcrest.Matchers.containsString("角色")));
+                .andExpect(jsonPath("$.msg").value(containsString("角色")));
     }
 
     // ========== 业务逻辑测试 ==========
@@ -98,13 +100,13 @@ class GlobalExceptionHandlerTest {
         User mockUser = new User();
         mockUser.setId(1);
         mockUser.setUsername("zhangsan");
-        mockUser.setRole("USER");
+        mockUser.setRole(RoleEnum.USER.name());
         when(userService.login(any(Account.class))).thenReturn(mockUser);
-        when(jwtUtils.generateToken(1, "USER")).thenReturn("mock-token");
+        when(jwtUtils.generateToken(1, RoleEnum.USER.name())).thenReturn("mock-token");
 
         String body = """
-                {"username":"zhangsan","password":"user123","role":"USER"}
-                """;
+                {"username":"zhangsan","password":"user123","role":"%s"}
+                """.formatted(RoleEnum.USER.name());
 
         mockMvc.perform(post("/api/v1/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -119,15 +121,15 @@ class GlobalExceptionHandlerTest {
         when(userService.login(any(Account.class))).thenReturn(null);
 
         String body = """
-                {"username":"wrong","password":"wrong","role":"USER"}
-                """;
+                {"username":"wrong","password":"wrong","role":"%s"}
+                """.formatted(RoleEnum.USER.name());
 
         mockMvc.perform(post("/api/v1/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value("400"))
-                .andExpect(jsonPath("$.msg").value(org.hamcrest.Matchers.containsString("角色")));
+                .andExpect(jsonPath("$.msg").value(containsString("角色")));
     }
 
     @Test
@@ -136,8 +138,8 @@ class GlobalExceptionHandlerTest {
                 .thenThrow(new CustomException("403", "账号已禁用"));
 
         String body = """
-                {"username":"blocked","password":"123456","role":"USER"}
-                """;
+                {"username":"blocked","password":"123456","role":"%s"}
+                """.formatted(RoleEnum.USER.name());
 
         mockMvc.perform(post("/api/v1/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -153,8 +155,8 @@ class GlobalExceptionHandlerTest {
                 .thenThrow(new RuntimeException("数据库连接失败"));
 
         String body = """
-                {"username":"zhangsan","password":"user123","role":"USER"}
-                """;
+                {"username":"zhangsan","password":"user123","role":"%s"}
+                """.formatted(RoleEnum.USER.name());
 
         mockMvc.perform(post("/api/v1/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)

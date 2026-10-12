@@ -155,7 +155,8 @@ public class AuthInterceptor implements HandlerInterceptor {
                 Result.error(ErrorCode.UNAUTHORIZED.code(), "登录已过期，请重新登录"));
     }
 
-    private boolean hasAccess(String path, String method, String role) {
+    /** 包私有以便同包测试直接覆盖门禁规则，无需反射 */
+    boolean hasAccess(String path, String method, String role) {
         if (RoleEnum.ADMIN.name().equals(role)) {
             return true;
         }

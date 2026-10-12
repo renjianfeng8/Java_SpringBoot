@@ -2,6 +2,7 @@ package com.example.springboot.service;
 
 import com.example.springboot.common.enums.ErrorCode;
 import com.example.springboot.common.enums.RechargeStatus;
+import com.example.springboot.common.enums.RoleEnum;
 import com.example.springboot.entity.RechargeOrder;
 import com.example.springboot.exception.CustomException;
 import com.example.springboot.mapper.RechargeOrderMapper;
@@ -51,7 +52,7 @@ class RechargeServiceTest {
 
     @Test
     void createRechargeShouldCreateProcessingOrderWithoutTouchingBalance() {
-        RechargeOrder created = rechargeService.createRecharge(USER_ID, "USER", new BigDecimal("200.00"));
+        RechargeOrder created = rechargeService.createRecharge(USER_ID, RoleEnum.USER.name(), new BigDecimal("200.00"));
 
         ArgumentCaptor<RechargeOrder> captor = ArgumentCaptor.forClass(RechargeOrder.class);
         verify(rechargeOrderMapper).insert(captor.capture());
@@ -72,7 +73,7 @@ class RechargeServiceTest {
     void createRechargeWithNonUserRoleShouldThrow() {
         BigDecimal amount = new BigDecimal("200.00");
         CustomException ex = assertThrows(CustomException.class,
-                () -> rechargeService.createRecharge(USER_ID, "CINEMA", amount));
+                () -> rechargeService.createRecharge(USER_ID, RoleEnum.CINEMA.name(), amount));
 
         assertEquals(ErrorCode.FORBIDDEN.code(), ex.getCode());
         verify(rechargeOrderMapper, never()).insert(any());
@@ -82,7 +83,7 @@ class RechargeServiceTest {
     @Test
     void createRechargeWithNonPositiveAmountShouldThrow() {
         CustomException ex = assertThrows(CustomException.class,
-                () -> rechargeService.createRecharge(USER_ID, "USER", BigDecimal.ZERO));
+                () -> rechargeService.createRecharge(USER_ID, RoleEnum.USER.name(), BigDecimal.ZERO));
 
         assertEquals(ErrorCode.PARAM_INVALID.code(), ex.getCode());
         verify(rechargeOrderMapper, never()).insert(any());
@@ -92,7 +93,7 @@ class RechargeServiceTest {
     void createRechargeWithAmountAboveLimitShouldThrow() {
         BigDecimal amount = new BigDecimal("50000.01");
         CustomException ex = assertThrows(CustomException.class,
-                () -> rechargeService.createRecharge(USER_ID, "USER", amount));
+                () -> rechargeService.createRecharge(USER_ID, RoleEnum.USER.name(), amount));
 
         assertEquals(ErrorCode.PARAM_INVALID.code(), ex.getCode());
         verify(rechargeOrderMapper, never()).insert(any());
@@ -102,7 +103,7 @@ class RechargeServiceTest {
     void handleCallbackSuccessShouldMarkDoneAndCreditBalance() {
         when(rechargeOrderMapper.selectByIdForUpdate(7)).thenReturn(processingOrder());
 
-        rechargeService.handleCallback(7, true, null, "USER", USER_ID);
+        rechargeService.handleCallback(7, true, null, RoleEnum.USER.name(), USER_ID);
 
         verify(walletService).creditRecharge(USER_ID, new BigDecimal("200.00"), 7);
 
@@ -115,7 +116,7 @@ class RechargeServiceTest {
     void handleCallbackFailureShouldMarkFailedWithoutCrediting() {
         when(rechargeOrderMapper.selectByIdForUpdate(7)).thenReturn(processingOrder());
 
-        rechargeService.handleCallback(7, false, "余额不足", "USER", USER_ID);
+        rechargeService.handleCallback(7, false, "余额不足", RoleEnum.USER.name(), USER_ID);
 
         verifyNoInteractions(walletService);
 
@@ -132,7 +133,7 @@ class RechargeServiceTest {
         when(rechargeOrderMapper.selectByIdForUpdate(7)).thenReturn(done);
 
         CustomException ex = assertThrows(CustomException.class,
-                () -> rechargeService.handleCallback(7, true, null, "USER", USER_ID));
+                () -> rechargeService.handleCallback(7, true, null, RoleEnum.USER.name(), USER_ID));
 
         assertEquals(ErrorCode.BUSINESS_CONFLICT.code(), ex.getCode());
         verify(walletService, never()).creditRecharge(anyInt(), any(), anyInt());
@@ -146,7 +147,7 @@ class RechargeServiceTest {
         when(rechargeOrderMapper.selectByIdForUpdate(7)).thenReturn(failed);
 
         assertThrows(CustomException.class,
-                () -> rechargeService.handleCallback(7, true, null, "USER", USER_ID));
+                () -> rechargeService.handleCallback(7, true, null, RoleEnum.USER.name(), USER_ID));
 
         verify(walletService, never()).creditRecharge(anyInt(), any(), anyInt());
     }
@@ -156,7 +157,7 @@ class RechargeServiceTest {
         when(rechargeOrderMapper.selectByIdForUpdate(7)).thenReturn(processingOrder());
 
         CustomException ex = assertThrows(CustomException.class,
-                () -> rechargeService.handleCallback(7, true, null, "USER", 999));
+                () -> rechargeService.handleCallback(7, true, null, RoleEnum.USER.name(), 999));
 
         assertEquals(ErrorCode.FORBIDDEN.code(), ex.getCode());
         verify(walletService, never()).creditRecharge(anyInt(), any(), anyInt());
@@ -166,7 +167,7 @@ class RechargeServiceTest {
     @Test
     void handleCallbackWhenOrderMissingShouldThrowNotFound() {
         CustomException ex = assertThrows(CustomException.class,
-                () -> rechargeService.handleCallback(7, true, null, "USER", USER_ID));
+                () -> rechargeService.handleCallback(7, true, null, RoleEnum.USER.name(), USER_ID));
 
         assertEquals(ErrorCode.NOT_FOUND.code(), ex.getCode());
         verify(walletService, never()).creditRecharge(anyInt(), any(), anyInt());
@@ -178,7 +179,7 @@ class RechargeServiceTest {
         query.setUserId(999);
         when(rechargeOrderMapper.selectAll(any())).thenReturn(List.of());
 
-        rechargeService.selectScoped(query, "USER", USER_ID);
+        rechargeService.selectScoped(query, RoleEnum.USER.name(), USER_ID);
 
         assertEquals(USER_ID, captureCondition().getUserId());
     }
@@ -187,7 +188,7 @@ class RechargeServiceTest {
     void selectScopedAsAdminShouldNotFilterByUser() {
         when(rechargeOrderMapper.selectAll(any())).thenReturn(List.of());
 
-        rechargeService.selectScoped(null, "ADMIN", 1);
+        rechargeService.selectScoped(null, RoleEnum.ADMIN.name(), 1);
 
         assertNull(captureCondition().getUserId());
     }
@@ -195,7 +196,7 @@ class RechargeServiceTest {
     @Test
     void selectScopedAsCinemaShouldThrowForbidden() {
         CustomException ex = assertThrows(CustomException.class,
-                () -> rechargeService.selectScoped(null, "CINEMA", 5));
+                () -> rechargeService.selectScoped(null, RoleEnum.CINEMA.name(), 5));
 
         assertEquals(ErrorCode.FORBIDDEN.code(), ex.getCode());
         verify(rechargeOrderMapper, never()).selectAll(any());

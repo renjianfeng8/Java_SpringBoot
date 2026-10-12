@@ -1,6 +1,7 @@
 package com.example.springboot.service;
 
 import com.example.springboot.common.enums.ErrorCode;
+import com.example.springboot.common.enums.RoleEnum;
 import com.example.springboot.entity.FundFlow;
 import com.example.springboot.exception.CustomException;
 import com.example.springboot.mapper.FundFlowMapper;
@@ -42,7 +43,7 @@ class FundFlowServiceTest {
         query.setUserId(999);
         when(fundFlowMapper.selectAll(any())).thenReturn(List.of());
 
-        fundFlowService.selectScoped(query, "USER", USER_ID);
+        fundFlowService.selectScoped(query, RoleEnum.USER.name(), USER_ID);
 
         assertEquals(USER_ID, captureCondition().getUserId());
     }
@@ -51,7 +52,7 @@ class FundFlowServiceTest {
     void selectScopedAsUserWithNullQueryShouldStillScopeToSelf() {
         when(fundFlowMapper.selectAll(any())).thenReturn(List.of());
 
-        fundFlowService.selectScoped(null, "USER", USER_ID);
+        fundFlowService.selectScoped(null, RoleEnum.USER.name(), USER_ID);
 
         assertEquals(USER_ID, captureCondition().getUserId());
     }
@@ -60,7 +61,7 @@ class FundFlowServiceTest {
     void selectScopedAsAdminShouldNotFilterByUser() {
         when(fundFlowMapper.selectAll(any())).thenReturn(List.of());
 
-        fundFlowService.selectScoped(null, "ADMIN", 1);
+        fundFlowService.selectScoped(null, RoleEnum.ADMIN.name(), 1);
 
         assertNull(captureCondition().getUserId());
     }
@@ -68,7 +69,7 @@ class FundFlowServiceTest {
     @Test
     void selectScopedAsCinemaShouldThrowForbidden() {
         CustomException ex = assertThrows(CustomException.class,
-                () -> fundFlowService.selectScoped(null, "CINEMA", 5));
+                () -> fundFlowService.selectScoped(null, RoleEnum.CINEMA.name(), 5));
 
         assertEquals(ErrorCode.FORBIDDEN.code(), ex.getCode());
         verify(fundFlowMapper, never()).selectAll(any());

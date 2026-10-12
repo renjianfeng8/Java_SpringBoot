@@ -5,7 +5,6 @@ import com.example.springboot.mapper.CinemaDirectoryMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.ActiveProfiles;
 
 import java.util.List;
 
@@ -20,7 +19,6 @@ import static org.assertj.core.api.Assertions.assertThat;
  * ——钉死具体条数会让这条守卫随开发库现状变红。
  */
 @SpringBootTest
-@ActiveProfiles("ci")
 class CinemaDirectoryMapperLoadTest {
 
     @Autowired

@@ -1,5 +1,6 @@
 package com.example.springboot.service;
 
+import com.example.springboot.common.enums.RoleEnum;
 import com.example.springboot.entity.Account;
 import com.example.springboot.entity.User;
 import com.example.springboot.exception.CustomException;
@@ -40,7 +41,7 @@ class UserServiceTest {
         mockUser.setUsername("zhangsan");
         mockUser.setPassword(encoder.encode("user123"));
         mockUser.setName("张三");
-        mockUser.setRole("USER");
+        mockUser.setRole(RoleEnum.USER.name());
     }
 
     @Test

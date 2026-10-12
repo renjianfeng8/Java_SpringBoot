@@ -9,7 +9,6 @@ import com.example.springboot.mapper.TypeMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.ActiveProfiles;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -21,7 +20,6 @@ import static org.assertj.core.api.Assertions.assertThat;
  * 自增 id 回填必须真插一行，用 finally 立即删除，保证可反复运行、不留痕。
  */
 @SpringBootTest
-@ActiveProfiles("ci")
 class TmdbLookupMapperLoadTest {
 
     private static final String PROBE_TITLE = "__tmdb_import_probe__";
