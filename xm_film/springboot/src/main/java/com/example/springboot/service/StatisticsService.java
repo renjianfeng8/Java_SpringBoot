@@ -1,5 +1,8 @@
 package com.example.springboot.service;
 
+import com.example.springboot.dto.response.DailyRevenueView;
+import com.example.springboot.dto.response.NameValueView;
+import com.example.springboot.dto.response.TodayRevenueView;
 import com.example.springboot.mapper.CinemaMapper;
 import com.example.springboot.mapper.FilmMapper;
 import com.example.springboot.mapper.OrderedMapper;
@@ -48,8 +51,8 @@ public class StatisticsService {
     private UserMapper userMapper;
 
     public Map<String, Object> overview() {
-        List<Map<String, Object>> cinemaStatus = cinemaMapper.countGroupByStatus();
-        Map<String, Object> today = orderedMapper.selectTodayPaidRevenue();
+        List<NameValueView> cinemaStatus = cinemaMapper.countGroupByStatus();
+        TodayRevenueView today = orderedMapper.selectTodayPaidRevenue();
 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("cinemaStatus", cinemaStatus);
@@ -58,7 +61,7 @@ public class StatisticsService {
         // 不补零，给什么维度值就是什么，由前端按自己的枚举补全并着色。
         result.put("orderStatus", orderedMapper.countGroupByStatus());
         // 统计时刻取自今日票房那次查询：同一次观测，页面上只有一个「今天」
-        result.put("updatedAt", today.get("updatedAt"));
+        result.put("updatedAt", today.getUpdatedAt());
         result.put("summary", summary(today, cinemaStatus));
         result.put("revenueTrend", revenueTrend(TREND_DAYS));
         return result;
@@ -68,9 +71,9 @@ public class StatisticsService {
      * 影院总数与待审核数由 cinemaStatus 派生 —— 同一份响应里已有的分组结果，
      * 不再发第二次 COUNT。重复取数会在两次数之间产生窗口，让两个数字对不上。
      */
-    private Map<String, Object> summary(Map<String, Object> today, List<Map<String, Object>> cinemaStatus) {
+    private Map<String, Object> summary(TodayRevenueView today, List<NameValueView> cinemaStatus) {
         Map<String, Object> summary = new LinkedHashMap<>();
-        summary.put("todayRevenue", today.get("total"));
+        summary.put("todayRevenue", today.getTotal());
         summary.put("todayOrders", orderedMapper.countTodayPaidOrders());
         summary.put("totalUsers", userMapper.countAll());
         summary.put("totalCinemas", sumValues(cinemaStatus));
@@ -90,41 +93,41 @@ public class StatisticsService {
     List<Map<String, Object>> revenueTrend(LocalDate endExclusive, int days) {
         LocalDate start = endExclusive.minusDays(days);
 
-        Map<String, Map<String, Object>> byDate = new LinkedHashMap<>();
-        for (Map<String, Object> row : orderedMapper.selectPaidRevenueByDay(start, endExclusive)) {
-            byDate.put(String.valueOf(row.get("date")), row);
+        Map<String, DailyRevenueView> byDate = new LinkedHashMap<>();
+        for (DailyRevenueView row : orderedMapper.selectPaidRevenueByDay(start, endExclusive)) {
+            byDate.put(row.getDate(), row);
         }
 
         List<Map<String, Object>> trend = new ArrayList<>(days);
         for (int i = 0; i < days; i++) {
             String date = start.plusDays(i).format(DAY);
-            Map<String, Object> row = byDate.get(date);
+            DailyRevenueView row = byDate.get(date);
 
             Map<String, Object> point = new LinkedHashMap<>();
             point.put("date", date);
-            point.put("revenue", row == null ? BigDecimal.ZERO : row.get("revenue"));
-            point.put("orders", row == null ? 0 : row.get("orders"));
+            point.put("revenue", row == null ? BigDecimal.ZERO : row.getRevenue());
+            // 补零日必须是 Integer 0 而不是 Long 0：(Object) 强转挡掉「int 与 Long 三元」的
+            // 数值提升，否则补零的 0 会被提升成 Long，orders 的类型随「当天有没有销售」而变。
+            point.put("orders", row == null ? (Object) 0 : row.getOrders());
             trend.add(point);
         }
         return trend;
     }
 
-    private static long sumValues(List<Map<String, Object>> rows) {
+    private static long sumValues(List<NameValueView> rows) {
         long total = 0L;
-        for (Map<String, Object> row : rows) {
-            Object value = row.get("value");
-            if (value instanceof Number number) {
-                total += number.longValue();
+        for (NameValueView row : rows) {
+            if (row.getValue() != null) {
+                total += row.getValue();
             }
         }
         return total;
     }
 
-    private static long countOf(List<Map<String, Object>> rows, String name) {
-        for (Map<String, Object> row : rows) {
-            if (name.equals(row.get("name"))) {
-                Object value = row.get("value");
-                return value instanceof Number number ? number.longValue() : 0L;
+    private static long countOf(List<NameValueView> rows, String name) {
+        for (NameValueView row : rows) {
+            if (name.equals(row.getName())) {
+                return row.getValue() == null ? 0L : row.getValue();
             }
         }
         return 0L;

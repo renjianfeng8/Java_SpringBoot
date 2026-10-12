@@ -51,7 +51,7 @@
     </select>
 
     <!-- 大盘统计：影院状态分布（由 cinema 实时计数） -->
-    <select id="countGroupByStatus" resultType="java.util.Map">
+    <select id="countGroupByStatus" resultType="com.example.springboot.dto.response.NameValueView">
         SELECT c.status AS name, COUNT(*) AS value
         FROM cinema c
         GROUP BY c.status
@@ -133,7 +133,7 @@
     </insert>
 
     <!-- 前台区域级联选项：只统计已审核且已关联的影院，避免出现选不到影院的城市 -->
-    <select id="selectRegions" resultType="java.util.Map">
+    <select id="selectRegions" resultType="com.example.springboot.dto.response.CinemaRegionItemView">
         SELECT DISTINCT d.city AS city, d.district AS district
         FROM cinema c
         JOIN cinema_directory d ON c.directory_id = d.id
@@ -145,7 +145,7 @@
     <select id="selectLinkedDirectoryIds" resultType="java.lang.Integer">
         SELECT DISTINCT directory_id FROM cinema
         WHERE directory_id IN
-        <foreach collection="ids" item="id" open="(" separator="," close=")">#{id}</foreach>
+        <foreach collection="list" item="id" open="(" separator="," close=")">#{id}</foreach>
     </select>
 
 </mapper>

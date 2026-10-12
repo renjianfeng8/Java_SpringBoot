@@ -1,19 +1,25 @@
 package com.example.springboot.entity;
 
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 import lombok.EqualsAndHashCode;
+
+import java.io.Serializable;
 
 /**
  * 影院实体类
  * 继承自Account类，使用Lombok注解简化代码
  */
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @EqualsAndHashCode(callSuper = true) // 调用父类的equals和hashCode方法
-public class Cinema extends Account {
+public class Cinema extends Account implements Serializable {
+    private static final long serialVersionUID = 1L;
+
     private String avatar;
     private String email;
     private String address;

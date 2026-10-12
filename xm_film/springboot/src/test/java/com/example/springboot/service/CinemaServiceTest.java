@@ -1,5 +1,6 @@
 package com.example.springboot.service;
 
+import com.example.springboot.dto.response.CinemaRegionItemView;
 import com.example.springboot.dto.response.CinemaRegionView;
 import com.example.springboot.entity.Account;
 import com.example.springboot.entity.Cinema;
@@ -16,9 +17,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -186,9 +185,9 @@ class CinemaServiceTest {
     @Test
     void regionsShouldGroupDistrictsByCity() {
         when(cinemaMapper.selectRegions()).thenReturn(List.of(
-                Map.of("city", "北京", "district", "朝阳区"),
-                Map.of("city", "北京", "district", "海淀区"),
-                Map.of("city", "上海", "district", "浦东新区")));
+                new CinemaRegionItemView("北京", "朝阳区"),
+                new CinemaRegionItemView("北京", "海淀区"),
+                new CinemaRegionItemView("上海", "浦东新区")));
 
         List<CinemaRegionView> regions = cinemaService.regions();
 
@@ -201,10 +200,7 @@ class CinemaServiceTest {
 
     @Test
     void regionsWithNullDistrictShouldYieldEmptyDistrictList() {
-        Map<String, Object> row = new HashMap<>();
-        row.put("city", "广州");
-        row.put("district", null);
-        when(cinemaMapper.selectRegions()).thenReturn(List.of(row));
+        when(cinemaMapper.selectRegions()).thenReturn(List.of(new CinemaRegionItemView("广州", null)));
 
         List<CinemaRegionView> regions = cinemaService.regions();
 

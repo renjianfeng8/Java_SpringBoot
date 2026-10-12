@@ -63,7 +63,7 @@ public class MarkService extends BaseService<Mark> {
             throw new CustomException(ErrorCode.PARAM_INVALID, "请选择要评价的影片");
         }
         validateScore(mark.getScore());
-        validateComment(mark.getMark());
+        validateComment(mark.getComment());
         // 评价资格是这个功能的语义前提（"看过的才能评"），此前只有前端按钮在守：
         // front/Orders.vue 仅对 已取票 订单渲染「去评价」，而服务端不校验订单 ——
         // 直接 POST /api/v1/marks 能给任何没买过票的影片打分。此处补上服务端门禁。
@@ -85,7 +85,7 @@ public class MarkService extends BaseService<Mark> {
     public void update(Mark mark) {
         Mark dbMark = requireExisting(mark.getId());
         validateScore(mark.getScore());
-        validateComment(mark.getMark());
+        validateComment(mark.getComment());
         // 评价的归属与目标影片不允许改，防止把评价转移到别人/别的影片名下
         mark.setUserId(null);
         mark.setFilmId(null);

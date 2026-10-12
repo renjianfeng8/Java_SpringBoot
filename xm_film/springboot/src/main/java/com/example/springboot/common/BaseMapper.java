@@ -8,11 +8,11 @@ public interface BaseMapper<T> {
 
     T selectById(Integer id);
 
-    void insert(T entity);
+    int insert(T entity);
 
-    void updateById(T entity);
+    int updateById(T entity);
 
-    void deleteById(Integer id);
+    int deleteById(Integer id);
 
-    void deleteBatch(List<Integer> ids);
+    int deleteBatch(List<Integer> ids);
 }

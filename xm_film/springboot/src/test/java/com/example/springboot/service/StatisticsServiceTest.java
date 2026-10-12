@@ -1,5 +1,8 @@
 package com.example.springboot.service;
 
+import com.example.springboot.dto.response.DailyRevenueView;
+import com.example.springboot.dto.response.NameValueView;
+import com.example.springboot.dto.response.TodayRevenueView;
 import com.example.springboot.mapper.CinemaMapper;
 import com.example.springboot.mapper.FilmMapper;
 import com.example.springboot.mapper.OrderedMapper;
@@ -12,7 +15,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -31,26 +33,16 @@ class StatisticsServiceTest {
 
     @InjectMocks private StatisticsService statisticsService;
 
-    private static Map<String, Object> grouped(String name, long value) {
-        Map<String, Object> row = new LinkedHashMap<>();
-        row.put("name", name);
-        row.put("value", value);
-        return row;
+    private static NameValueView grouped(String name, long value) {
+        return new NameValueView(name, value);
     }
 
-    private static Map<String, Object> today(Object total, String updatedAt) {
-        Map<String, Object> row = new LinkedHashMap<>();
-        row.put("total", total);
-        row.put("updatedAt", updatedAt);
-        return row;
+    private static TodayRevenueView today(BigDecimal total, String updatedAt) {
+        return new TodayRevenueView(total, updatedAt);
     }
 
-    private static Map<String, Object> day(String date, String revenue, long orders) {
-        Map<String, Object> row = new LinkedHashMap<>();
-        row.put("date", date);
-        row.put("revenue", new BigDecimal(revenue));
-        row.put("orders", orders);
-        return row;
+    private static DailyRevenueView day(String date, String revenue, long orders) {
+        return new DailyRevenueView(date, new BigDecimal(revenue), orders);
     }
 
     /** 影院总数与待审核数必须从**同一份** cinemaStatus 派生，不另发一次 COUNT 查询 */
@@ -101,16 +93,16 @@ class StatisticsServiceTest {
                 grouped("已退票", 2L)));
 
         @SuppressWarnings("unchecked")
-        List<Map<String, Object>> orderStatus =
-                (List<Map<String, Object>>) statisticsService.overview().get("orderStatus");
+        List<NameValueView> orderStatus =
+                (List<NameValueView>) statisticsService.overview().get("orderStatus");
 
         assertEquals(4, orderStatus.size());
         // 含未支付态的两种：说明没有被「已支付」口径过滤
-        assertTrue(orderStatus.stream().anyMatch(row -> "待支付".equals(row.get("name"))));
-        assertTrue(orderStatus.stream().anyMatch(row -> "已取消".equals(row.get("name"))));
+        assertTrue(orderStatus.stream().anyMatch(row -> "待支付".equals(row.getName())));
+        assertTrue(orderStatus.stream().anyMatch(row -> "已取消".equals(row.getName())));
         // 顺序是 mapper 给的顺序，服务层不重排 —— 排序属于展示层（图例按枚举补全）
-        assertEquals("待支付", orderStatus.get(0).get("name"));
-        assertEquals(61L, orderStatus.get(1).get("value"));
+        assertEquals("待支付", orderStatus.get(0).getName());
+        assertEquals(61L, orderStatus.get(1).getValue());
     }
 
     /** 没有销售的日子必须补成 0：折线图缺一天会连成一条跨越两天的直线 */

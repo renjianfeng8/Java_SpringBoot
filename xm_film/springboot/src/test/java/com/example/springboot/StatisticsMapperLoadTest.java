@@ -1,5 +1,6 @@
 package com.example.springboot;
 
+import com.example.springboot.dto.response.DailyRevenueView;
 import com.example.springboot.mapper.OrderedMapper;
 import com.example.springboot.mapper.UserMapper;
 import org.junit.jupiter.api.Test;
@@ -9,7 +10,6 @@ import org.springframework.test.context.ActiveProfiles;
 
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -38,7 +38,7 @@ class StatisticsMapperLoadTest {
 
     @Test
     void mapperLoadsSelectPaidRevenueByDayStatement() {
-        List<Map<String, Object>> rows =
+        List<DailyRevenueView> rows =
                 orderedMapper.selectPaidRevenueByDay(LocalDate.of(1970, 1, 1), LocalDate.of(1970, 1, 2));
         assertThat(rows).isEmpty();
     }
@@ -53,7 +53,10 @@ class StatisticsMapperLoadTest {
         // 只断言「能跑通、返回的是 name/value 形状」：本机库里有几单、各是什么状态
         // 取决于有没有人下过单，钉死行数会让这条守卫随开发库的现状变红。
         assertThat(orderedMapper.countGroupByStatus())
-                .allSatisfy(row -> assertThat(row).containsKeys("name", "value"));
+                .allSatisfy(row -> {
+                    assertThat(row.getName()).isNotNull();
+                    assertThat(row.getValue()).isNotNull();
+                });
     }
 
     @Test

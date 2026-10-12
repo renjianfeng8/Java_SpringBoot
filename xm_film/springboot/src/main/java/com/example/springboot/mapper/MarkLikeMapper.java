@@ -21,7 +21,7 @@ public interface MarkLikeMapper {
 
     int deleteByMarkAndUser(@Param("markId") Integer markId, @Param("userId") Integer userId);
 
-    int countByMarkId(@Param("markId") Integer markId);
+    int countByMarkId(Integer markId);
 
     int countByMarkAndUser(@Param("markId") Integer markId, @Param("userId") Integer userId);
 }

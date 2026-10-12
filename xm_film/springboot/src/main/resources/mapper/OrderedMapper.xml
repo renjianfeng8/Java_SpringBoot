@@ -103,7 +103,7 @@
         UPDATE ordered
         SET status = '已取消', pending_timeout_at = NULL
         WHERE id IN
-        <foreach collection="ids" item="id" open="(" separator="," close=")">
+        <foreach collection="list" item="id" open="(" separator="," close=")">
             #{id}
         </foreach>
           AND status = '待支付'
@@ -122,7 +122,7 @@
          SUM 在空集上返回 NULL，COALESCE 兜成 0：区间聚合的 0 是真实值（今天还没卖票），
          不是"取不到数据"，前端因此不渲染「暂无数据」。
          别名写 camelCase：map-underscore-to-camel-case 只转换 bean 属性，不转换 Map 的 key。 -->
-    <select id="selectTodayPaidRevenue" resultType="java.util.Map">
+    <select id="selectTodayPaidRevenue" resultType="com.example.springboot.dto.response.TodayRevenueView">
         SELECT COALESCE(SUM(total), 0) AS total,
                DATE_FORMAT(NOW(), '%Y-%m-%d %H:%i:%s') AS updatedAt
         FROM ordered
@@ -147,7 +147,7 @@
          GROUP BY / ORDER BY 必须与 SELECT 里那个表达式逐字相同（都写 DATE_FORMAT）：
          MySQL 8 默认开启 only_full_group_by，写成更"自然"的 GROUP BY DATE(pay_time)
          会因为 SELECT 表达式不在 GROUP BY 里而直接报错。别把它简化回去。 -->
-    <select id="selectPaidRevenueByDay" resultType="java.util.Map">
+    <select id="selectPaidRevenueByDay" resultType="com.example.springboot.dto.response.DailyRevenueView">
         SELECT DATE_FORMAT(pay_time, '%Y-%m-%d') AS date,
                COALESCE(SUM(total), 0) AS revenue,
                COUNT(*) AS orders
@@ -169,7 +169,7 @@
          （待取票 + 已取票），而这里是全部五态的结构，过滤掉未支付 / 已取消 / 已退票
          会让这张卡只剩两种颜色。别把它「顺手统一」回去。
          未出现的状态不产生行，由前端按 ORDER_STATUS_OPTIONS 补 0。 -->
-    <select id="countGroupByStatus" resultType="java.util.Map">
+    <select id="countGroupByStatus" resultType="com.example.springboot.dto.response.NameValueView">
         SELECT status AS name, COUNT(*) AS value
         FROM ordered
         GROUP BY status

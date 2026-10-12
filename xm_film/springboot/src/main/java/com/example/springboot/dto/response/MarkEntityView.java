@@ -17,7 +17,7 @@ public class MarkEntityView {
     private Integer filmId;
     private String img;
     private Double score;
-    private String mark;
+    private String comment;
     private String userName;
     private String filmName;
     private String filmImg;

@@ -1,7 +1,6 @@
 package com.example.springboot.mapper;
 
 import com.example.springboot.entity.CinemaDirectory;
-import org.apache.ibatis.annotations.Param;
 
 import java.util.List;
 
@@ -14,10 +13,10 @@ public interface CinemaDirectoryMapper {
     int insertIgnore(CinemaDirectory poi);
 
     /** 批量查已存在的 poi_id，供预览算「新增 / 重复」 */
-    List<String> selectExistingPoiIds(@Param("poiIds") List<String> poiIds);
+    List<String> selectExistingPoiIds(List<String> poiIds);
 
     /** 按名录 id 批量取行，供「从名录生成影院」 */
-    List<CinemaDirectory> selectByIds(@Param("ids") List<Integer> ids);
+    List<CinemaDirectory> selectByIds(List<Integer> ids);
 
     List<String> distinctCities();
 

@@ -146,7 +146,7 @@ interface MarkRow {
   id?: number;
   filmId?: number;
   score?: number;
-  mark?: string;
+  comment?: string;
 }
 
 interface Ordered {

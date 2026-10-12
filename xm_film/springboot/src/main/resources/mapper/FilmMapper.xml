@@ -99,7 +99,7 @@
     </select>
 
     <!-- 大盘统计：影片类型分布（由 film_type 关联实时计数） -->
-    <select id="countGroupByType" resultType="java.util.Map">
+    <select id="countGroupByType" resultType="com.example.springboot.dto.response.NameValueView">
         SELECT t.title AS name, COUNT(*) AS value
         FROM film_type ft
         INNER JOIN type t ON ft.type_id = t.id
@@ -200,12 +200,12 @@
         </foreach>
     </delete>
 
-    <select id="selectFilmTypeJoin" resultType="java.util.Map">
+    <select id="selectFilmTypeJoin" resultType="com.example.springboot.dto.response.FilmTypeJoinView">
         SELECT ft.film_id, ft.type_id, t.title AS type_title
         FROM film_type ft
         INNER JOIN type t ON ft.type_id = t.id
         WHERE ft.film_id IN
-        <foreach collection="filmIds" item="filmId" open="(" separator="," close=")">
+        <foreach collection="list" item="filmId" open="(" separator="," close=")">
             #{filmId}
         </foreach>
     </select>

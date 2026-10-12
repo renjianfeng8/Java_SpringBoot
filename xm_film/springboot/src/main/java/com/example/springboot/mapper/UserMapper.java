@@ -19,10 +19,10 @@ public interface UserMapper extends BaseMapper<User> {
     /* 账户余额：余额不挂 User 实体，避免 selectAll 的 SELECT * 把他人余额带出去 */
 
     /** 取余额并加行锁，供「读余额 → 变更 → 记流水」在同一事务内串行化 */
-    BigDecimal selectBalanceForUpdate(@Param("id") Integer id);
+    BigDecimal selectBalanceForUpdate(Integer id);
 
     /** 不加锁的余额查询，仅供展示（账户摘要） */
-    BigDecimal selectBalance(@Param("id") Integer id);
+    BigDecimal selectBalance(Integer id);
 
     /**
      * 扣减余额。带 balance >= #{amount} 守卫：并发下扣不动的调用影响行数为 0，
@@ -37,13 +37,13 @@ public interface UserMapper extends BaseMapper<User> {
        五个方法的唯一调用方是 PayPasswordService。 */
 
     /** 是否已设置支付密码（展示用，不加锁） */
-    int countPayPasswordSet(@Param("id") Integer id);
+    int countPayPasswordSet(Integer id);
 
     /** 校验所需的状态：密文 + 连续错误次数 + 锁定截止时刻 */
-    PayPasswordStateView selectPayPasswordState(@Param("id") Integer id);
+    PayPasswordStateView selectPayPasswordState(Integer id);
 
     /** 读回当前错误次数，用于拼「还可重试 N 次」提示 */
-    Integer selectPayPasswordErrorCount(@Param("id") Integer id);
+    int selectPayPasswordErrorCount(Integer id);
 
     /** 写入支付密码并清零计数与锁定（设置 / 修改 / 重设共用唯一写入口） */
     int updatePayPassword(@Param("id") Integer id, @Param("payPassword") String payPassword);
@@ -58,5 +58,5 @@ public interface UserMapper extends BaseMapper<User> {
                                     @Param("lockedUntil") String lockedUntil);
 
     /** 校验通过或锁定到期：清零计数与锁定 */
-    int clearPayPasswordFailure(@Param("id") Integer id);
+    int clearPayPasswordFailure(Integer id);
 }

@@ -192,7 +192,7 @@
                   <span class="mark-item__user">{{ item.userName || '匿名用户' }}</span>
                   <span class="mark-item__score">{{ item.score }} 分</span>
                 </div>
-                <div v-if="item.mark" class="mark-item__text">{{ item.mark }}</div>
+                <div v-if="item.comment" class="mark-item__text">{{ item.comment }}</div>
                 <div class="mark-item__meta">赞 {{ item.likeCount ?? 0 }}</div>
               </div>
             </div>

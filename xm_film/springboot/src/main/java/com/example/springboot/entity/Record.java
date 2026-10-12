@@ -1,13 +1,19 @@
 package com.example.springboot.entity;
 
 import lombok.AllArgsConstructor;
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 import lombok.NoArgsConstructor;
 
-@Data
+import java.io.Serializable;
+
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class Record {
+public class Record implements Serializable {
+    private static final long serialVersionUID = 1L;
+
     private Integer id;
     private Integer cinemaId;
     private Integer roomId;

@@ -40,7 +40,7 @@
     <select id="selectExistingPoiIds" resultType="java.lang.String">
         SELECT poi_id FROM cinema_directory
         WHERE poi_id IN
-        <foreach collection="poiIds" item="id" open="(" separator="," close=")">#{id}</foreach>
+        <foreach collection="list" item="id" open="(" separator="," close=")">#{id}</foreach>
     </select>
 
     <select id="distinctCities" resultType="java.lang.String">
@@ -54,7 +54,7 @@
     <select id="selectByIds" resultType="com.example.springboot.entity.CinemaDirectory">
         SELECT * FROM cinema_directory
         WHERE id IN
-        <foreach collection="ids" item="id" open="(" separator="," close=")">#{id}</foreach>
+        <foreach collection="list" item="id" open="(" separator="," close=")">#{id}</foreach>
     </select>
 
 </mapper>
