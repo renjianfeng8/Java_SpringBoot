@@ -6,7 +6,6 @@ import com.example.springboot.mapper.UserMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.ActiveProfiles;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -22,7 +21,6 @@ import static org.assertj.core.api.Assertions.assertThat;
  * 保证对开发库零影响，可反复运行。
  */
 @SpringBootTest
-@ActiveProfiles("ci")
 class StatisticsMapperLoadTest {
 
     @Autowired

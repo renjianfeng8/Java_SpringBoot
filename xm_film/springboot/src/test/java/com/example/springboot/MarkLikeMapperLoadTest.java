@@ -5,7 +5,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.test.context.ActiveProfiles;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -17,7 +16,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  * 全部传不存在的 id(-1)：既能证明绑定有效，又保证不写入/不删除任何真实数据，可反复运行、不留痕。
  */
 @SpringBootTest
-@ActiveProfiles("ci")
 class MarkLikeMapperLoadTest {
 
     @Autowired

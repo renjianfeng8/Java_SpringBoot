@@ -2,6 +2,7 @@ package com.example.springboot;
 
 import com.example.springboot.common.enums.ErrorCode;
 import com.example.springboot.common.enums.PayResult;
+import com.example.springboot.common.enums.RoleEnum;
 import com.example.springboot.dto.response.SeatOccupancyView;
 import com.example.springboot.dto.response.TicketVoucherView;
 import com.example.springboot.dto.response.TodayRevenueView;
@@ -87,7 +88,7 @@ class OrderedServiceTest {
         ordered.setStatus("待支付");
         when(orderedMapper.selectByIdForUpdate(1)).thenReturn(ordered);
 
-        assertThatThrownBy(() -> orderedService.cancelOrder(1, "USER", 200))
+        assertThatThrownBy(() -> orderedService.cancelOrder(1, RoleEnum.USER.name(), 200))
                 .isInstanceOf(CustomException.class)
                 .hasMessageContaining("无权");
     }
@@ -100,7 +101,7 @@ class OrderedServiceTest {
         ordered.setStatus("已取消");
         when(orderedMapper.selectByIdForUpdate(1)).thenReturn(ordered);
 
-        assertThatThrownBy(() -> orderedService.pickupOrder(1, "CINEMA", 10))
+        assertThatThrownBy(() -> orderedService.pickupOrder(1, RoleEnum.CINEMA.name(), 10))
                 .isInstanceOf(CustomException.class)
                 .hasMessageContaining("状态");
     }
@@ -114,7 +115,7 @@ class OrderedServiceTest {
         when(orderedMapper.selectByIdForUpdate(1)).thenReturn(ordered);
 
         // 用户即使操作自己的订单也走不通柜台通路；提示把他导向取票大厅的自助核销
-        assertThatThrownBy(() -> orderedService.pickupOrder(1, "USER", 100))
+        assertThatThrownBy(() -> orderedService.pickupOrder(1, RoleEnum.USER.name(), 100))
                 .isInstanceOf(CustomException.class)
                 .hasMessageContaining("影院柜台");
     }
@@ -126,7 +127,7 @@ class OrderedServiceTest {
         ordered.setUserId(100);
         when(orderedMapper.selectById(1)).thenReturn(ordered);
 
-        assertThatThrownBy(() -> orderedService.selectByIdScoped(1, "USER", 200))
+        assertThatThrownBy(() -> orderedService.selectByIdScoped(1, RoleEnum.USER.name(), 200))
                 .isInstanceOf(CustomException.class)
                 .hasMessageContaining("无权");
     }
@@ -137,7 +138,7 @@ class OrderedServiceTest {
         update.setId(1);
         update.setSeat("1排1座");
 
-        assertThatThrownBy(() -> orderedService.updateScoped(update, "ADMIN", 999))
+        assertThatThrownBy(() -> orderedService.updateScoped(update, RoleEnum.ADMIN.name(), 999))
                 .isInstanceOf(CustomException.class)
                 .hasMessageContaining("显式");
     }
@@ -158,7 +159,7 @@ class OrderedServiceTest {
         ordered.setRecordId(1);
         ordered.setSeat("1排1座");
 
-        orderedService.createOrder(ordered, "USER", 8);
+        orderedService.createOrder(ordered, RoleEnum.USER.name(), 8);
 
         verify(recordMapper).selectByIdForUpdate(1);
         verify(orderedMapper).insert(ordered);
@@ -177,7 +178,7 @@ class OrderedServiceTest {
         ordered.setRecordId(1);
         ordered.setSeat("1排1座");
 
-        assertThatThrownBy(() -> orderedService.createOrder(ordered, "USER", 8))
+        assertThatThrownBy(() -> orderedService.createOrder(ordered, RoleEnum.USER.name(), 8))
                 .isInstanceOf(CustomException.class)
                 .hasMessageContaining("已开场");
     }
@@ -196,7 +197,7 @@ class OrderedServiceTest {
         ordered.setRecordId(1);
         ordered.setSeat("1排1座");
 
-        assertThatThrownBy(() -> orderedService.createOrder(ordered, "USER", 8))
+        assertThatThrownBy(() -> orderedService.createOrder(ordered, RoleEnum.USER.name(), 8))
                 .isInstanceOf(CustomException.class)
                 .hasMessageContaining("停售");
     }
@@ -214,7 +215,7 @@ class OrderedServiceTest {
         ordered.setStatus("待支付");
         when(orderedMapper.selectByIdForUpdate(1)).thenReturn(ordered);
 
-        orderedService.cancelOrder(1, "USER", 100);
+        orderedService.cancelOrder(1, RoleEnum.USER.name(), 100);
 
         verify(orderedMapper).selectByIdForUpdate(1);
     }
@@ -229,7 +230,7 @@ class OrderedServiceTest {
         ordered.setStatus("待支付");
         when(orderedMapper.selectByIdForUpdate(1)).thenReturn(ordered);
 
-        orderedService.cancelOrder(1, "USER", 100);
+        orderedService.cancelOrder(1, RoleEnum.USER.name(), 100);
 
         verify(orderedMapper).updateById(argThat(u ->
                 1 == u.getId() && "已取消".equals(u.getStatus())
@@ -244,7 +245,7 @@ class OrderedServiceTest {
         ordered.setStatus("待取票");
         when(orderedMapper.selectByIdForUpdate(1)).thenReturn(ordered);
 
-        orderedService.pickupOrder(1, "CINEMA", 10);
+        orderedService.pickupOrder(1, RoleEnum.CINEMA.name(), 10);
 
         verify(orderedMapper).updateById(argThat(u ->
                 1 == u.getId() && "已取票".equals(u.getStatus())
@@ -259,7 +260,7 @@ class OrderedServiceTest {
         ordered.setStatus("待支付");
         when(orderedMapper.selectByIdForUpdate(1)).thenReturn(ordered);
 
-        orderedService.cancelOrder(1, "CINEMA", 10);
+        orderedService.cancelOrder(1, RoleEnum.CINEMA.name(), 10);
 
         verify(orderedMapper).updateById(argThat(u ->
                 1 == u.getId() && "已取消".equals(u.getStatus())
@@ -275,7 +276,7 @@ class OrderedServiceTest {
         ordered.setStatus("待支付");
         when(orderedMapper.selectByIdForUpdate(1)).thenReturn(ordered);
 
-        orderedService.cancelOrder(1, "ADMIN", 999);
+        orderedService.cancelOrder(1, RoleEnum.ADMIN.name(), 999);
 
         verify(orderedMapper).updateById(argThat(u ->
                 1 == u.getId() && "已取消".equals(u.getStatus())
@@ -292,7 +293,7 @@ class OrderedServiceTest {
         when(orderedMapper.selectByIdForUpdate(1)).thenReturn(ordered);
 
         // 取票是影院柜台的物理交付动作，ADMIN 不受 cinemaId 约束、放行等于可伪造任意用户的取票
-        assertThatThrownBy(() -> orderedService.pickupOrder(1, "ADMIN", 999))
+        assertThatThrownBy(() -> orderedService.pickupOrder(1, RoleEnum.ADMIN.name(), 999))
                 .isInstanceOf(CustomException.class)
                 .hasMessageContaining("影院柜台");
 
@@ -306,7 +307,7 @@ class OrderedServiceTest {
         ordered.setCinemaId(10);
         when(orderedMapper.selectById(1)).thenReturn(ordered);
 
-        Ordered result = orderedService.selectByIdScoped(1, "CINEMA", 10);
+        Ordered result = orderedService.selectByIdScoped(1, RoleEnum.CINEMA.name(), 10);
 
         assertThat(result).isSameAs(ordered);
     }
@@ -318,7 +319,7 @@ class OrderedServiceTest {
         Ordered ordered = pendingPaymentOrder();
         when(orderedMapper.selectByIdForUpdate(1)).thenReturn(ordered);
 
-        PayResult result = orderedService.payOrder(1, "USER", 100, PAY_PASSWORD);
+        PayResult result = orderedService.payOrder(1, RoleEnum.USER.name(), 100, PAY_PASSWORD);
 
         assertThat(result).isEqualTo(PayResult.PAID);
         verify(orderedMapper).updateById(argThat(u ->
@@ -340,7 +341,7 @@ class OrderedServiceTest {
         ordered.setPendingTimeoutAt(minutesFromNow(-1));
         when(orderedMapper.selectByIdForUpdate(1)).thenReturn(ordered);
 
-        PayResult result = orderedService.payOrder(1, "USER", 100, PAY_PASSWORD);
+        PayResult result = orderedService.payOrder(1, RoleEnum.USER.name(), 100, PAY_PASSWORD);
 
         assertThat(result).isEqualTo(PayResult.TIMEOUT_CANCELLED);
         verify(orderedMapper).updateById(argThat(u ->
@@ -356,7 +357,7 @@ class OrderedServiceTest {
         ordered.setStatus("待取票");
         when(orderedMapper.selectByIdForUpdate(1)).thenReturn(ordered);
 
-        assertThatThrownBy(() -> orderedService.payOrder(1, "USER", 100, PAY_PASSWORD))
+        assertThatThrownBy(() -> orderedService.payOrder(1, RoleEnum.USER.name(), 100, PAY_PASSWORD))
                 .isInstanceOf(CustomException.class)
                 .hasMessageContaining("不允许支付");
     }
@@ -369,7 +370,7 @@ class OrderedServiceTest {
         ordered.setStart(minutesFromNow(120));
         when(orderedMapper.selectByIdForUpdate(1)).thenReturn(ordered);
 
-        orderedService.refundOrder(1, "USER", 100);
+        orderedService.refundOrder(1, RoleEnum.USER.name(), 100);
 
         verify(orderedMapper).updateById(argThat(u ->
                 1 == u.getId()
@@ -385,7 +386,7 @@ class OrderedServiceTest {
         ordered.setStart(minutesFromNow(120));
         when(orderedMapper.selectByIdForUpdate(1)).thenReturn(ordered);
 
-        assertThatThrownBy(() -> orderedService.refundOrder(1, "USER", 100))
+        assertThatThrownBy(() -> orderedService.refundOrder(1, RoleEnum.USER.name(), 100))
                 .isInstanceOf(CustomException.class)
                 .hasMessageContaining("仅待取票");
     }
@@ -397,7 +398,7 @@ class OrderedServiceTest {
         ordered.setStart(minutesFromNow(120));
         when(orderedMapper.selectByIdForUpdate(1)).thenReturn(ordered);
 
-        assertThatThrownBy(() -> orderedService.refundOrder(1, "USER", 100))
+        assertThatThrownBy(() -> orderedService.refundOrder(1, RoleEnum.USER.name(), 100))
                 .isInstanceOf(CustomException.class)
                 .hasMessageContaining("仅待取票");
     }
@@ -408,7 +409,7 @@ class OrderedServiceTest {
         ordered.setStart(minutesFromNow(30));
         when(orderedMapper.selectByIdForUpdate(1)).thenReturn(ordered);
 
-        assertThatThrownBy(() -> orderedService.refundOrder(1, "USER", 100))
+        assertThatThrownBy(() -> orderedService.refundOrder(1, RoleEnum.USER.name(), 100))
                 .isInstanceOf(CustomException.class)
                 .hasMessageContaining("退票截止");
     }
@@ -419,7 +420,7 @@ class OrderedServiceTest {
         ordered.setStart(minutesFromNow(120));
         when(orderedMapper.selectByIdForUpdate(1)).thenReturn(ordered);
 
-        assertThatThrownBy(() -> orderedService.refundOrder(1, "USER", 200))
+        assertThatThrownBy(() -> orderedService.refundOrder(1, RoleEnum.USER.name(), 200))
                 .isInstanceOf(CustomException.class)
                 .hasMessageContaining("无权");
     }
@@ -438,13 +439,13 @@ class OrderedServiceTest {
         Ordered onEdge = new Ordered();
         onEdge.setRecordId(1);
         onEdge.setSeat("6排6座");
-        orderedService.createOrder(onEdge, "USER", 8);
+        orderedService.createOrder(onEdge, RoleEnum.USER.name(), 8);
         verify(orderedMapper).insert(onEdge);
 
         Ordered outside = new Ordered();
         outside.setRecordId(1);
         outside.setSeat("7排1座");
-        assertThatThrownBy(() -> orderedService.createOrder(outside, "USER", 8))
+        assertThatThrownBy(() -> orderedService.createOrder(outside, RoleEnum.USER.name(), 8))
                 .isInstanceOf(CustomException.class)
                 .hasMessageContaining("超出影厅范围");
     }
@@ -461,7 +462,7 @@ class OrderedServiceTest {
         ordered.setRecordId(1);
         ordered.setSeat("8排8座");
 
-        orderedService.createOrder(ordered, "USER", 8);
+        orderedService.createOrder(ordered, RoleEnum.USER.name(), 8);
 
         verify(orderedMapper).insert(ordered);
     }
@@ -474,7 +475,7 @@ class OrderedServiceTest {
         ordered.setRecordId(1);
         ordered.setSeat("1排1座,1排2座,1排3座,1排4座,1排5座,1排6座,1排7座");
 
-        assertThatThrownBy(() -> orderedService.createOrder(ordered, "USER", 8))
+        assertThatThrownBy(() -> orderedService.createOrder(ordered, RoleEnum.USER.name(), 8))
                 .isInstanceOf(CustomException.class)
                 .hasMessageContaining("最多选择 6 个座位");
     }
@@ -489,7 +490,7 @@ class OrderedServiceTest {
         Ordered ordered = new Ordered();
         ordered.setRecordId(1);
         ordered.setSeat("1排1座");
-        orderedService.createOrder(ordered, "USER", 100);
+        orderedService.createOrder(ordered, RoleEnum.USER.name(), 100);
 
         verifyNoInteractions(walletService);
     }
@@ -501,7 +502,7 @@ class OrderedServiceTest {
         Ordered ordered = new Ordered();
         ordered.setRecordId(1);
         ordered.setSeat("1排1座,1排2座");
-        orderedService.createOrder(ordered, "USER", 100);
+        orderedService.createOrder(ordered, RoleEnum.USER.name(), 100);
 
         verify(orderedMapper).insert(argThat(o ->
                 o.getUnitPrice() != null
@@ -515,7 +516,7 @@ class OrderedServiceTest {
         Ordered ordered = pendingPaymentOrder();
         when(orderedMapper.selectByIdForUpdate(1)).thenReturn(ordered);
 
-        orderedService.payOrder(1, "USER", 100, PAY_PASSWORD);
+        orderedService.payOrder(1, RoleEnum.USER.name(), 100, PAY_PASSWORD);
 
         verify(walletService).debitPurchase(eq(100), argThat(amountIs("90.00")), eq(1));
     }
@@ -532,7 +533,7 @@ class OrderedServiceTest {
         doThrow(new CustomException(ErrorCode.BUSINESS_CONFLICT, "账户余额不足，请先充值"))
                 .when(walletService).debitPurchase(anyInt(), any(), anyInt());
 
-        assertThatThrownBy(() -> orderedService.payOrder(1, "USER", 100, PAY_PASSWORD))
+        assertThatThrownBy(() -> orderedService.payOrder(1, RoleEnum.USER.name(), 100, PAY_PASSWORD))
                 .isInstanceOf(CustomException.class)
                 .hasMessageContaining("余额不足");
 
@@ -552,7 +553,7 @@ class OrderedServiceTest {
         when(payPasswordService.checkForPayment(anyInt(), any()))
                 .thenReturn(new CustomException(ErrorCode.UNAUTHORIZED, "支付密码错误，还可重试 4 次"));
 
-        assertThatThrownBy(() -> orderedService.payOrder(1, "USER", 100, "000000"))
+        assertThatThrownBy(() -> orderedService.payOrder(1, RoleEnum.USER.name(), 100, "000000"))
                 .isInstanceOf(CustomException.class)
                 .hasMessageContaining("支付密码错误");
 
@@ -570,7 +571,7 @@ class OrderedServiceTest {
         ordered.setUserId(100);
         when(orderedMapper.selectByIdForUpdate(1)).thenReturn(ordered);
 
-        orderedService.payOrder(1, "ADMIN", 999, PAY_PASSWORD);
+        orderedService.payOrder(1, RoleEnum.ADMIN.name(), 999, PAY_PASSWORD);
 
         verify(payPasswordService).checkForPayment(eq(100), eq(PAY_PASSWORD));
     }
@@ -581,7 +582,7 @@ class OrderedServiceTest {
         ordered.setStart(minutesFromNow(120));
         when(orderedMapper.selectByIdForUpdate(1)).thenReturn(ordered);
 
-        orderedService.refundOrder(1, "USER", 100);
+        orderedService.refundOrder(1, RoleEnum.USER.name(), 100);
 
         verify(walletService).creditRefund(eq(100), argThat(amountIs("90.00")), eq(1));
     }
@@ -593,7 +594,7 @@ class OrderedServiceTest {
         ordered.setStart(minutesFromNow(30));
         when(orderedMapper.selectByIdForUpdate(1)).thenReturn(ordered);
 
-        assertThatThrownBy(() -> orderedService.refundOrder(1, "USER", 100))
+        assertThatThrownBy(() -> orderedService.refundOrder(1, RoleEnum.USER.name(), 100))
                 .isInstanceOf(CustomException.class)
                 .hasMessageContaining("退票截止");
 
@@ -606,7 +607,7 @@ class OrderedServiceTest {
     void cannotDeletePaidOrder() {
         when(orderedMapper.selectById(1)).thenReturn(orderWithStatus("待取票"));
 
-        assertThatThrownBy(() -> orderedService.deleteScoped(1, "USER", 100))
+        assertThatThrownBy(() -> orderedService.deleteScoped(1, RoleEnum.USER.name(), 100))
                 .isInstanceOf(CustomException.class)
                 .hasMessageContaining("已取消 / 已退票");
 
@@ -617,7 +618,7 @@ class OrderedServiceTest {
     void cannotDeletePickedUpOrder() {
         when(orderedMapper.selectById(1)).thenReturn(orderWithStatus("已取票"));
 
-        assertThatThrownBy(() -> orderedService.deleteScoped(1, "USER", 100))
+        assertThatThrownBy(() -> orderedService.deleteScoped(1, RoleEnum.USER.name(), 100))
                 .isInstanceOf(CustomException.class);
 
         verify(orderedMapper, never()).deleteById(anyInt());
@@ -627,7 +628,7 @@ class OrderedServiceTest {
     void cannotDeletePendingPaymentOrder() {
         when(orderedMapper.selectById(1)).thenReturn(orderWithStatus("待支付"));
 
-        assertThatThrownBy(() -> orderedService.deleteScoped(1, "USER", 100))
+        assertThatThrownBy(() -> orderedService.deleteScoped(1, RoleEnum.USER.name(), 100))
                 .isInstanceOf(CustomException.class);
 
         verify(orderedMapper, never()).deleteById(anyInt());
@@ -637,7 +638,7 @@ class OrderedServiceTest {
     void canDeleteCancelledOrder() {
         when(orderedMapper.selectById(1)).thenReturn(orderWithStatus("已取消"));
 
-        orderedService.deleteScoped(1, "USER", 100);
+        orderedService.deleteScoped(1, RoleEnum.USER.name(), 100);
 
         verify(orderedMapper).deleteById(1);
     }
@@ -646,7 +647,7 @@ class OrderedServiceTest {
     void canDeleteRefundedOrder() {
         when(orderedMapper.selectById(1)).thenReturn(orderWithStatus("已退票"));
 
-        orderedService.deleteScoped(1, "USER", 100);
+        orderedService.deleteScoped(1, RoleEnum.USER.name(), 100);
 
         verify(orderedMapper).deleteById(1);
     }
@@ -657,7 +658,7 @@ class OrderedServiceTest {
         when(orderedMapper.selectById(2)).thenReturn(orderWithStatus("待取票"));
 
         List<Integer> ids = List.of(1, 2);
-        assertThatThrownBy(() -> orderedService.deleteBatchScoped(ids, "USER", 100))
+        assertThatThrownBy(() -> orderedService.deleteBatchScoped(ids, RoleEnum.USER.name(), 100))
                 .isInstanceOf(CustomException.class);
 
         verify(orderedMapper, never()).deleteBatch(any());
@@ -737,7 +738,7 @@ class OrderedServiceTest {
     void payOrderGeneratesPickupCode() {
         when(orderedMapper.selectByIdForUpdate(1)).thenReturn(pendingPaymentOrder());
 
-        orderedService.payOrder(1, "USER", 100, PAY_PASSWORD);
+        orderedService.payOrder(1, RoleEnum.USER.name(), 100, PAY_PASSWORD);
 
         // 字母表刻意剔除 I/L/O/0/1 —— 人工从手机抄到自助机上时这几个最容易看错。
         // 正则写全字母表而不是 [A-Z2-9]，就是为了把"不许出现易混字符"钉住。

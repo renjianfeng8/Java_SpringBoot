@@ -1,5 +1,6 @@
 package com.example.springboot.service;
 
+import com.example.springboot.common.enums.RoleEnum;
 import com.example.springboot.dto.response.CinemaRegionItemView;
 import com.example.springboot.dto.response.CinemaRegionView;
 import com.example.springboot.entity.Account;
@@ -55,7 +56,7 @@ class CinemaServiceTest {
         mockCinema.setUsername("asks");
         mockCinema.setPassword(encoder.encode("cinema123"));
         mockCinema.setName("测试影院");
-        mockCinema.setRole("CINEMA");
+        mockCinema.setRole(RoleEnum.CINEMA.name());
         mockCinema.setStatus("已审核");
     }
 
@@ -126,7 +127,7 @@ class CinemaServiceTest {
 
         cinemaService.add(cinema);
 
-        assertEquals("CINEMA", cinema.getRole());
+        assertEquals(RoleEnum.CINEMA.name(), cinema.getRole());
         assertEquals("未审核", cinema.getStatus());
         assertNotNull(cinema.getPassword());
         assertNotEquals("pwd123", cinema.getPassword());
@@ -227,7 +228,7 @@ class CinemaServiceTest {
         verify(cinemaMapper).insert(captor.capture());
         Cinema c = captor.getValue();
         assertEquals("amap_p2", c.getUsername());
-        assertEquals("CINEMA", c.getRole());
+        assertEquals(RoleEnum.CINEMA.name(), c.getRole());
         assertEquals("已审核", c.getStatus());
         assertEquals("B影院", c.getName());
         assertEquals("021-1", c.getPhone());

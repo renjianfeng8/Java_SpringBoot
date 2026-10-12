@@ -1,12 +1,11 @@
-package com.example.springboot;
+package com.example.springboot.common.config;
 
 import com.example.springboot.common.JwtUtils;
-import com.example.springboot.common.config.AuthInterceptor;
+import com.example.springboot.common.enums.RoleEnum;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
-import org.springframework.test.util.ReflectionTestUtils;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
@@ -19,9 +18,9 @@ class AuthInterceptorAccessTest {
         return new AuthInterceptor(mock(JwtUtils.class), new ObjectMapper());
     }
 
+    /** 直接调包私有的 hasAccess：本测试与 AuthInterceptor 同包，不再用反射 */
     private boolean hasAccess(AuthInterceptor interceptor, String path, String method, String role) {
-        return (boolean) ReflectionTestUtils.invokeMethod(
-                interceptor, "hasAccess", path, method, role);
+        return interceptor.hasAccess(path, method, role);
     }
 
     /** 匿名（无 token）请求是否被放行，覆盖 preHandle 的白名单分支 */
@@ -53,29 +52,29 @@ class AuthInterceptorAccessTest {
 
     @Test
     void cinemaCannotWriteFilms() {
-        assertThat(hasAccess(newInterceptor(), "/api/v1/films", "POST", "CINEMA")).isFalse();
+        assertThat(hasAccess(newInterceptor(), "/api/v1/films", "POST", RoleEnum.CINEMA.name())).isFalse();
     }
 
     @Test
     void adminCanWriteFilms() {
-        assertThat(hasAccess(newInterceptor(), "/api/v1/films", "POST", "ADMIN")).isTrue();
+        assertThat(hasAccess(newInterceptor(), "/api/v1/films", "POST", RoleEnum.ADMIN.name())).isTrue();
     }
 
     @Test
     void cinemaCanReadFilms() {
-        assertThat(hasAccess(newInterceptor(), "/api/v1/films", "GET", "CINEMA")).isTrue();
+        assertThat(hasAccess(newInterceptor(), "/api/v1/films", "GET", RoleEnum.CINEMA.name())).isTrue();
     }
 
     // ========== Admin-only resources ==========
 
     @Test
     void cinemaCannotAccessAdminPrefix() {
-        assertThat(hasAccess(newInterceptor(), "/api/v1/admins", "GET", "CINEMA")).isFalse();
+        assertThat(hasAccess(newInterceptor(), "/api/v1/admins", "GET", RoleEnum.CINEMA.name())).isFalse();
     }
 
     @Test
     void userCannotAccessAdminPrefix() {
-        assertThat(hasAccess(newInterceptor(), "/api/v1/admins", "GET", "USER")).isFalse();
+        assertThat(hasAccess(newInterceptor(), "/api/v1/admins", "GET", RoleEnum.USER.name())).isFalse();
     }
 
     // ========== TMDB 导入：GET 但带副作用，必须 admin-only ==========
@@ -84,20 +83,20 @@ class AuthInterceptorAccessTest {
 
     @Test
     void adminCanReachTmdbImport() {
-        assertThat(hasAccess(newInterceptor(), "/api/v1/tmdb", "GET", "ADMIN")).isTrue();
-        assertThat(hasAccess(newInterceptor(), "/api/v1/tmdb/movie/550", "GET", "ADMIN")).isTrue();
+        assertThat(hasAccess(newInterceptor(), "/api/v1/tmdb", "GET", RoleEnum.ADMIN.name())).isTrue();
+        assertThat(hasAccess(newInterceptor(), "/api/v1/tmdb/movie/550", "GET", RoleEnum.ADMIN.name())).isTrue();
     }
 
     @Test
     void userCannotReachTmdbImportEvenThoughItIsAGet() {
-        assertThat(hasAccess(newInterceptor(), "/api/v1/tmdb", "GET", "USER")).isFalse();
-        assertThat(hasAccess(newInterceptor(), "/api/v1/tmdb/search", "GET", "USER")).isFalse();
-        assertThat(hasAccess(newInterceptor(), "/api/v1/tmdb/movie/550", "GET", "USER")).isFalse();
+        assertThat(hasAccess(newInterceptor(), "/api/v1/tmdb", "GET", RoleEnum.USER.name())).isFalse();
+        assertThat(hasAccess(newInterceptor(), "/api/v1/tmdb/search", "GET", RoleEnum.USER.name())).isFalse();
+        assertThat(hasAccess(newInterceptor(), "/api/v1/tmdb/movie/550", "GET", RoleEnum.USER.name())).isFalse();
     }
 
     @Test
     void cinemaCannotReachTmdbImport() {
-        assertThat(hasAccess(newInterceptor(), "/api/v1/tmdb/movie/550", "GET", "CINEMA")).isFalse();
+        assertThat(hasAccess(newInterceptor(), "/api/v1/tmdb/movie/550", "GET", RoleEnum.CINEMA.name())).isFalse();
     }
 
     @Test
@@ -115,71 +114,71 @@ class AuthInterceptorAccessTest {
 
     @Test
     void cinemaCanReadActors() {
-        assertThat(hasAccess(newInterceptor(), "/api/v1/actors", "GET", "CINEMA")).isTrue();
+        assertThat(hasAccess(newInterceptor(), "/api/v1/actors", "GET", RoleEnum.CINEMA.name())).isTrue();
     }
 
     @Test
     void cinemaCannotWriteActors() {
-        assertThat(hasAccess(newInterceptor(), "/api/v1/actors", "POST", "CINEMA")).isFalse();
+        assertThat(hasAccess(newInterceptor(), "/api/v1/actors", "POST", RoleEnum.CINEMA.name())).isFalse();
     }
 
     @Test
     void cinemaCanReadAreas() {
-        assertThat(hasAccess(newInterceptor(), "/api/v1/areas", "GET", "CINEMA")).isTrue();
+        assertThat(hasAccess(newInterceptor(), "/api/v1/areas", "GET", RoleEnum.CINEMA.name())).isTrue();
     }
 
     @Test
     void cinemaCannotWriteAreas() {
-        assertThat(hasAccess(newInterceptor(), "/api/v1/areas", "PUT", "CINEMA")).isFalse();
+        assertThat(hasAccess(newInterceptor(), "/api/v1/areas", "PUT", RoleEnum.CINEMA.name())).isFalse();
     }
 
     @Test
     void cinemaCanReadTypes() {
-        assertThat(hasAccess(newInterceptor(), "/api/v1/types", "GET", "CINEMA")).isTrue();
+        assertThat(hasAccess(newInterceptor(), "/api/v1/types", "GET", RoleEnum.CINEMA.name())).isTrue();
     }
 
     @Test
     void cinemaCannotWriteTypes() {
-        assertThat(hasAccess(newInterceptor(), "/api/v1/types", "POST", "CINEMA")).isFalse();
+        assertThat(hasAccess(newInterceptor(), "/api/v1/types", "POST", RoleEnum.CINEMA.name())).isFalse();
     }
 
     @Test
     void cinemaCanReadNotices() {
-        assertThat(hasAccess(newInterceptor(), "/api/v1/notices", "GET", "CINEMA")).isTrue();
+        assertThat(hasAccess(newInterceptor(), "/api/v1/notices", "GET", RoleEnum.CINEMA.name())).isTrue();
     }
 
     @Test
     void cinemaCannotWriteNotices() {
-        assertThat(hasAccess(newInterceptor(), "/api/v1/notices", "DELETE", "CINEMA")).isFalse();
+        assertThat(hasAccess(newInterceptor(), "/api/v1/notices", "DELETE", RoleEnum.CINEMA.name())).isFalse();
     }
 
     @Test
     void cinemaCanReadVideos() {
-        assertThat(hasAccess(newInterceptor(), "/api/v1/videos", "GET", "CINEMA")).isTrue();
+        assertThat(hasAccess(newInterceptor(), "/api/v1/videos", "GET", RoleEnum.CINEMA.name())).isTrue();
     }
 
     @Test
     void cinemaCannotWriteVideos() {
-        assertThat(hasAccess(newInterceptor(), "/api/v1/videos", "POST", "CINEMA")).isFalse();
+        assertThat(hasAccess(newInterceptor(), "/api/v1/videos", "POST", RoleEnum.CINEMA.name())).isFalse();
     }
 
     // ========== USER read access ==========
 
     @Test
     void userCanReadActors() {
-        assertThat(hasAccess(newInterceptor(), "/api/v1/actors", "GET", "USER")).isTrue();
+        assertThat(hasAccess(newInterceptor(), "/api/v1/actors", "GET", RoleEnum.USER.name())).isTrue();
     }
 
     @Test
     void userCannotWriteActors() {
-        assertThat(hasAccess(newInterceptor(), "/api/v1/actors", "POST", "USER")).isFalse();
+        assertThat(hasAccess(newInterceptor(), "/api/v1/actors", "POST", RoleEnum.USER.name())).isFalse();
     }
 
     // ========== Order endpoint (service-level auth) ==========
 
     @Test
     void interceptorAllowsUserPostOrders() {
-        assertThat(hasAccess(newInterceptor(), "/api/v1/orders", "POST", "USER")).isTrue();
+        assertThat(hasAccess(newInterceptor(), "/api/v1/orders", "POST", RoleEnum.USER.name())).isTrue();
     }
 
     // ========== Anonymous read allowlist (preHandle) ==========
@@ -219,7 +218,7 @@ class AuthInterceptorAccessTest {
     @Test
     void interceptorLetsUserReachMarkWriteEndpoint() {
         // 拦截器只做前缀级判断，「仅 USER 可发表 / 非 ADMIN 只能改删自己的」在控制器内
-        assertThat(hasAccess(newInterceptor(), "/api/v1/marks", "POST", "USER")).isTrue();
+        assertThat(hasAccess(newInterceptor(), "/api/v1/marks", "POST", RoleEnum.USER.name())).isTrue();
     }
 
     @Test
@@ -236,7 +235,7 @@ class AuthInterceptorAccessTest {
     @Test
     void interceptorLetsCinemaReachLikeEndpoint() {
         // 点赞的角色门禁（仅 USER）在 MarkController 内，拦截器只做前缀级判断
-        assertThat(hasAccess(newInterceptor(), "/api/v1/marks/1/like", "PUT", "CINEMA")).isTrue();
+        assertThat(hasAccess(newInterceptor(), "/api/v1/marks/1/like", "PUT", RoleEnum.CINEMA.name())).isTrue();
     }
 
     @Test
@@ -253,7 +252,7 @@ class AuthInterceptorAccessTest {
 
     @Test
     void userCanReadCinemas() {
-        assertThat(hasAccess(newInterceptor(), "/api/v1/cinemas", "GET", "USER")).isTrue();
+        assertThat(hasAccess(newInterceptor(), "/api/v1/cinemas", "GET", RoleEnum.USER.name())).isTrue();
     }
 
     // ========== 令牌过期：公开只读资源不应因此变成"必须登录" ==========
@@ -323,14 +322,14 @@ class AuthInterceptorAccessTest {
 
     @Test
     void userAndCinemaCannotRunCinemaDirectoryImport() {
-        assertThat(hasAccess(newInterceptor(), "/api/v1/cinema-directory/import", "POST", "USER")).isFalse();
-        assertThat(hasAccess(newInterceptor(), "/api/v1/cinema-directory/import", "POST", "CINEMA")).isFalse();
-        assertThat(hasAccess(newInterceptor(), "/api/v1/cinema-directory/import/preview", "POST", "USER")).isFalse();
+        assertThat(hasAccess(newInterceptor(), "/api/v1/cinema-directory/import", "POST", RoleEnum.USER.name())).isFalse();
+        assertThat(hasAccess(newInterceptor(), "/api/v1/cinema-directory/import", "POST", RoleEnum.CINEMA.name())).isFalse();
+        assertThat(hasAccess(newInterceptor(), "/api/v1/cinema-directory/import/preview", "POST", RoleEnum.USER.name())).isFalse();
     }
 
     @Test
     void adminCanRunCinemaDirectoryImport() {
-        assertThat(hasAccess(newInterceptor(), "/api/v1/cinema-directory/import", "POST", "ADMIN")).isTrue();
+        assertThat(hasAccess(newInterceptor(), "/api/v1/cinema-directory/import", "POST", RoleEnum.ADMIN.name())).isTrue();
     }
 
     @Test
