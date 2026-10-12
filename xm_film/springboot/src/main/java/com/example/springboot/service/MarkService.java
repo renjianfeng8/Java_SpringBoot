@@ -15,7 +15,6 @@ import com.example.springboot.mapper.MarkMapper;
 import com.example.springboot.mapper.OrderedMapper;
 import com.github.pagehelper.PageInfo;
 import com.github.pagehelper.page.PageMethod;
-import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
@@ -36,17 +35,21 @@ public class MarkService extends BaseService<Mark> {
     private static final double MAX_SCORE = 10.0;
     private static final int MAX_COMMENT_LENGTH = 255;
 
-    @Resource
-    private MarkMapper markMapper;
+    private final MarkMapper markMapper;
 
-    @Resource
-    private MarkLikeMapper markLikeMapper;
+    private final MarkLikeMapper markLikeMapper;
 
-    @Resource
-    private FilmMapper filmMapper;
+    private final FilmMapper filmMapper;
 
-    @Resource
-    private OrderedMapper orderedMapper;
+    private final OrderedMapper orderedMapper;
+
+    public MarkService(MarkMapper markMapper, MarkLikeMapper markLikeMapper,
+                       FilmMapper filmMapper, OrderedMapper orderedMapper) {
+        this.markMapper = markMapper;
+        this.markLikeMapper = markLikeMapper;
+        this.filmMapper = filmMapper;
+        this.orderedMapper = orderedMapper;
+    }
 
     @Override
     protected BaseMapper<Mark> mapper() {

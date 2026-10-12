@@ -9,7 +9,6 @@ import com.example.springboot.dto.response.AccountView;
 import com.example.springboot.entity.Account;
 import com.example.springboot.entity.User;
 import com.example.springboot.service.AuthService;
-import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.beans.BeanUtils;
@@ -30,11 +29,14 @@ import java.util.stream.IntStream;
 @RequestMapping("/api/v1/auth")
 public class AuthController {
 
-    @Resource
-    private AuthService authService;
+    private final AuthService authService;
 
-    @Resource
-    private JwtUtils jwtUtils;
+    private final JwtUtils jwtUtils;
+
+    public AuthController(AuthService authService, JwtUtils jwtUtils) {
+        this.authService = authService;
+        this.jwtUtils = jwtUtils;
+    }
 
     @PostMapping("/login")
     public Result<AccountView> login(@Valid @RequestBody LoginRequest request) {

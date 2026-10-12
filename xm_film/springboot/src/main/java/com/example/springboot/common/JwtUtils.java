@@ -15,11 +15,14 @@ public class JwtUtils {
 
     // 读 jwt.signing-key 而非 jwt.secret：本机用户级环境变量 JWT_SECRET 会经宽松绑定覆盖
     // jwt.secret（环境变量优先级高于 application.yml），改名前这行在本机取到的是别的项目的密钥。
-    @Value("${jwt.signing-key}")
-    private String secret;
+    private final String secret;
 
-    @Value("${jwt.expire}")
-    private long expire;
+    private final long expire;
+
+    public JwtUtils(@Value("${jwt.signing-key}") String secret, @Value("${jwt.expire}") long expire) {
+        this.secret = secret;
+        this.expire = expire;
+    }
 
     private SecretKey getSigningKey() {
         return Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));

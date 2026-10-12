@@ -5,7 +5,6 @@ import com.example.springboot.common.enums.RoleEnum;
 import com.example.springboot.entity.FundFlow;
 import com.example.springboot.exception.CustomException;
 import com.example.springboot.mapper.FundFlowMapper;
-import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -14,8 +13,11 @@ import java.util.List;
 @Service
 public class FundFlowService {
 
-    @Resource
-    private FundFlowMapper fundFlowMapper;
+    private final FundFlowMapper fundFlowMapper;
+
+    public FundFlowService(FundFlowMapper fundFlowMapper) {
+        this.fundFlowMapper = fundFlowMapper;
+    }
 
     public List<FundFlow> selectScoped(FundFlow query, String role, Integer tokenUserId) {
         FundFlow condition = query == null ? new FundFlow() : query;

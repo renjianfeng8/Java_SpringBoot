@@ -8,7 +8,6 @@ import com.example.springboot.common.enums.ErrorCode;
 import com.example.springboot.common.enums.RoleEnum;
 import com.example.springboot.exception.CustomException;
 import com.example.springboot.mapper.AdminMapper;
-import jakarta.annotation.Resource;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -22,10 +21,13 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class AdminService extends BaseService<Admin> {
 
-    @Resource
-    private AdminMapper adminMapper;
+    private final AdminMapper adminMapper;
 
     private final PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+
+    public AdminService(AdminMapper adminMapper) {
+        this.adminMapper = adminMapper;
+    }
 
     @Override
     protected BaseMapper<Admin> mapper() {

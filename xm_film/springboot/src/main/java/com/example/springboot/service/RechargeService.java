@@ -6,7 +6,6 @@ import com.example.springboot.common.enums.RoleEnum;
 import com.example.springboot.entity.RechargeOrder;
 import com.example.springboot.exception.CustomException;
 import com.example.springboot.mapper.RechargeOrderMapper;
-import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,11 +30,14 @@ public class RechargeService {
 
     private static final String DATE_TIME_PATTERN = "yyyy-MM-dd HH:mm:ss";
 
-    @Resource
-    private RechargeOrderMapper rechargeOrderMapper;
+    private final RechargeOrderMapper rechargeOrderMapper;
 
-    @Resource
-    private WalletService walletService;
+    private final WalletService walletService;
+
+    public RechargeService(RechargeOrderMapper rechargeOrderMapper, WalletService walletService) {
+        this.rechargeOrderMapper = rechargeOrderMapper;
+        this.walletService = walletService;
+    }
 
     /**
      * 提交充值申请。只登记单据，余额分文不动 —— 只有回调成功才入账。

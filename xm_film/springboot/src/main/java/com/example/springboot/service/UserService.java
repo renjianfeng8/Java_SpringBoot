@@ -10,7 +10,6 @@ import com.example.springboot.exception.CustomException;
 import com.example.springboot.mapper.UserMapper;
 import com.github.pagehelper.PageInfo;
 import com.github.pagehelper.page.PageMethod;
-import jakarta.annotation.Resource;
 import org.springframework.beans.BeanUtils;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -27,13 +26,16 @@ import java.util.List;
 @Transactional(readOnly = true)
 public class UserService extends BaseService<User> {
 
-    @Resource
-    private UserMapper userMapper;
+    private final UserMapper userMapper;
 
-    @Resource
-    private OrderedService orderedService;
+    private final OrderedService orderedService;
 
     private final PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+
+    public UserService(UserMapper userMapper, OrderedService orderedService) {
+        this.userMapper = userMapper;
+        this.orderedService = orderedService;
+    }
 
     @Override
     protected BaseMapper<User> mapper() {

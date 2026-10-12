@@ -6,7 +6,6 @@ import com.example.springboot.entity.FundFlow;
 import com.example.springboot.exception.CustomException;
 import com.example.springboot.mapper.FundFlowMapper;
 import com.example.springboot.mapper.UserMapper;
-import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,11 +19,14 @@ import java.math.BigDecimal;
 @Service
 public class WalletService {
 
-    @Resource
-    private UserMapper userMapper;
+    private final UserMapper userMapper;
 
-    @Resource
-    private FundFlowMapper fundFlowMapper;
+    private final FundFlowMapper fundFlowMapper;
+
+    public WalletService(UserMapper userMapper, FundFlowMapper fundFlowMapper) {
+        this.userMapper = userMapper;
+        this.fundFlowMapper = fundFlowMapper;
+    }
 
     /** 充值入账（充值单据回调成功时调用） */
     @Transactional(rollbackFor = Exception.class)

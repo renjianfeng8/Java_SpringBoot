@@ -7,7 +7,6 @@ import com.example.springboot.mapper.CinemaMapper;
 import com.example.springboot.mapper.FilmMapper;
 import com.example.springboot.mapper.OrderedMapper;
 import com.example.springboot.mapper.UserMapper;
-import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -38,17 +37,21 @@ public class StatisticsService {
     private static final String UNAUDITED = "未审核";
     private static final String PENDING_PICKUP = "待取票";
 
-    @Resource
-    private CinemaMapper cinemaMapper;
+    private final CinemaMapper cinemaMapper;
 
-    @Resource
-    private FilmMapper filmMapper;
+    private final FilmMapper filmMapper;
 
-    @Resource
-    private OrderedMapper orderedMapper;
+    private final OrderedMapper orderedMapper;
 
-    @Resource
-    private UserMapper userMapper;
+    private final UserMapper userMapper;
+
+    public StatisticsService(CinemaMapper cinemaMapper, FilmMapper filmMapper,
+                             OrderedMapper orderedMapper, UserMapper userMapper) {
+        this.cinemaMapper = cinemaMapper;
+        this.filmMapper = filmMapper;
+        this.orderedMapper = orderedMapper;
+        this.userMapper = userMapper;
+    }
 
     public Map<String, Object> overview() {
         List<NameValueView> cinemaStatus = cinemaMapper.countGroupByStatus();

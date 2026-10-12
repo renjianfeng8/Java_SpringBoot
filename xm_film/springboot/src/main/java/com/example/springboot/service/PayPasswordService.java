@@ -5,7 +5,6 @@ import com.example.springboot.dto.response.PayPasswordStateView;
 import com.example.springboot.entity.User;
 import com.example.springboot.exception.CustomException;
 import com.example.springboot.mapper.UserMapper;
-import jakarta.annotation.Resource;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -41,10 +40,13 @@ public class PayPasswordService {
     private static final DateTimeFormatter DATE_TIME_FORMATTER =
             DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
-    @Resource
-    private UserMapper userMapper;
+    private final UserMapper userMapper;
 
     private final PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+
+    public PayPasswordService(UserMapper userMapper) {
+        this.userMapper = userMapper;
+    }
 
     /** 是否已设置支付密码；前端据此决定「引导去设置」还是「就地输密码」 */
     public boolean hasPayPassword(Integer userId) {

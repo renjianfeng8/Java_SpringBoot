@@ -15,7 +15,6 @@ import com.example.springboot.mapper.CinemaDirectoryMapper;
 import com.example.springboot.mapper.CinemaMapper;
 import com.github.pagehelper.PageInfo;
 import com.github.pagehelper.page.PageMethod;
-import jakarta.annotation.Resource;
 import org.springframework.beans.BeanUtils;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -37,15 +36,18 @@ import java.util.Set;
 @Transactional(readOnly = true)
 public class CinemaService extends BaseService<Cinema> {
 
-    @Resource
-    private CinemaMapper cinemaMapper;
+    private final CinemaMapper cinemaMapper;
 
-    @Resource
-    private CinemaDirectoryMapper directoryMapper;
+    private final CinemaDirectoryMapper directoryMapper;
 
     private static final String DEFAULT_PASSWORD = "cinema123";
 
     private final PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+
+    public CinemaService(CinemaMapper cinemaMapper, CinemaDirectoryMapper directoryMapper) {
+        this.cinemaMapper = cinemaMapper;
+        this.directoryMapper = directoryMapper;
+    }
 
     @Override
     protected BaseMapper<Cinema> mapper() {

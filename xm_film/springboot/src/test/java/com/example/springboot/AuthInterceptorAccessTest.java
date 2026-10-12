@@ -2,6 +2,7 @@ package com.example.springboot;
 
 import com.example.springboot.common.JwtUtils;
 import com.example.springboot.common.config.AuthInterceptor;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
@@ -13,9 +14,9 @@ import static org.mockito.Mockito.mock;
 class AuthInterceptorAccessTest {
 
     private AuthInterceptor newInterceptor() {
-        AuthInterceptor interceptor = new AuthInterceptor();
-        ReflectionTestUtils.setField(interceptor, "jwtUtils", mock(JwtUtils.class));
-        return interceptor;
+        // 拦截器改为构造器注入：jwtUtils 给 mock（parseToken 返回 null 即"令牌解析失败"），
+        // objectMapper 用真实实例，回写错误体时不会 NPE。
+        return new AuthInterceptor(mock(JwtUtils.class), new ObjectMapper());
     }
 
     private boolean hasAccess(AuthInterceptor interceptor, String path, String method, String role) {

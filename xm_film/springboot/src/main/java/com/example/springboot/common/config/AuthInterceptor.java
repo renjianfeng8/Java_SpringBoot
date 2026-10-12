@@ -1,9 +1,11 @@
 package com.example.springboot.common.config;
 
 import com.example.springboot.common.JwtUtils;
+import com.example.springboot.common.Result;
+import com.example.springboot.common.enums.ErrorCode;
 import com.example.springboot.common.enums.RoleEnum;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.jsonwebtoken.Claims;
-import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
@@ -75,8 +77,13 @@ public class AuthInterceptor implements HandlerInterceptor {
             "/api/v1/tickets/redeem"
     );
 
-    @Resource
-    private JwtUtils jwtUtils;
+    private final JwtUtils jwtUtils;
+    private final ObjectMapper objectMapper;
+
+    public AuthInterceptor(JwtUtils jwtUtils, ObjectMapper objectMapper) {
+        this.jwtUtils = jwtUtils;
+        this.objectMapper = objectMapper;
+    }
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
@@ -109,7 +116,7 @@ public class AuthInterceptor implements HandlerInterceptor {
                 }
                 return true;
             } catch (Exception e) {
-                log.warn("JWT token parsing failed: {}", e.getMessage());
+                log.warn("JWT 令牌解析失败: {}", e.getMessage());
             }
         }
 
@@ -144,9 +151,8 @@ public class AuthInterceptor implements HandlerInterceptor {
     }
 
     private void writeUnauthorized(HttpServletResponse response) throws IOException {
-        response.setStatus(401);
-        response.setContentType(JSON_CONTENT_TYPE);
-        response.getWriter().write("{\"code\":\"401\",\"msg\":\"登录已过期，请重新登录\"}");
+        writeJsonError(response, HttpServletResponse.SC_UNAUTHORIZED,
+                Result.error(ErrorCode.UNAUTHORIZED.code(), "登录已过期，请重新登录"));
     }
 
     private boolean hasAccess(String path, String method, String role) {
@@ -167,8 +173,14 @@ public class AuthInterceptor implements HandlerInterceptor {
     }
 
     private void writeForbidden(HttpServletResponse response) throws IOException {
-        response.setStatus(403);
+        writeJsonError(response, HttpServletResponse.SC_FORBIDDEN,
+                Result.error(ErrorCode.FORBIDDEN.code(), "权限不足"));
+    }
+
+    /** 统一回写错误体：HTTP 状态码与 Result 业务码同源，不再在拦截器里另抄一份字面 JSON */
+    private void writeJsonError(HttpServletResponse response, int status, Result<Void> body) throws IOException {
+        response.setStatus(status);
         response.setContentType(JSON_CONTENT_TYPE);
-        response.getWriter().write("{\"code\":\"403\",\"msg\":\"权限不足\"}");
+        response.getWriter().write(objectMapper.writeValueAsString(body));
     }
 }
