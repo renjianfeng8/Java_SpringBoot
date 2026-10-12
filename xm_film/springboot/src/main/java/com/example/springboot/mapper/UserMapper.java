@@ -1,7 +1,7 @@
 package com.example.springboot.mapper;
 
 import com.example.springboot.common.BaseMapper;
-import com.example.springboot.dto.response.PayPasswordState;
+import com.example.springboot.dto.response.PayPasswordStateView;
 import com.example.springboot.entity.User;
 import org.apache.ibatis.annotations.Param;
 
@@ -40,7 +40,7 @@ public interface UserMapper extends BaseMapper<User> {
     int countPayPasswordSet(@Param("id") Integer id);
 
     /** 校验所需的状态：密文 + 连续错误次数 + 锁定截止时刻 */
-    PayPasswordState selectPayPasswordState(@Param("id") Integer id);
+    PayPasswordStateView selectPayPasswordState(@Param("id") Integer id);
 
     /** 读回当前错误次数，用于拼「还可重试 N 次」提示 */
     Integer selectPayPasswordErrorCount(@Param("id") Integer id);

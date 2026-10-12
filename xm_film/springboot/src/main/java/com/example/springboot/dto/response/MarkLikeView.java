@@ -14,7 +14,7 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class MarkLikeResult {
+public class MarkLikeView {
 
     /** 操作后的权威状态：当前访问者是否赞过 */
     private Boolean liked;

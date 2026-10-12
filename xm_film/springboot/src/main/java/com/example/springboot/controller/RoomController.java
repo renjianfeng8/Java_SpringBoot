@@ -1,19 +1,15 @@
 package com.example.springboot.controller;
 
+import com.example.springboot.common.AuthContext;
 import com.example.springboot.common.BaseController;
 import com.example.springboot.common.Result;
-import com.example.springboot.common.enums.ErrorCode;
-import com.example.springboot.common.enums.RoleEnum;
-import com.example.springboot.entity.Cinema;
+import com.example.springboot.dto.request.RoomRequest;
+import com.example.springboot.dto.response.RoomView;
 import com.example.springboot.entity.Room;
-import com.example.springboot.exception.CustomException;
-import com.example.springboot.service.CinemaService;
-import com.example.springboot.service.OrderedService;
-import com.example.springboot.service.RecordService;
 import com.example.springboot.service.RoomService;
 import com.github.pagehelper.PageInfo;
 import com.github.pagehelper.page.PageMethod;
-import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.beans.BeanUtils;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -23,203 +19,100 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.context.request.RequestContextHolder;
-import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/rooms")
-public class RoomController extends BaseController<Room> {
-
-    /** 影厅座位行列数的合法区间，与前端选座图渲染规模相称 */
-    private static final int MIN_SEAT_DIMENSION = 1;
-    private static final int MAX_SEAT_DIMENSION = 50;
+public class RoomController extends BaseController<Room, RoomRequest, RoomView> {
 
     private final RoomService roomService;
-    private final RecordService recordService;
-    private final OrderedService orderedService;
-    private final CinemaService cinemaService;
 
-    public RoomController(RoomService roomService,
-                          RecordService recordService,
-                          OrderedService orderedService,
-                          CinemaService cinemaService) {
+    public RoomController(RoomService roomService) {
         super(roomService);
         this.roomService = roomService;
-        this.recordService = recordService;
-        this.orderedService = orderedService;
-        this.cinemaService = cinemaService;
+    }
+
+    @Override
+    protected Room toEntity(RoomRequest request) {
+        Room room = new Room();
+        room.setId(request.getId());
+        room.setCinemaId(request.getCinemaId());
+        room.setTitle(request.getTitle());
+        room.setName(request.getName());
+        room.setSeatRows(request.getSeatRows());
+        room.setSeatCols(request.getSeatCols());
+        return room;
+    }
+
+    @Override
+    protected RoomView toView(Room room) {
+        RoomView view = new RoomView();
+        view.setId(room.getId());
+        view.setCinemaId(room.getCinemaId());
+        view.setTitle(room.getTitle());
+        view.setName(room.getName());
+        view.setSeatRows(room.getSeatRows());
+        view.setSeatCols(room.getSeatCols());
+        return view;
     }
 
     @Override
     @GetMapping
-    public Result list(Room entity) {
-        applyCinemaScope(entity);
-        return Result.success(roomService.selectAll(entity));
+    public Result<List<RoomView>> list(RoomRequest query) {
+        Room entity = toEntity(query);
+        roomService.applyCinemaScope(entity, AuthContext.role(), AuthContext.userId());
+        return Result.success(roomService.selectAll(entity).stream().map(this::toView).toList());
     }
 
     @Override
     @GetMapping("/page")
-    public Result page(Room entity,
+    public Result<PageInfo<RoomView>> page(RoomRequest query,
                        @RequestParam(defaultValue = "1") Integer pageNum,
                        @RequestParam(defaultValue = "10") Integer pageSize) {
-        applyCinemaScope(entity);
+        Room entity = toEntity(query);
+        roomService.applyCinemaScope(entity, AuthContext.role(), AuthContext.userId());
         PageMethod.startPage(pageNum, pageSize);
-        return Result.success(new PageInfo<>(roomService.selectAll(entity)));
+        PageInfo<Room> src = new PageInfo<>(roomService.selectAll(entity));
+        PageInfo<RoomView> dst = new PageInfo<>();
+        BeanUtils.copyProperties(src, dst);
+        dst.setList(src.getList().stream().map(this::toView).toList());
+        return Result.success(dst);
     }
 
     @Override
     @GetMapping("/{id}")
-    public Result getById(@PathVariable Integer id) {
-        Room room = roomService.selectById(id);
-        ensureRoomAccess(room);
-        return Result.success(room);
+    public Result<RoomView> getById(@PathVariable Integer id) {
+        Room room = roomService.selectByIdScoped(id, AuthContext.role(), AuthContext.userId());
+        return Result.success(toView(room));
     }
 
     @Override
     @PostMapping
-    public Result add(@RequestBody Room entity) {
-        if (isCinema()) {
-            entity.setCinemaId(currentUserId());
-        }
-        requireAdminOrCinema();
-        if (entity.getCinemaId() == null) {
-            throw new CustomException(ErrorCode.PARAM_INVALID, "请选择所属影院");
-        }
-        validateSeatLayout(entity);
-        // 影院名称由影院记录派生，不接受前端手填
-        String title = cinemaTitleOf(entity.getCinemaId());
-        if (title == null) {
-            throw new CustomException(ErrorCode.BUSINESS_CONFLICT, "所属影院不存在，无法确定影厅归属");
-        }
-        entity.setTitle(title);
-        roomService.add(entity);
+    public Result<Void> add(@RequestBody RoomRequest request) {
+        roomService.addScoped(toEntity(request), AuthContext.role(), AuthContext.userId());
         return Result.success();
     }
 
     @Override
     @PutMapping
-    public Result update(@RequestBody Room entity) {
-        Room dbRoom = roomService.selectById(entity.getId());
-        ensureRoomAccess(dbRoom);
-        if (isCinema()) {
-            entity.setCinemaId(currentUserId());
-        }
-        validateSeatLayout(entity);
-        Integer cinemaId = entity.getCinemaId() != null ? entity.getCinemaId() : dbRoom.getCinemaId();
-        String title = cinemaTitleOf(cinemaId);
-        if (title != null) {
-            entity.setTitle(title);
-        }
-        roomService.update(entity);
+    public Result<Void> update(@RequestBody RoomRequest request) {
+        roomService.updateScoped(toEntity(request), AuthContext.role(), AuthContext.userId());
         return Result.success();
-    }
-
-    /** 影厅所属影院名称，由影院记录派生；影院不存在时返回 null，由调用方决定拒绝还是保持原值 */
-    private String cinemaTitleOf(Integer cinemaId) {
-        if (cinemaId == null) {
-            return null;
-        }
-        Cinema cinema = cinemaService.selectById(cinemaId);
-        return cinema == null ? null : cinema.getName();
-    }
-
-    private void validateSeatLayout(Room room) {
-        validateSeatDimension(room.getSeatRows(), "座位行数");
-        validateSeatDimension(room.getSeatCols(), "座位列数");
-    }
-
-    private void validateSeatDimension(Integer value, String label) {
-        if (value != null && (value < MIN_SEAT_DIMENSION || value > MAX_SEAT_DIMENSION)) {
-            throw new CustomException(ErrorCode.PARAM_INVALID,
-                    label + "需在 " + MIN_SEAT_DIMENSION + "~" + MAX_SEAT_DIMENSION + " 之间");
-        }
     }
 
     @Override
     @DeleteMapping("/{id}")
-    public Result delete(@PathVariable Integer id) {
-        Room room = roomService.selectById(id);
-        ensureRoomAccess(room);
-        ensureNoReferences(id);
-        roomService.delete(id);
+    public Result<Void> delete(@PathVariable Integer id) {
+        roomService.deleteScoped(id, AuthContext.role(), AuthContext.userId());
         return Result.success();
     }
 
     @Override
     @DeleteMapping("/batch")
-    public Result deleteBatch(@RequestBody List<Integer> ids) {
-        for (Integer id : ids) {
-            ensureRoomAccess(roomService.selectById(id));
-            ensureNoReferences(id);
-        }
-        roomService.deleteBatch(ids);
+    public Result<Void> deleteBatch(@RequestBody List<Integer> ids) {
+        roomService.deleteBatchScoped(ids, AuthContext.role(), AuthContext.userId());
         return Result.success();
     }
 
-    /** 影厅被排片或订单引用时禁止物理删除 */
-    private void ensureNoReferences(Integer roomId) {
-        int records = recordService.countByRoomId(roomId);
-        int orders = orderedService.countByRoomId(roomId);
-        if (records > 0 || orders > 0) {
-            throw new CustomException(ErrorCode.BUSINESS_CONFLICT,
-                    "该影厅已有 " + records + " 个排片、" + orders + " 笔订单，无法删除");
-        }
-    }
-
-    private void applyCinemaScope(Room room) {
-        if (isCinema()) {
-            room.setCinemaId(currentUserId());
-        }
-    }
-
-    private void ensureRoomAccess(Room room) {
-        if (room == null) {
-            throw new CustomException(ErrorCode.NOT_FOUND, "影厅不存在");
-        }
-        if (isAdmin()) {
-            return;
-        }
-        if (isCinema()) {
-            Integer cinemaId = currentUserId();
-            if (cinemaId != null && cinemaId.equals(room.getCinemaId())) {
-                return;
-            }
-        }
-        throw new CustomException(ErrorCode.FORBIDDEN, "无权操作该影厅");
-    }
-
-    private void requireAdminOrCinema() {
-        if (!isAdmin() && !isCinema()) {
-            throw new CustomException(ErrorCode.FORBIDDEN, "权限不足");
-        }
-    }
-
-    private boolean isAdmin() {
-        return RoleEnum.ADMIN.name().equals(currentRole());
-    }
-
-    private boolean isCinema() {
-        return RoleEnum.CINEMA.name().equals(currentRole());
-    }
-
-    private String currentRole() {
-        HttpServletRequest request = currentRequest();
-        return request == null ? null : (String) request.getAttribute("role");
-    }
-
-    private Integer currentUserId() {
-        HttpServletRequest request = currentRequest();
-        if (request == null) {
-            return null;
-        }
-        String userId = (String) request.getAttribute("userId");
-        return userId == null ? null : Integer.valueOf(userId);
-    }
-
-    private HttpServletRequest currentRequest() {
-        ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
-        return attributes == null ? null : attributes.getRequest();
-    }
 }

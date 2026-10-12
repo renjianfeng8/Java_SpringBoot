@@ -7,8 +7,8 @@ import com.example.springboot.common.enums.OrderStatus;
 import com.example.springboot.common.enums.PayResult;
 import com.example.springboot.common.enums.RecordStatus;
 import com.example.springboot.common.enums.RoleEnum;
-import com.example.springboot.dto.response.SeatOccupancy;
-import com.example.springboot.dto.response.TicketVoucher;
+import com.example.springboot.dto.response.SeatOccupancyView;
+import com.example.springboot.dto.response.TicketVoucherView;
 import com.example.springboot.entity.Cinema;
 import com.example.springboot.entity.Film;
 import com.example.springboot.entity.Ordered;
@@ -305,7 +305,7 @@ public class OrderedService extends BaseService<Ordered> {
      * pickupOrder 是影院柜台的员工操作（仅 CINEMA，见该方法的注释），本方法是自助机通路。
      */
     @Transactional(rollbackFor = Exception.class)
-    public TicketVoucher redeemByCode(String rawCode) {
+    public TicketVoucherView redeemByCode(String rawCode) {
         String code = normalizePickupCode(rawCode);
         if (code.isEmpty()) {
             throw new CustomException(ErrorCode.PARAM_INVALID, "取票码无效，请核对后重试");
@@ -363,11 +363,11 @@ public class OrderedService extends BaseService<Ordered> {
     }
 
     /** 组装出票凭条：只带展示字段，订单号/金额/userId 一概不出现在匿名响应里 */
-    private TicketVoucher buildVoucher(Ordered ordered, Film film) {
+    private TicketVoucherView buildVoucher(Ordered ordered, Film film) {
         Cinema cinema = ordered.getCinemaId() == null ? null : cinemaMapper.selectById(ordered.getCinemaId());
         Room room = ordered.getRoomId() == null ? null : roomMapper.selectById(ordered.getRoomId());
 
-        TicketVoucher voucher = new TicketVoucher();
+        TicketVoucherView voucher = new TicketVoucherView();
         voucher.setFilmTitle(film == null ? null : film.getTitle());
         voucher.setCinemaName(cinema == null ? null : cinema.getName());
         voucher.setRoomName(room == null ? null : room.getName());
@@ -383,14 +383,14 @@ public class OrderedService extends BaseService<Ordered> {
      * 不能直接把 {@code Ordered} 实体发给前端 —— 那等于把该场次所有订单的
      * 订单号、用户 ID、金额都给到任意登录用户。归属判定只看 JWT 里的 userId。
      */
-    public List<SeatOccupancy> selectSeatOccupancy(Integer recordId, Integer tokenUserId) {
+    public List<SeatOccupancyView> selectSeatOccupancy(Integer recordId, Integer tokenUserId) {
         return orderedMapper.selectActiveByRecordId(recordId).stream()
                 .map(ordered -> toSeatOccupancy(ordered, tokenUserId))
                 .toList();
     }
 
-    private SeatOccupancy toSeatOccupancy(Ordered ordered, Integer tokenUserId) {
-        SeatOccupancy view = new SeatOccupancy();
+    private SeatOccupancyView toSeatOccupancy(Ordered ordered, Integer tokenUserId) {
+        SeatOccupancyView view = new SeatOccupancyView();
         view.setSeat(ordered.getSeat());
         boolean mine = tokenUserId != null && tokenUserId.equals(ordered.getUserId());
         view.setMine(mine);

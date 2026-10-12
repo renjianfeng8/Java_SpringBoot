@@ -8,12 +8,12 @@ import java.util.List;
 
 /**
  * 高德导入的预览。只是一份草稿，不代表库里已经多了这些行。
- * 与 TMDB 的 TmdbImportPreview 同一思路：确认之后才走 import 落库。
+ * 与 TMDB 的 TmdbImportView 同一思路：确认之后才走 import 落库。
  */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class CinemaImportPreview {
+public class CinemaImportView {
 
     /** 抓取到的唯一 POI 数（按 poi_id 去重后） */
     private Integer total;

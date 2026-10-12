@@ -2,11 +2,16 @@ package com.example.springboot.controller;
 
 import com.example.springboot.common.Result;
 import com.example.springboot.common.enums.ErrorCode;
+import com.example.springboot.dto.request.CinemaDirectoryRequest;
 import com.example.springboot.dto.request.CinemaImportRequest;
+import com.example.springboot.dto.response.CinemaDirectoryView;
+import com.example.springboot.dto.response.CinemaImportView;
 import com.example.springboot.entity.CinemaDirectory;
 import com.example.springboot.exception.CustomException;
 import com.example.springboot.service.CinemaDirectoryImportService;
 import com.example.springboot.service.CinemaDirectoryService;
+import com.github.pagehelper.PageInfo;
+import org.springframework.beans.BeanUtils;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -36,28 +41,71 @@ public class CinemaDirectoryController {
     }
 
     @GetMapping("/page")
-    public Result page(CinemaDirectory query,
+    public Result<PageInfo<CinemaDirectoryView>> page(CinemaDirectoryRequest query,
                        @RequestParam(defaultValue = "1") Integer pageNum,
                        @RequestParam(defaultValue = "12") Integer pageSize) {
-        return Result.success(directoryService.selectPage(query, pageNum, pageSize));
+        PageInfo<CinemaDirectory> src = directoryService.selectPage(toEntity(query), pageNum, pageSize);
+        PageInfo<CinemaDirectoryView> dst = new PageInfo<>();
+        BeanUtils.copyProperties(src, dst);
+        dst.setList(src.getList().stream().map(this::toView).toList());
+        return Result.success(dst);
     }
 
     /** 前台筛选下拉与后台导入选城都用得到 */
     @GetMapping("/filters")
-    public Result filters() {
+    public Result<Map<String, List<String>>> filters() {
         return Result.success(Map.of(
                 "cities", directoryService.distinctCities(),
                 "brands", directoryService.distinctBrands()));
     }
 
     @PostMapping("/import/preview")
-    public Result preview(@RequestBody CinemaImportRequest request) {
+    public Result<CinemaImportView> preview(@RequestBody CinemaImportRequest request) {
         return Result.success(importService.preview(requireCities(request)));
     }
 
     @PostMapping("/import")
-    public Result doImport(@RequestBody CinemaImportRequest request) {
+    public Result<Integer> doImport(@RequestBody CinemaImportRequest request) {
         return Result.success(importService.importAll(requireCities(request)));
+    }
+
+    /** 请求 DTO → 实体：查询条件（含派生筛选字段 linked）交给 Service/DAO */
+    private CinemaDirectory toEntity(CinemaDirectoryRequest request) {
+        if (request == null) {
+            return null;
+        }
+        CinemaDirectory entity = new CinemaDirectory();
+        entity.setId(request.getId());
+        entity.setPoiId(request.getPoiId());
+        entity.setName(request.getName());
+        entity.setBrand(request.getBrand());
+        entity.setProvince(request.getProvince());
+        entity.setCity(request.getCity());
+        entity.setDistrict(request.getDistrict());
+        entity.setAddress(request.getAddress());
+        entity.setPhone(request.getPhone());
+        entity.setSource(request.getSource());
+        entity.setCreateTime(request.getCreateTime());
+        entity.setLinked(request.getLinked());
+        return entity;
+    }
+
+    /** 实体 → 响应视图 */
+    private CinemaDirectoryView toView(CinemaDirectory entity) {
+        CinemaDirectoryView view = new CinemaDirectoryView();
+        view.setId(entity.getId());
+        view.setPoiId(entity.getPoiId());
+        view.setName(entity.getName());
+        view.setBrand(entity.getBrand());
+        view.setProvince(entity.getProvince());
+        view.setCity(entity.getCity());
+        view.setDistrict(entity.getDistrict());
+        view.setAddress(entity.getAddress());
+        view.setPhone(entity.getPhone());
+        view.setSource(entity.getSource());
+        view.setCreateTime(entity.getCreateTime());
+        view.setLinked(entity.getLinked());
+        return view;
     }
 
     private static List<String> requireCities(CinemaImportRequest request) {

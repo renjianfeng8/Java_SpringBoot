@@ -7,6 +7,7 @@ import com.example.springboot.entity.User;
 import com.example.springboot.exception.CustomException;
 import com.example.springboot.exception.GlobalExceptionHandler;
 import com.example.springboot.service.AdminService;
+import com.example.springboot.service.AuthService;
 import com.example.springboot.service.CinemaService;
 import com.example.springboot.service.UserService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -25,7 +26,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(AuthController.class)
-@Import(GlobalExceptionHandler.class)
+@Import({GlobalExceptionHandler.class, AuthService.class})
 class GlobalExceptionHandlerTest {
 
     @Autowired

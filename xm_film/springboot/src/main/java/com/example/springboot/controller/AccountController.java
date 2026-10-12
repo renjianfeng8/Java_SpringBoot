@@ -43,7 +43,7 @@ public class AccountController {
     }
 
     @GetMapping("/summary")
-    public Result summary() {
+    public Result<Map<String, Object>> summary() {
         Integer userId = requireUser();
         Map<String, Object> data = new HashMap<>();
         data.put("balance", walletService.getBalance(userId));
@@ -52,28 +52,28 @@ public class AccountController {
     }
 
     @PostMapping("/pay-password/verify-old")
-    public Result verifyOldPassword(@Valid @RequestBody PayPasswordVerifyOldRequest request) {
+    public Result<Void> verifyOldPassword(@Valid @RequestBody PayPasswordVerifyOldRequest request) {
         Integer userId = requireUser();
         payPasswordService.verifyOldPassword(userId, request.getOldPassword());
         return Result.success();
     }
 
     @PostMapping("/pay-password/verify-login")
-    public Result verifyLoginPassword(@Valid @RequestBody PayPasswordVerifyLoginRequest request) {
+    public Result<Void> verifyLoginPassword(@Valid @RequestBody PayPasswordVerifyLoginRequest request) {
         Integer userId = requireUser();
         payPasswordService.verifyLoginPassword(userId, request.getLoginPassword());
         return Result.success();
     }
 
     @PutMapping("/pay-password")
-    public Result changePayPassword(@Valid @RequestBody PayPasswordChangeRequest request) {
+    public Result<Void> changePayPassword(@Valid @RequestBody PayPasswordChangeRequest request) {
         Integer userId = requireUser();
         payPasswordService.changePayPassword(userId, request.getOldPassword(), request.getPayPassword());
         return Result.success();
     }
 
     @PutMapping("/pay-password/reset")
-    public Result resetPayPassword(@Valid @RequestBody PayPasswordResetRequest request) {
+    public Result<Void> resetPayPassword(@Valid @RequestBody PayPasswordResetRequest request) {
         Integer userId = requireUser();
         payPasswordService.resetWithLoginPassword(userId, request.getLoginPassword(), request.getPayPassword());
         return Result.success();

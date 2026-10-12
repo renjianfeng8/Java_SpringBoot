@@ -2,8 +2,8 @@ package com.example.springboot;
 
 import com.example.springboot.common.enums.ErrorCode;
 import com.example.springboot.common.enums.PayResult;
-import com.example.springboot.dto.response.SeatOccupancy;
-import com.example.springboot.dto.response.TicketVoucher;
+import com.example.springboot.dto.response.SeatOccupancyView;
+import com.example.springboot.dto.response.TicketVoucherView;
 import com.example.springboot.entity.Cinema;
 import com.example.springboot.entity.Film;
 import com.example.springboot.entity.Ordered;
@@ -679,7 +679,7 @@ class OrderedServiceTest {
         other.setPendingTimeoutAt("2026-09-28 12:00:00");
         when(orderedMapper.selectActiveByRecordId(1)).thenReturn(List.of(other));
 
-        List<SeatOccupancy> view = orderedService.selectSeatOccupancy(1, 100);
+        List<SeatOccupancyView> view = orderedService.selectSeatOccupancy(1, 100);
 
         assertThat(view).hasSize(1);
         assertThat(view.get(0).getSeat()).isEqualTo("1排1座");
@@ -704,7 +704,7 @@ class OrderedServiceTest {
         mine.setPendingTimeoutAt("2026-09-28 12:00:00");
         when(orderedMapper.selectActiveByRecordId(1)).thenReturn(List.of(mine));
 
-        List<SeatOccupancy> view = orderedService.selectSeatOccupancy(1, 100);
+        List<SeatOccupancyView> view = orderedService.selectSeatOccupancy(1, 100);
 
         assertThat(view).hasSize(1);
         assertThat(view.get(0).getSeat()).isEqualTo("1排1座");
@@ -725,7 +725,7 @@ class OrderedServiceTest {
         other.setSeat("1排1座");
         when(orderedMapper.selectActiveByRecordId(1)).thenReturn(List.of(other));
 
-        List<SeatOccupancy> view = orderedService.selectSeatOccupancy(1, null);
+        List<SeatOccupancyView> view = orderedService.selectSeatOccupancy(1, null);
 
         assertThat(view).hasSize(1);
         assertThat(view.get(0).getMine()).isFalse();
@@ -758,7 +758,7 @@ class OrderedServiceTest {
         when(roomMapper.selectById(7)).thenReturn(roomRow(7, "一号厅"));
 
         // 入参刻意写成小写、去横杠：归一化后才会变成库里存的 8F3A-2C71
-        TicketVoucher voucher = orderedService.redeemByCode("8f3a2c71");
+        TicketVoucherView voucher = orderedService.redeemByCode("8f3a2c71");
 
         assertThat(voucher.getFilmTitle()).isEqualTo("流浪地球2");
         assertThat(voucher.getCinemaName()).isEqualTo("奥斯卡赛影城");
@@ -766,7 +766,7 @@ class OrderedServiceTest {
         assertThat(voucher.getSeat()).isEqualTo("3排4座");
         assertThat(voucher.getNumber()).isEqualTo(2);
         // 凭条里不存在 orderId / 订单编号 / 金额 / userId 字段 —— 匿名端点靠类型本身保证不泄露，
-        // 不需要额外断言（要加字段就必须改 TicketVoucher，那一步会被人看见）
+        // 不需要额外断言（要加字段就必须改 TicketVoucherView，那一步会被人看见）
     }
 
     /** 长度不符的码直接判无效，不该白跑一次数据库 */

@@ -1,6 +1,6 @@
 package com.example.springboot.service;
 
-import com.example.springboot.dto.response.PayPasswordState;
+import com.example.springboot.dto.response.PayPasswordStateView;
 import com.example.springboot.entity.User;
 import com.example.springboot.exception.CustomException;
 import com.example.springboot.mapper.UserMapper;
@@ -43,8 +43,8 @@ class PayPasswordServiceTest {
 
     private final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
 
-    private PayPasswordState stateWith(String rawPayPassword) {
-        PayPasswordState state = new PayPasswordState();
+    private PayPasswordStateView stateWith(String rawPayPassword) {
+        PayPasswordStateView state = new PayPasswordStateView();
         state.setId(USER_ID);
         state.setPayPassword(encoder.encode(rawPayPassword));
         state.setErrorCount(0);
@@ -82,7 +82,7 @@ class PayPasswordServiceTest {
 
     @Test
     void verifyOldPasswordWhenLockedThrowsLockMessageAndDoesNotCountAgain() {
-        PayPasswordState state = stateWith("123456");
+        PayPasswordStateView state = stateWith("123456");
         state.setLockedUntil(LocalDateTime.now(ZoneId.systemDefault())
                 .plusMinutes(10)
                 .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
@@ -97,7 +97,7 @@ class PayPasswordServiceTest {
 
     @Test
     void verifyOldPasswordBeforeAnyPasswordWasSetThrows() {
-        PayPasswordState state = new PayPasswordState();
+        PayPasswordStateView state = new PayPasswordStateView();
         state.setId(USER_ID);
         when(userMapper.selectPayPasswordState(USER_ID)).thenReturn(state);
 

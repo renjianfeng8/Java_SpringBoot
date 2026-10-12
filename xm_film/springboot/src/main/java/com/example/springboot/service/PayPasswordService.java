@@ -1,7 +1,7 @@
 package com.example.springboot.service;
 
 import com.example.springboot.common.enums.ErrorCode;
-import com.example.springboot.dto.response.PayPasswordState;
+import com.example.springboot.dto.response.PayPasswordStateView;
 import com.example.springboot.entity.User;
 import com.example.springboot.exception.CustomException;
 import com.example.springboot.mapper.UserMapper;
@@ -138,7 +138,7 @@ public class PayPasswordService {
 
     /** 校验本体。全程不抛异常：要么返回 null（通过），要么返回调用方该抛的那个异常 */
     private CustomException check(Integer userId, String rawPassword, String label) {
-        PayPasswordState state = userMapper.selectPayPasswordState(userId);
+        PayPasswordStateView state = userMapper.selectPayPasswordState(userId);
         if (state == null) {
             return new CustomException(ErrorCode.NOT_FOUND, "用户不存在");
         }

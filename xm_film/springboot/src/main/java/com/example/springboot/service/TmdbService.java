@@ -3,7 +3,7 @@ package com.example.springboot.service;
 import com.example.springboot.common.FileUtil;
 import com.example.springboot.common.TmdbClient;
 import com.example.springboot.common.TmdbMapping;
-import com.example.springboot.dto.response.TmdbImportPreview;
+import com.example.springboot.dto.response.TmdbImportView;
 import com.example.springboot.entity.Actor;
 import com.example.springboot.entity.Area;
 import com.example.springboot.entity.Type;
@@ -64,11 +64,11 @@ public class TmdbService {
     }
 
     /** 拉详情并整理成预填值，顺带把地区/类型/演职人员行补齐。 */
-    public TmdbImportPreview preview(int tmdbId) {
+    public TmdbImportView preview(int tmdbId) {
         TmdbClient.MovieDetail detail = client.detail(tmdbId);
         List<String> warnings = new ArrayList<>();
 
-        TmdbImportPreview preview = new TmdbImportPreview();
+        TmdbImportView preview = new TmdbImportView();
         preview.setTitle(detail.title());
         preview.setEnglish(detail.originalTitle());
         preview.setStart(blankToNull(detail.releaseDate()));
@@ -110,7 +110,7 @@ public class TmdbService {
     }
 
     /** 制片国家代码 → area 表 id。中文名取自 TMDB 自己的国家表，本项目不维护对照表。 */
-    private void resolveArea(String countryCode, TmdbImportPreview preview, List<String> warnings) {
+    private void resolveArea(String countryCode, TmdbImportView preview, List<String> warnings) {
         if (countryCode == null || countryCode.isBlank()) {
             return;
         }
@@ -137,7 +137,7 @@ public class TmdbService {
      * 且 film.actor_id 只指向一行，所以整张 cast 表塞不进现有模型。
      * title/img 是该表自带的影片冗余字段，前台演职人员区会用到，故一并填上。
      */
-    private void resolveLeadActor(TmdbClient.MovieDetail detail, TmdbImportPreview preview, List<String> warnings) {
+    private void resolveLeadActor(TmdbClient.MovieDetail detail, TmdbImportView preview, List<String> warnings) {
         TmdbClient.CastMember cast = detail.topCast();
         if (cast == null || cast.name() == null || cast.name().isBlank()) {
             return;

@@ -8,7 +8,7 @@ import com.example.springboot.entity.CinemaDirectory;
 import com.example.springboot.common.enums.CinemaStatus;
 import com.example.springboot.common.enums.ErrorCode;
 import com.example.springboot.common.enums.RoleEnum;
-import com.example.springboot.dto.response.CinemaRegion;
+import com.example.springboot.dto.response.CinemaRegionView;
 import com.example.springboot.exception.CustomException;
 import com.example.springboot.mapper.CinemaDirectoryMapper;
 import com.example.springboot.mapper.CinemaMapper;
@@ -67,7 +67,7 @@ public class CinemaService extends BaseService<Cinema> {
     }
 
     /** 前台区域级联：把 distinct(city,district) 行按城市归组，保持 SQL 的排序 */
-    public List<CinemaRegion> regions() {
+    public List<CinemaRegionView> regions() {
         Map<String, List<String>> byCity = new LinkedHashMap<>();
         for (Map<String, Object> row : cinemaMapper.selectRegions()) {
             String city = (String) row.get("city");
@@ -80,8 +80,8 @@ public class CinemaService extends BaseService<Cinema> {
                 districts.add(district);
             }
         }
-        List<CinemaRegion> result = new ArrayList<>();
-        byCity.forEach((city, districts) -> result.add(new CinemaRegion(city, districts)));
+        List<CinemaRegionView> result = new ArrayList<>();
+        byCity.forEach((city, districts) -> result.add(new CinemaRegionView(city, districts)));
         return result;
     }
 

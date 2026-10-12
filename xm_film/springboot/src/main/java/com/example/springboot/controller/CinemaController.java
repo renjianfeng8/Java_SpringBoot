@@ -1,17 +1,22 @@
 package com.example.springboot.controller;
 
+import com.example.springboot.common.AuthContext;
 import com.example.springboot.common.BaseController;
 import com.example.springboot.common.Result;
 import com.example.springboot.common.enums.ErrorCode;
 import com.example.springboot.common.enums.RoleEnum;
 import com.example.springboot.dto.request.CinemaFromDirectoryRequest;
+import com.example.springboot.dto.request.CinemaRequest;
+import com.example.springboot.dto.response.CinemaRegionView;
+import com.example.springboot.dto.response.CinemaView;
 import com.example.springboot.entity.Cinema;
 import com.example.springboot.exception.CustomException;
 import com.example.springboot.service.CinemaService;
 import com.example.springboot.service.OrderedService;
 import com.example.springboot.service.RecordService;
 import com.example.springboot.service.RoomService;
-import jakarta.servlet.http.HttpServletRequest;
+import com.github.pagehelper.PageInfo;
+import org.springframework.beans.BeanUtils;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -28,7 +33,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/cinemas")
-public class CinemaController extends BaseController<Cinema> {
+public class CinemaController extends BaseController<Cinema, CinemaRequest, CinemaView> {
 
     private final CinemaService cinemaService;
     private final RoomService roomService;
@@ -47,8 +52,57 @@ public class CinemaController extends BaseController<Cinema> {
     }
 
     @Override
+    protected Cinema toEntity(CinemaRequest request) {
+        Cinema cinema = new Cinema();
+        cinema.setId(request.getId());
+        cinema.setUsername(request.getUsername());
+        cinema.setPassword(request.getPassword());
+        cinema.setRole(request.getRole());
+        cinema.setName(request.getName());
+        cinema.setNewPassword(request.getNewPassword());
+        cinema.setToken(request.getToken());
+        cinema.setAvatar(request.getAvatar());
+        cinema.setEmail(request.getEmail());
+        cinema.setAddress(request.getAddress());
+        cinema.setLeader(request.getLeader());
+        cinema.setCode(request.getCode());
+        cinema.setCertificate(request.getCertificate());
+        cinema.setStatus(request.getStatus());
+        cinema.setPhone(request.getPhone());
+        cinema.setDescription(request.getDescription());
+        cinema.setDirectoryId(request.getDirectoryId());
+        cinema.setProvince(request.getProvince());
+        cinema.setCity(request.getCity());
+        cinema.setDistrict(request.getDistrict());
+        return cinema;
+    }
+
+    @Override
+    protected CinemaView toView(Cinema cinema) {
+        CinemaView view = new CinemaView();
+        view.setId(cinema.getId());
+        view.setUsername(cinema.getUsername());
+        view.setRole(cinema.getRole());
+        view.setName(cinema.getName());
+        view.setAvatar(cinema.getAvatar());
+        view.setEmail(cinema.getEmail());
+        view.setAddress(cinema.getAddress());
+        view.setLeader(cinema.getLeader());
+        view.setCode(cinema.getCode());
+        view.setCertificate(cinema.getCertificate());
+        view.setStatus(cinema.getStatus());
+        view.setPhone(cinema.getPhone());
+        view.setDescription(cinema.getDescription());
+        view.setDirectoryId(cinema.getDirectoryId());
+        view.setProvince(cinema.getProvince());
+        view.setCity(cinema.getCity());
+        view.setDistrict(cinema.getDistrict());
+        return view;
+    }
+
+    @Override
     @GetMapping("/page")
-    public Result page(Cinema cinema,
+    public Result<PageInfo<CinemaView>> page(CinemaRequest query,
                        @RequestParam(defaultValue = "1") Integer pageNum,
                        @RequestParam(defaultValue = "10") Integer pageSize) {
         Integer filmId = null;
@@ -59,18 +113,22 @@ public class CinemaController extends BaseController<Cinema> {
                 filmId = Integer.valueOf(filmIdStr);
             }
         }
-        return Result.success(cinemaService.selectPage(cinema, filmId, pageNum, pageSize, !isAdmin()));
+        PageInfo<Cinema> src = cinemaService.selectPage(toEntity(query), filmId, pageNum, pageSize, !isAdmin());
+        PageInfo<CinemaView> dst = new PageInfo<>();
+        BeanUtils.copyProperties(src, dst);
+        dst.setList(src.getList().stream().map(this::toView).toList());
+        return Result.success(dst);
     }
 
     /** 前台区域级联选项。前缀已在 AuthInterceptor 的 PUBLIC_READ_PREFIXES，游客可读 */
     @GetMapping("/regions")
-    public Result regions() {
+    public Result<List<CinemaRegionView>> regions() {
         return Result.success(cinemaService.regions());
     }
 
     /** 从名录批量生成影院（幂等）。仅管理员 —— 写角色门禁在方法内 */
     @PostMapping("/from-directory")
-    public Result importFromDirectory(@RequestBody CinemaFromDirectoryRequest request) {
+    public Result<Integer> importFromDirectory(@RequestBody CinemaFromDirectoryRequest request) {
         requireAdmin();
         List<Integer> ids = request == null ? null : request.getDirectoryIds();
         return Result.success(cinemaService.importFromDirectory(ids));
@@ -78,27 +136,29 @@ public class CinemaController extends BaseController<Cinema> {
 
     @Override
     @GetMapping
-    public Result list(Cinema cinema) {
-        return Result.success(cinemaService.selectAll(cinema, !isAdmin()));
+    public Result<List<CinemaView>> list(CinemaRequest query) {
+        return Result.success(cinemaService.selectAll(toEntity(query), !isAdmin())
+                .stream().map(this::toView).toList());
     }
 
     @Override
     @PostMapping
-    public Result add(@RequestBody Cinema cinema) {
+    public Result<Void> add(@RequestBody CinemaRequest request) {
         requireAdmin();
-        cinemaService.add(cinema);
+        cinemaService.add(toEntity(request));
         return Result.success();
     }
 
     @Override
     @PutMapping
-    public Result update(@RequestBody Cinema cinema) {
+    public Result<Void> update(@RequestBody CinemaRequest request) {
+        Cinema cinema = toEntity(request);
         if (isAdmin()) {
             cinemaService.update(cinema);
             return Result.success();
         }
         if (isCinema()) {
-            cinema.setId(currentUserId());
+            cinema.setId(AuthContext.userId());
             cinema.setStatus(null);
             cinemaService.update(cinema);
             return Result.success();
@@ -108,7 +168,7 @@ public class CinemaController extends BaseController<Cinema> {
 
     @Override
     @DeleteMapping("/{id}")
-    public Result delete(@PathVariable Integer id) {
+    public Result<Void> delete(@PathVariable Integer id) {
         requireAdmin();
         ensureNoReferences(id);
         cinemaService.delete(id);
@@ -117,7 +177,7 @@ public class CinemaController extends BaseController<Cinema> {
 
     @Override
     @DeleteMapping("/batch")
-    public Result deleteBatch(@RequestBody List<Integer> ids) {
+    public Result<Void> deleteBatch(@RequestBody List<Integer> ids) {
         requireAdmin();
         for (Integer id : ids) {
             ensureNoReferences(id);
@@ -139,11 +199,11 @@ public class CinemaController extends BaseController<Cinema> {
     }
 
     private boolean isAdmin() {
-        return RoleEnum.ADMIN.name().equals(currentRole());
+        return RoleEnum.ADMIN.name().equals(AuthContext.role());
     }
 
     private boolean isCinema() {
-        return RoleEnum.CINEMA.name().equals(currentRole());
+        return RoleEnum.CINEMA.name().equals(AuthContext.role());
     }
 
     private void requireAdmin() {
@@ -152,22 +212,4 @@ public class CinemaController extends BaseController<Cinema> {
         }
     }
 
-    private String currentRole() {
-        HttpServletRequest request = currentRequest();
-        return request == null ? null : (String) request.getAttribute("role");
-    }
-
-    private Integer currentUserId() {
-        HttpServletRequest request = currentRequest();
-        if (request == null) {
-            return null;
-        }
-        String userId = (String) request.getAttribute("userId");
-        return userId == null ? null : Integer.valueOf(userId);
-    }
-
-    private HttpServletRequest currentRequest() {
-        ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
-        return attributes == null ? null : attributes.getRequest();
-    }
 }

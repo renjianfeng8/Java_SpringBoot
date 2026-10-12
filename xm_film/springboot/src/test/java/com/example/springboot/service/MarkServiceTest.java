@@ -2,7 +2,7 @@ package com.example.springboot.service;
 
 import com.example.springboot.common.enums.ErrorCode;
 import com.example.springboot.dto.response.FilmMarksView;
-import com.example.springboot.dto.response.MarkLikeResult;
+import com.example.springboot.dto.response.MarkLikeView;
 import com.example.springboot.dto.response.MarkView;
 import com.example.springboot.entity.Film;
 import com.example.springboot.entity.Mark;
@@ -271,7 +271,7 @@ class MarkServiceTest {
         when(markLikeMapper.countByMarkAndUser(5, 6)).thenReturn(1);
         when(markLikeMapper.countByMarkId(5)).thenReturn(1);
 
-        MarkLikeResult result = markService.setLike(5, 6, true);
+        MarkLikeView result = markService.setLike(5, 6, true);
 
         verify(markLikeMapper).insertIfAbsent(5, 6);
         verify(markLikeMapper, never()).deleteByMarkAndUser(anyInt(), anyInt());
@@ -290,7 +290,7 @@ class MarkServiceTest {
         when(markLikeMapper.countByMarkAndUser(5, 6)).thenReturn(1);
         when(markLikeMapper.countByMarkId(5)).thenReturn(1);
 
-        MarkLikeResult result = markService.setLike(5, 6, true);
+        MarkLikeView result = markService.setLike(5, 6, true);
 
         verify(markLikeMapper).insertIfAbsent(5, 6);
         assertTrue(result.getLiked());
@@ -303,7 +303,7 @@ class MarkServiceTest {
         when(markLikeMapper.countByMarkAndUser(5, 6)).thenReturn(0);
         when(markLikeMapper.countByMarkId(5)).thenReturn(0);
 
-        MarkLikeResult result = markService.setLike(5, 6, false);
+        MarkLikeView result = markService.setLike(5, 6, false);
 
         verify(markLikeMapper).deleteByMarkAndUser(5, 6);
         verify(markLikeMapper, never()).insertIfAbsent(anyInt(), anyInt());
@@ -317,7 +317,7 @@ class MarkServiceTest {
         when(markMapper.selectById(5)).thenReturn(storedMark(5, 6, 10));
         when(markLikeMapper.countByMarkAndUser(5, 6)).thenReturn(0);
 
-        MarkLikeResult result = markService.setLike(5, 6, false);
+        MarkLikeView result = markService.setLike(5, 6, false);
 
         verify(markLikeMapper).deleteByMarkAndUser(5, 6);
         assertFalse(result.getLiked());

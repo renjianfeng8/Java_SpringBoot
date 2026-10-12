@@ -27,7 +27,7 @@ public class FileUploadController {
     private static final Logger log = LoggerFactory.getLogger(FileUploadController.class);
 
     @PostMapping("/upload")
-    public Result uploadFile(@RequestParam("file") MultipartFile file) {
+    public Result<String> uploadFile(@RequestParam("file") MultipartFile file) {
         try {
             if (file == null || file.isEmpty()) {
                 return Result.error(ErrorCode.PARAM_INVALID.code(), "上传文件不能为空");
@@ -41,9 +41,6 @@ public class FileUploadController {
         } catch (IOException e) {
             log.error("File upload failed", e);
             return Result.error(ErrorCode.SYSTEM_ERROR.code(), "文件上传失败: " + e.getMessage());
-        } catch (Exception e) {
-            log.error("File upload failed", e);
-            return Result.error(ErrorCode.SYSTEM_ERROR.code(), "服务器内部错误");
         }
     }
 }

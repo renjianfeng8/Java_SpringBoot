@@ -1,6 +1,6 @@
 package com.example.springboot.service;
 
-import com.example.springboot.dto.response.CinemaRegion;
+import com.example.springboot.dto.response.CinemaRegionView;
 import com.example.springboot.entity.Account;
 import com.example.springboot.entity.Cinema;
 import com.example.springboot.entity.CinemaDirectory;
@@ -190,7 +190,7 @@ class CinemaServiceTest {
                 Map.of("city", "北京", "district", "海淀区"),
                 Map.of("city", "上海", "district", "浦东新区")));
 
-        List<CinemaRegion> regions = cinemaService.regions();
+        List<CinemaRegionView> regions = cinemaService.regions();
 
         assertEquals(2, regions.size());
         assertEquals("北京", regions.get(0).getCity());
@@ -206,7 +206,7 @@ class CinemaServiceTest {
         row.put("district", null);
         when(cinemaMapper.selectRegions()).thenReturn(List.of(row));
 
-        List<CinemaRegion> regions = cinemaService.regions();
+        List<CinemaRegionView> regions = cinemaService.regions();
 
         assertEquals(1, regions.size());
         assertEquals("广州", regions.get(0).getCity());

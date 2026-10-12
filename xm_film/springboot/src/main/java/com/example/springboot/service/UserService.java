@@ -8,12 +8,16 @@ import com.example.springboot.common.enums.ErrorCode;
 import com.example.springboot.common.enums.RoleEnum;
 import com.example.springboot.exception.CustomException;
 import com.example.springboot.mapper.UserMapper;
+import com.github.pagehelper.PageInfo;
+import com.github.pagehelper.page.PageMethod;
 import jakarta.annotation.Resource;
 import org.springframework.beans.BeanUtils;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
 
 /**
  * 普通用户账号的注册、登录与密码维护。注册时固定角色为 USER、缺省密码兜底，
@@ -25,6 +29,9 @@ public class UserService extends BaseService<User> {
 
     @Resource
     private UserMapper userMapper;
+
+    @Resource
+    private OrderedService orderedService;
 
     private final PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
@@ -99,5 +106,88 @@ public class UserService extends BaseService<User> {
         BeanUtils.copyProperties(account, user);
         insertUser(user);
         return user;
+    }
+
+    /** 列表：管理员看全部，普通用户只看自己，其他角色拒绝 */
+    public List<User> listScoped(User query, String role, Integer userId) {
+        if (RoleEnum.ADMIN.name().equals(role)) {
+            return selectAll(query);
+        }
+        if (RoleEnum.USER.name().equals(role)) {
+            User user = selectById(userId);
+            return user == null ? List.of() : List.of(user);
+        }
+        throw new CustomException(ErrorCode.FORBIDDEN, "权限不足");
+    }
+
+    /** 分页：管理员翻全表，普通用户只回自己一条，其他角色拒绝 */
+    public PageInfo<User> pageScoped(User query, String role, Integer userId,
+                                     Integer pageNum, Integer pageSize) {
+        if (RoleEnum.ADMIN.name().equals(role)) {
+            PageMethod.startPage(pageNum, pageSize);
+            return new PageInfo<>(selectAll(query));
+        }
+        if (RoleEnum.USER.name().equals(role)) {
+            User user = selectById(userId);
+            return new PageInfo<>(user == null ? List.of() : List.of(user));
+        }
+        throw new CustomException(ErrorCode.FORBIDDEN, "权限不足");
+    }
+
+    /** 详情：管理员可查任意用户，普通用户仅可查自己，其他角色拒绝 */
+    public User selectByIdScoped(Integer id, String role, Integer userId) {
+        if (RoleEnum.ADMIN.name().equals(role)
+                || (RoleEnum.USER.name().equals(role) && id.equals(userId))) {
+            return selectById(id);
+        }
+        throw new CustomException(ErrorCode.FORBIDDEN, "权限不足");
+    }
+
+    /** 编辑资料：管理员按提交 ID 更新，普通用户强制改自己，其他角色拒绝 */
+    @Transactional(rollbackFor = Exception.class)
+    public void updateScoped(User user, String role, Integer userId) {
+        if (RoleEnum.ADMIN.name().equals(role)) {
+            update(user);
+            return;
+        }
+        if (RoleEnum.USER.name().equals(role)) {
+            user.setId(userId);
+            update(user);
+            return;
+        }
+        throw new CustomException(ErrorCode.FORBIDDEN, "权限不足");
+    }
+
+    /** 删除用户：仅管理员，且用户有订单时禁止物理删除 */
+    @Transactional(rollbackFor = Exception.class)
+    public void deleteScoped(Integer id, String role, Integer userId) {
+        requireAdmin(role);
+        ensureNoOrders(id);
+        delete(id);
+    }
+
+    /** 批量删除用户：仅管理员，逐条校验订单引用后再删 */
+    @Transactional(rollbackFor = Exception.class)
+    public void deleteBatchScoped(List<Integer> ids, String role, Integer userId) {
+        requireAdmin(role);
+        for (Integer id : ids) {
+            ensureNoOrders(id);
+        }
+        deleteBatch(ids);
+    }
+
+    /** 用户有订单时禁止物理删除，避免连带删除交易凭证 */
+    private void ensureNoOrders(Integer userId) {
+        int orders = orderedService.countByUserId(userId);
+        if (orders > 0) {
+            throw new CustomException(ErrorCode.BUSINESS_CONFLICT,
+                    "该用户已有 " + orders + " 笔订单，无法删除");
+        }
+    }
+
+    private void requireAdmin(String role) {
+        if (!RoleEnum.ADMIN.name().equals(role)) {
+            throw new CustomException(ErrorCode.FORBIDDEN, "权限不足");
+        }
     }
 }
