@@ -26,7 +26,7 @@ public class MarkView {
 
     private Double score;
 
-    private String mark;
+    private String comment;
 
     /** 该条评价的赞数，由 mark_like 关系表实时聚合（无计数器列） */
     private Integer likeCount;

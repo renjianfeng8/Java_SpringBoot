@@ -4,6 +4,7 @@ import com.example.springboot.common.enums.ErrorCode;
 import com.example.springboot.common.enums.PayResult;
 import com.example.springboot.dto.response.SeatOccupancyView;
 import com.example.springboot.dto.response.TicketVoucherView;
+import com.example.springboot.dto.response.TodayRevenueView;
 import com.example.springboot.entity.Cinema;
 import com.example.springboot.entity.Film;
 import com.example.springboot.entity.Ordered;
@@ -30,9 +31,7 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -861,16 +860,13 @@ class OrderedServiceTest {
      */
     @Test
     void todayPaidRevenuePassesMapperRowThroughUnchanged() {
-        Map<String, Object> row = new LinkedHashMap<>();
-        row.put("total", new BigDecimal("136.50"));
-        row.put("updatedAt", "2026-09-29 15:04:23");
+        TodayRevenueView row = new TodayRevenueView(new BigDecimal("136.50"), "2026-09-29 15:04:23");
         when(orderedMapper.selectTodayPaidRevenue()).thenReturn(row);
 
-        Map<String, Object> result = orderedService.todayPaidRevenue();
+        TodayRevenueView result = orderedService.todayPaidRevenue();
 
-        assertThat(result).hasSize(2)
-                .containsEntry("total", new BigDecimal("136.50"))
-                .containsEntry("updatedAt", "2026-09-29 15:04:23");
+        assertThat(result.getTotal()).isEqualByComparingTo("136.50");
+        assertThat(result.getUpdatedAt()).isEqualTo("2026-09-29 15:04:23");
         verify(orderedMapper).selectTodayPaidRevenue();
     }
 

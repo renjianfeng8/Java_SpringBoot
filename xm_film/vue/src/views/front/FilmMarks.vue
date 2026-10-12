@@ -56,7 +56,7 @@
                 <el-tag v-if="item.mine" class="mark-item__badge" size="small" type="primary">我的</el-tag>
                 <span class="mark-item__score">{{ item.score }} 分</span>
               </div>
-              <div v-if="item.mark" class="mark-item__text">{{ item.mark }}</div>
+              <div v-if="item.comment" class="mark-item__text">{{ item.comment }}</div>
             </div>
             <div class="mark-item__actions">
               <!-- 自己那条只给「修改」：自己赞自己没有意义 -->
@@ -100,8 +100,8 @@
           <el-input-number v-model="form.score" :min="0" :max="10" :step="0.1" :precision="1"
                            class="field-full" @keyup.enter="submit"/>
         </el-form-item>
-        <el-form-item label="评语" prop="mark">
-          <el-input v-model="form.mark" type="textarea" :rows="3" maxlength="255" show-word-limit
+        <el-form-item label="评语" prop="comment">
+          <el-input v-model="form.comment" type="textarea" :rows="3" maxlength="255" show-word-limit
                     placeholder="说说你的观后感（选填）"/>
         </el-form-item>
       </el-form>
@@ -259,12 +259,12 @@ const onLike = async (item) => {
 // 评价弹窗
 const dialogVisible = ref(false);
 const submitting = ref(false);
-const form = reactive({ id: undefined, score: 8, mark: '' });
+const form = reactive({ id: undefined, score: 8, comment: '' });
 
 const openCreate = () => {
   form.id = undefined;
   form.score = 8;
-  form.mark = '';
+  form.comment = '';
   dialogVisible.value = true;
 };
 
@@ -272,7 +272,7 @@ const openEdit = () => {
   if (!my.value) return;
   form.id = my.value.id;
   form.score = my.value.score ?? 8;
-  form.mark = my.value.mark || '';
+  form.comment = my.value.comment || '';
   dialogVisible.value = true;
 };
 
@@ -283,7 +283,7 @@ const submit = async () => {
   }
   submitting.value = true;
   try {
-    const payload = { score: form.score, mark: form.mark };
+    const payload = { score: form.score, comment: form.comment };
     const res = form.id
         ? await request.put(API_PATHS.MARKS, { id: form.id, ...payload })
         : await request.post(API_PATHS.MARKS, { filmId: Number(filmId), ...payload });

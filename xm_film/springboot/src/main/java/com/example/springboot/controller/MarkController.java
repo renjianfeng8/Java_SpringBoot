@@ -44,7 +44,7 @@ public class MarkController extends BaseController<Mark, MarkRequest, MarkEntity
         mark.setFilmId(request.getFilmId());
         mark.setImg(request.getImg());
         mark.setScore(request.getScore());
-        mark.setMark(request.getMark());
+        mark.setComment(request.getComment());
         mark.setUserName(request.getUserName());
         mark.setFilmName(request.getFilmName());
         mark.setFilmImg(request.getFilmImg());
@@ -59,7 +59,7 @@ public class MarkController extends BaseController<Mark, MarkRequest, MarkEntity
         view.setFilmId(mark.getFilmId());
         view.setImg(mark.getImg());
         view.setScore(mark.getScore());
-        view.setMark(mark.getMark());
+        view.setComment(mark.getComment());
         view.setUserName(mark.getUserName());
         view.setFilmName(mark.getFilmName());
         view.setFilmImg(mark.getFilmImg());

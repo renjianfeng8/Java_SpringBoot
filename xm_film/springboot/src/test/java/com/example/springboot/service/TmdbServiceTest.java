@@ -79,15 +79,15 @@ class TmdbServiceTest {
     private void stubGeneratedKeys() {
         doAnswer(inv -> {
             ((Type) inv.getArgument(0)).setId(nextTypeId.getAndIncrement());
-            return null;
+            return 1;
         }).when(typeMapper).insert(any());
         doAnswer(inv -> {
             ((Area) inv.getArgument(0)).setId(200);
-            return null;
+            return 1;
         }).when(areaMapper).insert(any());
         doAnswer(inv -> {
             ((Actor) inv.getArgument(0)).setId(300);
-            return null;
+            return 1;
         }).when(actorMapper).insert(any());
     }
 

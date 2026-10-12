@@ -2,6 +2,7 @@ package com.example.springboot.service;
 
 import com.example.springboot.common.BaseMapper;
 import com.example.springboot.common.BaseService;
+import com.example.springboot.dto.response.FilmTypeJoinView;
 import com.example.springboot.entity.Film;
 import com.example.springboot.entity.Type;
 import com.example.springboot.mapper.FilmMapper;
@@ -103,16 +104,16 @@ public class FilmService extends BaseService<Film> {
             return;
         }
         List<Integer> filmIds = filmList.stream().map(Film::getId).toList();
-        List<Map<String, Object>> rows = filmMapper.selectFilmTypeJoin(filmIds);
+        List<FilmTypeJoinView> rows = filmMapper.selectFilmTypeJoin(filmIds);
         if (rows == null || rows.isEmpty()) {
             return;
         }
         Map<Integer, List<Integer>> filmTypeIdMap = new LinkedHashMap<>();
         Map<Integer, List<Type>> filmTypeMap = new LinkedHashMap<>();
-        for (Map<String, Object> row : rows) {
-            Integer filmId = ((Number) row.get("film_id")).intValue();
-            Integer typeId = ((Number) row.get("type_id")).intValue();
-            String typeTitle = (String) row.get("type_title");
+        for (FilmTypeJoinView row : rows) {
+            Integer filmId = row.getFilmId();
+            Integer typeId = row.getTypeId();
+            String typeTitle = row.getTypeTitle();
             filmTypeIdMap.computeIfAbsent(filmId, k -> new ArrayList<>()).add(typeId);
             filmTypeMap.computeIfAbsent(filmId, k -> new ArrayList<>()).add(new Type(typeId, typeTitle));
         }

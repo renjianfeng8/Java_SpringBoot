@@ -1,19 +1,25 @@
 package com.example.springboot.entity;
 
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
+
+import java.io.Serializable;
 
 /**
  * 管理员实体类
  * 继承自Account类，使用Lombok注解简化代码
  */
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @EqualsAndHashCode(callSuper = true)
-public class Admin extends Account {
+public class Admin extends Account implements Serializable {
+    private static final long serialVersionUID = 1L;
+
     private String avatar;
     private String phone;
     private String email;

@@ -1,16 +1,21 @@
 package com.example.springboot.entity;
 
 import lombok.AllArgsConstructor;
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 import lombok.NoArgsConstructor;
 
+import java.io.Serializable;
 import java.time.LocalDateTime;
 
 /** 影院名录：高德 POI 导入的只读门店资料，与账号表 cinema 无关 */
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class CinemaDirectory {
+public class CinemaDirectory implements Serializable {
+    private static final long serialVersionUID = 1L;
+
     private Integer id;
     private String poiId;
     private String name;

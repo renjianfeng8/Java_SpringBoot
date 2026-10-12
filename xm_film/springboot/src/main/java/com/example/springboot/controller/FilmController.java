@@ -5,6 +5,7 @@ import com.example.springboot.common.Result;
 import com.example.springboot.common.enums.ErrorCode;
 import com.example.springboot.dto.request.FilmRequest;
 import com.example.springboot.dto.response.FilmView;
+import com.example.springboot.dto.response.TodayRevenueView;
 import com.example.springboot.entity.Film;
 import com.example.springboot.exception.CustomException;
 import com.example.springboot.service.FilmService;
@@ -19,7 +20,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/films")
@@ -148,7 +148,7 @@ public class FilmController extends BaseController<Film, FilmRequest, FilmView> 
      * 返回 {total, updatedAt}，口径见 OrderedService.todayPaidRevenue。
      */
     @GetMapping("/box-office/today")
-    public Result<Map<String, Object>> todayBoxOffice() {
+    public Result<TodayRevenueView> todayBoxOffice() {
         return Result.success(orderedService.todayPaidRevenue());
     }
 

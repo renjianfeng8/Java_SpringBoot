@@ -62,7 +62,7 @@ class MarkServiceTest {
         mark.setUserId(userId);
         mark.setFilmId(filmId);
         mark.setScore(score);
-        mark.setMark("很好看");
+        mark.setComment("很好看");
         return mark;
     }
 
@@ -172,7 +172,7 @@ class MarkServiceTest {
     @Test
     void addWithOverlongCommentShouldThrow() {
         Mark mark = request(6, 10, 9.5);
-        mark.setMark("评".repeat(256));
+        mark.setComment("评".repeat(256));
 
         assertThrows(CustomException.class, () -> markService.add(mark));
         verify(markMapper, never()).insert(any());
@@ -199,7 +199,7 @@ class MarkServiceTest {
         Mark request = new Mark();
         request.setId(5);
         request.setScore(8.0);
-        request.setMark("改一下");
+        request.setComment("改一下");
         request.setUserId(7);   // 试图把评价转到别人名下
         request.setFilmId(99);  // 试图把评价转到别的影片
 

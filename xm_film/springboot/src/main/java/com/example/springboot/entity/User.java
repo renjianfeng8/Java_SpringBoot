@@ -1,15 +1,21 @@
 package com.example.springboot.entity;
 
 import lombok.AllArgsConstructor;
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 
-@Data
+import java.io.Serializable;
+
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @EqualsAndHashCode(callSuper = true)
-public class User extends Account {
+public class User extends Account implements Serializable {
+    private static final long serialVersionUID = 1L;
+
     private String avatar;
     private String phone;
     private String email;

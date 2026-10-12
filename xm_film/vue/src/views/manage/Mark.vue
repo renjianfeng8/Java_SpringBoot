@@ -28,7 +28,7 @@
           </template>
         </el-table-column>
         <el-table-column label="用户评分" prop="score" width="90" />
-        <el-table-column label="用户评语" prop="mark" show-overflow-tooltip />
+        <el-table-column label="用户评语" prop="comment" show-overflow-tooltip />
         <el-table-column label="操作" width="80">
           <template #default="scope">
             <el-button class="row-action" link :icon="Delete" aria-label="删除" @click="confirmDel(scope.row.id)" type="danger" />

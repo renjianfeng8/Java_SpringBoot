@@ -1,6 +1,7 @@
 package com.example.springboot.service;
 
 import com.example.springboot.common.BaseMapper;
+import com.example.springboot.dto.response.TodayRevenueView;
 import com.example.springboot.common.BaseService;
 import com.example.springboot.common.enums.ErrorCode;
 import com.example.springboot.common.enums.OrderStatus;
@@ -33,7 +34,6 @@ import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
@@ -410,7 +410,7 @@ public class OrderedService extends BaseService<Ordered> {
      * 日期边界与统计时刻都取自数据库时钟，避免"边界按一台钟切、时间戳按另一台钟写"。
      * 口径与状态集合见 OrderedMapper.selectTodayPaidRevenue 的注释。
      */
-    public Map<String, Object> todayPaidRevenue() {
+    public TodayRevenueView todayPaidRevenue() {
         return orderedMapper.selectTodayPaidRevenue();
     }
 

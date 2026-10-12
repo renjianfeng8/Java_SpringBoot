@@ -1,19 +1,24 @@
 package com.example.springboot.entity;
 
 import lombok.AllArgsConstructor;
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 import lombok.NoArgsConstructor;
 
+import java.io.Serializable;
 import java.math.BigDecimal;
 
 /**
  * 充值单据。提交申请只生成一条「处理中」单据，余额不变；
  * 只有模拟支付网关回调成功才置为「已完成」并入账。
  */
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class RechargeOrder {
+public class RechargeOrder implements Serializable {
+    private static final long serialVersionUID = 1L;
+
     private Integer id;
     private String rechargeNo;
     private Integer userId;
