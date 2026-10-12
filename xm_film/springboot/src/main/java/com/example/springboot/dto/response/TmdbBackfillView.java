@@ -13,7 +13,7 @@ import java.util.List;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class TmdbBackfillResult {
+public class TmdbBackfillView {
 
     private Integer scanned;
     private Integer updated;

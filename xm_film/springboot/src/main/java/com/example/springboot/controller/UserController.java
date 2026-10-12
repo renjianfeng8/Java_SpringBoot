@@ -1,16 +1,14 @@
 package com.example.springboot.controller;
 
+import com.example.springboot.common.AuthContext;
 import com.example.springboot.common.BaseController;
 import com.example.springboot.common.Result;
-import com.example.springboot.common.enums.ErrorCode;
-import com.example.springboot.common.enums.RoleEnum;
+import com.example.springboot.dto.request.UserRequest;
+import com.example.springboot.dto.response.UserView;
 import com.example.springboot.entity.User;
-import com.example.springboot.exception.CustomException;
-import com.example.springboot.service.OrderedService;
 import com.example.springboot.service.UserService;
 import com.github.pagehelper.PageInfo;
-import com.github.pagehelper.page.PageMethod;
-import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.beans.BeanUtils;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -19,135 +17,94 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.context.request.RequestContextHolder;
-import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/users")
-public class UserController extends BaseController<User> {
+public class UserController extends BaseController<User, UserRequest, UserView> {
     private final UserService userService;
-    private final OrderedService orderedService;
 
-    public UserController(UserService userService, OrderedService orderedService) {
+    public UserController(UserService userService) {
         super(userService);
         this.userService = userService;
-        this.orderedService = orderedService;
+    }
+
+    @Override
+    protected User toEntity(UserRequest request) {
+        User user = new User();
+        user.setId(request.getId());
+        user.setUsername(request.getUsername());
+        user.setPassword(request.getPassword());
+        user.setRole(request.getRole());
+        user.setName(request.getName());
+        user.setNewPassword(request.getNewPassword());
+        user.setToken(request.getToken());
+        user.setAvatar(request.getAvatar());
+        user.setPhone(request.getPhone());
+        user.setEmail(request.getEmail());
+        return user;
+    }
+
+    @Override
+    protected UserView toView(User user) {
+        UserView view = new UserView();
+        view.setId(user.getId());
+        view.setUsername(user.getUsername());
+        view.setRole(user.getRole());
+        view.setName(user.getName());
+        view.setAvatar(user.getAvatar());
+        view.setPhone(user.getPhone());
+        view.setEmail(user.getEmail());
+        return view;
     }
 
     @Override
     @GetMapping
-    public Result list(User entity) {
-        if (isAdmin()) {
-            return Result.success(userService.selectAll(entity));
-        }
-        if (isUser()) {
-            User user = userService.selectById(currentUserId());
-            return Result.success(user == null ? List.of() : List.of(user));
-        }
-        throw new CustomException(ErrorCode.FORBIDDEN, "权限不足");
+    public Result<List<UserView>> list(UserRequest query) {
+        return Result.success(userService.listScoped(toEntity(query), AuthContext.role(), AuthContext.userId())
+                .stream().map(this::toView).toList());
     }
 
     @Override
     @GetMapping("/page")
-    public Result page(User entity,
+    public Result<PageInfo<UserView>> page(UserRequest query,
                        @RequestParam(defaultValue = "1") Integer pageNum,
                        @RequestParam(defaultValue = "10") Integer pageSize) {
-        if (isAdmin()) {
-            PageMethod.startPage(pageNum, pageSize);
-            return Result.success(new PageInfo<>(userService.selectAll(entity)));
-        }
-        if (isUser()) {
-            User user = userService.selectById(currentUserId());
-            return Result.success(new PageInfo<>(user == null ? List.of() : List.of(user)));
-        }
-        throw new CustomException(ErrorCode.FORBIDDEN, "权限不足");
+        PageInfo<User> src = userService.pageScoped(toEntity(query), AuthContext.role(), AuthContext.userId(),
+                pageNum, pageSize);
+        PageInfo<UserView> dst = new PageInfo<>();
+        BeanUtils.copyProperties(src, dst);
+        dst.setList(src.getList().stream().map(this::toView).toList());
+        return Result.success(dst);
     }
 
     @Override
     @GetMapping("/{id}")
-    public Result getById(@PathVariable Integer id) {
-        if (isAdmin() || (isUser() && id.equals(currentUserId()))) {
-            return Result.success(userService.selectById(id));
-        }
-        throw new CustomException(ErrorCode.FORBIDDEN, "权限不足");
+    public Result<UserView> getById(@PathVariable Integer id) {
+        User user = userService.selectByIdScoped(id, AuthContext.role(), AuthContext.userId());
+        return Result.success(user == null ? null : toView(user));
     }
 
     @Override
     @PutMapping
-    public Result update(@RequestBody User entity) {
-        if (isAdmin()) {
-            userService.update(entity);
-            return Result.success();
-        }
-        if (isUser()) {
-            entity.setId(currentUserId());
-            userService.update(entity);
-            return Result.success();
-        }
-        throw new CustomException(ErrorCode.FORBIDDEN, "权限不足");
+    public Result<Void> update(@RequestBody UserRequest request) {
+        userService.updateScoped(toEntity(request), AuthContext.role(), AuthContext.userId());
+        return Result.success();
     }
 
     @Override
     @DeleteMapping("/{id}")
-    public Result delete(@PathVariable Integer id) {
-        requireAdmin();
-        ensureNoOrders(id);
-        userService.delete(id);
+    public Result<Void> delete(@PathVariable Integer id) {
+        userService.deleteScoped(id, AuthContext.role(), AuthContext.userId());
         return Result.success();
     }
 
     @Override
     @DeleteMapping("/batch")
-    public Result deleteBatch(@RequestBody List<Integer> ids) {
-        requireAdmin();
-        for (Integer id : ids) {
-            ensureNoOrders(id);
-        }
-        userService.deleteBatch(ids);
+    public Result<Void> deleteBatch(@RequestBody List<Integer> ids) {
+        userService.deleteBatchScoped(ids, AuthContext.role(), AuthContext.userId());
         return Result.success();
     }
 
-    /** 用户有订单时禁止物理删除，避免连带删除交易凭证 */
-    private void ensureNoOrders(Integer userId) {
-        int orders = orderedService.countByUserId(userId);
-        if (orders > 0) {
-            throw new CustomException(ErrorCode.BUSINESS_CONFLICT,
-                    "该用户已有 " + orders + " 笔订单，无法删除");
-        }
-    }
-
-    private boolean isAdmin() {
-        return RoleEnum.ADMIN.name().equals(currentRole());
-    }
-
-    private boolean isUser() {
-        return RoleEnum.USER.name().equals(currentRole());
-    }
-
-    private void requireAdmin() {
-        if (!isAdmin()) {
-            throw new CustomException(ErrorCode.FORBIDDEN, "权限不足");
-        }
-    }
-
-    private String currentRole() {
-        HttpServletRequest request = currentRequest();
-        return request == null ? null : (String) request.getAttribute("role");
-    }
-
-    private Integer currentUserId() {
-        HttpServletRequest request = currentRequest();
-        if (request == null) {
-            return null;
-        }
-        String userId = (String) request.getAttribute("userId");
-        return userId == null ? null : Integer.valueOf(userId);
-    }
-
-    private HttpServletRequest currentRequest() {
-        ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
-        return attributes == null ? null : attributes.getRequest();
-    }
 }

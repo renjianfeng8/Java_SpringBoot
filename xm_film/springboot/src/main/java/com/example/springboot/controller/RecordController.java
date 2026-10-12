@@ -1,19 +1,15 @@
 package com.example.springboot.controller;
 
+import com.example.springboot.common.AuthContext;
 import com.example.springboot.common.BaseController;
 import com.example.springboot.common.Result;
-import com.example.springboot.common.enums.ErrorCode;
-import com.example.springboot.common.enums.RecordStatus;
-import com.example.springboot.common.enums.RoleEnum;
+import com.example.springboot.dto.request.RecordRequest;
+import com.example.springboot.dto.response.RecordView;
 import com.example.springboot.entity.Record;
-import com.example.springboot.entity.Room;
-import com.example.springboot.exception.CustomException;
-import com.example.springboot.service.OrderedService;
 import com.example.springboot.service.RecordService;
-import com.example.springboot.service.RoomService;
 import com.github.pagehelper.PageInfo;
 import com.github.pagehelper.page.PageMethod;
-import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.beans.BeanUtils;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -23,195 +19,111 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.context.request.RequestContextHolder;
-import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/records")
-public class RecordController extends BaseController<Record> {
+public class RecordController extends BaseController<Record, RecordRequest, RecordView> {
     private final RecordService recordService;
-    private final RoomService roomService;
-    private final OrderedService orderedService;
 
-    public RecordController(RecordService recordService,
-                            RoomService roomService,
-                            OrderedService orderedService) {
+    public RecordController(RecordService recordService) {
         super(recordService);
         this.recordService = recordService;
-        this.roomService = roomService;
-        this.orderedService = orderedService;
+    }
+
+    @Override
+    protected Record toEntity(RecordRequest request) {
+        Record record = new Record();
+        record.setId(request.getId());
+        record.setCinemaId(request.getCinemaId());
+        record.setRoomId(request.getRoomId());
+        record.setFilmId(request.getFilmId());
+        record.setTitle(request.getTitle());
+        record.setStart(request.getStart());
+        record.setPrice(request.getPrice());
+        record.setStatus(request.getStatus());
+        record.setCinemaName(request.getCinemaName());
+        record.setRoomName(request.getRoomName());
+        record.setRoomSeatRows(request.getRoomSeatRows());
+        record.setRoomSeatCols(request.getRoomSeatCols());
+        return record;
+    }
+
+    @Override
+    protected RecordView toView(Record record) {
+        RecordView view = new RecordView();
+        view.setId(record.getId());
+        view.setCinemaId(record.getCinemaId());
+        view.setRoomId(record.getRoomId());
+        view.setFilmId(record.getFilmId());
+        view.setTitle(record.getTitle());
+        view.setStart(record.getStart());
+        view.setPrice(record.getPrice());
+        view.setStatus(record.getStatus());
+        view.setCinemaName(record.getCinemaName());
+        view.setRoomName(record.getRoomName());
+        view.setRoomSeatRows(record.getRoomSeatRows());
+        view.setRoomSeatCols(record.getRoomSeatCols());
+        return view;
     }
 
     @Override
     @GetMapping
-    public Result list(Record entity) {
-        applyCinemaScope(entity);
-        return Result.success(recordService.selectAll(entity));
+    public Result<List<RecordView>> list(RecordRequest query) {
+        Record entity = toEntity(query);
+        recordService.applyCinemaScope(entity, AuthContext.role(), AuthContext.userId());
+        return Result.success(recordService.selectAll(entity).stream().map(this::toView).toList());
     }
 
     @Override
     @GetMapping("/page")
-    public Result page(Record entity,
+    public Result<PageInfo<RecordView>> page(RecordRequest query,
                        @RequestParam(defaultValue = "1") Integer pageNum,
                        @RequestParam(defaultValue = "10") Integer pageSize) {
-        applyCinemaScope(entity);
+        Record entity = toEntity(query);
+        recordService.applyCinemaScope(entity, AuthContext.role(), AuthContext.userId());
         PageMethod.startPage(pageNum, pageSize);
-        return Result.success(new PageInfo<>(recordService.selectAll(entity)));
+        PageInfo<Record> src = new PageInfo<>(recordService.selectAll(entity));
+        PageInfo<RecordView> dst = new PageInfo<>();
+        BeanUtils.copyProperties(src, dst);
+        dst.setList(src.getList().stream().map(this::toView).toList());
+        return Result.success(dst);
     }
 
     @Override
     @GetMapping("/{id}")
-    public Result getById(@PathVariable Integer id) {
-        Record recordItem = recordService.selectById(id);
-        if (recordItem == null) {
-            throw new CustomException(ErrorCode.NOT_FOUND, "排片不存在");
-        }
-        return Result.success(recordItem);
+    public Result<RecordView> getById(@PathVariable Integer id) {
+        Record recordItem = recordService.selectByIdScoped(id, AuthContext.role(), AuthContext.userId());
+        return Result.success(toView(recordItem));
     }
 
     @Override
     @PostMapping
-    public Result add(@RequestBody Record entity) {
-        if (isCinema()) {
-            entity.setCinemaId(currentUserId());
-        }
-        requireAdminOrCinema();
-        entity.setStatus(entity.getStatus() == null
-                ? RecordStatus.NORMAL
-                : RecordService.normalizeStatus(entity.getStatus()));
-        ensureRoomBelongsToCinema(entity);
-        recordService.validateSchedule(entity, null);
-        recordService.add(entity);
+    public Result<Void> add(@RequestBody RecordRequest request) {
+        recordService.addScoped(toEntity(request), AuthContext.role(), AuthContext.userId());
         return Result.success();
     }
 
     @Override
     @PutMapping
-    public Result update(@RequestBody Record entity) {
-        Record dbRecord = recordService.selectById(entity.getId());
-        ensureRecordAccess(dbRecord);
-        if (isCinema()) {
-            entity.setCinemaId(currentUserId());
-        }
-        // 局部更新：未提交的字段沿用库内值，避免"仅停售"这类操作被整表校验挡住
-        if (entity.getRoomId() == null) {
-            entity.setRoomId(dbRecord.getRoomId());
-        }
-        if (entity.getFilmId() == null) {
-            entity.setFilmId(dbRecord.getFilmId());
-        }
-        if (entity.getStart() == null) {
-            entity.setStart(dbRecord.getStart());
-        }
-        if (entity.getPrice() == null) {
-            entity.setPrice(dbRecord.getPrice());
-        }
-        entity.setStatus(entity.getStatus() == null
-                ? dbRecord.getStatus()
-                : RecordService.normalizeStatus(entity.getStatus()));
-        ensureRoomBelongsToCinema(entity);
-        recordService.validateSchedule(entity, dbRecord.getStart());
-        recordService.update(entity);
+    public Result<Void> update(@RequestBody RecordRequest request) {
+        recordService.updateScoped(toEntity(request), AuthContext.role(), AuthContext.userId());
         return Result.success();
     }
 
     @Override
     @DeleteMapping("/{id}")
-    public Result delete(@PathVariable Integer id) {
-        Record recordItem = recordService.selectById(id);
-        ensureRecordAccess(recordItem);
-        ensureNoOrders(id);
-        recordService.delete(id);
+    public Result<Void> delete(@PathVariable Integer id) {
+        recordService.deleteScoped(id, AuthContext.role(), AuthContext.userId());
         return Result.success();
     }
 
     @Override
     @DeleteMapping("/batch")
-    public Result deleteBatch(@RequestBody List<Integer> ids) {
-        for (Integer id : ids) {
-            ensureRecordAccess(recordService.selectById(id));
-            ensureNoOrders(id);
-        }
-        recordService.deleteBatch(ids);
+    public Result<Void> deleteBatch(@RequestBody List<Integer> ids) {
+        recordService.deleteBatchScoped(ids, AuthContext.role(), AuthContext.userId());
         return Result.success();
     }
 
-    /** 订单引用排片，物理删除会带走交易凭证 —— 已产生订单的场次只能停售 */
-    private void ensureNoOrders(Integer recordId) {
-        int count = orderedService.countByRecordId(recordId);
-        if (count > 0) {
-            throw new CustomException(ErrorCode.BUSINESS_CONFLICT,
-                    "该场次已有 " + count + " 笔订单，无法删除；如需下架请将放映状态改为「停售」");
-        }
-    }
-
-    private void applyCinemaScope(Record recordItem) {
-        if (isCinema()) {
-            recordItem.setCinemaId(currentUserId());
-        }
-    }
-
-    private void ensureRecordAccess(Record recordItem) {
-        if (recordItem == null) {
-            throw new CustomException(ErrorCode.NOT_FOUND, "排片不存在");
-        }
-        if (isAdmin()) {
-            return;
-        }
-        if (isCinema()) {
-            Integer cinemaId = currentUserId();
-            if (cinemaId != null && cinemaId.equals(recordItem.getCinemaId())) {
-                return;
-            }
-        }
-        throw new CustomException(ErrorCode.FORBIDDEN, "无权操作该排片");
-    }
-
-    private void ensureRoomBelongsToCinema(Record recordItem) {
-        if (recordItem.getRoomId() == null || recordItem.getCinemaId() == null) {
-            return;
-        }
-        Room room = roomService.selectById(recordItem.getRoomId());
-        if (room == null) {
-            throw new CustomException(ErrorCode.PARAM_INVALID, "影厅不存在");
-        }
-        if (!recordItem.getCinemaId().equals(room.getCinemaId())) {
-            throw new CustomException(ErrorCode.PARAM_INVALID, "影厅不属于当前影院");
-        }
-    }
-
-    private void requireAdminOrCinema() {
-        if (!isAdmin() && !isCinema()) {
-            throw new CustomException(ErrorCode.FORBIDDEN, "权限不足");
-        }
-    }
-
-    private boolean isAdmin() {
-        return RoleEnum.ADMIN.name().equals(currentRole());
-    }
-
-    private boolean isCinema() {
-        return RoleEnum.CINEMA.name().equals(currentRole());
-    }
-
-    private String currentRole() {
-        HttpServletRequest request = currentRequest();
-        return request == null ? null : (String) request.getAttribute("role");
-    }
-
-    private Integer currentUserId() {
-        HttpServletRequest request = currentRequest();
-        if (request == null) {
-            return null;
-        }
-        String userId = (String) request.getAttribute("userId");
-        return userId == null ? null : Integer.valueOf(userId);
-    }
-
-    private HttpServletRequest currentRequest() {
-        ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
-        return attributes == null ? null : attributes.getRequest();
-    }
 }

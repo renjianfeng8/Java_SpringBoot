@@ -91,7 +91,7 @@
     <!-- 必须选出 id：未设置支付密码的用户，pay_password 与 locked_until 都是 NULL，
          若不带上一个非空列，MyBatis 会把整行当作"没有行"返回 null，
          「用户存在但没设过支付密码」就会被误判成「用户不存在」。 -->
-    <select id="selectPayPasswordState" resultType="com.example.springboot.dto.response.PayPasswordState">
+    <select id="selectPayPasswordState" resultType="com.example.springboot.dto.response.PayPasswordStateView">
         SELECT id,
                pay_password         AS payPassword,
                pay_pwd_error_count  AS errorCount,

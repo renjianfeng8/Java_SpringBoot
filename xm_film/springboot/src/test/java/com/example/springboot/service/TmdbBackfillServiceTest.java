@@ -1,7 +1,7 @@
 package com.example.springboot.service;
 
 import com.example.springboot.common.TmdbClient;
-import com.example.springboot.dto.response.TmdbBackfillResult;
+import com.example.springboot.dto.response.TmdbBackfillView;
 import com.example.springboot.entity.Film;
 import com.example.springboot.mapper.FilmMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -67,7 +67,7 @@ class TmdbBackfillServiceTest {
                 .thenReturn(List.of(hit("肖申克的救赎", "The Shawshank Redemption", "1994")));
         when(client.detail(278)).thenReturn(detailWith(TRAILER));
 
-        TmdbBackfillResult result = service.backfillVideos();
+        TmdbBackfillView result = service.backfillVideos();
 
         assertThat(result.getScanned()).isEqualTo(1);
         assertThat(result.getUpdated()).isEqualTo(1);
@@ -88,7 +88,7 @@ class TmdbBackfillServiceTest {
         existing.setVideo("https://www.youtube.com/embed/er2f1HxbIyg");
         when(filmMapper.selectAll(any())).thenReturn(List.of(existing));
 
-        TmdbBackfillResult result = service.backfillVideos();
+        TmdbBackfillView result = service.backfillVideos();
 
         assertThat(result.getScanned()).isZero();
         assertThat(result.getUpdated()).isZero();
@@ -103,7 +103,7 @@ class TmdbBackfillServiceTest {
                 .thenReturn(List.of(film(2, "肖申克的救赎", "The Shawshank Redemption", "1994-09-23")));
         when(client.search(anyString())).thenReturn(List.of(hit("别的电影", "Some Other Movie", "1994")));
 
-        TmdbBackfillResult result = service.backfillVideos();
+        TmdbBackfillView result = service.backfillVideos();
 
         assertThat(result.getUpdated()).isZero();
         assertThat(result.getMissed()).singleElement().satisfies(m -> {
@@ -121,7 +121,7 @@ class TmdbBackfillServiceTest {
                 .thenReturn(List.of(hit("肖申克的救赎", "The Shawshank Redemption", "1994")));
         when(client.detail(278)).thenReturn(detailWith(null));
 
-        TmdbBackfillResult result = service.backfillVideos();
+        TmdbBackfillView result = service.backfillVideos();
 
         assertThat(result.getUpdated()).isZero();
         assertThat(result.getMissed()).singleElement()
@@ -136,7 +136,7 @@ class TmdbBackfillServiceTest {
                 .thenReturn(List.of(film(2, "肖申克的救赎", "The Shawshank Redemption", "1994-09-23")));
         when(client.search(anyString())).thenReturn(List.of(hit("翻拍版", "The Shawshank Redemption", "2020")));
 
-        TmdbBackfillResult result = service.backfillVideos();
+        TmdbBackfillView result = service.backfillVideos();
 
         assertThat(result.getMissed()).singleElement()
                 .satisfies(m -> assertThat(m.getReason()).contains("无匹配"));
@@ -153,7 +153,7 @@ class TmdbBackfillServiceTest {
                 .thenReturn(List.of(hit("千与千寻", "千と千尋の神隠し", "2001")));
         when(client.detail(278)).thenReturn(detailWith(TRAILER));
 
-        TmdbBackfillResult result = service.backfillVideos();
+        TmdbBackfillView result = service.backfillVideos();
 
         assertThat(result.getUpdated()).isEqualTo(1);
         assertThat(result.getMissed()).singleElement().satisfies(m -> {

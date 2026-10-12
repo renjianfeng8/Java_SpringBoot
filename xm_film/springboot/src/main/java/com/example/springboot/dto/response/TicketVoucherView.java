@@ -8,10 +8,10 @@ import lombok.Data;
  * 这个端点**匿名可读** —— 核销的授权凭证是取票码本身，不是登录身份，所以响应体必须
  * 只包含"出的是什么票"：谁持有码谁就能看到这些字段，这是设计如此。
  * 因此刻意不放 orderId、订单编号、金额、userId —— 那些属于订单明细，
- * 只该由持有登录态的本人在 /api/v1/orders 下看到（同 SeatOccupancy 的口径）。
+ * 只该由持有登录态的本人在 /api/v1/orders 下看到（同 SeatOccupancyView 的口径）。
  */
 @Data
-public class TicketVoucher {
+public class TicketVoucherView {
 
     private String filmTitle;
     private String cinemaName;

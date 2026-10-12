@@ -2,7 +2,7 @@ package com.example.springboot.service;
 
 import com.example.springboot.common.AmapClient;
 import com.example.springboot.common.CinemaBrand;
-import com.example.springboot.dto.response.CinemaImportPreview;
+import com.example.springboot.dto.response.CinemaImportView;
 import com.example.springboot.entity.CinemaDirectory;
 import com.example.springboot.mapper.CinemaDirectoryMapper;
 import org.springframework.stereotype.Service;
@@ -38,7 +38,7 @@ public class CinemaDirectoryImportService {
         this.mapper = mapper;
     }
 
-    public CinemaImportPreview preview(List<String> cities) {
+    public CinemaImportView preview(List<String> cities) {
         List<String> warnings = new ArrayList<>();
         List<AmapClient.CinemaPoi> unique = fetchUnique(cities, warnings);
 
@@ -46,7 +46,7 @@ public class CinemaDirectoryImportService {
         Set<String> existing = existingPoiIds(ids);
         int duplicates = (int) ids.stream().filter(existing::contains).count();
 
-        CinemaImportPreview preview = new CinemaImportPreview();
+        CinemaImportView preview = new CinemaImportView();
         preview.setTotal(unique.size());
         preview.setDuplicateCount(duplicates);
         preview.setFreshCount(unique.size() - duplicates);

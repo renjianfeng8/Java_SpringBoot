@@ -10,7 +10,7 @@ import java.util.List;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class CinemaRegion {
+public class CinemaRegionView {
     private String city;
     private List<String> districts;
 }

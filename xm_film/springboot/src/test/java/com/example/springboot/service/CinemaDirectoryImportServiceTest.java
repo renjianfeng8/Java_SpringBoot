@@ -1,7 +1,7 @@
 package com.example.springboot.service;
 
 import com.example.springboot.common.AmapClient;
-import com.example.springboot.dto.response.CinemaImportPreview;
+import com.example.springboot.dto.response.CinemaImportView;
 import com.example.springboot.entity.CinemaDirectory;
 import com.example.springboot.mapper.CinemaDirectoryMapper;
 import org.junit.jupiter.api.Test;
@@ -51,7 +51,7 @@ class CinemaDirectoryImportServiceTest {
                 List.of(poi("A", "万达影城(a)", "北京市"), poi("B", "CGV影城(b)", "北京市")));
         when(mapper.selectExistingPoiIds(anyList())).thenReturn(List.of("A")); // A 已存在
 
-        CinemaImportPreview preview = service(client, mapper).preview(List.of("北京"));
+        CinemaImportView preview = service(client, mapper).preview(List.of("北京"));
 
         assertThat(preview.getTotal()).isEqualTo(2);
         assertThat(preview.getFreshCount()).isEqualTo(1);
@@ -101,7 +101,7 @@ class CinemaDirectoryImportServiceTest {
                 .thenReturn(List.of(poi("D2", "影院2", "北京市")));
         when(mapper.selectExistingPoiIds(anyList())).thenReturn(List.of());
 
-        CinemaImportPreview preview = service(client, mapper).preview(List.of("北京"));
+        CinemaImportView preview = service(client, mapper).preview(List.of("北京"));
 
         // 城市级那 200 条不参与计数，真正入库的两个区县 POI 才计数
         assertThat(preview.getTotal()).isEqualTo(2);

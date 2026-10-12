@@ -5,7 +5,7 @@ import com.example.springboot.common.BaseService;
 import com.example.springboot.common.enums.ErrorCode;
 import com.example.springboot.common.enums.RoleEnum;
 import com.example.springboot.dto.response.FilmMarksView;
-import com.example.springboot.dto.response.MarkLikeResult;
+import com.example.springboot.dto.response.MarkLikeView;
 import com.example.springboot.dto.response.MarkView;
 import com.example.springboot.entity.Mark;
 import com.example.springboot.exception.CustomException;
@@ -130,7 +130,7 @@ public class MarkService extends BaseService<Mark> {
      * 不用锁定读（FOR UPDATE）来纠正：那会锁住该评价行，把同一部片子上所有人的点赞串行化。
      */
     @Transactional(rollbackFor = Exception.class, isolation = Isolation.READ_COMMITTED)
-    public MarkLikeResult setLike(Integer markId, Integer userId, boolean liked) {
+    public MarkLikeView setLike(Integer markId, Integer userId, boolean liked) {
         requireExisting(markId);
         if (liked) {
             // 主键 (mark_id, user_id) 让"已赞过"变成一次无副作用的空更新；不用 INSERT IGNORE，
@@ -142,7 +142,7 @@ public class MarkService extends BaseService<Mark> {
         // 回读权威状态，而不是假定请求生效：重复点赞时受影响行数同样是 0，
         // 光看返回值分不出"本来就赞过"和"这次刚赞上"。
         boolean nowLiked = markLikeMapper.countByMarkAndUser(markId, userId) > 0;
-        return new MarkLikeResult(nowLiked, markLikeMapper.countByMarkId(markId));
+        return new MarkLikeView(nowLiked, markLikeMapper.countByMarkId(markId));
     }
 
     /**

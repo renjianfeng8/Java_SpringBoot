@@ -1,7 +1,7 @@
 package com.example.springboot.service;
 
 import com.example.springboot.common.TmdbClient;
-import com.example.springboot.dto.response.TmdbBackfillResult;
+import com.example.springboot.dto.response.TmdbBackfillView;
 import com.example.springboot.entity.Film;
 import com.example.springboot.mapper.FilmMapper;
 import org.slf4j.Logger;
@@ -36,9 +36,9 @@ public class TmdbBackfillService {
         this.filmMapper = filmMapper;
     }
 
-    public TmdbBackfillResult backfillVideos() {
+    public TmdbBackfillView backfillVideos() {
         List<Film> films = filmMapper.selectAll(new Film());
-        List<TmdbBackfillResult.Miss> missed = new ArrayList<>();
+        List<TmdbBackfillView.Miss> missed = new ArrayList<>();
         int scanned = 0;
         int updated = 0;
 
@@ -50,18 +50,18 @@ public class TmdbBackfillService {
             try {
                 Resolved resolved = resolve(film);
                 if (resolved.url() == null) {
-                    missed.add(new TmdbBackfillResult.Miss(film.getId(), film.getTitle(), resolved.reason()));
+                    missed.add(new TmdbBackfillView.Miss(film.getId(), film.getTitle(), resolved.reason()));
                     continue;
                 }
                 filmMapper.updateById(videoPatch(film.getId(), resolved.url()));
                 updated++;
             } catch (RestClientException e) {
                 log.warn("TMDB 回填预告片失败 film={}: {}", film.getId(), e.getMessage());
-                missed.add(new TmdbBackfillResult.Miss(film.getId(), film.getTitle(), "TMDB 请求失败"));
+                missed.add(new TmdbBackfillView.Miss(film.getId(), film.getTitle(), "TMDB 请求失败"));
             }
         }
 
-        return new TmdbBackfillResult(scanned, updated, missed);
+        return new TmdbBackfillView(scanned, updated, missed);
     }
 
     /**

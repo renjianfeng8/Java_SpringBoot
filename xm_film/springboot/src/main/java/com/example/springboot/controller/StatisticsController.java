@@ -10,6 +10,8 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.Map;
+
 @RestController
 @RequestMapping("/api/v1/statistics")
 public class StatisticsController {
@@ -21,7 +23,7 @@ public class StatisticsController {
     }
 
     @GetMapping("/overview")
-    public Result overview() {
+    public Result<Map<String, Object>> overview() {
         if (!RoleEnum.ADMIN.name().equals(AuthContext.role())) {
             throw new CustomException(ErrorCode.FORBIDDEN, "仅管理员可查看统计数据");
         }

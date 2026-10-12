@@ -10,7 +10,7 @@ import lombok.Data;
  * 全仓只有 PayPasswordService 读它。
  */
 @Data
-public class PayPasswordState {
+public class PayPasswordStateView {
 
     /**
      * 主键。查询里必须带上它：MyBatis 默认把"映射出来全是 null"的行当作没有行返回 null

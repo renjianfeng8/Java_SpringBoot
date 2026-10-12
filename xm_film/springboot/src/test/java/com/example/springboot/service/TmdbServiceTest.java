@@ -1,7 +1,7 @@
 package com.example.springboot.service;
 
 import com.example.springboot.common.TmdbClient;
-import com.example.springboot.dto.response.TmdbImportPreview;
+import com.example.springboot.dto.response.TmdbImportView;
 import com.example.springboot.entity.Actor;
 import com.example.springboot.entity.Area;
 import com.example.springboot.entity.Type;
@@ -104,7 +104,7 @@ class TmdbServiceTest {
     void previewBackfillsEveryFieldTheFormExpects() {
         stubHappyPath(List.of("剧情", "惊悚"));
 
-        TmdbImportPreview preview = service.preview(550);
+        TmdbImportView preview = service.preview(550);
 
         assertThat(preview.getTitle()).isEqualTo("搏击俱乐部");
         assertThat(preview.getEnglish()).isEqualTo("Fight Club");
@@ -141,7 +141,7 @@ class TmdbServiceTest {
         when(client.countryNames()).thenReturn(Map.of());
         when(client.downloadImage(anyString(), anyString())).thenReturn(Optional.empty());
 
-        TmdbImportPreview preview = service.preview(550);
+        TmdbImportView preview = service.preview(550);
 
         assertThat(preview.getStart()).isNull();
         assertThat(preview.getStatus()).isEmpty();
@@ -164,7 +164,7 @@ class TmdbServiceTest {
         when(client.countryNames()).thenReturn(Map.of());
         when(client.downloadImage(anyString(), anyString())).thenReturn(Optional.empty());
 
-        TmdbImportPreview preview = service.preview(550);
+        TmdbImportView preview = service.preview(550);
 
         assertThat(preview.getLanguage()).isEmpty();
         // 其余可映射字段不受影响，仍然回填
@@ -178,7 +178,7 @@ class TmdbServiceTest {
         stubHappyPath(List.of("剧情"));
         when(typeMapper.selectByTitleExact("剧情")).thenReturn(new Type(9, "剧情"));
 
-        TmdbImportPreview preview = service.preview(550);
+        TmdbImportView preview = service.preview(550);
 
         assertThat(preview.getTypeIds()).containsExactly(9);
         verify(typeMapper, never()).insert(any());
@@ -188,7 +188,7 @@ class TmdbServiceTest {
     void previewCreatesMissingTypeRow() {
         stubHappyPath(List.of("剧情"));
 
-        TmdbImportPreview preview = service.preview(550);
+        TmdbImportView preview = service.preview(550);
 
         assertThat(preview.getTypeIds()).containsExactly(100);
         verify(typeMapper).insert(any());
@@ -199,7 +199,7 @@ class TmdbServiceTest {
     void previewTrimsGenresBeforeCreatingAnyRow() {
         stubHappyPath(List.of("剧情", "惊悚", "动作", "科幻", "悬疑"));
 
-        TmdbImportPreview preview = service.preview(550);
+        TmdbImportView preview = service.preview(550);
 
         assertThat(preview.getTypeIds()).hasSize(4);
         verify(typeMapper, times(4)).insert(any());
@@ -213,7 +213,7 @@ class TmdbServiceTest {
         stubHappyPath(List.of());
         when(areaMapper.selectByTitleExact("德国")).thenReturn(new Area(8, "德国"));
 
-        TmdbImportPreview preview = service.preview(550);
+        TmdbImportView preview = service.preview(550);
 
         assertThat(preview.getAreaId()).isEqualTo(8);
         verify(areaMapper, never()).insert(any());
@@ -232,7 +232,7 @@ class TmdbServiceTest {
         stubHappyPath(List.of());
         when(client.countryNames()).thenReturn(Map.of("US", "美国"));
 
-        TmdbImportPreview preview = service.preview(550);
+        TmdbImportView preview = service.preview(550);
 
         assertThat(preview.getAreaId()).isNull();
         assertThat(preview.getWarnings()).anySatisfy(w -> assertThat(w).contains("DE"));
@@ -244,7 +244,7 @@ class TmdbServiceTest {
     void previewStoresPosterLocallyAndReturnsLocalUrl() throws Exception {
         stubHappyPath(List.of());
 
-        TmdbImportPreview preview = service.preview(550);
+        TmdbImportView preview = service.preview(550);
 
         assertThat(preview.getImg()).startsWith(ACCESS_PREFIX).endsWith(".jpg");
         String fileName = preview.getImg().substring(ACCESS_PREFIX.length());
@@ -257,7 +257,7 @@ class TmdbServiceTest {
         stubHappyPath(List.of());
         when(client.downloadImage(eq(TmdbClient.POSTER_SIZE), eq(POSTER_PATH))).thenReturn(Optional.empty());
 
-        TmdbImportPreview preview = service.preview(550);
+        TmdbImportView preview = service.preview(550);
 
         assertThat(preview.getImg()).isNull();
         assertThat(preview.getWarnings()).anySatisfy(w -> assertThat(w).contains("海报"));
@@ -289,7 +289,7 @@ class TmdbServiceTest {
         stubHappyPath(List.of());
         when(client.downloadImage(eq(TmdbClient.PROFILE_SIZE), eq(AVATAR_PATH))).thenReturn(Optional.empty());
 
-        TmdbImportPreview preview = service.preview(550);
+        TmdbImportView preview = service.preview(550);
 
         ArgumentCaptor<Actor> captor = ArgumentCaptor.forClass(Actor.class);
         verify(actorMapper).insert(captor.capture());
@@ -303,7 +303,7 @@ class TmdbServiceTest {
         stubHappyPath(List.of());
         when(client.detail(550)).thenReturn(detail("1999-10-15", List.of(), null));
 
-        TmdbImportPreview preview = service.preview(550);
+        TmdbImportView preview = service.preview(550);
 
         assertThat(preview.getActorId()).isNull();
         assertThat(preview.getActorName()).isNull();

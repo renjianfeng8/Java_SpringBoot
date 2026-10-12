@@ -1,20 +1,22 @@
 package com.example.springboot.controller;
 
+import com.example.springboot.common.AuthContext;
 import com.example.springboot.common.BaseController;
 import com.example.springboot.common.Result;
 import com.example.springboot.common.enums.ErrorCode;
 import com.example.springboot.common.enums.PayResult;
 import com.example.springboot.dto.request.OrderCreateRequest;
 import com.example.springboot.dto.request.OrderPayRequest;
+import com.example.springboot.dto.request.OrderedRequest;
+import com.example.springboot.dto.response.OrderedView;
+import com.example.springboot.dto.response.SeatOccupancyView;
 import com.example.springboot.entity.Ordered;
 import com.example.springboot.exception.CustomException;
 import com.example.springboot.service.OrderedService;
 import com.github.pagehelper.PageInfo;
 import com.github.pagehelper.page.PageMethod;
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
-import org.springframework.web.context.request.RequestContextHolder;
-import org.springframework.web.context.request.ServletRequestAttributes;
+import org.springframework.beans.BeanUtils;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -29,7 +31,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/orders")
-public class OrderedController extends BaseController<Ordered> {
+public class OrderedController extends BaseController<Ordered, OrderedRequest, OrderedView> {
     private final OrderedService orderedService;
 
     public OrderedController(OrderedService orderedService) {
@@ -38,65 +40,136 @@ public class OrderedController extends BaseController<Ordered> {
     }
 
     @Override
+    protected Ordered toEntity(OrderedRequest request) {
+        Ordered ordered = new Ordered();
+        ordered.setId(request.getId());
+        ordered.setOrders(request.getOrders());
+        ordered.setRecordId(request.getRecordId());
+        ordered.setUserId(request.getUserId());
+        ordered.setFilmId(request.getFilmId());
+        ordered.setImg(request.getImg());
+        ordered.setCinemaId(request.getCinemaId());
+        ordered.setRoomId(request.getRoomId());
+        ordered.setAppointment(request.getAppointment());
+        ordered.setTotal(request.getTotal());
+        ordered.setUnitPrice(request.getUnitPrice());
+        ordered.setNumber(request.getNumber());
+        ordered.setStatus(request.getStatus());
+        ordered.setStart(request.getStart());
+        ordered.setSeat(request.getSeat());
+        ordered.setCreateTime(request.getCreateTime());
+        ordered.setPendingTimeoutAt(request.getPendingTimeoutAt());
+        ordered.setPayTime(request.getPayTime());
+        ordered.setPayAmount(request.getPayAmount());
+        ordered.setRefundTime(request.getRefundTime());
+        ordered.setRefundAmount(request.getRefundAmount());
+        ordered.setPickupCode(request.getPickupCode());
+        ordered.setUserName(request.getUserName());
+        ordered.setFilmName(request.getFilmName());
+        ordered.setCinemaName(request.getCinemaName());
+        ordered.setRoomName(request.getRoomName());
+        return ordered;
+    }
+
+    @Override
+    protected OrderedView toView(Ordered ordered) {
+        OrderedView view = new OrderedView();
+        view.setId(ordered.getId());
+        view.setOrders(ordered.getOrders());
+        view.setRecordId(ordered.getRecordId());
+        view.setUserId(ordered.getUserId());
+        view.setFilmId(ordered.getFilmId());
+        view.setImg(ordered.getImg());
+        view.setCinemaId(ordered.getCinemaId());
+        view.setRoomId(ordered.getRoomId());
+        view.setAppointment(ordered.getAppointment());
+        view.setTotal(ordered.getTotal());
+        view.setUnitPrice(ordered.getUnitPrice());
+        view.setNumber(ordered.getNumber());
+        view.setStatus(ordered.getStatus());
+        view.setStart(ordered.getStart());
+        view.setSeat(ordered.getSeat());
+        view.setCreateTime(ordered.getCreateTime());
+        view.setPendingTimeoutAt(ordered.getPendingTimeoutAt());
+        view.setPayTime(ordered.getPayTime());
+        view.setPayAmount(ordered.getPayAmount());
+        view.setRefundTime(ordered.getRefundTime());
+        view.setRefundAmount(ordered.getRefundAmount());
+        view.setPickupCode(ordered.getPickupCode());
+        view.setUserName(ordered.getUserName());
+        view.setFilmName(ordered.getFilmName());
+        view.setCinemaName(ordered.getCinemaName());
+        view.setRoomName(ordered.getRoomName());
+        return view;
+    }
+
+    @Override
     @GetMapping
-    public Result list(Ordered entity) {
-        orderedService.applyScope(entity, currentRole(), currentUserId());
-        return Result.success(orderedService.selectAll(entity));
+    public Result<List<OrderedView>> list(OrderedRequest query) {
+        Ordered entity = toEntity(query);
+        orderedService.applyScope(entity, AuthContext.role(), AuthContext.userId());
+        return Result.success(orderedService.selectAll(entity).stream().map(this::toView).toList());
     }
 
     @Override
     @GetMapping("/page")
-    public Result page(Ordered entity,
+    public Result<PageInfo<OrderedView>> page(OrderedRequest query,
                        @RequestParam(defaultValue = "1") Integer pageNum,
                        @RequestParam(defaultValue = "10") Integer pageSize) {
-        orderedService.applyScope(entity, currentRole(), currentUserId());
+        Ordered entity = toEntity(query);
+        orderedService.applyScope(entity, AuthContext.role(), AuthContext.userId());
         PageMethod.startPage(pageNum, pageSize);
-        return Result.success(new PageInfo<>(orderedService.selectAll(entity)));
+        PageInfo<Ordered> src = new PageInfo<>(orderedService.selectAll(entity));
+        PageInfo<OrderedView> dst = new PageInfo<>();
+        BeanUtils.copyProperties(src, dst);
+        dst.setList(src.getList().stream().map(this::toView).toList());
+        return Result.success(dst);
     }
 
     @Override
     @GetMapping("/{id}")
-    public Result getById(@PathVariable Integer id) {
-        return Result.success(orderedService.selectByIdScoped(id, currentRole(), currentUserId()));
+    public Result<OrderedView> getById(@PathVariable Integer id) {
+        Ordered ordered = orderedService.selectByIdScoped(id, AuthContext.role(), AuthContext.userId());
+        return Result.success(ordered == null ? null : toView(ordered));
     }
 
     @Override
     @PostMapping
-    public Result add(@RequestBody Ordered entity) {
+    public Result<Void> add(@RequestBody OrderedRequest request) {
         throw new CustomException(ErrorCode.PARAM_INVALID, "请使用 /api/v1/orders/create 创建订单");
     }
 
     @PostMapping("/create")
-    public Result create(@Valid @RequestBody OrderCreateRequest request) {
+    public Result<OrderedView> create(@Valid @RequestBody OrderCreateRequest request) {
         Ordered ordered = new Ordered();
         ordered.setRecordId(request.getRecordId());
         ordered.setSeat(request.getSeat());
-        orderedService.createOrder(ordered, currentRole(), currentUserId());
-        return Result.success(ordered);
+        orderedService.createOrder(ordered, AuthContext.role(), AuthContext.userId());
+        return Result.success(toView(ordered));
     }
 
     @Override
     @PutMapping
-    public Result update(@RequestBody Ordered entity) {
-        orderedService.updateScoped(entity, currentRole(), currentUserId());
+    public Result<Void> update(@RequestBody OrderedRequest request) {
+        orderedService.updateScoped(toEntity(request), AuthContext.role(), AuthContext.userId());
         return Result.success();
     }
 
     @PutMapping("/{id}/cancel")
-    public Result cancel(@PathVariable Integer id) {
-        orderedService.cancelOrder(id, currentRole(), currentUserId());
+    public Result<Void> cancel(@PathVariable Integer id) {
+        orderedService.cancelOrder(id, AuthContext.role(), AuthContext.userId());
         return Result.success();
     }
 
     @PutMapping("/{id}/pickup")
-    public Result pickup(@PathVariable Integer id) {
-        orderedService.pickupOrder(id, currentRole(), currentUserId());
+    public Result<Void> pickup(@PathVariable Integer id) {
+        orderedService.pickupOrder(id, AuthContext.role(), AuthContext.userId());
         return Result.success();
     }
 
     @PutMapping("/{id}/pay")
-    public Result pay(@PathVariable Integer id, @Valid @RequestBody OrderPayRequest request) {
-        if (orderedService.payOrder(id, currentRole(), currentUserId(), request.getPayPassword())
+    public Result<Void> pay(@PathVariable Integer id, @Valid @RequestBody OrderPayRequest request) {
+        if (orderedService.payOrder(id, AuthContext.role(), AuthContext.userId(), request.getPayPassword())
                 == PayResult.TIMEOUT_CANCELLED) {
             // 超时取消必须已落库，因此服务层不抛异常回滚，由此处翻译成业务错误返回客户端
             return Result.error(ErrorCode.BUSINESS_CONFLICT.code(), "支付超时，订单已自动取消");
@@ -105,47 +178,29 @@ public class OrderedController extends BaseController<Ordered> {
     }
 
     @PutMapping("/{id}/refund")
-    public Result refund(@PathVariable Integer id) {
-        orderedService.refundOrder(id, currentRole(), currentUserId());
+    public Result<Void> refund(@PathVariable Integer id) {
+        orderedService.refundOrder(id, AuthContext.role(), AuthContext.userId());
         return Result.success();
     }
 
     @GetMapping("/seats")
-    public Result seats(@RequestParam Integer recordId) {
+    public Result<List<SeatOccupancyView>> seats(@RequestParam Integer recordId) {
         // 归属判定在后端按 JWT 完成；响应里不含他人订单的订单号/用户/金额
-        return Result.success(orderedService.selectSeatOccupancy(recordId, currentUserId()));
+        return Result.success(orderedService.selectSeatOccupancy(recordId, AuthContext.userId()));
     }
 
     @Override
     @DeleteMapping("/{id}")
-    public Result delete(@PathVariable Integer id) {
-        orderedService.deleteScoped(id, currentRole(), currentUserId());
+    public Result<Void> delete(@PathVariable Integer id) {
+        orderedService.deleteScoped(id, AuthContext.role(), AuthContext.userId());
         return Result.success();
     }
 
     @Override
     @DeleteMapping("/batch")
-    public Result deleteBatch(@RequestBody List<Integer> ids) {
-        orderedService.deleteBatchScoped(ids, currentRole(), currentUserId());
+    public Result<Void> deleteBatch(@RequestBody List<Integer> ids) {
+        orderedService.deleteBatchScoped(ids, AuthContext.role(), AuthContext.userId());
         return Result.success();
     }
 
-    private String currentRole() {
-        HttpServletRequest request = currentRequest();
-        return request == null ? null : (String) request.getAttribute("role");
-    }
-
-    private Integer currentUserId() {
-        HttpServletRequest request = currentRequest();
-        if (request == null) {
-            return null;
-        }
-        String userId = (String) request.getAttribute("userId");
-        return userId == null ? null : Integer.valueOf(userId);
-    }
-
-    private HttpServletRequest currentRequest() {
-        ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
-        return attributes == null ? null : attributes.getRequest();
-    }
 }

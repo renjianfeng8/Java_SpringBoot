@@ -10,7 +10,7 @@ import lombok.Data;
  * 等于把该场次所有订单的明细发给任意登录用户。
  */
 @Data
-public class SeatOccupancy {
+public class SeatOccupancyView {
 
     /** 被占用的座位号，任何登录用户都需要它来渲染占用图 */
     private String seat;

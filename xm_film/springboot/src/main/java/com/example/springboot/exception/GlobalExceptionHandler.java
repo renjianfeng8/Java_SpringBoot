@@ -8,6 +8,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.client.RestClientException;
 
 import java.util.stream.Collectors;
 
@@ -23,7 +24,7 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(MethodArgumentNotValidException.class)
     @ResponseBody
-    public Result validationError(MethodArgumentNotValidException e) {
+    public Result<Void> validationError(MethodArgumentNotValidException e) {
         String message = e.getBindingResult().getFieldErrors().stream()
                 .map(error -> error.getField() + ": " + error.getDefaultMessage())
                 .collect(Collectors.joining("; "));
@@ -38,9 +39,21 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(CustomException.class)
     @ResponseBody
-    public Result error(CustomException e) {
+    public Result<Void> error(CustomException e) {
         logger.warn("业务异常: code={}, message={}", e.getCode(), e.getMsg(), e);
         return Result.error(e.getCode(), e.getMsg());
+    }
+
+    /**
+     * 处理外部接口请求失败（TMDB 经本机代理访问，代理未开即此异常）。
+     * @param e 外部接口异常对象
+     * @return 返回可操作的提示，提示管理员确认本机代理
+     */
+    @ExceptionHandler(RestClientException.class)
+    @ResponseBody
+    public Result<Void> restClientError(RestClientException e) {
+        logger.warn("外部接口请求失败: {}", e.getMessage());
+        return Result.error(ErrorCode.SYSTEM_ERROR.code(), "TMDB 接口不可达，请确认本机代理已开启");
     }
 
     /**
@@ -50,7 +63,7 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(Exception.class)
     @ResponseBody
-    public Result error(Exception e) {
+    public Result<Void> error(Exception e) {
         logger.error("系统异常:", e);
         return Result.error();
     }

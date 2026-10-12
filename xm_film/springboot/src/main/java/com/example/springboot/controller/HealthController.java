@@ -14,7 +14,7 @@ import java.util.Map;
 public class HealthController {
 
     @GetMapping
-    public Result health() {
+    public Result<Map<String, String>> health() {
         return Result.success(Map.of(
                 "status", "UP",
                 "time", OffsetDateTime.now(ZoneId.systemDefault()).toString()

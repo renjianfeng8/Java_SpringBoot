@@ -2,6 +2,7 @@ package com.example.springboot.controller;
 
 import com.example.springboot.common.Result;
 import com.example.springboot.dto.request.TicketRedeemRequest;
+import com.example.springboot.dto.response.TicketVoucherView;
 import com.example.springboot.service.OrderedService;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -23,7 +24,7 @@ import org.springframework.web.bind.annotation.RestController;
  *   <li><b>一次性</b>：核销走状态条件更新（{@code WHERE status = '待取票'}），
  *       越权之外也堵死了并发重复核销</li>
  *   <li><b>有寿命</b>：有效期到放映结束，过期即废</li>
- *   <li><b>不泄露订单</b>：响应只有出票凭条（{@code TicketVoucher}），
+ *   <li><b>不泄露订单</b>：响应只有出票凭条（{@code TicketVoucherView}），
  *       没有 orderId / 订单编号 / 金额 / userId</li>
  * </ol>
  *
@@ -40,7 +41,7 @@ public class TicketController {
     }
 
     @PostMapping("/redeem")
-    public Result redeem(@Valid @RequestBody TicketRedeemRequest request) {
+    public Result<TicketVoucherView> redeem(@Valid @RequestBody TicketRedeemRequest request) {
         return Result.success(orderedService.redeemByCode(request.getCode()));
     }
 }

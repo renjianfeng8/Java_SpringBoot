@@ -4,11 +4,14 @@ import com.example.springboot.common.BaseMapper;
 import com.example.springboot.common.BaseService;
 import com.example.springboot.common.enums.ErrorCode;
 import com.example.springboot.common.enums.RecordStatus;
+import com.example.springboot.common.enums.RoleEnum;
 import com.example.springboot.entity.Film;
 import com.example.springboot.entity.Record;
+import com.example.springboot.entity.Room;
 import com.example.springboot.exception.CustomException;
 import com.example.springboot.mapper.FilmMapper;
 import com.example.springboot.mapper.RecordMapper;
+import com.example.springboot.mapper.RoomMapper;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,6 +24,7 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
 import java.time.format.DateTimeParseException;
 import java.time.temporal.ChronoField;
+import java.util.List;
 
 /**
  * 放映场次的增删改查，含排期时间的多种写法兼容解析、片长兜底与票价规范化
@@ -49,6 +53,13 @@ public class RecordService extends BaseService<Record> {
 
     @Resource
     private FilmMapper filmMapper;
+
+    /** 影厅归属校验直接查 Mapper，避免与 RoomService 形成互相注入的环 */
+    @Resource
+    private RoomMapper roomMapper;
+
+    @Resource
+    private OrderedService orderedService;
 
     @Override
     protected BaseMapper<Record> mapper() {
@@ -151,6 +162,129 @@ public class RecordService extends BaseService<Record> {
 
     public int countByRoomId(Integer roomId) {
         return recordMapper.countByRoomId(roomId);
+    }
+
+    /** 列表/分页范围：影院角色只能看本影院排片 */
+    public void applyCinemaScope(Record recordItem, String role, Integer userId) {
+        if (RoleEnum.CINEMA.name().equals(role)) {
+            recordItem.setCinemaId(userId);
+        }
+    }
+
+    /** 详情：仅做存在性校验（与原控制器口径一致，不在此追加归属限制） */
+    public Record selectByIdScoped(Integer id, String role, Integer userId) {
+        Record recordItem = selectById(id);
+        if (recordItem == null) {
+            throw new CustomException(ErrorCode.NOT_FOUND, "排片不存在");
+        }
+        return recordItem;
+    }
+
+    /** 新增排片：影院角色归属本影院，状态归一化，校验影厅归属与排期后落库 */
+    @Transactional(rollbackFor = Exception.class)
+    public void addScoped(Record recordItem, String role, Integer userId) {
+        if (RoleEnum.CINEMA.name().equals(role)) {
+            recordItem.setCinemaId(userId);
+        }
+        requireAdminOrCinema(role);
+        recordItem.setStatus(recordItem.getStatus() == null
+                ? RecordStatus.NORMAL
+                : normalizeStatus(recordItem.getStatus()));
+        ensureRoomBelongsToCinema(recordItem);
+        validateSchedule(recordItem, null);
+        add(recordItem);
+    }
+
+    /** 编辑排片：先校验归属，再按局部更新口径补全缺省字段，最后校验影厅归属与排期 */
+    @Transactional(rollbackFor = Exception.class)
+    public void updateScoped(Record recordItem, String role, Integer userId) {
+        Record dbRecord = selectById(recordItem.getId());
+        ensureRecordAccess(dbRecord, role, userId);
+        if (RoleEnum.CINEMA.name().equals(role)) {
+            recordItem.setCinemaId(userId);
+        }
+        // 局部更新：未提交的字段沿用库内值，避免"仅停售"这类操作被整表校验挡住
+        if (recordItem.getRoomId() == null) {
+            recordItem.setRoomId(dbRecord.getRoomId());
+        }
+        if (recordItem.getFilmId() == null) {
+            recordItem.setFilmId(dbRecord.getFilmId());
+        }
+        if (recordItem.getStart() == null) {
+            recordItem.setStart(dbRecord.getStart());
+        }
+        if (recordItem.getPrice() == null) {
+            recordItem.setPrice(dbRecord.getPrice());
+        }
+        recordItem.setStatus(recordItem.getStatus() == null
+                ? dbRecord.getStatus()
+                : normalizeStatus(recordItem.getStatus()));
+        ensureRoomBelongsToCinema(recordItem);
+        validateSchedule(recordItem, dbRecord.getStart());
+        update(recordItem);
+    }
+
+    /** 删除排片：校验归属，且已产生订单的场次禁止物理删除 */
+    @Transactional(rollbackFor = Exception.class)
+    public void deleteScoped(Integer id, String role, Integer userId) {
+        Record recordItem = selectById(id);
+        ensureRecordAccess(recordItem, role, userId);
+        ensureNoOrders(id);
+        delete(id);
+    }
+
+    /** 批量删除排片：逐条校验归属与订单引用后再删 */
+    @Transactional(rollbackFor = Exception.class)
+    public void deleteBatchScoped(List<Integer> ids, String role, Integer userId) {
+        for (Integer id : ids) {
+            ensureRecordAccess(selectById(id), role, userId);
+            ensureNoOrders(id);
+        }
+        deleteBatch(ids);
+    }
+
+    /** 订单引用排片，物理删除会带走交易凭证 —— 已产生订单的场次只能停售 */
+    private void ensureNoOrders(Integer recordId) {
+        int count = orderedService.countByRecordId(recordId);
+        if (count > 0) {
+            throw new CustomException(ErrorCode.BUSINESS_CONFLICT,
+                    "该场次已有 " + count + " 笔订单，无法删除；如需下架请将放映状态改为「停售」");
+        }
+    }
+
+    /** 排片归属校验：管理员放行，影院仅可操作本影院排片 */
+    private void ensureRecordAccess(Record recordItem, String role, Integer userId) {
+        if (recordItem == null) {
+            throw new CustomException(ErrorCode.NOT_FOUND, "排片不存在");
+        }
+        if (RoleEnum.ADMIN.name().equals(role)) {
+            return;
+        }
+        if (RoleEnum.CINEMA.name().equals(role)
+                && userId != null && userId.equals(recordItem.getCinemaId())) {
+            return;
+        }
+        throw new CustomException(ErrorCode.FORBIDDEN, "无权操作该排片");
+    }
+
+    /** 影厅必须存在且归属于排片所在影院 */
+    private void ensureRoomBelongsToCinema(Record recordItem) {
+        if (recordItem.getRoomId() == null || recordItem.getCinemaId() == null) {
+            return;
+        }
+        Room room = roomMapper.selectById(recordItem.getRoomId());
+        if (room == null) {
+            throw new CustomException(ErrorCode.PARAM_INVALID, "影厅不存在");
+        }
+        if (!recordItem.getCinemaId().equals(room.getCinemaId())) {
+            throw new CustomException(ErrorCode.PARAM_INVALID, "影厅不属于当前影院");
+        }
+    }
+
+    private void requireAdminOrCinema(String role) {
+        if (!RoleEnum.ADMIN.name().equals(role) && !RoleEnum.CINEMA.name().equals(role)) {
+            throw new CustomException(ErrorCode.FORBIDDEN, "权限不足");
+        }
     }
 
     private static BigDecimal parsePrice(String price) {

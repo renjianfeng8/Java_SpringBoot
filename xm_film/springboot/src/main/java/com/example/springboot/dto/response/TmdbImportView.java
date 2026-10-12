@@ -19,7 +19,7 @@ import java.util.List;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class TmdbImportPreview {
+public class TmdbImportView {
 
     private String title;
     private String english;
