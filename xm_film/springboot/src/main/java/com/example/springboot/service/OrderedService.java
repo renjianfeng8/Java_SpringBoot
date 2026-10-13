@@ -212,7 +212,7 @@ public class OrderedService extends BaseService<Ordered> {
             Ordered cancel = new Ordered();
             cancel.setId(id);
             cancel.setStatus(OrderStatus.CANCELLED);
-            cancel.setPendingTimeoutAt(null);
+            cancel.setClearPendingTimeout(true);
             orderedMapper.updateById(cancel);
             return PayResult.TIMEOUT_CANCELLED;
         }
@@ -233,7 +233,8 @@ public class OrderedService extends BaseService<Ordered> {
         Ordered update = new Ordered();
         update.setId(id);
         update.setStatus(OrderStatus.PENDING);
-        update.setPendingTimeoutAt(null);
+        // 离开待支付：倒计时作废，显式清空（不能靠 pendingTimeoutAt=null，那会被守卫跳过）
+        update.setClearPendingTimeout(true);
         update.setPayTime(now());
         update.setPayAmount(ordered.getTotal());
         // 取票码与扣款同一事务生成：不存在"扣了钱没码"或"有码没扣钱"的中间态，
@@ -272,7 +273,7 @@ public class OrderedService extends BaseService<Ordered> {
         update.setStatus(OrderStatus.REFUNDED);
         update.setRefundTime(now());
         update.setRefundAmount(ordered.getTotal());
-        update.setPendingTimeoutAt(null);
+        update.setClearPendingTimeout(true);
         orderedMapper.updateById(update);
     }
 
@@ -481,7 +482,7 @@ public class OrderedService extends BaseService<Ordered> {
         Ordered update = new Ordered();
         update.setId(id);
         update.setStatus(OrderStatus.CANCELLED);
-        update.setPendingTimeoutAt(null);
+        update.setClearPendingTimeout(true);
         orderedMapper.updateById(update);
     }
 
@@ -507,6 +508,7 @@ public class OrderedService extends BaseService<Ordered> {
         Ordered update = new Ordered();
         update.setId(id);
         update.setStatus(OrderStatus.PICKED_UP);
+        update.setClearPendingTimeout(true);
         orderedMapper.updateById(update);
     }
 
