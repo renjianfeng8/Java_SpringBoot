@@ -128,7 +128,12 @@ public class RecordService extends BaseService<Record> {
         }
 
         LocalDateTime start = parseStart(recordItem.getStart());
-        if (!recordItem.getStart().equals(previousStart) && !start.isAfter(LocalDateTime.now(ZoneId.systemDefault()))) {
+        // 按解析后的时刻比较，而不是原始字符串：提交值可能只到分钟（前端选择器口径），
+        // 与库里的秒精度不逐字节相等，字符串比较会把"未改时间"误判成改动，
+        // 从而拒绝把一场已开演的排片改为停售。
+        LocalDateTime previous = readStart(previousStart);
+        if ((previous == null || !previous.equals(start))
+                && !start.isAfter(LocalDateTime.now(ZoneId.systemDefault()))) {
             throw new CustomException(ErrorCode.PARAM_INVALID, "放映时间必须晚于当前时间");
         }
 
@@ -190,6 +195,11 @@ public class RecordService extends BaseService<Record> {
             recordItem.setCinemaId(userId);
         }
         requireAdminOrCinema(role);
+        // 管理员不代入影院，影院归属必须由请求给出：record.cinema_id 非空，
+        // 缺省会在落库时撞 NOT NULL 报 500（ensureRoomBelongsToCinema 在 null 时直接放行）。
+        if (recordItem.getCinemaId() == null) {
+            throw new CustomException(ErrorCode.PARAM_INVALID, "请选择所属影院");
+        }
         recordItem.setStatus(recordItem.getStatus() == null
                 ? RecordStatus.NORMAL
                 : normalizeStatus(recordItem.getStatus()));
