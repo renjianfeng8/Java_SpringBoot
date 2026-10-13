@@ -83,7 +83,7 @@ public class AdminService extends BaseService<Admin> {
             throw new CustomException(ErrorCode.UNAUTHORIZED.code(), "账号不存在");
         }
         if (!passwordEncoder.matches(account.getPassword(), admin.getPassword())
-                && !admin.getPassword().equals(account.getPassword())) {
+                && !account.getPassword().equals(admin.getPassword())) {
             throw new CustomException(ErrorCode.UNAUTHORIZED.code(), "原密码错误");
         }
         admin.setPassword(passwordEncoder.encode(account.getNewPassword()));

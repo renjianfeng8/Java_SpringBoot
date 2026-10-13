@@ -100,7 +100,7 @@
     </select>
 
     <select id="selectPayPasswordErrorCount" resultType="java.lang.Integer">
-        SELECT pay_pwd_error_count FROM user WHERE id = #{id}
+        SELECT COALESCE(pay_pwd_error_count, 0) FROM user WHERE id = #{id}
     </select>
 
     <update id="updatePayPassword">
@@ -116,8 +116,8 @@
          若先自增再判 IF(pay_pwd_error_count + 1 >= max)，读到的就是"新值 + 1"，会提前一次触发锁定。 -->
     <update id="incrementPayPasswordFailure">
         UPDATE user
-        SET pay_pwd_locked_until = IF(pay_pwd_error_count + 1 &gt;= #{maxAttempts}, #{lockedUntil}, pay_pwd_locked_until),
-            pay_pwd_error_count = pay_pwd_error_count + 1
+        SET pay_pwd_locked_until = IF(COALESCE(pay_pwd_error_count, 0) + 1 &gt;= #{maxAttempts}, #{lockedUntil}, pay_pwd_locked_until),
+            pay_pwd_error_count = COALESCE(pay_pwd_error_count, 0) + 1
         WHERE id = #{id}
     </update>
 
