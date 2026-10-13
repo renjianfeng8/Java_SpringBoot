@@ -94,8 +94,13 @@ public class RoomService extends BaseService<Room> {
         }
         validateSeatLayout(room);
         Integer cinemaId = room.getCinemaId() != null ? room.getCinemaId() : dbRoom.getCinemaId();
-        String title = cinemaTitleOf(cinemaId);
-        if (title != null) {
+        if (cinemaId != null) {
+            // 与 addScoped 同口径：指向不存在的影院一律拒绝，而不是写入悬空的 cinema_id
+            // 并沿用旧影院名（后者会让影厅在列表里挂在一个查不到的影院下）。
+            String title = cinemaTitleOf(cinemaId);
+            if (title == null) {
+                throw new CustomException(ErrorCode.BUSINESS_CONFLICT, "所属影院不存在，无法确定影厅归属");
+            }
             room.setTitle(title);
         }
         update(room);
