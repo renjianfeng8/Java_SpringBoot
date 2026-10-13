@@ -276,9 +276,16 @@
             <if test="start != null">start = #{start},</if>
             <if test="seat != null">seat = #{seat},</if>
             <if test="createTime != null">create_time = #{createTime},</if>
-            <!-- 只在下单（insert）或显式改期时写入；部分更新不得清掉待支付倒计时，否则
-                 自动取消扫不到该单（selectExpiredPendingOrders 要求 pending_timeout_at 非空） -->
-            <if test="pendingTimeoutAt != null">pending_timeout_at = #{pendingTimeoutAt},</if>
+            <!-- 待支付倒计时只有两种合法写入，其余更新一律不碰该列：
+                 ① 显式清空 —— clearPendingTimeout 置真（状态离开待支付时由服务层设置）；
+                 ② 写入新值 —— pendingTimeoutAt 非空（下单 / 改期）。
+                 用 <choose> 而非两个并列 <if>：同一列写两次会互相覆盖，只能有一个分支生效。
+                 此前这一列不受守卫，任何部分更新都会顺手清掉倒计时，自动取消便扫不到该单
+                 （selectExpiredPendingOrders 要求该列非空）。 -->
+            <choose>
+                <when test="clearPendingTimeout != null and clearPendingTimeout">pending_timeout_at = NULL,</when>
+                <when test="pendingTimeoutAt != null">pending_timeout_at = #{pendingTimeoutAt},</when>
+            </choose>
             <!-- 资金凭证：留痕字段只增不改，退票不得抹掉 pay_time -->
             <if test="payTime != null">pay_time = #{payTime},</if>
             <if test="payAmount != null">pay_amount = #{payAmount},</if>

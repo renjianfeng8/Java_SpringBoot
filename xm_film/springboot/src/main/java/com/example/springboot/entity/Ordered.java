@@ -49,6 +49,14 @@ public class Ordered implements Serializable {
      */
     private String pickupCode;
 
+    /**
+     * 更新哨兵（非数据库列）：置真时 updateById 把 pending_timeout_at 显式写为 NULL。
+     * 状态流转离开「待支付」（支付/取消/退票/取票）时由服务层置真 —— 倒计时随之作废。
+     * 不能用 pendingTimeoutAt = null 表达"清空"：null 同时是"本次更新不涉及该列"，
+     * 而部分更新绝不能被当成清空（否则自动取消扫不到该单，座位永久占死）。
+     */
+    private Boolean clearPendingTimeout;
+
     private String userName;
     private String filmName;
     private String cinemaName;
