@@ -178,7 +178,7 @@ public class CinemaService extends BaseService<Cinema> {
             throw new CustomException(ErrorCode.UNAUTHORIZED.code(), "账号不存在");
         }
         if (!passwordEncoder.matches(account.getPassword(), cinema.getPassword())
-                && !cinema.getPassword().equals(account.getPassword())) {
+                && !account.getPassword().equals(cinema.getPassword())) {
             throw new CustomException(ErrorCode.UNAUTHORIZED.code(), "原密码错误");
         }
         cinema.setPassword(passwordEncoder.encode(account.getNewPassword()));

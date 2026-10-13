@@ -291,6 +291,9 @@ public class RecordService extends BaseService<Record> {
     }
 
     private static BigDecimal parsePrice(String price) {
+        if (price == null) {
+            throw new CustomException(ErrorCode.PARAM_INVALID, "票价格式错误");
+        }
         try {
             return new BigDecimal(price).setScale(2, RoundingMode.HALF_UP);
         } catch (NumberFormatException e) {

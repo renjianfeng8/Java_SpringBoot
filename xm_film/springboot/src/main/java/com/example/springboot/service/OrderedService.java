@@ -596,6 +596,9 @@ public class OrderedService extends BaseService<Ordered> {
     }
 
     private BigDecimal parsePrice(String price) {
+        if (price == null) {
+            throw new CustomException(ErrorCode.SYSTEM_ERROR, "场次票价配置错误");
+        }
         try {
             return new BigDecimal(price).setScale(2, RoundingMode.HALF_UP);
         } catch (NumberFormatException e) {

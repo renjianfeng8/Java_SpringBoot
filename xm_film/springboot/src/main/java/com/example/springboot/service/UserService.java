@@ -95,7 +95,7 @@ public class UserService extends BaseService<User> {
             throw new CustomException(ErrorCode.UNAUTHORIZED.code(), "账号不存在");
         }
         if (!passwordEncoder.matches(account.getPassword(), user.getPassword())
-                && !user.getPassword().equals(account.getPassword())) {
+                && !account.getPassword().equals(user.getPassword())) {
             throw new CustomException(ErrorCode.UNAUTHORIZED.code(), "原密码错误");
         }
         user.setPassword(passwordEncoder.encode(account.getNewPassword()));

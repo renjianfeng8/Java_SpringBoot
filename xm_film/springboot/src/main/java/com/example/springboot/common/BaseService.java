@@ -34,6 +34,11 @@ public abstract class BaseService<T> {
 
     @Transactional(rollbackFor = Exception.class)
     public void deleteBatch(List<Integer> ids) {
+        // 空集合不能落到 mapper：<foreach> 会拼出 `IN ()`，MySQL 报语法错。
+        // 删零条即无操作，直接返回。
+        if (ids == null || ids.isEmpty()) {
+            return;
+        }
         mapper().deleteBatch(ids);
     }
 }
