@@ -26,6 +26,7 @@ public class Account implements Serializable {
     private String password;
     private String role;
     private String name;
+    @JsonProperty(access = Access.WRITE_ONLY)
     private String newPassword;
     private String token; // JWT令牌
 }

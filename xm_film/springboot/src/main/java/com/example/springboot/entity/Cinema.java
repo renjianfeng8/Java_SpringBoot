@@ -4,7 +4,6 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
-import lombok.EqualsAndHashCode;
 
 import java.io.Serializable;
 
@@ -16,7 +15,6 @@ import java.io.Serializable;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@EqualsAndHashCode(callSuper = true) // 调用父类的equals和hashCode方法
 public class Cinema extends Account implements Serializable {
     private static final long serialVersionUID = 1L;
 
