@@ -95,7 +95,7 @@
         UPDATE cinema SET password = #{password} WHERE id = #{id}
     </update>
 
-    <insert id="insert" parameterType="com.example.springboot.entity.Cinema">
+    <insert id="insert" parameterType="com.example.springboot.entity.Cinema" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO cinema
         <trim prefix="(" suffix=")" suffixOverrides=",">
             <if test="username != null">username,</if>

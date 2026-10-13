@@ -5,19 +5,29 @@
 
 <mapper namespace="com.example.springboot.mapper.OrderedMapper">
 
-    <!-- 查询操作 -->
-    <select id="selectAll" resultType="com.example.springboot.entity.Ordered">
-        SELECT
+    <!-- 列表与详情的公共投影 / 关联：两处逐字相同，抽成片段，避免改一处漏一处导致
+         列表与详情对同一条订单给出不同展示（如掉了一个关联列）。 -->
+    <sql id="orderColumns">
         ordered.*,
         user.name as userName,
         film.title as filmName,
         cinema.name as cinemaName,
         IFNULL(room.name, '暂未关联影厅') as roomName
-        FROM ordered
+    </sql>
+
+    <sql id="orderJoins">
         LEFT JOIN user ON ordered.user_id = user.id
         LEFT JOIN film ON ordered.film_id = film.id
         LEFT JOIN cinema ON ordered.cinema_id = cinema.id
         LEFT JOIN room ON ordered.room_id = room.id
+    </sql>
+
+    <!-- 查询操作 -->
+    <select id="selectAll" resultType="com.example.springboot.entity.Ordered">
+        SELECT
+        <include refid="orderColumns"/>
+        FROM ordered
+        <include refid="orderJoins"/>
         <where>
             <if test="orders != null and orders != ''">AND ordered.orders LIKE CONCAT('%', #{orders}, '%')</if>
             <if test="status != null">AND ordered.status = #{status}</if>
@@ -32,16 +42,9 @@
 
     <select id="selectById" parameterType="java.lang.Integer" resultType="com.example.springboot.entity.Ordered">
         SELECT
-        ordered.*,
-        user.name as userName,
-        film.title as filmName,
-        cinema.name as cinemaName,
-        IFNULL(room.name, '暂未关联影厅') as roomName
+        <include refid="orderColumns"/>
         FROM ordered
-        LEFT JOIN user ON ordered.user_id = user.id
-        LEFT JOIN film ON ordered.film_id = film.id
-        LEFT JOIN cinema ON ordered.cinema_id = cinema.id
-        LEFT JOIN room ON ordered.room_id = room.id
+        <include refid="orderJoins"/>
         WHERE ordered.id = #{id}
     </select>
 
@@ -75,19 +78,24 @@
           AND status = '已取票'
     </select>
 
-    <!-- 占用座位的订单：已取消/已退票都不再锁座；待支付仅在未超时时锁座 -->
+    <!-- 座位占用的唯一判定：已取消/已退票都不再锁座；待支付仅在未超时时锁座。
+         selectActiveByRecordId（占座列表）与 countSeatInUse（下单前查重）共用本片段 ——
+         两处口径一旦分叉，就会出现"列表说占用、查重说空闲"的双卖。 -->
+    <sql id="seatActiveCondition">
+        status NOT IN ('已取消', '已退票')
+        AND (status != '待支付' OR pending_timeout_at IS NULL OR pending_timeout_at &gt; NOW())
+    </sql>
+
     <select id="selectActiveByRecordId" resultType="com.example.springboot.entity.Ordered">
         SELECT * FROM ordered
         WHERE record_id = #{recordId}
-          AND status NOT IN ('已取消', '已退票')
-          AND (status != '待支付' OR pending_timeout_at IS NULL OR pending_timeout_at &gt; NOW())
+          AND <include refid="seatActiveCondition"/>
     </select>
 
     <select id="countSeatInUse" resultType="int">
         SELECT COUNT(*) FROM ordered
         WHERE record_id = #{recordId}
-          AND status NOT IN ('已取消', '已退票')
-          AND (status != '待支付' OR pending_timeout_at IS NULL OR pending_timeout_at &gt; NOW())
+          AND <include refid="seatActiveCondition"/>
           AND FIND_IN_SET(#{seat}, REPLACE(seat, '，', ',')) > 0
     </select>
 
@@ -109,11 +117,11 @@
           AND status = '待支付'
     </update>
 
-    <!-- 「已支付」的状态集合只有一处定义，供本文件三条聚合语句 <include>：
-         countTodayPaidOrders / selectPaidRevenueByDay / selectTodayPaidRevenue。
-         口径方向与 FilmMapper.filmRevenueJoin（票房聚合）一致 —— 新增或改变任一状态时
-         几处必须同步。写成片段而非各写一遍，是为了让「同源」由构建保证，
-         而不是靠注释提醒。 -->
+    <!-- 「已支付」的状态集合：本文件三条聚合语句（countTodayPaidOrders /
+         selectPaidRevenueByDay / selectTodayPaidRevenue）与 FilmMapper.filmRevenueJoin
+         （票房聚合）都 <include> 本片段 —— 全仓只有这一处定义，票房榜与今日/逐日票房
+         不会因各写一遍而分叉。列名不带表前缀，是因为各处都是单表上下文
+         （ordered 或 ordered o），加了前缀反而限定死调用方。 -->
     <sql id="paidOrderStatuses">status IN ('待取票', '已取票')</sql>
 
     <!-- 今日票房：今天支付的售票收入合计（元）+ 统计时刻。
@@ -268,7 +276,9 @@
             <if test="start != null">start = #{start},</if>
             <if test="seat != null">seat = #{seat},</if>
             <if test="createTime != null">create_time = #{createTime},</if>
-            pending_timeout_at = #{pendingTimeoutAt},
+            <!-- 只在下单（insert）或显式改期时写入；部分更新不得清掉待支付倒计时，否则
+                 自动取消扫不到该单（selectExpiredPendingOrders 要求 pending_timeout_at 非空） -->
+            <if test="pendingTimeoutAt != null">pending_timeout_at = #{pendingTimeoutAt},</if>
             <!-- 资金凭证：留痕字段只增不改，退票不得抹掉 pay_time -->
             <if test="payTime != null">pay_time = #{payTime},</if>
             <if test="payAmount != null">pay_amount = #{payAmount},</if>

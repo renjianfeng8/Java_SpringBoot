@@ -15,6 +15,7 @@ import com.example.springboot.mapper.MarkMapper;
 import com.example.springboot.mapper.OrderedMapper;
 import com.github.pagehelper.PageInfo;
 import com.github.pagehelper.page.PageMethod;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
@@ -79,7 +80,13 @@ public class MarkService extends BaseService<Mark> {
         if (markMapper.countByUserAndFilm(mark.getUserId(), mark.getFilmId()) > 0) {
             throw new CustomException(ErrorCode.BUSINESS_CONFLICT, "您已评价过该影片，可直接修改原有评价");
         }
-        mapper().insert(mark);
+        try {
+            mapper().insert(mark);
+        } catch (DuplicateKeyException e) {
+            // 上面的 count 是"先查后插"，并发双发会双双通过；唯一索引 uk_user_film 兜底。
+            // 撞键翻成与串行路径同一句提示，而不是漏成系统异常。
+            throw new CustomException(ErrorCode.BUSINESS_CONFLICT, "您已评价过该影片，可直接修改原有评价");
+        }
         recalculateFilmScore(mark.getFilmId());
     }
 
@@ -108,6 +115,11 @@ public class MarkService extends BaseService<Mark> {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void deleteBatch(List<Integer> ids) {
+        // 空集合绝不能落到 mapper：deleteBatch 的 <foreach> 会拼出 `IN ()`，MySQL 报语法错。
+        // 本方法覆写了 BaseService.deleteBatch，必须自带这道守卫 —— 否则空选删除会 500。
+        if (ids == null || ids.isEmpty()) {
+            return;
+        }
         Set<Integer> filmIds = new HashSet<>();
         for (Integer id : ids) {
             Mark dbMark = markMapper.selectById(id);

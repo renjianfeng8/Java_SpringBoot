@@ -6,13 +6,14 @@
 <mapper namespace="com.example.springboot.mapper.FilmMapper">
 
     <!-- 票房 = 本系统内该影片的累计售票收入（元），由 ordered 实时聚合，不再读 film.box_office 静态列。
-         只统计已支付状态（待取票/已取票）；已取消/已退票不计。
-         状态集合与 OrderedMapper 的占座判定同源：新增任何改变"是否已支付"的状态时两处必须同步。 -->
+         只统计已支付状态；已取消/已退票不计。状态集合 <include> OrderedMapper.paidOrderStatuses ——
+         全仓只有那一处定义，新增任何"是否已支付"的状态时无需再同步第二个副本。
+         片段里的 status 不带表前缀：本子查询只有 ordered o 一张表，解析到 o.status。 -->
     <sql id="filmRevenueJoin">
         LEFT JOIN (
             SELECT o.film_id, SUM(o.total) AS revenue
             FROM ordered o
-            WHERE o.status IN ('待取票', '已取票')
+            WHERE <include refid="com.example.springboot.mapper.OrderedMapper.paidOrderStatuses"/>
             GROUP BY o.film_id
         ) rev ON rev.film_id = film.id
     </sql>
@@ -107,12 +108,16 @@
         ORDER BY value DESC
     </select>
 
+    <!-- 与其它 film 查询共用列清单与票房口径：若这里退回 film.*，本接口下发的是
+         film.box_office 静态列（恒为 0），与详情/列表接口的聚合票房分叉 ——
+         同一个 FilmView.boxOffice 在两个接口下含义不同。 -->
     <select id="selectMarkTop" resultType="com.example.springboot.entity.Film">
         SELECT
-            film.*,
-            area.title as areaName,
-            CONCAT(actor.id, ':', actor.actor) as actorInfo
+        <include refid="filmColumnsWithRevenue"/>,
+        area.title as areaName,
+        CONCAT(actor.id, ':', actor.actor) as actorInfo
         FROM film
+        <include refid="filmRevenueJoin"/>
         LEFT JOIN area ON film.area_id = area.id
         LEFT JOIN actor ON film.actor_id = actor.id
         <!-- 必须"有真实评价"才上榜，与票房榜的 WHERE rev.revenue > 0 同构；

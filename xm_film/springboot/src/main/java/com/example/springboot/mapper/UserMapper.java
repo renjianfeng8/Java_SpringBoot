@@ -42,8 +42,12 @@ public interface UserMapper extends BaseMapper<User> {
     /** 校验所需的状态：密文 + 连续错误次数 + 锁定截止时刻 */
     PayPasswordStateView selectPayPasswordState(Integer id);
 
-    /** 读回当前错误次数，用于拼「还可重试 N 次」提示 */
-    int selectPayPasswordErrorCount(Integer id);
+    /**
+     * 读回当前错误次数，用于拼「还可重试 N 次」提示。
+     * 返回 {@link Integer} 而非 int：这是标量查询，命中不到行（用户已不存在）时返回 null，
+     * 基本类型会在拆箱处抛 NPE。SQL 里的 COALESCE 只兜住"列值为 NULL"，兜不住"没有行"。
+     */
+    Integer selectPayPasswordErrorCount(Integer id);
 
     /** 写入支付密码并清零计数与锁定（设置 / 修改 / 重设共用唯一写入口） */
     int updatePayPassword(@Param("id") Integer id, @Param("payPassword") String payPassword);
