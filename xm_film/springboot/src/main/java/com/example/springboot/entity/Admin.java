@@ -2,7 +2,6 @@ package com.example.springboot.entity;
 
 import lombok.Getter;
 import lombok.Setter;
-import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 
@@ -16,7 +15,6 @@ import java.io.Serializable;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@EqualsAndHashCode(callSuper = true)
 public class Admin extends Account implements Serializable {
     private static final long serialVersionUID = 1L;
 
