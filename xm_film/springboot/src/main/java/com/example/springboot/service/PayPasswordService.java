@@ -165,8 +165,10 @@ public class PayPasswordService {
         }
 
         userMapper.incrementPayPasswordFailure(userId, MAX_ATTEMPTS, lockDeadline());
-        // 读回真值再拼提示：并发尝试下递增是原子的，用本地推算出来的次数可能偏低
-        int failed = userMapper.selectPayPasswordErrorCount(userId);
+        // 读回真值再拼提示：并发尝试下递增是原子的，用本地推算出来的次数可能偏低。
+        // 读不到行时是 null，显式兜成 0，避免拆箱 NPE。
+        Integer failedCount = userMapper.selectPayPasswordErrorCount(userId);
+        int failed = failedCount == null ? 0 : failedCount;
         if (failed >= MAX_ATTEMPTS) {
             return new CustomException(ErrorCode.BUSINESS_CONFLICT,
                     "支付密码连续输错 " + MAX_ATTEMPTS + " 次，已锁定 " + LOCK_MINUTES + " 分钟");

@@ -38,7 +38,6 @@ import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 /**
  * 订单状态机与座位占用的唯一出处：选座建单（锁座、超时废单）、支付、取消、退票、
@@ -564,33 +563,37 @@ public class OrderedService extends BaseService<Ordered> {
         if (rawSeats == null || rawSeats.trim().isEmpty()) {
             throw new CustomException(ErrorCode.PARAM_INVALID, "请选择座位");
         }
-        Set<String> seats = Arrays.stream(rawSeats.replace('，', ',').split(","))
+        List<String> rawTokens = Arrays.stream(rawSeats.replace('，', ',').split(","))
                 .map(String::trim)
                 .filter(seat -> !seat.isEmpty())
-                .collect(Collectors.toCollection(LinkedHashSet::new));
-        if (seats.isEmpty()) {
+                .toList();
+        if (rawTokens.isEmpty()) {
             throw new CustomException(ErrorCode.PARAM_INVALID, "请选择座位");
-        }
-        if (seats.size() > MAX_SEATS_PER_ORDER) {
-            throw new CustomException(ErrorCode.PARAM_INVALID,
-                    "单笔订单最多选择 " + MAX_SEATS_PER_ORDER + " 个座位");
         }
 
         Room room = roomId == null ? null : roomMapper.selectById(roomId);
         int rows = room != null && room.getSeatRows() != null ? room.getSeatRows() : DEFAULT_SEAT_ROWS;
         int cols = room != null && room.getSeatCols() != null ? room.getSeatCols() : DEFAULT_SEAT_COLS;
 
-        for (String seat : seats) {
-            Matcher matcher = SEAT_SHAPE.matcher(seat);
+        // 统一成规范形 "R排C座"（去前导零）后再去重、再存库：否则 "1排01座" 与 "1排1座"
+        // 会被当成两个座位串，countSeatInUse 的 FIND_IN_SET 逐字节比对就漏判，同一座位双卖。
+        Set<String> seats = new LinkedHashSet<>();
+        for (String raw : rawTokens) {
+            Matcher matcher = SEAT_SHAPE.matcher(raw);
             if (!matcher.matches()) {
-                throw new CustomException(ErrorCode.PARAM_INVALID, "座位格式错误: " + seat);
+                throw new CustomException(ErrorCode.PARAM_INVALID, "座位格式错误: " + raw);
             }
             int row = Integer.parseInt(matcher.group(1));
             int col = Integer.parseInt(matcher.group(2));
             if (row < 1 || row > rows || col < 1 || col > cols) {
                 throw new CustomException(ErrorCode.PARAM_INVALID,
-                        "座位超出影厅范围: " + seat + "（本厅 " + rows + " 排 " + cols + " 座）");
+                        "座位超出影厅范围: " + raw + "（本厅 " + rows + " 排 " + cols + " 座）");
             }
+            seats.add(row + "排" + col + "座");
+        }
+        if (seats.size() > MAX_SEATS_PER_ORDER) {
+            throw new CustomException(ErrorCode.PARAM_INVALID,
+                    "单笔订单最多选择 " + MAX_SEATS_PER_ORDER + " 个座位");
         }
         return List.copyOf(seats);
     }

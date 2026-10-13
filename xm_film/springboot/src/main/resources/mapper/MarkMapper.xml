@@ -62,11 +62,15 @@
         ORDER BY likeCount DESC, m.id DESC
     </select>
 
+    <!-- LIMIT 1：mark(user_id, film_id) 有唯一索引兜底，正常情况下至多一行；
+         加 LIMIT 是给存量脏数据（索引建立前可能存在的重复行）留退路，
+         否则 selectOne 撞到两行会抛 TooManyResultsException。 -->
     <select id="selectFilmMarkOfUser" resultType="com.example.springboot.dto.response.MarkView">
         SELECT <include refid="markViewColumns"/>
         FROM mark m
         LEFT JOIN user u ON m.user_id = u.id
         WHERE m.film_id = #{filmId} AND m.user_id = #{viewerId}
+        LIMIT 1
     </select>
 
     <!-- 插入操作 -->
