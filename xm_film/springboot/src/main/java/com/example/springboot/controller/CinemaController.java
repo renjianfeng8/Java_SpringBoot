@@ -135,7 +135,7 @@ public class CinemaController extends BaseController<Cinema, CinemaRequest, Cine
     @Override
     @GetMapping
     public Result<List<CinemaView>> list(CinemaRequest query) {
-        return Result.success(cinemaService.selectAll(toEntity(query), !isAdmin())
+        return Result.success(cinemaService.selectAll(toEntity(query), query.getFilmId(), !isAdmin())
                 .stream().map(this::toView).toList());
     }
 

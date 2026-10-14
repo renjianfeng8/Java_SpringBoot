@@ -1,6 +1,5 @@
 package com.example.springboot.dto.response;
 
-import com.example.springboot.entity.Type;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -27,13 +26,11 @@ public class FilmView {
     private Double score;
     private String year;
     private String areaName;
-    private List<Integer> ids;
-    private Integer typeId;
     private Double boxOffice;
     private Integer actorId;
     private String actorInfo;
     private Integer topNum;
     private String video;
     private List<Integer> typeIds;
-    private List<Type> typeList;
+    private List<TypeView> typeList;
 }

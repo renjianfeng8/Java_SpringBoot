@@ -64,9 +64,10 @@ public class CinemaService extends BaseService<Cinema> {
     /**
      * 影院列表。approvedOnly 由调用方按角色决定：未登录/非管理员只看到「已审核」，
      * 管理员看到全部 —— 否则后台审核列表会连待审核的影院都查不出来，无法审核。
+     * filmId 与分页列表同口径（按上映影片筛），非空即生效。
      */
-    public List<Cinema> selectAll(Cinema cinema, boolean approvedOnly) {
-        return cinemaMapper.selectByFilmId(cinema, null, approvedOnly);
+    public List<Cinema> selectAll(Cinema cinema, Integer filmId, boolean approvedOnly) {
+        return cinemaMapper.selectByFilmId(cinema, filmId, approvedOnly);
     }
 
     /** 前台区域级联：把 distinct(city,district) 行按城市归组，保持 SQL 的排序 */

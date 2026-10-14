@@ -6,6 +6,7 @@ import com.example.springboot.common.enums.ErrorCode;
 import com.example.springboot.dto.request.FilmRequest;
 import com.example.springboot.dto.response.FilmView;
 import com.example.springboot.dto.response.TodayRevenueView;
+import com.example.springboot.dto.response.TypeView;
 import com.example.springboot.entity.Film;
 import com.example.springboot.exception.CustomException;
 import com.example.springboot.service.FilmService;
@@ -56,7 +57,6 @@ public class FilmController extends BaseController<Film, FilmRequest, FilmView> 
         film.setScore(request.getScore());
         film.setYear(request.getYear());
         film.setAreaName(request.getAreaName());
-        film.setIds(request.getIds());
         film.setTypeId(request.getTypeId());
         film.setBoxOffice(request.getBoxOffice());
         film.setActorId(request.getActorId());
@@ -64,7 +64,6 @@ public class FilmController extends BaseController<Film, FilmRequest, FilmView> 
         film.setTopNum(request.getTopNum());
         film.setVideo(request.getVideo());
         film.setTypeIds(request.getTypeIds());
-        film.setTypeList(request.getTypeList());
         return film;
     }
 
@@ -86,15 +85,14 @@ public class FilmController extends BaseController<Film, FilmRequest, FilmView> 
         view.setScore(film.getScore());
         view.setYear(film.getYear());
         view.setAreaName(film.getAreaName());
-        view.setIds(film.getIds());
-        view.setTypeId(film.getTypeId());
         view.setBoxOffice(film.getBoxOffice());
         view.setActorId(film.getActorId());
         view.setActorInfo(film.getActorInfo());
         view.setTopNum(film.getTopNum());
         view.setVideo(film.getVideo());
         view.setTypeIds(film.getTypeIds());
-        view.setTypeList(film.getTypeList());
+        view.setTypeList(film.getTypeList() == null ? null
+                : film.getTypeList().stream().map(t -> new TypeView(t.getId(), t.getTitle())).toList());
         return view;
     }
 

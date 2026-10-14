@@ -5,17 +5,27 @@
 
 <mapper namespace="com.example.springboot.mapper.RecordMapper">
 
-    <!-- 查询操作 -->
-    <select id="selectAll" resultType="com.example.springboot.entity.Record">
-        SELECT
+    <!-- 列表与详情的公共投影 / 关联：两处逐字相同，抽成片段，避免改一处漏一处导致
+         列表与详情对同一条排片给出不同展示（如掉了一个关联列）。 -->
+    <sql id="recordColumns">
         record.*,
         cinema.name as cinemaName,
         room.name as roomName,
         room.seat_rows as roomSeatRows,
         room.seat_cols as roomSeatCols
-        FROM record
+    </sql>
+
+    <sql id="recordJoins">
         LEFT JOIN cinema ON record.cinema_id = cinema.id
         LEFT JOIN room ON record.room_id = room.id
+    </sql>
+
+    <!-- 查询操作 -->
+    <select id="selectAll" resultType="com.example.springboot.entity.Record">
+        SELECT
+        <include refid="recordColumns"/>
+        FROM record
+        <include refid="recordJoins"/>
         <where>
             <if test="title != null">AND record.title LIKE CONCAT('%', #{title}, '%')</if>
             <if test="start != null">AND record.start LIKE CONCAT('%', #{start}, '%')</if>
@@ -30,14 +40,9 @@
 
     <select id="selectById" parameterType="java.lang.Integer" resultType="com.example.springboot.entity.Record">
         SELECT
-        record.*,
-        cinema.name as cinemaName,
-        room.name as roomName,
-        room.seat_rows as roomSeatRows,
-        room.seat_cols as roomSeatCols
+        <include refid="recordColumns"/>
         FROM record
-        LEFT JOIN cinema ON record.cinema_id = cinema.id
-        LEFT JOIN room ON record.room_id = room.id
+        <include refid="recordJoins"/>
         WHERE record.id = #{id}
     </select>
 
