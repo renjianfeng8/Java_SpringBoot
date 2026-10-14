@@ -5,6 +5,7 @@ import com.example.springboot.common.BaseController;
 import com.example.springboot.common.Result;
 import com.example.springboot.common.enums.ErrorCode;
 import com.example.springboot.common.enums.PayResult;
+import com.example.springboot.common.enums.RoleEnum;
 import com.example.springboot.dto.request.OrderCreateRequest;
 import com.example.springboot.dto.request.OrderPayRequest;
 import com.example.springboot.dto.request.OrderedRequest;
@@ -16,7 +17,6 @@ import com.example.springboot.service.OrderedService;
 import com.github.pagehelper.PageInfo;
 import com.github.pagehelper.page.PageMethod;
 import jakarta.validation.Valid;
-import org.springframework.beans.BeanUtils;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -119,11 +119,7 @@ public class OrderedController extends BaseController<Ordered, OrderedRequest, O
         Ordered entity = toEntity(query);
         orderedService.applyScope(entity, AuthContext.role(), AuthContext.userId());
         PageMethod.startPage(pageNum, pageSize);
-        PageInfo<Ordered> src = new PageInfo<>(orderedService.selectAll(entity));
-        PageInfo<OrderedView> dst = new PageInfo<>();
-        BeanUtils.copyProperties(src, dst);
-        dst.setList(src.getList().stream().map(this::toView).toList());
-        return Result.success(dst);
+        return Result.success(toPageView(new PageInfo<>(orderedService.selectAll(entity))));
     }
 
     @Override
@@ -185,8 +181,11 @@ public class OrderedController extends BaseController<Ordered, OrderedRequest, O
 
     @GetMapping("/seats")
     public Result<List<SeatOccupancyView>> seats(@RequestParam Integer recordId) {
-        // 归属判定在后端按 JWT 完成；响应里不含他人订单的订单号/用户/金额
-        return Result.success(orderedService.selectSeatOccupancy(recordId, AuthContext.userId()));
+        // 归属判定在后端按 JWT 完成；响应里不含他人订单的订单号/用户/金额。
+        // mine 只对 USER 有意义：cinema/admin 的 id 与 user 表不同源，直接把 id 传下去
+        // 会把同号用户订单误标成"我的"，泄露其订单号/金额 —— 非 USER 一律按匿名视角查。
+        Integer viewerId = RoleEnum.USER.name().equals(AuthContext.role()) ? AuthContext.userId() : null;
+        return Result.success(orderedService.selectSeatOccupancy(recordId, viewerId));
     }
 
     @Override

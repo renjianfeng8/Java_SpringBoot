@@ -1,10 +1,10 @@
 # 待办技术债清单（audit-backlog）
 
-本文件是本仓唯一的技术债登记处，承接已删除的 `后端代码规范审查报告.md` 的全部"登记备查"项，并汇总 2026-10-13 两轮代码审查（`entity/`、`service/`）中判定延后或建议的条目。已完成项不进本表；已判定非缺陷的条目集中在末节，避免二次误报。
+本文件是本仓唯一的技术债登记处，承接已删除的 `后端代码规范审查报告.md` 的全部"登记备查"项，并汇总 2026-10-13 两轮代码审查（`entity/`、`service/`）与 2026-10-14 控制器层审查（`controller/`）中判定延后或建议的条目。已完成项不进本表；已判定非缺陷的条目集中在末节，避免二次误报。
 
 维护口径：一处事实一处归属；每条给出 `文件` 与符号，行号随改动可能漂移、以符号为准。状态分三档：待办、有意不整改（与既定政策一致，非债务）、已核验非缺陷。
 
-更新日期：2026-10-13。基线：master `e724ab20`。
+更新日期：2026-10-14。基线：master `b6a39f4c`。
 
 ## 并发与事务
 
@@ -69,6 +69,17 @@
 | --- | --- | --- | --- |
 | BL-28 | service/RecordService/RoomService/UserService.deleteBatchScoped | 缺 ids 为空/null 的守卫（OrderedService、MarkService、BaseService 均有）。经 Spring 拒绝 null @RequestBody，HTTP 路径不可达，属同形不一致。 | 与兄弟方法对齐补守卫。 |
 | BL-29 | entity/Cinema.province/city/district | /auth/me 与 /login 经 CinemaMapper.selectById/selectByUsername（SELECT *，无 JOIN）取影院，区域字段恒为 null；/cinemas/page 则有值。UNCERTAIN：当前无前端读取该路径的区域。 | 若需在登录态展示区域，给该查询补 JOIN。 |
+
+## 控制器层遗留（2026-10-14 控制器审查）
+
+| 编号 | 位置 | 问题 | 处置建议 |
+| --- | --- | --- | --- |
+| BL-30 | controller/FileUploadController.uploadFile（落盘在 common/FileUtil） | `/api/v1/files/upload` 不在 ADMIN_WRITE_PREFIXES / ADMIN_ONLY_PREFIXES，任何已登录角色（含 USER）都能上传。本轮已把落盘扩展名从客户端文件名改为按已校验 MIME 派生（堵掉 `.html` 落盘 + MIME 可伪造那条），但"谁可上传"未收紧。UNCERTAIN：CINEMA 自助改头像/资料是否依赖此端点。 | 确认用途后给前缀加写门禁，或按角色拆端点。 |
+| BL-31 | controller/CinemaDirectoryController.page | 本轮已给 BaseController 抽出 `toPageView`，但本类不继承 BaseController，`PageInfo` 拷贝 + toView 映射仍自成一份（与 BL-13 同类的映射重复）。 | 抽静态 `PageMapper.map(PageInfo<S>, Function<S,T>)`，基类与独立控制器共用。 |
+| BL-32 | controller/AuthController.updatePassword、me | 手工 `httpRequest.getAttribute("userId"/"role")` 再 `Integer.valueOf`，绕过 AuthContext.role()/userId()；身份存放方式一改此处静默失效（AuthContext 类注释正警告此坑）。 | 改用 AuthContext（`me` 的 userId 参数需由 String 放宽为 Integer）。 |
+| BL-33 | controller/RechargeController.toEntity、FundFlowController.toEntity、CinemaDirectoryController.toEntity | 开头 `if (request == null) return null;` 是死分支：query 由 Spring 绑定、恒非 null（其余控制器的 toEntity 均无此判断）。 | 删除该死守卫。 |
+| BL-34 | controller/OrderedController.getById | `ordered == null ? null : toView(ordered)` 为死三元：selectByIdScoped 在 null 时先抛 NOT_FOUND；Room/Record 的同类方法无此冗余。 | 删除死三元。 |
+| BL-35 | controller/StatisticsController.overview、controller/AccountController.requireUser | 角色门禁在方法内逐端点各写一份（`/api/v1/statistics` 未进任何前缀表），新增端点易漏（与 BL-17 同类）。 | 统计前缀加 ADMIN_ONLY_PREFIXES；账户前缀加统一 USER 守卫，或与 BL-17 同轮抽统一守卫。 |
 
 ## 有意不整改（与既定政策一致，非债务）
 

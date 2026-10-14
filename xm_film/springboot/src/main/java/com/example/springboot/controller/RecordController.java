@@ -9,7 +9,6 @@ import com.example.springboot.entity.Record;
 import com.example.springboot.service.RecordService;
 import com.github.pagehelper.PageInfo;
 import com.github.pagehelper.page.PageMethod;
-import org.springframework.beans.BeanUtils;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -84,11 +83,7 @@ public class RecordController extends BaseController<Record, RecordRequest, Reco
         Record entity = toEntity(query);
         recordService.applyCinemaScope(entity, AuthContext.role(), AuthContext.userId());
         PageMethod.startPage(pageNum, pageSize);
-        PageInfo<Record> src = new PageInfo<>(recordService.selectAll(entity));
-        PageInfo<RecordView> dst = new PageInfo<>();
-        BeanUtils.copyProperties(src, dst);
-        dst.setList(src.getList().stream().map(this::toView).toList());
-        return Result.success(dst);
+        return Result.success(toPageView(new PageInfo<>(recordService.selectAll(entity))));
     }
 
     @Override

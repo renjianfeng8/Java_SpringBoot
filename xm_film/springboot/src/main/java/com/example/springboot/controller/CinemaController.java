@@ -3,6 +3,7 @@ package com.example.springboot.controller;
 import com.example.springboot.common.AuthContext;
 import com.example.springboot.common.BaseController;
 import com.example.springboot.common.Result;
+import com.example.springboot.common.enums.CinemaStatus;
 import com.example.springboot.common.enums.ErrorCode;
 import com.example.springboot.common.enums.RoleEnum;
 import com.example.springboot.dto.request.CinemaFromDirectoryRequest;
@@ -16,7 +17,6 @@ import com.example.springboot.service.OrderedService;
 import com.example.springboot.service.RecordService;
 import com.example.springboot.service.RoomService;
 import com.github.pagehelper.PageInfo;
-import org.springframework.beans.BeanUtils;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -26,8 +26,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.context.request.RequestContextHolder;
-import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.util.List;
 
@@ -105,19 +103,19 @@ public class CinemaController extends BaseController<Cinema, CinemaRequest, Cine
     public Result<PageInfo<CinemaView>> page(CinemaRequest query,
                        @RequestParam(defaultValue = "1") Integer pageNum,
                        @RequestParam(defaultValue = "10") Integer pageSize) {
-        Integer filmId = null;
-        ServletRequestAttributes attrs = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
-        if (attrs != null) {
-            String filmIdStr = attrs.getRequest().getParameter("filmId");
-            if (filmIdStr != null) {
-                filmId = Integer.valueOf(filmIdStr);
-            }
+        PageInfo<Cinema> src = cinemaService.selectPage(toEntity(query), query.getFilmId(), pageNum, pageSize, !isAdmin());
+        return Result.success(toPageView(src));
+    }
+
+    /** 详情与列表同口径：未审核影院不对外展示（管理员与后台审核不受限），否则列表藏得住、按 id 又查得到 */
+    @Override
+    @GetMapping("/{id}")
+    public Result<CinemaView> getById(@PathVariable Integer id) {
+        Cinema cinema = cinemaService.selectById(id);
+        if (cinema == null || (!isAdmin() && !CinemaStatus.APPROVED.equals(cinema.getStatus()))) {
+            return Result.success(null);
         }
-        PageInfo<Cinema> src = cinemaService.selectPage(toEntity(query), filmId, pageNum, pageSize, !isAdmin());
-        PageInfo<CinemaView> dst = new PageInfo<>();
-        BeanUtils.copyProperties(src, dst);
-        dst.setList(src.getList().stream().map(this::toView).toList());
-        return Result.success(dst);
+        return Result.success(toView(cinema));
     }
 
     /** 前台区域级联选项。前缀已在 AuthInterceptor 的 PUBLIC_READ_PREFIXES，游客可读 */
@@ -162,6 +160,9 @@ public class CinemaController extends BaseController<Cinema, CinemaRequest, Cine
             cinema.setStatus(null);
             // 名录关联决定区域展示，属管理员字段，影院自助更新不得改动
             cinema.setDirectoryId(null);
+            // code/certificate 是管理员审核所依据的资质字段，自助更新同样不得改写
+            cinema.setCode(null);
+            cinema.setCertificate(null);
             cinemaService.update(cinema);
             return Result.success();
         }

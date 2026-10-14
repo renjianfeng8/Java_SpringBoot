@@ -3,15 +3,18 @@ package com.example.springboot.controller;
 import com.example.springboot.common.AuthContext;
 import com.example.springboot.common.BaseController;
 import com.example.springboot.common.Result;
+import com.example.springboot.common.enums.ErrorCode;
+import com.example.springboot.common.enums.RoleEnum;
 import com.example.springboot.dto.request.UserRequest;
 import com.example.springboot.dto.response.UserView;
 import com.example.springboot.entity.User;
+import com.example.springboot.exception.CustomException;
 import com.example.springboot.service.UserService;
 import com.github.pagehelper.PageInfo;
-import org.springframework.beans.BeanUtils;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -59,6 +62,16 @@ public class UserController extends BaseController<User, UserRequest, UserView> 
         return view;
     }
 
+    /** 新增用户仅管理员：/api/v1/users 前缀不在 ADMIN_WRITE_PREFIXES（普通用户要能改自己的资料），
+     *  故新增必须在此显式守卫，否则任何登录角色都能建号 */
+    @Override
+    @PostMapping
+    public Result<Void> add(@RequestBody UserRequest request) {
+        requireAdmin();
+        userService.add(toEntity(request));
+        return Result.success();
+    }
+
     @Override
     @GetMapping
     public Result<List<UserView>> list(UserRequest query) {
@@ -71,12 +84,14 @@ public class UserController extends BaseController<User, UserRequest, UserView> 
     public Result<PageInfo<UserView>> page(UserRequest query,
                        @RequestParam(defaultValue = "1") Integer pageNum,
                        @RequestParam(defaultValue = "10") Integer pageSize) {
-        PageInfo<User> src = userService.pageScoped(toEntity(query), AuthContext.role(), AuthContext.userId(),
-                pageNum, pageSize);
-        PageInfo<UserView> dst = new PageInfo<>();
-        BeanUtils.copyProperties(src, dst);
-        dst.setList(src.getList().stream().map(this::toView).toList());
-        return Result.success(dst);
+        return Result.success(toPageView(userService.pageScoped(toEntity(query), AuthContext.role(),
+                AuthContext.userId(), pageNum, pageSize)));
+    }
+
+    private void requireAdmin() {
+        if (!RoleEnum.ADMIN.name().equals(AuthContext.role())) {
+            throw new CustomException(ErrorCode.FORBIDDEN, "权限不足");
+        }
     }
 
     @Override

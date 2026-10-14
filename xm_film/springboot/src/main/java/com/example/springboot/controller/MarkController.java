@@ -128,6 +128,10 @@ public class MarkController extends BaseController<Mark, MarkRequest, MarkEntity
         if (isAdmin()) {
             return;
         }
+        // 评价的 user_id 指向 user 表，而 admin/cinema 的 id 是另外两套自增序列。
+        // 只比 id 不比角色，会让 id 恰好相同的影院账号操作到别的用户的评价（跨表撞号越权），
+        // 故非 ADMIN 一律要求 USER —— 与发表/点赞的 requireUser 同一口径。
+        requireUser("操作");
         if (markId == null) {
             throw new CustomException(ErrorCode.PARAM_INVALID, "缺少评价ID");
         }

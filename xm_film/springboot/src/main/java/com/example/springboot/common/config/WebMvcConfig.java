@@ -35,8 +35,6 @@ public class WebMvcConfig implements WebMvcConfigurer {
                         "/api/v1/auth/login",
                         "/api/v1/auth/register",
                         "/api/v1/auth/years",
-                        "/api/v1/types",
-                        "/api/v1/areas",
                         "/api/v1/films/page",
                         "/api/v1/films/box-office/**",
                         "/api/v1/films/mark/**",
@@ -44,8 +42,11 @@ public class WebMvcConfig implements WebMvcConfigurer {
                         "/api/v1/films/by-cinema",
                         "/api/v1/notices/page"
                 );
-        // 注意：不要把 /api/v1/cinemas/page 加进排除表。匿名 GET 已由 AuthInterceptor 的
-        // PUBLIC_READ_PREFIXES 放行，而一旦排除在这里，拦截器就不工作、不会往 request 写
-        // role 属性，控制器里的 role 判断（管理员看全部 / 其他人只看已审核）就永远失效。
+        // 排除表只放「必须绕过鉴权的非读端点」（登录/注册）与确定无副作用的读端点。
+        // 注意：不要把 /api/v1/cinemas/page 或 /api/v1/types、/api/v1/areas 这类
+        // 「类路径即集合根」的路径加进来 —— 排除是对该路径的所有方法生效，而继承自
+        // BaseController 的 POST/PUT 就挂在同一个集合根上，一旦排除，拦截器不工作、
+        // ADMIN_WRITE_PREFIXES 形同虚设，匿名就能增改。这些读端点的匿名放行统一交给
+        // AuthInterceptor.PUBLIC_READ_PREFIXES（只放 GET），不要再往这张表里加。
     }
 }

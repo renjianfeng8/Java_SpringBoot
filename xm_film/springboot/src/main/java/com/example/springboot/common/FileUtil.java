@@ -7,7 +7,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Set;
+import java.util.Map;
 import java.util.UUID;
 
 public class FileUtil {
@@ -15,9 +15,18 @@ public class FileUtil {
     private FileUtil() {
     }
 
-    private static final Set<String> ALLOWED_MIME_TYPES = Set.of(
-            "image/jpeg", "image/png", "image/webp", "image/gif",
-            "video/mp4", "video/webm"
+    /**
+     * 允许的上传类型：MIME -> 落盘扩展名。
+     * 扩展名取自本表而非客户端文件名 —— Content-Type 是客户端可随意声明的，
+     * 若再按文件名给后缀，就能把 .html/.jsp 之类的内容落在 /files/** 下并按其类型回放。
+     */
+    private static final Map<String, String> ALLOWED_TYPES = Map.of(
+            "image/jpeg", ".jpg",
+            "image/png", ".png",
+            "image/webp", ".webp",
+            "image/gif", ".gif",
+            "video/mp4", ".mp4",
+            "video/webm", ".webm"
     );
 
     public static String uploadFile(MultipartFile file, String uploadDir) throws IOException {
@@ -26,11 +35,12 @@ public class FileUtil {
         }
 
         String contentType = file.getContentType();
-        if (contentType == null || !ALLOWED_MIME_TYPES.contains(contentType)) {
+        String extension = contentType == null ? null : ALLOWED_TYPES.get(contentType);
+        if (extension == null) {
             throw new IllegalArgumentException("不支持的文件类型: " + contentType);
         }
 
-        return saveBytes(file.getBytes(), getFileExtension(file.getOriginalFilename()), uploadDir);
+        return saveBytes(file.getBytes(), extension, uploadDir);
     }
 
     /**
