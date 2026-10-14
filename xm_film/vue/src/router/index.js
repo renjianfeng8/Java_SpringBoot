@@ -1,4 +1,4 @@
-import { createRouter, createWebHistory } from 'vue-router'
+import { createRouter, createWebHistory, START_LOCATION } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { clearStoredUser, getStoredUser } from '@/utils/authStorage'
 
@@ -80,13 +80,11 @@ const router = createRouter({
 router.beforeEach((to, from, next) => {
   document.title = to.meta.title || '电影购票网站'
 
-  // 1. 访客页面（login/register/404）无条件放行
-  if (to.meta.guest) {
-    return next()
-  }
-
-  // 2. 需要登录的页面
-  if (to.meta.requiresAuth) {
+  // 鉴权判定必须先于 guest，且 roles 本身即蕴含"需登录"：
+  // Vue Router 会把父路由的 meta 合并进子路由，任何"只看其中一个标记"的写法都会在标记共存时 fail-open
+  // （guest 压过 requiresAuth 就是 e3089365 修的这类；只判 requiresAuth 则会让未来的 roles-only 路由裸奔）。
+  // 公开页（login/register/404 与前台游客页）既无 requiresAuth 也无 roles，落到末尾的 next() 直接放行。
+  if (to.meta.requiresAuth || to.meta.roles) {
     const user = getStoredUser()
     if (!user?.token || !user?.role) {
       clearStoredUser()
@@ -99,7 +97,14 @@ router.beforeEach((to, from, next) => {
         // 只回跳 to.path 会让登录后落在一个没有参数的 /front/buyTicket 上（页面只能报"参数无效"）
         next(`/login?redirect=${encodeURIComponent(to.fullPath)}`)
       }).catch(() => {
-        next(false)
+        // 首次导航（地址栏直入 / 刷新 / 书签）没有上一页可回退：此时 next(false) 会中止唯一一次导航，
+        // RouterView 匹配为空 → 白屏。改为落到前台首页，让用户仍留在应用内；
+        // 非首次导航仍按「取消」处理，停留在当前页。
+        if (from === START_LOCATION) {
+          next('/front/home')
+        } else {
+          next(false)
+        }
       })
       return
     }
@@ -111,7 +116,7 @@ router.beforeEach((to, from, next) => {
     }
   }
 
-  // 3. 无 meta 限制的路由直接放行
+  // 公开页 / 无 meta 限制的路由直接放行
   next()
 })
 
