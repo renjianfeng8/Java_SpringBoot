@@ -163,10 +163,21 @@ class CinemaServiceTest {
         when(cinemaMapper.selectByFilmId(any(Cinema.class), isNull(), eq(false)))
                 .thenReturn(List.of(mockCinema));
 
-        cinemaService.selectAll(new Cinema(), false);
+        cinemaService.selectAll(new Cinema(), null, false);
 
         // 管理端审核列表需要看到未审核影院，故该路径不得过滤
         verify(cinemaMapper).selectByFilmId(any(Cinema.class), isNull(), eq(false));
+    }
+
+    @Test
+    void selectAllShouldForwardFilmId() {
+        when(cinemaMapper.selectByFilmId(any(Cinema.class), eq(7), eq(false)))
+                .thenReturn(List.of(mockCinema));
+
+        cinemaService.selectAll(new Cinema(), 7, false);
+
+        // filmId 决定 /cinemas 是否按上映影片筛，漏传即静默返回全部影院
+        verify(cinemaMapper).selectByFilmId(any(Cinema.class), eq(7), eq(false));
     }
 
     @Test

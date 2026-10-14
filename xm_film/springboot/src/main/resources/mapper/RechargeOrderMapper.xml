@@ -52,7 +52,8 @@
         </trim>
     </insert>
 
-    <!-- 单据是资金凭证，只允许回调推进状态与完成时间，不接受业务字段改写 -->
+    <!-- 单据是资金凭证，只允许回调推进「状态 / 完成时间 / 备注（回调失败原因）」三项，
+         不接受业务字段（金额 / 归属人 / 单号）改写 -->
     <update id="updateById" parameterType="com.example.springboot.entity.RechargeOrder">
         UPDATE recharge_order
         <set>

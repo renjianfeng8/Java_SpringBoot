@@ -1,6 +1,5 @@
 package com.example.springboot.dto.request;
 
-import com.example.springboot.entity.Type;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -27,7 +26,6 @@ public class FilmRequest {
     private Double score;
     private String year;
     private String areaName;
-    private List<Integer> ids;
     private Integer typeId;
     private Double boxOffice;
     private Integer actorId;
@@ -35,5 +33,4 @@ public class FilmRequest {
     private Integer topNum;
     private String video;
     private List<Integer> typeIds;
-    private List<Type> typeList;
 }

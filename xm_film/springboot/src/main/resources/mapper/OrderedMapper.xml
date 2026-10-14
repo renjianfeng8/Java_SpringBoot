@@ -276,7 +276,8 @@
             <if test="start != null">start = #{start},</if>
             <if test="seat != null">seat = #{seat},</if>
             <if test="createTime != null">create_time = #{createTime},</if>
-            <!-- 待支付倒计时只有两种合法写入，其余更新一律不碰该列：
+            <!-- 待支付倒计时在本语句里只有两种合法写法，其余更新一律不碰该列
+                 （该列另有 insert 与 batchCancelExpiredOrders 两个写者，都不经此处）：
                  ① 显式清空 —— clearPendingTimeout 置真（状态离开待支付时由服务层设置）；
                  ② 写入新值 —— pendingTimeoutAt 非空（下单 / 改期）。
                  用 <choose> 而非两个并列 <if>：同一列写两次会互相覆盖，只能有一个分支生效。

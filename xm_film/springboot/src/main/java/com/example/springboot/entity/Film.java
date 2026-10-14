@@ -30,7 +30,6 @@ public class Film implements Serializable {
     private Double score;
     private String year;
     private String areaName;
-    private List<Integer> ids;
     private Integer typeId;
     // 必须用包装类型：FilmMapper.updateById 用 <if test="boxOffice != null"> 守卫，
     // 原始类型 double 永远非 null，任何不带票房的局部更新都会把票房写成 0（同理）。

@@ -26,6 +26,10 @@
         SELECT * FROM cinema WHERE username = #{username}
     </select>
 
+    <!-- 「已审核」谓词：只此一处定义，公开列表与区域级联共用同一口径。
+         值即 CinemaStatus.APPROVED，改状态字面量时两处一并改。 -->
+    <sql id="approvedCinema">c.status = '已审核'</sql>
+
     <!-- 根据电影ID筛选影院：上映关系由排片(record)派生。
          区域(province/city/district)由关联的影院名录带出，cinema 表不存。 -->
     <select id="selectByFilmId" resultType="com.example.springboot.entity.Cinema">
@@ -34,14 +38,15 @@
         LEFT JOIN cinema_directory d ON c.directory_id = d.id
         <where>
             <!-- 未审核影院不对外展示；管理员（含后台审核列表）传 false 看全部 -->
-            <if test="approvedOnly">AND c.status = '已审核'</if>
-            <!-- 原有影院自身条件 -->
-            <if test="cinema.name != null">
+            <if test="approvedOnly">AND <include refid="approvedCinema"/></if>
+            <!-- 原有影院自身条件。字符串筛选一律连带判空串：前端 clearable 清空即"不筛"，
+                 空串若落成 `= ''` 会查出零行（与其余 mapper 的字符串筛选同口径） -->
+            <if test="cinema.name != null and cinema.name != ''">
                 AND c.name LIKE CONCAT('%', #{cinema.name}, '%')
             </if>
             <!-- 前台区域筛选：命中关联名录的市/区 -->
-            <if test="cinema.city != null">AND d.city = #{cinema.city}</if>
-            <if test="cinema.district != null">AND d.district = #{cinema.district}</if>
+            <if test="cinema.city != null and cinema.city != ''">AND d.city = #{cinema.city}</if>
+            <if test="cinema.district != null and cinema.district != ''">AND d.district = #{cinema.district}</if>
             <!-- 电影筛选条件：该影院存在这部电影的排片 -->
             <if test="filmId != null">
                 AND EXISTS (SELECT 1 FROM record r WHERE r.cinema_id = c.id AND r.film_id = #{filmId})
@@ -137,7 +142,7 @@
         SELECT DISTINCT d.city AS city, d.district AS district
         FROM cinema c
         JOIN cinema_directory d ON c.directory_id = d.id
-        WHERE c.status = '已审核'
+        WHERE <include refid="approvedCinema"/>
           AND d.city IS NOT NULL AND d.city != ''
         ORDER BY d.city, d.district
     </select>

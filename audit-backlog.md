@@ -1,6 +1,6 @@
 # 待办技术债清单（audit-backlog）
 
-本文件是本仓唯一的技术债登记处，承接已删除的 `后端代码规范审查报告.md` 的全部"登记备查"项，并汇总 2026-10-13 两轮代码审查（`entity/`、`service/`）与 2026-10-14 控制器层审查（`controller/`）中判定延后或建议的条目。已完成项不进本表；已判定非缺陷的条目集中在末节，避免二次误报。
+本文件是本仓唯一的技术债登记处，承接已删除的 `后端代码规范审查报告.md` 的全部"登记备查"项，并汇总 2026-10-13 两轮代码审查（`entity/`、`service/`）、2026-10-14 控制器层审查（`controller/`）、2026-10-14 mapper 层审查（`mapper/`）与 2026-10-14 DTO 层审查（`dto/`）中判定延后或建议的条目。已完成项不进本表；已判定非缺陷的条目集中在末节，避免二次误报。
 
 维护口径：一处事实一处归属；每条给出 `文件` 与符号，行号随改动可能漂移、以符号为准。状态分三档：待办、有意不整改（与既定政策一致，非债务）、已核验非缺陷。
 
@@ -47,10 +47,9 @@
 
 | 编号 | 位置 | 问题 | 处置建议 |
 | --- | --- | --- | --- |
-| BL-18 | entity/ 全 17 类 | 实体混入非持久化展示/派生字段并直接对外：Film.areaName/typeList/ids、Cinema.province/city/district、Ordered/Mark/Record 的 join 字段。 | S10 展示字段剥离，移入对应 View（需改 JOIN 查询 resultType 与 Service 签名）。架构级，用户另立一轮。 |
+| BL-18 | entity/ 全 17 类 | 实体混入非持久化展示/派生字段并直接对外：Film.areaName/typeList、Cinema.province/city/district、Ordered/Mark/Record 的 join 字段。 | S10 展示字段剥离，移入对应 View（需改 JOIN 查询 resultType 与 Service 签名）。架构级，用户另立一轮。 |
 | BL-19 | entity/Account 及 User/Admin/Cinema | token/newPassword 置于 Account 被三子类继承；三子类 @AllArgsConstructor 只覆盖自身字段、不含父字段（误用会建出 role/password 为 null 的账号，当前无调用者）。 | S10 继承解耦，把 token/newPassword 移出 Account（需改 login/updatePassword 签名）。 |
 | BL-20 | entity/Admin 与 entity/User | 两实体字段完全一致；avatar/phone/email 在 Admin/User/Cinema 三处重复声明。 | 上提至 Account 或抽 Profile 基类（与 BL-19 同轮）。 |
-| BL-21 | entity/Film.ids | 死字段：在 Film/FilmRequest/FilmView 三处声明，仅 Controller 逐层拷贝，无 Service/Mapper/前端读取。 | 连同 DTO 一并删除。 |
 | BL-22 | entity/CinemaDirectory.createTime | 全仓唯一非 String 时间字段（LocalDateTime），序列化为 ISO 带 T 串，与其余 String 时间字段口径不一；前端未读取。 | 统一为 String，或全仓统一改 LocalDateTime（需联动 mapper/DTO/前端）。 |
 | BL-23 | entity/Room.title | 存的是所属影院名（RoomService 由 cinema.getName() 派生），而 name 才是影厅自身名。命名与语义不符，是未标注的冗余快照。 | 改名或去除（需联动 mapper/Service/前端）。 |
 | BL-24 | entity/Ordered 的 total/payAmount/refundAmount、entity/Film.boxOffice | 金额用 Double，而同实体 unitPrice、RechargeOrder.amount、FundFlow 各额均 BigDecimal。当前经 BigDecimal.valueOf(double) 往返未见精度损失，但与"金额用 BigDecimal"的既定口径不一致。 | 统一为 BigDecimal（需改库列类型与 mapper/DTO）。 |
@@ -80,6 +79,22 @@
 | BL-33 | controller/RechargeController.toEntity、FundFlowController.toEntity、CinemaDirectoryController.toEntity | 开头 `if (request == null) return null;` 是死分支：query 由 Spring 绑定、恒非 null（其余控制器的 toEntity 均无此判断）。 | 删除该死守卫。 |
 | BL-34 | controller/OrderedController.getById | `ordered == null ? null : toView(ordered)` 为死三元：selectByIdScoped 在 null 时先抛 NOT_FOUND；Room/Record 的同类方法无此冗余。 | 删除死三元。 |
 | BL-35 | controller/StatisticsController.overview、controller/AccountController.requireUser | 角色门禁在方法内逐端点各写一份（`/api/v1/statistics` 未进任何前缀表），新增端点易漏（与 BL-17 同类）。 | 统计前缀加 ADMIN_ONLY_PREFIXES；账户前缀加统一 USER 守卫，或与 BL-17 同轮抽统一守卫。 |
+
+## Mapper 层遗留（2026-10-14 mapper 审查）
+
+| 编号 | 位置 | 问题 | 处置建议 |
+| --- | --- | --- | --- |
+| BL-36 | mapper/ 全部 `updateById`（UserMapper、AdminMapper、ActorMapper、AreaMapper、TypeMapper、VideoMapper、NoticeMapper、RoomMapper、RecordMapper、MarkMapper、FilmMapper、CinemaMapper、OrderedMapper） | `<set>` 内所有 `<if>` 均不成立时 MyBatis 不输出 SET 关键字，整句退化为 `UPDATE t WHERE id = ?`。本轮以 BoundSql 实测渲染确认（OrderedMapper.updateById 传仅含 id 的实体 → `UPDATE ordered WHERE id = ?`），MySQL 报 1064；经未覆写 update 的控制器（BaseController.update → service.update）以 HTTP 500 暴露，请求体仅带 id 即可触发。 | BaseService.update 前置校验"除主键外无待更新字段"并抛 PARAM_INVALID，或在 mapper 侧保证 SET 恒非空。行为变更，需确认前端可接受。 |
+| BL-38 | mapper/CinemaDirectoryMapper.selectAll 的等值筛选（province / city / district / brand） | 与 CinemaMapper.selectByFilmId 同形：只判 `!= null`、不判空串，空串入参落成 `= ''` 查出零行。本轮已按同一口径修 CinemaMapper 的 cinema.name/city/district，此处同形点未做。name 走 LIKE，空串落成 `LIKE '%%'` 行为无害，仅属同形不一致。UNCERTAIN：HTTP 路径当前不可达（前端 clearable 均以 `|| undefined` 发送）。 | 与 CinemaMapper 对齐补 `and x != ''`；确认不可达后可登记备查不整改。 |
+
+## DTO 层遗留（2026-10-14 dto 审查）
+
+本轮修复并移出本表：BL-21（entity/Film.ids 死字段）、BL-37（/cinemas 的 filmId 静默失效，selectAll 已增 filmId 形参透传）。
+
+| 编号 | 位置 | 问题 | 处置建议 |
+| --- | --- | --- | --- |
+| BL-39 | dto/ 的同名 Request/View 对（Actor、Area、Type、Video、Room、Record、FundFlow、Notice、RechargeOrder、CinemaDirectory、Ordered，以及 MarkRequest 与 MarkEntityView，共 12 对） | 同名字段逐字重复、各对字段完全一致：增删改一个字段要在两个 DTO 加 toEntity、toView 共四处同步，无机制保证两列表不漂移。 | 合并为单一 DTO，或加断言两列表相等的测试；属架构级，另立一轮。 |
+| BL-40 | dto/request/RecordRequest 的 cinemaName/roomName/roomSeatRows/roomSeatCols；dto/request/OrderedRequest 的 userName/filmName/cinemaName/roomName | join 派生字段只作 SQL 输出，却落在请求 DTO 上成为可绑定入参；toEntity 逐层拷贝后 mapper 不写这些列，入参被静默丢弃。 | 入参 DTO 剥离这些只读字段（与 BL-18 实体展示字段剥离同轮）。 |
 
 ## 有意不整改（与既定政策一致，非债务）
 
