@@ -48,11 +48,15 @@ public abstract class BaseController<T, R, V> {
             @RequestParam(defaultValue = "1") Integer pageNum,
             @RequestParam(defaultValue = "10") Integer pageSize) {
         PageMethod.startPage(pageNum, pageSize);
-        PageInfo<T> src = new PageInfo<>(service.selectAll(toEntity(query)));
+        return Result.success(toPageView(new PageInfo<>(service.selectAll(toEntity(query)))));
+    }
+
+    /** 分页映射：PageInfo<T> → PageInfo<V>（拷贝分页元数据，list 换成视图）。子类的分页覆写共用此段 */
+    protected PageInfo<V> toPageView(PageInfo<T> src) {
         PageInfo<V> dst = new PageInfo<>();
         BeanUtils.copyProperties(src, dst);
         dst.setList(src.getList().stream().map(this::toView).toList());
-        return Result.success(dst);
+        return dst;
     }
 
     @PostMapping

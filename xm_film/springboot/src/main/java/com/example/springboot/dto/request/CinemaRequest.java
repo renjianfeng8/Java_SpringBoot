@@ -29,4 +29,6 @@ public class CinemaRequest {
     private String province;
     private String city;
     private String district;
+    /** 仅作查询条件：按上映影片筛影院，非实体字段 */
+    private Integer filmId;
 }

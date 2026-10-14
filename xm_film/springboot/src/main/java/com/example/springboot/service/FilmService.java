@@ -88,17 +88,21 @@ public class FilmService extends BaseService<Film> {
     }
 
     public List<Film> getBoxOfficeTop(Film film) {
-        int topNum = film.getTopNum() != null ? film.getTopNum() : 10;
-        List<Film> result = filmMapper.selectBoxOfficeTop(topNum);
+        List<Film> result = filmMapper.selectBoxOfficeTop(resolveTopNum(film));
         fillFilmTypes(result);
         return result;
     }
 
     public List<Film> getMarkTop(Film film) {
-        int topNum = film.getTopNum() != null ? film.getTopNum() : 10;
-        List<Film> result = filmMapper.selectMarkTop(topNum);
+        List<Film> result = filmMapper.selectMarkTop(resolveTopNum(film));
         fillFilmTypes(result);
         return result;
+    }
+
+    /** 榜单条数：缺省 10。非正数会让 SQL 拼出 `LIMIT -1`/`LIMIT 0` 直接报错或空榜，故一并归到缺省 */
+    private static int resolveTopNum(Film film) {
+        Integer topNum = film.getTopNum();
+        return topNum != null && topNum > 0 ? topNum : 10;
     }
 
     private void fillFilmTypes(List<Film> filmList) {

@@ -9,7 +9,6 @@ import com.example.springboot.entity.Room;
 import com.example.springboot.service.RoomService;
 import com.github.pagehelper.PageInfo;
 import com.github.pagehelper.page.PageMethod;
-import org.springframework.beans.BeanUtils;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -73,11 +72,7 @@ public class RoomController extends BaseController<Room, RoomRequest, RoomView> 
         Room entity = toEntity(query);
         roomService.applyCinemaScope(entity, AuthContext.role(), AuthContext.userId());
         PageMethod.startPage(pageNum, pageSize);
-        PageInfo<Room> src = new PageInfo<>(roomService.selectAll(entity));
-        PageInfo<RoomView> dst = new PageInfo<>();
-        BeanUtils.copyProperties(src, dst);
-        dst.setList(src.getList().stream().map(this::toView).toList());
-        return Result.success(dst);
+        return Result.success(toPageView(new PageInfo<>(roomService.selectAll(entity))));
     }
 
     @Override
