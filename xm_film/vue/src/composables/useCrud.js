@@ -1,6 +1,7 @@
 import { ref, reactive } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import request from '@/utils/request'
+import { apiPage, apiById, apiBatch } from '@/constants'
 
 export function useCrud(apiBase) {
   const dataList = ref([])
@@ -20,24 +21,35 @@ export function useCrud(apiBase) {
     error.value = message
   }
 
+  // 递增序号：只让最后一次 load 的结果落地，避免慢响应覆盖新结果、提前收起 loading
+  let loadSeq = 0
+
   async function load() {
+    const seq = ++loadSeq
     loading.value = true
     error.value = ''
     try {
       const params = { pageNum: pageNum.value, pageSize: pageSize.value, ...searchForm }
-      const res = await request.get(`${apiBase}/page`, { params })
+      const res = await request.get(apiPage(apiBase), { params })
+      if (seq !== loadSeq) return
       if (res.code === '200') {
         dataList.value = res.data.list || []
         total.value = res.data.total || 0
+        // 删空当前页后回退到第 1 页：PageHelper 未开 reasonable，越界页只是返回空列表
+        if (dataList.value.length === 0 && total.value > 0 && pageNum.value > 1) {
+          pageNum.value = 1
+          return load()
+        }
       } else {
         fail(res.msg || '加载失败')
         ElMessage.error(error.value)
       }
     } catch (e) {
       // request.js 已统一弹出网络/HTTP 提示，这里仅清空数据兜底，异常不再上抛
+      if (seq !== loadSeq) return
       fail('数据加载失败，请稍后重试')
     } finally {
-      loading.value = false
+      if (seq === loadSeq) loading.value = false
     }
   }
 
@@ -73,7 +85,7 @@ export function useCrud(apiBase) {
 
   async function del(id) {
     try {
-      const res = await request.delete(`${apiBase}/${id}`)
+      const res = await request.delete(apiById(apiBase, id))
       if (res.code === '200') {
         ElMessage.success('删除成功')
         await load()
@@ -92,7 +104,7 @@ export function useCrud(apiBase) {
       return false
     }
     try {
-      const res = await request.delete(`${apiBase}/batch`, { data: ids })
+      const res = await request.delete(apiBatch(apiBase), { data: ids })
       if (res.code === '200') {
         ElMessage.success('批量删除成功')
         await load()
