@@ -1,13 +1,25 @@
 import { ref, reactive } from 'vue'
 import { ElMessage } from 'element-plus'
 
+// 深拷贝默认值：defaultForm 里的数组/对象若按下标共享（如 Film 的 typeIds: []），
+// 一次就地改动会渗进后续每一次新增。
+function cloneDefaults(value) {
+  if (Array.isArray(value)) return value.map(cloneDefaults)
+  if (value && typeof value === 'object') {
+    const copy = {}
+    Object.keys(value).forEach((key) => { copy[key] = cloneDefaults(value[key]) })
+    return copy
+  }
+  return value
+}
+
 export function useFormDialog(crud, options = {}) {
   const { defaultForm = {}, rules: formRules = {}, onSaved } = options
   const dialogVisible = ref(false)
   const isEdit = ref(false)
+  const submitting = ref(false)
   const formRef = ref(null)
-  const form = reactive({ ...defaultForm })
-  const rules = formRules
+  const form = reactive(cloneDefaults(defaultForm))
 
   function openAdd() {
     isEdit.value = false
@@ -18,7 +30,7 @@ export function useFormDialog(crud, options = {}) {
     Object.keys(form).forEach((key) => {
       if (!(key in defaultForm)) delete form[key]
     })
-    Object.assign(form, defaultForm)
+    Object.assign(form, cloneDefaults(defaultForm))
     dialogVisible.value = true
   }
 
@@ -29,18 +41,25 @@ export function useFormDialog(crud, options = {}) {
   }
 
   async function submit() {
-    if (!formRef.value) return
+    // 提交期间吞掉重复点击：双击会让无 id 的表插两条，或让显式写 id 的表撞主键
+    if (submitting.value) return
+    submitting.value = true
     try {
-      await formRef.value.validate()
-    } catch {
-      ElMessage.warning('请完成必填字段')
-      return
-    }
+      if (!formRef.value) return
+      try {
+        await formRef.value.validate()
+      } catch {
+        ElMessage.warning('请完成必填字段')
+        return
+      }
 
-    const success = isEdit.value ? await crud.update(form) : await crud.add(form)
-    if (success) {
-      dialogVisible.value = false
-      onSaved?.()
+      const success = isEdit.value ? await crud.update(form) : await crud.add(form)
+      if (success) {
+        dialogVisible.value = false
+        onSaved?.()
+      }
+    } finally {
+      submitting.value = false
     }
   }
 
@@ -49,5 +68,5 @@ export function useFormDialog(crud, options = {}) {
     formRef.value?.resetFields()
   }
 
-  return { dialogVisible, isEdit, formRef, form, rules, openAdd, openEdit, submit, close }
+  return { dialogVisible, isEdit, submitting, formRef, form, rules: formRules, openAdd, openEdit, submit, close }
 }

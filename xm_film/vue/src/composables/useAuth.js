@@ -6,6 +6,9 @@ import { AUTH_API } from '@/constants'
 
 const globalUser = ref(null)
 const globalVerifying = ref(true)
+// 模块级单例：/auth/me 整个应用生命周期只验一次。init 仍每次同步 storage，
+// 但不再让每个调用 useAuth() 的组件各自发一轮 GET /auth/me。
+let verified = false
 
 export function useAuth() {
   const user = globalUser
@@ -21,34 +24,36 @@ export function useAuth() {
 
   function init() {
     user.value = getStoredUser()
+    if (verified) return
+    verified = true
     verifyToken()
   }
 
   async function verifyToken() {
-    if (!user.value?.token) {
+    // 令牌在发请求前取一次：/me 不返回 token（只有 login 才注入），
+    // 解析时再从 storage 读会让「验签期间被登出」的响应把 token 写成 undefined。
+    const currentToken = user.value?.token
+    if (!currentToken) {
       globalVerifying.value = false
       return
     }
     try {
       const res = await request.get(AUTH_API.ME)
+      // 验签期间登录态可能已变（登出 / 换号 / 他标签页清空），此结果作废，避免复活半个会话
+      if (user.value?.token !== currentToken) return
       if (res.code === '200') {
-        const stored = getStoredUser()  // preserve the existing token
-        setUser({ ...res.data, token: stored?.token })
+        setUser({ ...res.data, token: currentToken })
       } else {
-        forceLogout()
+        logout()
       }
     } catch (e) {
+      if (user.value?.token !== currentToken) return
       if (e.response?.status === 401 || e.response?.status === 403) {
-        forceLogout()
+        logout()
       }
     } finally {
       globalVerifying.value = false
     }
-  }
-
-  function forceLogout() {
-    clearStoredUser()
-    user.value = null
   }
 
   function setUser(userData) {
