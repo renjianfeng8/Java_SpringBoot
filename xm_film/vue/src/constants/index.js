@@ -58,7 +58,7 @@ export const TMDB_API = {
   BACKFILL_VIDEOS: `${API_PATHS.TMDB}/backfill-videos`,
 }
 
-/** 影院名录（高德导入的只读资料）。PAGE/FILTERS 匿名可读；IMPORT* 仅管理员 */
+/** 影院名录（高德导入的只读资料）。整条前缀仅管理员，后台管理页专用 */
 export const CINEMA_DIRECTORY_API = {
   PAGE: apiPage(API_PATHS.CINEMA_DIRECTORY),
   FILTERS: `${API_PATHS.CINEMA_DIRECTORY}/filters`,

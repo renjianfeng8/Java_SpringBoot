@@ -23,8 +23,8 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 影院名录。GET 是公开只读资源；/import 与 /import/preview 会触发高德抓取与写库，
- * 由 AuthInterceptor 的 ADMIN_WRITE_PREFIXES 拦在非管理员之外（与本仓 film 写同款前缀级门禁）。
+ * 影院名录。整条前缀仅管理员可用（见 AuthInterceptor 的 ADMIN_ONLY_PREFIXES）：
+ * 读端 page/filters 只服务后台管理页，写端 /import 会触发高德抓取与建行。
  * 目录行只从高德来，没有第二条写路径。
  */
 @RestController
@@ -51,7 +51,7 @@ public class CinemaDirectoryController {
         return Result.success(dst);
     }
 
-    /** 前台筛选下拉与后台导入选城都用得到 */
+    /** 后台名录页筛选与导入选城下拉的数据源 */
     @GetMapping("/filters")
     public Result<Map<String, List<String>>> filters() {
         return Result.success(Map.of(

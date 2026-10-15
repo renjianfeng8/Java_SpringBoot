@@ -36,11 +36,11 @@
 | FE-27 | views/front/PayPassword.vue `switchMode` / `verifyIdentity` | 验证请求在途时第一步的「忘记支付密码？」仍可点：切模式清空字段后响应回来无条件 `step=2`，未经登录密码验证即进入「设置新密码」。 | `switchMode` 在途早退；两处链接加 `:disabled="submitting"`。 |
 | FE-28 | views/manage/Notice.vue `defaultForm.time` | 默认发布时间用 `new Date().toISOString()`（UTC），el-date-picker 按本地渲染，东八区差 8 小时；且默认值在 setup 求值一次后冻结。 | 改本地时钟 `nowLocal()`。 |
 | FE-29 | views/back/Home.vue `load` | 公告 `apiPage` 未传分页参数，固定后端默认 `pageSize=10` 且页面无分页控件，表头「共 N 条」与实际行数矛盾，第 11 条起不可达。 | 传 `pageNum`/`pageSize` 并补 `el-pagination`。 |
-| FE-30 | views/front/CinemaDirectory.vue `load` | 错误态保留上一个筛选的旧行、丢弃后端 `res.msg`、无 loading、无请求序号。 | 补请求序号、`v-loading`、`res.msg` 提示、错误清行。 |
+| FE-30 | views/front/CinemaDirectory.vue `load` | 错误态保留上一个筛选的旧行、丢弃后端 `res.msg`、无 loading、无请求序号。 | 补请求序号、`v-loading`、`res.msg` 提示、错误清行。（2026-10-15 该页整体删除 —— 前台不再暴露影院名录，本条随之失效） |
 | FE-31 | views/front/Movie.vue `el-pagination` / `load` / 三个下拉 | 分页未绑 `v-model`（`applyFilter` 复位页码不生效，pager 与内容错位）、`layout` 缺 `sizes` 致 `:page-sizes`/`@size-change` 为死配置；错误态不清旧列表；`loadType/Area/Year` 无 `.catch`。 | 补 `v-model` 与 `sizes`；错误清 `filmData`/`total`；三个下拉补 `.catch`。 |
 | FE-32 | views/front/FilmDetail.vue `img` / `types` | 缺海报兜底写死为字面中文串「默认海报地址（可选）」并当 `<img src>` 用，触发不存在路径的请求、头图裂图；`types` 本地 `map+join` 未复用共享 `formatFilmTypes`。 | 兜底改 `''`；改存 `typeList` 并复用 `formatFilmTypes`。 |
 | FE-33 | views/front/FilmCinema.vue `loading` / `types` | `loading` 初值 `false`，电影信息到位前渲染 `v-else` 空态（「未知电影」「暂无该电影的上映影院信息」）再切骨架，每次进入闪一屏假空态；`types` 未复用 `formatFilmTypes`。 | 初值改 `true`；改存 `typeList` 并复用 `formatFilmTypes`。 |
-| FE-34 | views/Front.vue `isNavActive` | `route.path.startsWith(prefix)` 无路径边界：`/front/cinema` 吞掉同前缀的 `/front/cinemaDirectory`，访问影院名录时「影院」与「影院名录」两项同时点亮。 | 匹配改为「相等或 `prefix + '/'`」。 |
+| FE-34 | views/Front.vue `isNavActive` | `route.path.startsWith(prefix)` 无路径边界：`/front/cinema` 吞掉同前缀的 `/front/cinemaDirectory`，访问影院名录时「影院」与「影院名录」两项同时点亮。 | 匹配改为「相等或 `prefix + '/'`」。（2026-10-15 前台名录页与导航项删除，所举这对碰撞源消失；边界匹配本身保留） |
 | FE-35 | views/Login.vue `login` catch | 传输类失败（网络/5xx）时 `e.message` 是 axios 英文串，且响应拦截器已弹过中文提示，此处再弹即二次提示 + 未翻译文案。 | 命中 `e.isAxiosError` 时不再弹框（业务失败仍弹后端中文 msg）。 |
 | FE-36 | views/front/Search.vue `fetchSearchResults` | 空关键字早退发生在清空 `filmList`/`error` 之前：同路由只换 query（顶栏搜索）时残留上一次搜索结果。 | 早退前清空 `filmList`/`error`/`loading`。 |
 | FE-37 | views/front/FilmMarks.vue `filmId` | `route.params.id` 一次性 `const` 捕获且只在 `onMounted` 取数：同路由记录换 `:id` 时组件复用、`onMounted` 不重触发，页面停留在上一部片的数据。 | 改 `let` + `watch(() => route.params.id)` 复位页码并重取。 |
