@@ -172,6 +172,9 @@ public class UserService extends BaseService<User> {
     /** 批量删除用户：仅管理员，逐条校验订单引用后再删 */
     @Transactional(rollbackFor = Exception.class)
     public void deleteBatchScoped(List<Integer> ids, String role, Integer userId) {
+        if (ids == null || ids.isEmpty()) {
+            throw new CustomException(ErrorCode.PARAM_INVALID, "请选择用户");
+        }
         requireAdmin(role);
         for (Integer id : ids) {
             ensureNoOrders(id);

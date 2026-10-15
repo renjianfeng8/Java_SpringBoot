@@ -71,9 +71,6 @@ public class CinemaDirectoryController {
 
     /** 请求 DTO → 实体：查询条件（含派生筛选字段 linked）交给 Service/DAO */
     private CinemaDirectory toEntity(CinemaDirectoryRequest request) {
-        if (request == null) {
-            return null;
-        }
         CinemaDirectory entity = new CinemaDirectory();
         entity.setId(request.getId());
         entity.setPoiId(request.getPoiId());

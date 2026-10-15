@@ -126,7 +126,7 @@ public class OrderedController extends BaseController<Ordered, OrderedRequest, O
     @GetMapping("/{id}")
     public Result<OrderedView> getById(@PathVariable Integer id) {
         Ordered ordered = orderedService.selectByIdScoped(id, AuthContext.role(), AuthContext.userId());
-        return Result.success(ordered == null ? null : toView(ordered));
+        return Result.success(toView(ordered));
     }
 
     @Override

@@ -44,9 +44,6 @@ public class FundFlowController {
 
     /** 请求 DTO → 实体：查询条件交给 Service/DAO */
     private FundFlow toEntity(FundFlowRequest request) {
-        if (request == null) {
-            return null;
-        }
         FundFlow entity = new FundFlow();
         entity.setId(request.getId());
         entity.setUserId(request.getUserId());

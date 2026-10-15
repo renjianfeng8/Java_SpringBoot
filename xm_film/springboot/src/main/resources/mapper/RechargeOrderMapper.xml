@@ -9,7 +9,7 @@
         SELECT * FROM recharge_order
         <where>
             <if test="userId != null">AND user_id = #{userId}</if>
-            <if test="status != null">AND status = #{status}</if>
+            <if test="status != null and status != ''">AND status = #{status}</if>
             <if test="rechargeNo != null and rechargeNo != ''">
                 AND recharge_no LIKE CONCAT('%', #{rechargeNo}, '%')
             </if>

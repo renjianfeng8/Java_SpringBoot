@@ -15,11 +15,11 @@
                EXISTS(SELECT 1 FROM cinema c WHERE c.directory_id = d.id) AS linked
         FROM cinema_directory d
         <where>
-            <if test="name != null">AND d.name LIKE CONCAT('%', #{name}, '%')</if>
-            <if test="province != null">AND d.province = #{province}</if>
-            <if test="city != null">AND d.city = #{city}</if>
-            <if test="district != null">AND d.district = #{district}</if>
-            <if test="brand != null">AND d.brand = #{brand}</if>
+            <if test="name != null and name != ''">AND d.name LIKE CONCAT('%', #{name}, '%')</if>
+            <if test="province != null and province != ''">AND d.province = #{province}</if>
+            <if test="city != null and city != ''">AND d.city = #{city}</if>
+            <if test="district != null and district != ''">AND d.district = #{district}</if>
+            <if test="brand != null and brand != ''">AND d.brand = #{brand}</if>
             <if test="linked != null">
                 <choose>
                     <when test="linked">AND EXISTS(SELECT 1 FROM cinema lc WHERE lc.directory_id = d.id)</when>

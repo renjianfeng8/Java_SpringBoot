@@ -64,9 +64,6 @@ public class RechargeController {
 
     /** 请求 DTO → 实体：查询条件交给 Service/DAO */
     private RechargeOrder toEntity(RechargeOrderRequest request) {
-        if (request == null) {
-            return null;
-        }
         RechargeOrder entity = new RechargeOrder();
         entity.setId(request.getId());
         entity.setRechargeNo(request.getRechargeNo());

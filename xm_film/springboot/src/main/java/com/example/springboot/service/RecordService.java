@@ -249,6 +249,9 @@ public class RecordService extends BaseService<Record> {
     /** 批量删除排片：逐条校验归属与订单引用后再删 */
     @Transactional(rollbackFor = Exception.class)
     public void deleteBatchScoped(List<Integer> ids, String role, Integer userId) {
+        if (ids == null || ids.isEmpty()) {
+            throw new CustomException(ErrorCode.PARAM_INVALID, "请选择排片");
+        }
         for (Integer id : ids) {
             ensureRecordAccess(selectById(id), role, userId);
             ensureNoOrders(id);

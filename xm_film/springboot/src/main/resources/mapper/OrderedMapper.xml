@@ -30,7 +30,7 @@
         <include refid="orderJoins"/>
         <where>
             <if test="orders != null and orders != ''">AND ordered.orders LIKE CONCAT('%', #{orders}, '%')</if>
-            <if test="status != null">AND ordered.status = #{status}</if>
+            <if test="status != null and status != ''">AND ordered.status = #{status}</if>
             <if test="recordId != null">AND ordered.record_id = #{recordId} </if>
             <if test="userId != null">AND ordered.user_id = #{userId} </if>
             <if test="filmId != null">AND ordered.film_id = #{filmId} </if>
