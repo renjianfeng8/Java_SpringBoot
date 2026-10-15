@@ -298,11 +298,12 @@
     }
   }
 
-  /* 头像既是图片容器也是无图时的首字兜底底色：浅主色底 + 主色文字（不承载正文，只放昵称首字） */
+  /* 评价人头像：圆形图片容器。浅主色底只在图片加载完成前垫着，避免头像位置闪白；
+     无图与破图都由 FilmMarks 在 el-avatar 的默认插槽里渲染默认头像图，不再放昵称首字，
+     故这里不再设 color（已无文字可着色）。 */
   .mark-item__avatar {
     flex: 0 0 auto;
     background-color: var(--el-color-primary-light-9);
-    color: var(--el-color-primary);
   }
 
   .mark-item__main {

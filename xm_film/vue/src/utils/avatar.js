@@ -21,14 +21,19 @@ export function avatarSrc(value) {
 /**
  * 原生 `<img>` 的 `@error` 处理：加载失败就换成默认头像。
  *
- * 用 dataset 打标做幂等 —— 万一默认头像自身也 404，不打标会无限重试。
+ * 判据是「当前 src 是不是已经是默认图」，而不是「这张图兜过一次没有」——
+ * 后者会把标记留在元素上，而同一张 `<img>` 会被反复复用（顶栏换人登录、
+ * 列表 `:key="index"` 换页），下一个坏头像就再也兜不住了。
+ * 也不能拿 `img.src` 比对：那是浏览器解析后的绝对 URL，与 import 出来的相对
+ * 产物路径永远不相等；`getAttribute` 拿到的才是 Vue 原样写进去的那个值。
+ * 换成默认图后若默认图自身也 404，这里会因为 src 已等于默认图而直接返回，不会死循环。
+ *
  * 只适用于原生 `<img>`（元素不会被卸载，改 src 即生效）；`el-image` / `el-avatar`
  * 加载失败时会卸载内部 img 并改走插槽，故它们不用这个函数，而用各自的
  * `#error` / 默认插槽渲染 `<img :src="DEFAULT_AVATAR">`。
  */
 export function onAvatarError(event) {
   const img = event?.target
-  if (!img || img.dataset.avatarFallback) return
-  img.dataset.avatarFallback = '1'
+  if (!img || img.getAttribute('src') === DEFAULT_AVATAR) return
   img.src = DEFAULT_AVATAR
 }
