@@ -1,6 +1,6 @@
 # 待办技术债清单（audit-backlog）
 
-本文件是本仓唯一的技术债登记处，承接已删除的 `后端代码规范审查报告.md` 的全部"登记备查"项，并汇总 2026-10-13 两轮代码审查（`entity/`、`service/`）、2026-10-14 控制器层审查（`controller/`）、2026-10-14 mapper 层审查（`mapper/`）与 2026-10-14 DTO 层审查（`dto/`）中判定延后或建议的条目。已完成项不进本表；已判定非缺陷的条目集中在末节，避免二次误报。
+本文件是本仓唯一的技术债登记处，承接已删除的 `后端代码规范审查报告.md` 的全部"登记备查"项，并汇总 2026-10-13 两轮代码审查（`entity/`、`service/`）、2026-10-14 控制器层审查（`controller/`）、2026-10-14 mapper 层审查（`mapper/`）与 2026-10-14 DTO 层审查（`dto/`）中判定延后或建议的条目。已完成项不进本表；已判定非缺陷的条目集中在末节，避免二次误报。2026-10-15 承 FE-48 契约对齐复查演职人员数据模型，补登 BL-41。
 
 维护口径：一处事实一处归属；每条给出 `文件` 与符号，行号随改动可能漂移、以符号为准。状态分三档：待办、有意不整改（与既定政策一致，非债务）、已核验非缺陷；修复完成的条目从表中移出，在该节以「本轮修复并移出本表」一句登记。
 
@@ -54,6 +54,7 @@
 | BL-22 | entity/CinemaDirectory.createTime | 全仓唯一非 String 时间字段（LocalDateTime），序列化为 ISO 带 T 串，与其余 String 时间字段口径不一；前端未读取。 | 统一为 String，或全仓统一改 LocalDateTime（需联动 mapper/DTO/前端）。 |
 | BL-23 | entity/Room.title | 存的是所属影院名（RoomService 由 cinema.getName() 派生），而 name 才是影厅自身名。命名与语义不符，是未标注的冗余快照。 | 改名或去除（需联动 mapper/Service/前端）。 |
 | BL-24 | entity/Ordered 的 total/payAmount/refundAmount、entity/Film.boxOffice | 金额用 Double，而同实体 unitPrice、RechargeOrder.amount、FundFlow 各额均 BigDecimal。当前经 BigDecimal.valueOf(double) 往返未见精度损失，但与"金额用 BigDecimal"的既定口径不一致。 | 统一为 BigDecimal（需改库列类型与 mapper/DTO）。 |
+| BL-41 | 库表 actor 的关联列（`film.actor_id` 与 `actor.film_id`）；views/front/FilmDetail.vue 的四分组 | 演职人员与影片的关联存在两套机制：`film.actor_id` 单值外键（1:1，在用，FilmMapper 多处 JOIN）与 `actor.film_id`（库中已建且带非唯一索引，但全仓无任何读写、`film_id IS NOT NULL` 实测 0 行）。前端按 `grade` 分导演/主演/编剧/二级演员四组，但库中 actor 65 行 `grade` 全为「主演」、film 又只关联单行，故非主演三组无数据可显。 | 要支持多角色展示须先定唯一关联口径（保留 `film.actor_id` 还是改走 `actor.film_id`，二者不可并存），再落 1:N 写路径 + 数据导入；当前无数据、无写路径，属新特性而非缺陷，另立一轮。FE-48 的「读错键名」缺陷已在前端就地修复（见前端审计报告）。 |
 
 ## 规范建议遗留（承接 S4/S6/S15）
 

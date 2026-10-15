@@ -245,3 +245,20 @@ export function getFilmStatusType(status) {
 export function getRecordStatusType(status) {
   return RECORD_STATUS_MAP[status] || 'info'
 }
+
+/**
+ * 演职人员「所属角色」→ 影片详情页分组编号（1 导演 / 2 主演 / 3 编剧 / 4 二级演员）。
+ * 取值与后端 TmdbService（写入 actor.grade）、manage/Actor.vue 的「所属角色」下拉一致。
+ * 注意与 ROLE_TAG_MAP 无关：后者是登录角色 ADMIN/CINEMA/USER。
+ * 缺省 2=主演：库中未标角色的行按主演展示，与前端原有兜底一致。
+ */
+export const ACTOR_ROLE_TYPE_MAP = {
+  '导演': 1,
+  '主演': 2,
+  '编剧': 3,
+  '二级演员': 4,
+}
+
+export function getActorRoleType(grade) {
+  return ACTOR_ROLE_TYPE_MAP[grade] || 2
+}

@@ -1,10 +1,10 @@
 # 前端 Vue3 代码安全与质量审计报告
 
-本文件登记 2026-10-14 起前端代码安全与质量审查的结论。第一轮审查 `xm_film/vue/src/router/`（导航守卫与路由表，vue-router 4.5.1），并登记该轮牵连核实的跨文件前端问题（前端鉴权与跳转口径：`utils/request.js`、`composables/useAuth.js`、`views/Login.vue`、`views/404.vue`、`views/Front.vue`、`views/back/Back.vue`、`views/manage/Manage.vue`）。同日第二轮审查 `xm_film/vue/src/composables/` 三个复用件（`useAuth.js`、`useCrud.js`、`useFormDialog.js`）及其调用方（`views/manage/*`、`views/back/*`、`views/front/*`），结论见「已修复（composables 复用件）」一节。2026-10-15 第三轮审查 `xm_film/vue/src/views/` 全目录（47 个视图文件，约 12.8k 行），结论见「已修复（views/ 目录）」及「本轮登记未做」新增条目。后端条目另见 audit-backlog.md，本文件不重复。
+本文件登记 2026-10-14 起前端代码安全与质量审查的结论。第一轮审查 `xm_film/vue/src/router/`（导航守卫与路由表，vue-router 4.5.1），并登记该轮牵连核实的跨文件前端问题（前端鉴权与跳转口径：`utils/request.js`、`composables/useAuth.js`、`views/Login.vue`、`views/404.vue`、`views/Front.vue`、`views/back/Back.vue`、`views/manage/Manage.vue`）。同日第二轮审查 `xm_film/vue/src/composables/` 三个复用件（`useAuth.js`、`useCrud.js`、`useFormDialog.js`）及其调用方（`views/manage/*`、`views/back/*`、`views/front/*`），结论见「已修复（composables 复用件）」一节。2026-10-15 第三轮审查 `xm_film/vue/src/views/` 全目录（47 个视图文件，约 12.8k 行），结论见「已修复（views/ 目录）」及「本轮登记未做」新增条目；同日就 FE-48 做契约对齐（前端读错键名，非后端缺字段），见「已修复（契约对齐）」，多角色 1:N 需求转登 audit-backlog.md。后端条目另见 audit-backlog.md，本文件不重复。
 
 维护口径：一处事实一处归属；每条给出 `文件` 与符号，行号随改动可能漂移、以符号为准。状态分三档：已修复、本轮登记未做、已核验非缺陷。编号 FE-xx 与后端 BL-xx 区隔。
 
-更新日期：2026-10-15。基线：master `cf83e680`（第一轮）、`7e0dcc1a`（第二轮 composables 修复）、`02527cf4`（第三轮 views/ 起点）。
+更新日期：2026-10-15。基线：master `cf83e680`（第一轮）、`7e0dcc1a`（第二轮 composables 修复）、`02527cf4`（第三轮 views/ 起点）、`1f813fa5`（契约对齐起点）。
 
 ## 已修复（2026-10-14）
 
@@ -55,6 +55,12 @@
 | FE-46 | 独立表单无 in-flight 守卫（类） | `Register.vue`、`manage/Password.vue`、`back/Password.vue`、`front/Password.vue`、`front/Person.vue` 的提交按钮无 loading/disabled，双击或回车并发提交；改密类第二次会因原密码已变反报「原密码错误」。 | 各加 `submitting` 守卫并在 `finally` 复位，按钮绑 `:loading`。 |
 | FE-47 | el-upload 编辑态无回填（类） | `manage/Admin.vue`（头像）、`User.vue`（头像）、`Actor.vue`（电影图片/演员照片）、`Video.vue`（电影图片/预告视频）的 `<el-upload>` 未绑 `file-list`，弹窗 `destroy-on-close` 每次从空列表起步，编辑时看不到已保存文件。 | 各加 computed `file-list` 绑定。 |
 
+## 已修复（2026-10-15 契约对齐）
+
+| 编号 | 位置 | 问题 | 处置 |
+| --- | --- | --- | --- |
+| FE-48 | views/front/FilmDetail.vue `fetchCastBySingleId` | 读 `actorData.roleType`/`role` 两键，后端响应里均不存在：`roleType` 恒落兜底 2、`role` 恒为空。原记「后端缺字段、越出前端范围」经复核不成立——后端 `ActorView.java` 的 `figure`/`grade`、`ActorController.toView` 的回填、`ActorMapper.xml` 的 `SELECT *` 三处俱在，数据在库、接口在返，只是前端读错了键名（`figure`=饰演角色名、`grade`=所属角色，取值域见 `manage/Actor.vue:102-105`）。 | 前端改读真字段：`roleType` 由 `constants.getActorRoleType(grade)` 派生（`ACTOR_ROLE_TYPE_MAP`，缺省 2=主演），`role` 改读 `actorData.figure`。后端零改动，无需加列落库。导演/编剧/二级演员三组仍空——库中 `grade` 65 行全为「主演」、无该类数据，属正确空态而非死 UI；多角色 1:N 需求另登记 audit-backlog.md BL-41。 |
+
 ## 本轮登记未做
 
 | 编号 | 位置 | 问题 | 处置建议 |
@@ -72,7 +78,6 @@
 | FE-20 | composables/useCrud.js `selectedIds` | add/update/del/delBatch 经 `load()` 换掉 `dataList`，却不重置 `selectedIds`；重置完全依赖 el-table 在 `:data` 替换时发 `selection-change([])`。当前无 `row-key`/`reserve-selection`，通常自愈；一旦加 row-key 或 EP 行为变更，删除后工具条仍显示「已选 N 项」且批量删除可用，会重发已删 id。 | 写操作成功后由 composable 显式清 `selectedIds`，不再依赖组件契约。 |
 | FE-21 | composables/useFormDialog.js `openEdit` | openEdit 只 `Object.assign(form, row)`：既不清理 row 缺失的 defaultForm 独有键（如 Admin 的 `password`），也不隔离 row 的对象字段（form 与列表行按下标共享）。当前后端 update 显式置空 password，故不外显；契约「form 恰好等于当前记录」不成立。 | 若需修：openEdit 也按默认值重置缺键，并深拷贝 row 的对象字段（row 可能是 el-table 的响应式代理，需先 `toRaw` 再拷）。 |
 | FE-22 | composables/useAuth.js `isLoggedIn` 的 `!globalVerifying` 门 | isAdmin/isCinema/isUser 直取 `user`、不设门，`isLoggedIn` 却被 `!globalVerifying` 挡住。冷加载已登录页时 `globalVerifying` 初始为真，首次渲染 isLoggedIn 为假 —— 顶栏先渲染游客「登录/注册」再切已登录菜单（一次 `/me` 往返的闪烁，慢网/后端停顿时可见）。 | 若要消除：与路由守卫口径一致地信任 storage（isLoggedIn 只看 token），或让 role 标记同样受门（更差）。属行为变更，先定口径。 |
-| FE-48 | views/front/FilmDetail.vue `fetchCastBySingleId` | 读 `actorData.roleType`/`role`，但后端 `ActorView`/`Actor` 均无此二字段（springboot 全仓 grep `roleType` 零匹配），`roleType \|\| 2` 恒为 2。导演（1）/编剧（3）/配角（4）三个 computed 列表永久为空，四个 `v-if` 区块成死 UI，挂着导演的影片仍只显示「主演」。 | 前端已改不动根因：需后端在 `ActorView`/`Actor` 补 `roleType`（及 `role`）字段并落库。越出前端范围。 |
 | FE-49 | views/front/Cinema.vue；views/front/Orders.vue；views/front/Movie.vue；views/manage/CinemaDirectory.vue | 分页列表各自手搓（`pageNum`/`pageSize`/`total`/`load`/`handlePage`），未复用 `useCrud`，因而不带它已有的请求序号与越界回退。第三轮已就地补齐由此派生的具体缺陷（FE-25/FE-26/FE-30/FE-31），但两套口径并存本身仍在。 | 收敛到 `useCrud`（同端点 `manage/Cinema.vue` 已在用）；跨文件重构，属独立一轮。另：`front/Cinema.vue` 的 `:page-sizes`/`@size-change` 因 layout 无 `sizes` 仍为死配置。 |
 | FE-50 | views/Front.vue；views/back/Back.vue；views/manage/Manage.vue | 退出登录确认块（`ElMessageBox.confirm` → `logout()` → `push('/login')` → 成功/取消提示）在三处逐字重复，改文案或跳转目标需同步三处。 | 抽共享 `confirmLogout`（置于 `composables/useAuth.js` 或 `utils/`），三处共用。与 FE-06/FE-07 同族。 |
 | FE-51 | views/manage/Person.vue `form: { ...user.value }` | setup 时对 `user.value` 一次性浅拷贝快照，`verifyToken` 异步回填的 `/me` 权威资料不落进表单；存储与后端不一致时表单显示陈旧值，直接保存会用旧值覆盖。 | 需 dirty-check 设计（异步回填不得覆盖用户已改字段），属行为变更，先定口径。 |

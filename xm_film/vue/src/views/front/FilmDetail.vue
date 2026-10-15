@@ -212,7 +212,7 @@ import {useRoute} from 'vue-router';
 import {ElMessage} from 'element-plus';
 import request from "@/utils/request.js";
 import 'element-plus/theme-chalk/el-button.css';
-import { API_PATHS, MARK_API, apiById } from '@/constants';
+import { API_PATHS, MARK_API, apiById, getActorRoleType } from '@/constants';
 import { formatBoxOffice, formatScore, formatFilmTypes } from '@/utils/format.js';
 
 
@@ -359,8 +359,8 @@ const fetchCastBySingleId = (actorId) => {
               {
                 id: actorData.id,
                 actor: actorData.actorName, // 演员/导演名称（actor表的actor列）
-                roleType: actorData.roleType || 2, // 角色类型（默认2=主演）
-                role: actorData.role || '' ,// 具体角色名称（如"Jackie"）
+                roleType: getActorRoleType(actorData.grade), // 分组编号，由后端「所属角色」grade 映射
+                role: actorData.figure || '', // 具体角色名，取自后端 actor.figure（如 "Jackie"）
                 picture: actorData.picture,//演员图片
                 video: actorData.video //预告视频
               }
