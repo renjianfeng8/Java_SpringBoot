@@ -67,7 +67,7 @@
           <template #default="scope">
             <el-image class="cell-avatar"
                       :src="avatarSrc(scope.row.avatar)"
-                      :preview-src-list="[avatarSrc(scope.row.avatar)]" preview-teleported>
+                      :preview-src-list="scope.row.avatar ? [scope.row.avatar] : []" preview-teleported>
               <template #error>
                 <img :src="DEFAULT_AVATAR" alt="" class="cell-fallback" aria-hidden="true">
               </template>

@@ -26,7 +26,8 @@
             loading="lazy"
             @error="posterFailed = true"
         >
-        <!-- 破图兜底取片名首字，与该项目的头像兜底同一手法（front-pages.scss .mark-item__avatar） -->
+        <!-- 破图兜底取片名首字：海报没有通用占位图，首字至少能指认是哪部片。
+             头像走的是另一套（无图与破图都落 default_avatar.jpg，见 utils/avatar.js）。 -->
         <div v-else class="poster-card__fallback" aria-hidden="true">{{ firstChar }}</div>
 
         <!-- 评分徽章压在图上：--color-rating 可用于「图片叠加」，
