@@ -84,9 +84,6 @@
             <if test="name != null">name = #{name},</if>
             <if test="avatar != null">avatar = #{avatar},</if>
             <if test="address != null">address = #{address},</if>
-            <if test="leader != null">leader = #{leader},</if>
-            <if test="code != null">code = #{code},</if>
-            <if test="certificate != null">certificate = #{certificate},</if>
             <if test="status != null">status = #{status},</if>
             <if test="phone != null">phone = #{phone},</if>
             <if test="description != null">description = #{description},</if>
@@ -110,9 +107,6 @@
             <if test="name != null">name,</if>
             <if test="avatar != null">avatar,</if>
             <if test="address != null">address,</if>
-            <if test="leader != null">leader,</if>
-            <if test="code != null">code,</if>
-            <if test="certificate != null">certificate,</if>
             <if test="status != null">status,</if>
             <if test="phone != null">phone,</if>
             <if test="description != null">description,</if>
@@ -126,9 +120,6 @@
             <if test="name != null">#{name},</if>
             <if test="avatar != null">#{avatar},</if>
             <if test="address != null">#{address},</if>
-            <if test="leader != null">#{leader},</if>
-            <if test="code != null">#{code},</if>
-            <if test="certificate != null">#{certificate},</if>
             <if test="status != null">#{status},</if>
             <if test="phone != null">#{phone},</if>
             <if test="description != null">#{description},</if>
