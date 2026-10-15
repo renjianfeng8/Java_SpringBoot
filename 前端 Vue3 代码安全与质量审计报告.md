@@ -1,10 +1,10 @@
 # 前端 Vue3 代码安全与质量审计报告
 
-本文件登记 2026-10-14 起前端代码安全与质量审查的结论。第一轮审查 `xm_film/vue/src/router/`（导航守卫与路由表，vue-router 4.5.1），并登记该轮牵连核实的跨文件前端问题（前端鉴权与跳转口径：`utils/request.js`、`composables/useAuth.js`、`views/Login.vue`、`views/404.vue`、`views/Front.vue`、`views/back/Back.vue`、`views/manage/Manage.vue`）。同日第二轮审查 `xm_film/vue/src/composables/` 三个复用件（`useAuth.js`、`useCrud.js`、`useFormDialog.js`）及其调用方（`views/manage/*`、`views/back/*`、`views/front/*`），结论见「已修复（composables 复用件）」一节。2026-10-15 第三轮审查 `xm_film/vue/src/views/` 全目录（47 个视图文件，约 12.8k 行），结论见「已修复（views/ 目录）」及「本轮登记未做」新增条目；同日就 FE-48 做契约对齐（前端读错键名，非后端缺字段），见「已修复（契约对齐）」，多角色 1:N 需求转登 audit-backlog.md。后端条目另见 audit-backlog.md，本文件不重复。
+本文件登记 2026-10-14 起前端代码安全与质量审查的结论。第一轮审查 `xm_film/vue/src/router/`（导航守卫与路由表，vue-router 4.5.1），并登记该轮牵连核实的跨文件前端问题（前端鉴权与跳转口径：`utils/request.js`、`composables/useAuth.js`、`views/Login.vue`、`views/404.vue`、`views/Front.vue`、`views/back/Back.vue`、`views/manage/Manage.vue`）。同日第二轮审查 `xm_film/vue/src/composables/` 三个复用件（`useAuth.js`、`useCrud.js`、`useFormDialog.js`）及其调用方（`views/manage/*`、`views/back/*`、`views/front/*`），结论见「已修复（composables 复用件）」一节。2026-10-15 第三轮审查 `xm_film/vue/src/views/` 全目录（47 个视图文件，约 12.8k 行），结论见「已修复（views/ 目录）」及「本轮登记未做」新增条目；同日就 FE-48 做契约对齐（前端读错键名，非后端缺字段），见「已修复（契约对齐）」，多角色 1:N 需求转登 audit-backlog.md。后端条目另见 audit-backlog.md，本文件不重复。2026-10-15 另对重做后的前台影院列表页做了复查（并核到与 FE-34 同形的后端前缀匹配），结论见「已修复（影院列表页复查）」及「本轮登记未做」新增条目。
 
 维护口径：一处事实一处归属；每条给出 `文件` 与符号，行号随改动可能漂移、以符号为准。状态分三档：已修复、本轮登记未做、已核验非缺陷。编号 FE-xx 与后端 BL-xx 区隔。
 
-更新日期：2026-10-15。基线：master `cf83e680`（第一轮）、`7e0dcc1a`（第二轮 composables 修复）、`02527cf4`（第三轮 views/ 起点）、`1f813fa5`（契约对齐起点）。
+更新日期：2026-10-15。基线：master `cf83e680`（第一轮）、`7e0dcc1a`（第二轮 composables 修复）、`02527cf4`（第三轮 views/ 起点）、`1f813fa5`（契约对齐起点）、`f8b10705`（影院列表页复查起点）。
 
 ## 已修复（2026-10-14）
 
@@ -61,6 +61,17 @@
 | --- | --- | --- | --- |
 | FE-48 | views/front/FilmDetail.vue `fetchCastBySingleId` | 读 `actorData.roleType`/`role` 两键，后端响应里均不存在：`roleType` 恒落兜底 2、`role` 恒为空。原记「后端缺字段、越出前端范围」经复核不成立——后端 `ActorView.java` 的 `figure`/`grade`、`ActorController.toView` 的回填、`ActorMapper.xml` 的 `SELECT *` 三处俱在，数据在库、接口在返，只是前端读错了键名（`figure`=饰演角色名、`grade`=所属角色，取值域见 `manage/Actor.vue:102-105`）。 | 前端改读真字段：`roleType` 由 `constants.getActorRoleType(grade)` 派生（`ACTOR_ROLE_TYPE_MAP`，缺省 2=主演），`role` 改读 `actorData.figure`。后端零改动，无需加列落库。导演/编剧/二级演员三组仍空——库中 `grade` 65 行全为「主演」、无该类数据，属正确空态而非死 UI；多角色 1:N 需求另登记 audit-backlog.md BL-41。 |
 
+## 已修复（2026-10-15 影院列表页复查）
+
+前台影院列表页重做（e88490ec）与前台下线影院名录（f8b10705）之后，复查该页及相邻改动。
+
+| 编号 | 位置 | 问题 | 处置 |
+| --- | --- | --- | --- |
+| FE-53 | views/front/Cinema.vue 两行筛选项 | 筛选由两个 el-select 改为 .filter-chip 按钮后，控制件自身的可访问名丢失：.filter-label（「城市 :」/「区域 :」）是并列的 `<div>`，与按钮之间没有 `for`/`aria-labelledby` 关联，读屏只念「北京 按钮」，两行的「全部」按钮无法区分。旧版 el-select 是带 `aria-label` 的。 | 两个 `.filter-options` 加 `role="group"` 与 `aria-label`（按城市筛选 / 按区域筛选），与 BuyTicket.vue、CinemaDetail.vue 的既有写法同款；不加 aria-pressed，选中态已由底色 + 加粗双通道表达。 |
+| FE-54 | views/front/Cinema.vue `el-pagination` | 分页器不在 loading 的 v-if 链内、也无 disabled，而 `load()` 不清 `total`：筛选重载期间旧分页器仍可点，点中的页码与刚切换的筛选叠加，答一次越界空请求并闪出「没有符合筛选条件的影院」。EP 的 pageCount 监听会把页码夹回并重发，故后果是一次多余请求加一次误报空态，不是持久损坏。 | 分页器加 `:disabled="data.loading"`。 |
+| FE-55 | views/front/Cinema.vue 影院卡片 `img` | 卡片图缺 `loading="lazy"`。前身 Cinema.vue 同样缺，重做时被原样带过来：一屏之外的十余张仍立即加载，且每次翻页/换筛选重来一遍。同仓列表组件 FilmPosterCard.vue 已设该属性，是既定口径。 | 补 `loading="lazy"`。 |
+| FE-56 | views/front/Cinema.vue `filters.cities` | 该字段恒等于 `Object.keys(filters.districtsByCity)` —— 同一份 `res.data` 派生、又各自赋值，是一份永远不该不一致、却必须手工同步的重复状态。 | 删除 `filters.cities`，改 `computed cityOptions = Object.keys(filters.districtsByCity)`。后端 `regions()` 用 LinkedHashMap 且保证 city 非空，派生值与展示顺序一致。 |
+
 ## 本轮登记未做
 
 | 编号 | 位置 | 问题 | 处置建议 |
@@ -82,6 +93,10 @@
 | FE-50 | views/Front.vue；views/back/Back.vue；views/manage/Manage.vue | 退出登录确认块（`ElMessageBox.confirm` → `logout()` → `push('/login')` → 成功/取消提示）在三处逐字重复，改文案或跳转目标需同步三处。 | 抽共享 `confirmLogout`（置于 `composables/useAuth.js` 或 `utils/`），三处共用。与 FE-06/FE-07 同族。 |
 | FE-51 | views/manage/Person.vue `form: { ...user.value }` | setup 时对 `user.value` 一次性浅拷贝快照，`verifyToken` 异步回填的 `/me` 权威资料不落进表单；存储与后端不一致时表单显示陈旧值，直接保存会用旧值覆盖。 | 需 dirty-check 设计（异步回填不得覆盖用户已改字段），属行为变更，先定口径。 |
 | FE-52 | views/front/Account.vue 充值单据/资金流水两列表 | 两处均硬编码 `pageNum:1`/`pageSize:50` 且无分页控件，累计超 50 条后更早的记录在页面上无任何入口（对账场景是资金凭证不可见）。 | 加分页控件（或至少「共 N 条」与翻页）。属 UI 变更。 |
+| FE-57 | views/front/Cinema.vue；views/front/CinemaDetail.vue；views/front/FilmCinema.vue | 影院服务三项（退票无忧 / 儿童优惠 / WiFi覆盖）的标签与图标在三处硬编码，只有底色 `.service-tag--*` 是共享的：改一个服务名要动三个模板，而底色共享、文案不共享，同一底色可以挂在两个不同名字下。 | 上提 `SERVICES` 数据常量到 constants/index.js（key 映射既有底色类），三处按各自形状 v-for。三处渲染形状不同（纯片 / 片+说明 / 无图标），共享单元应是常量而非组件。**本轮未做（登记备查）**：CinemaDetail.vue、FilmCinema.vue 不在本次 diff 内，属跨文件重构。 |
+| FE-58 | views/front/Cinema.vue 页头内层；views/front/CinemaDetail.vue、FilmDetail.vue、FilmCinema.vue、FilmMarks.vue 的 hero 与内容层 | 「1200px 居中内容测度」（`width: 55%`/`60%` + `max-width: 1200px`）手写在约 10 处，`.page-narrow`/`.page-wide` 只是其中两份：改一次内容宽度要动 10 个文件，新增页头一旦漂移就与其下方列表错位。 | 上提为共享 measure（front-pages.scss 的变量/mixin，或一个类加「无纵向外边距」变体），各页引用。**本轮未做（登记备查）**：系统性缺口，跨 5 个文件，另起一轮。 |
+| FE-59 | views/Front.vue `NAV_ITEMS`；router/index.js 路由表 | 顶部导航由数组手工维护、与路由表并列，两者之间没有任何机制关联：删路由忘删导航项则会落 `/:pathMatch` 兜底 404，加路由忘加导航项则页面无入口。本次下线影院名录就需同时改两处，正是该漂移的实例。 | 导航改由路由 meta（如 `meta.nav`）派生，或加断言：/front 下需出现在导航的路由必须各有对应项。属结构变更。 |
+| FE-60 | App.vue `path.startsWith('/front')`；utils/request.js `pathname.startsWith('/login')` | 与 FE-34 同形的裸前缀匹配残余两处：只差字符前缀相邻的路径也会命中（`/frontx` 会被套上前台主题、`/loginx` 会走登录页的跳过分支）。当前路由表下均无可达碰撞，属同形未做点。 | 与 FE-34 同口径改为「相等或 `prefix + '/'`」。两条均非当前可达缺陷。 |
 
 ## 已核验为非缺陷（防二次误报）
 
