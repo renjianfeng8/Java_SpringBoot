@@ -20,9 +20,10 @@
         <div class="cinema-hero__inner">
           <div class="cinema-hero__poster">
             <img
-                :src="cinema.avatar"
+                :src="avatarSrc(cinema.avatar)"
                 :alt="`${cinema.name || '影院'} 图片`"
                 class="cinema-hero__img"
+                @error="onAvatarError"
             >
           </div>
 
@@ -172,6 +173,7 @@ import {
 import request from "@/utils/request.js";
 import { formatScore } from '@/utils/format.js';
 import { API_PATHS, FILM_API, apiById, apiPage } from '@/constants';
+import { avatarSrc, onAvatarError } from '@/utils/avatar';
 
 // 1. 路由相关：参数提取与监听
 const route = useRoute();

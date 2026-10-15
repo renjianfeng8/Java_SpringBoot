@@ -26,7 +26,12 @@
         <el-table-column label="账号" prop="username" />
         <el-table-column label="头像" prop="avatar">
           <template #default="scope">
-            <el-image class="cell-avatar" v-if="scope.row.avatar" :src="scope.row.avatar" :preview-src-list="[scope.row.avatar]" preview-teleported />
+            <el-image class="cell-avatar" :src="avatarSrc(scope.row.avatar)"
+                      :preview-src-list="[avatarSrc(scope.row.avatar)]" preview-teleported>
+              <template #error>
+                <img :src="DEFAULT_AVATAR" alt="" class="cell-fallback" aria-hidden="true">
+              </template>
+            </el-image>
           </template>
         </el-table-column>
         <el-table-column label="姓名" prop="name" />
@@ -106,6 +111,7 @@ import { useCrud } from '@/composables/useCrud'
 import { useFormDialog } from '@/composables/useFormDialog'
 import { API_PATHS, FILE_UPLOAD_URL, getRoleType } from '@/constants'
 import { uploadHeaders, handleUploadError } from '@/utils/upload'
+import { avatarSrc, DEFAULT_AVATAR } from '@/utils/avatar'
 
 const crud = useCrud(API_PATHS.ADMINS)
 const { dataList, total, pageNum, pageSize, searchForm, selectedIds, loading, error,

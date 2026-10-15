@@ -19,7 +19,7 @@
           :to="`/front/cinemaDetail/${cinema.id}`"
       >
         <div class="cinema-card__poster">
-          <img :src="cinema.avatar" :alt="`${cinema.name || '影院'} 图片`" class="cinema-card__img">
+          <img :src="avatarSrc(cinema.avatar)" :alt="`${cinema.name || '影院'} 图片`" class="cinema-card__img" @error="onAvatarError">
         </div>
 
         <div class="cinema-card__info">
@@ -70,6 +70,7 @@ import { reactive, computed } from 'vue';
 import request from "@/utils/request.js";
 import { ElMessage } from 'element-plus';
 import { API_PATHS, apiPage, CINEMA_API } from '@/constants';
+import { avatarSrc, onAvatarError } from '@/utils/avatar';
 
 const data = reactive({
   pageNum: 1,
