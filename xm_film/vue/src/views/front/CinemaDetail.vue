@@ -257,14 +257,13 @@ const canBuy = (record) => {
   return start !== null && start.getTime() > Date.now();
 };
 
-// 8. 影片副信息：时长 · 语言 · 格式
+// 8. 影片副信息：时长 · 语言
 // 刻意不含类型 —— films/by-cinema 不填 typeList（FilmService.selectByCinema 未调 fillFilmTypes），
 // 而类型是后端派生字段，前端没有第二种取法
 const filmMeta = (film) => {
   const parts = [];
   if (film.time) parts.push(`${film.time}分钟`);
   if (film.language) parts.push(film.language);
-  if (film.resolution) parts.push(film.resolution);
   return parts.join(' · ');
 };
 

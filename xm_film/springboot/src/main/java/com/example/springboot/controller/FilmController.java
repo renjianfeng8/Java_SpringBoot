@@ -48,7 +48,6 @@ public class FilmController extends BaseController<Film, FilmRequest, FilmView> 
         film.setStart(request.getStart());
         film.setTime(request.getTime());
         film.setLanguage(request.getLanguage());
-        film.setResolution(request.getResolution());
         film.setContent(request.getContent());
         film.setImg(request.getImg());
         film.setEmployee(request.getEmployee());
@@ -76,7 +75,6 @@ public class FilmController extends BaseController<Film, FilmRequest, FilmView> 
         view.setStart(film.getStart());
         view.setTime(film.getTime());
         view.setLanguage(film.getLanguage());
-        view.setResolution(film.getResolution());
         view.setContent(film.getContent());
         view.setImg(film.getImg());
         view.setEmployee(film.getEmployee());

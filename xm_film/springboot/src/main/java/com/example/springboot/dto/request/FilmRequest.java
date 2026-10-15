@@ -17,7 +17,6 @@ public class FilmRequest {
     private String start;
     private Integer time;
     private String language;
-    private String resolution;
     private String content;
     private String img;
     private String employee;

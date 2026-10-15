@@ -28,7 +28,7 @@
             <p class="film-hero__meta">{{ film.english || '无英文标题' }}</p>
             <p class="film-hero__meta">{{ formatFilmTypes(film) }}</p>
             <p class="film-hero__meta">{{ film.area || '未知地区' }} / {{ film.time || '未知时长' }}</p>
-            <p class="film-hero__meta">{{ film.language || '未知语言' }} / {{ film.resolution || '未知格式' }}</p>
+            <p class="film-hero__meta">{{ film.language || '未知语言' }}</p>
             <p class="film-hero__meta">{{ film.start || '未知上映时间' }} 开始上映</p>
             <p class="film-hero__meta" v-if="film.actorInfo">
               主演：{{ film.actorInfo.split(':')[1] || '未知演员' }}
@@ -236,7 +236,6 @@ const film = reactive({     // 电影基础数据（默认值避免渲染空白�
   area: '',
   time: '',
   language: '',
-  resolution: '',
   boxOffice: 0,
   status: '',
   intro: '',
@@ -303,7 +302,6 @@ const fetchFilmDetail = () => {
             area: data.areaName || '未知地区',
             time: data.time ? `${data.time}分钟` : '未知时长',
             language: data.language || '未知语言',
-            resolution: data.resolution || '未知格式',
             boxOffice: data.boxOffice || 0,
             status: data.status || '未知状态',
             intro: data.content || '暂无剧情简介',

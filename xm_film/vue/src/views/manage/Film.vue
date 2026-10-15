@@ -39,7 +39,6 @@
                 <el-tag v-for="item in props.row.typeList" :key="item.id ?? item.title" class="tag-gap" :type="getTypeTagType(item)">{{ item.title }}</el-tag>
               </el-descriptions-item>
               <el-descriptions-item label="电影语言">{{props.row.language}}</el-descriptions-item>
-              <el-descriptions-item label="电影分辨率">{{props.row.resolution}}</el-descriptions-item>
               <el-descriptions-item label="电影简介">
                 <el-popover placement="top-start" title="电影简介" :width="200" trigger="hover" :content="props.row.content">
                   <template #reference>
@@ -160,13 +159,6 @@
             <el-option label="其他" value="其他" />
           </el-select>
         </el-form-item>
-        <el-form-item label="分辨率" prop="resolution">
-          <el-select v-model="form.resolution" placeholder="请选择分辨率" class="field-lg">
-            <el-option label="标准版" value="标准版" />
-            <el-option label="2DIMAX" value="2DIMAX" />
-            <el-option label="3DIMAX" value="3DIMAX" />
-          </el-select>
-        </el-form-item>
         <el-form-item label="电影简介" prop="content">
           <el-input type="textarea" :rows="4" v-model="form.content" autocomplete="off" placeholder="请输入电影简介"/>
         </el-form-item>
@@ -269,7 +261,7 @@ const { dataList, total, pageNum, pageSize, searchForm, selectedIds, loading, er
 const { dialogVisible, formRef, form, rules, openAdd, openEdit, submit, close } = useFormDialog(crud, {
   defaultForm: {
     title: '', english: '', img: '', start: '', time: undefined,
-    language: '', content: '', resolution: '', employee: '',
+    language: '', content: '', employee: '',
     areaId: undefined, actorId: undefined, status: '', typeIds: [], video: ''
   },
   rules: {
