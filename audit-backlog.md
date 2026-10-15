@@ -1,10 +1,10 @@
 # 待办技术债清单（audit-backlog）
 
-本文件是本仓唯一的技术债登记处，承接已删除的 `后端代码规范审查报告.md` 的全部"登记备查"项，并汇总 2026-10-13 两轮代码审查（`entity/`、`service/`）、2026-10-14 控制器层审查（`controller/`）、2026-10-14 mapper 层审查（`mapper/`）与 2026-10-14 DTO 层审查（`dto/`）中判定延后或建议的条目。已完成项不进本表；已判定非缺陷的条目集中在末节，避免二次误报。2026-10-15 承 FE-48 契约对齐复查演职人员数据模型，补登 BL-41。
+本文件是本仓唯一的技术债登记处，承接已删除的 `后端代码规范审查报告.md` 的全部"登记备查"项，并汇总 2026-10-13 两轮代码审查（`entity/`、`service/`）、2026-10-14 控制器层审查（`controller/`）、2026-10-14 mapper 层审查（`mapper/`）与 2026-10-14 DTO 层审查（`dto/`）中判定延后或建议的条目。已完成项不进本表；已判定非缺陷的条目集中在末节，避免二次误报。2026-10-15 承 FE-48 契约对齐复查演职人员数据模型，补登 BL-41；同日做纯清理四项（BL-28/33/34/38），另登记 BL-42（同形字符串筛选未做）、BL-43（UserController 读口径分歧）。
 
 维护口径：一处事实一处归属；每条给出 `文件` 与符号，行号随改动可能漂移、以符号为准。状态分三档：待办、有意不整改（与既定政策一致，非债务）、已核验非缺陷；修复完成的条目从表中移出，在该节以「本轮修复并移出本表」一句登记。
 
-更新日期：2026-10-15。基线：master `bfdd1c07`。
+更新日期：2026-10-15。基线：master `bfdd1c07`（清单）、`a2144fc4`（纯清理起点）。
 
 ## 并发与事务
 
@@ -66,29 +66,31 @@
 
 ## 健壮性（低优先 / 未证实可达）
 
+本轮修复并移出本表：BL-28 —— Record/Room/User 的 `deleteBatchScoped` 各补空 ids 守卫，与同签名的 `OrderedService.deleteBatchScoped` 同款抛 `PARAM_INVALID`（"请选择排片/影厅/用户"）。行为变更：空 ids 由静默 200（经 `BaseService.deleteBatch` 兜底）变 400；该入参现由前端不可达，属口径对齐。
+
 | 编号 | 位置 | 问题 | 处置建议 |
 | --- | --- | --- | --- |
-| BL-28 | service/RecordService/RoomService/UserService.deleteBatchScoped | 缺 ids 为空/null 的守卫（OrderedService、MarkService、BaseService 均有）。经 Spring 拒绝 null @RequestBody，HTTP 路径不可达，属同形不一致。 | 与兄弟方法对齐补守卫。 |
 | BL-29 | entity/Cinema.province/city/district | /auth/me 与 /login 经 CinemaMapper.selectById/selectByUsername（SELECT *，无 JOIN）取影院，区域字段恒为 null；/cinemas/page 则有值。UNCERTAIN：当前无前端读取该路径的区域。 | 若需在登录态展示区域，给该查询补 JOIN。 |
 
 ## 控制器层遗留（2026-10-14 控制器审查）
+
+本轮修复并移出本表：BL-33 —— 删除 RechargeController / FundFlowController / CinemaDirectoryController 三个 `toEntity` 开头的死守卫 `if (request == null) return null;`（query 由 Spring 绑定，恒非 null）。BL-34 —— 删除 OrderedController.getById 的死三元（`selectByIdScoped` 经 `ensureOrderAccess` 在 null 时先抛 NOT_FOUND）。**同形点甄别**：UserController.getById 的 `user == null ? null : toView(user)` 不是死代码 —— `UserService.selectByIdScoped` 直接返回 `BaseService.selectById`（不抛），可为 null，故保留；其 200+null 与 Record/Room/Ordered 的 404 之间的口径分歧另登 BL-43。
 
 | 编号 | 位置 | 问题 | 处置建议 |
 | --- | --- | --- | --- |
 | BL-30 | controller/FileUploadController.uploadFile（落盘在 common/FileUtil） | `/api/v1/files/upload` 不在 ADMIN_WRITE_PREFIXES / ADMIN_ONLY_PREFIXES，任何已登录角色（含 USER）都能上传。本轮已把落盘扩展名从客户端文件名改为按已校验 MIME 派生（堵掉 `.html` 落盘 + MIME 可伪造那条），但"谁可上传"未收紧。UNCERTAIN：CINEMA 自助改头像/资料是否依赖此端点。 | 确认用途后给前缀加写门禁，或按角色拆端点。 |
 | BL-31 | controller/CinemaDirectoryController.page | 本轮已给 BaseController 抽出 `toPageView`，但本类不继承 BaseController，`PageInfo` 拷贝 + toView 映射仍自成一份（与 BL-13 同类的映射重复）。 | 抽静态 `PageMapper.map(PageInfo<S>, Function<S,T>)`，基类与独立控制器共用。 |
 | BL-32 | controller/AuthController.updatePassword、me | 手工 `httpRequest.getAttribute("userId"/"role")` 再 `Integer.valueOf`，绕过 AuthContext.role()/userId()；身份存放方式一改此处静默失效（AuthContext 类注释正警告此坑）。 | 改用 AuthContext（`me` 的 userId 参数需由 String 放宽为 Integer）。 |
-| BL-33 | controller/RechargeController.toEntity、FundFlowController.toEntity、CinemaDirectoryController.toEntity | 开头 `if (request == null) return null;` 是死分支：query 由 Spring 绑定、恒非 null（其余控制器的 toEntity 均无此判断）。 | 删除该死守卫。 |
-| BL-34 | controller/OrderedController.getById | `ordered == null ? null : toView(ordered)` 为死三元：selectByIdScoped 在 null 时先抛 NOT_FOUND；Room/Record 的同类方法无此冗余。 | 删除死三元。 |
 | BL-35 | controller/StatisticsController.overview、controller/AccountController.requireUser | 角色门禁在方法内逐端点各写一份（`/api/v1/statistics` 未进任何前缀表），新增端点易漏（与 BL-17 同类）。 | 统计前缀加 ADMIN_ONLY_PREFIXES；账户前缀加统一 USER 守卫，或与 BL-17 同轮抽统一守卫。 |
+| BL-43 | controller/UserController.getById | 管理员查不存在的 id 返回 200 + `data:null`；Record/Room/Ordered 的同名方法经 ensure 抛 NOT_FOUND（404）。根因是 `UserService.selectByIdScoped` 直接返回 `selectById`（不判存在），与其余 scoped 读不一致。 | 若要统一：`UserService.selectByIdScoped` 补存在性判定抛 NOT_FOUND。属行为变更（该路径现为 200），先定口径。 |
 
 ## Mapper 层遗留（2026-10-14 mapper 审查）
 
-本轮修复并移出本表：BL-36 —— 该条所列 13 个 mapper 之外漏登 RechargeOrderMapper，实为 14 个；全部在 `updateById` 的 `<set>` 末尾加 `id = #{id}` 自赋值兜底，SET 恒非空，`UPDATE t WHERE id=?` 触发的 1064 不再出现。实测渲染：`UPDATE area SET id = ? WHERE id = ?`。
+本轮修复并移出本表：BL-36 —— 该条所列 13 个 mapper 之外漏登 RechargeOrderMapper，实为 14 个；全部在 `updateById` 的 `<set>` 末尾加 `id = #{id}` 自赋值兜底，SET 恒非空，`UPDATE t WHERE id=?` 触发的 1064 不再出现。实测渲染：`UPDATE area SET id = ? WHERE id = ?`。BL-38 —— 字符串筛选的空串判定，按 CinemaMapper 既有口径（`x != null and x != ''`）补齐 6 个 mapper 共 12 处：CinemaDirectoryMapper（name/province/city/district/brand）、FundFlowMapper（source）、OrderedMapper（status）、RechargeOrderMapper（status）、RecordMapper（title/start/status）、FilmMapper（year）。未补的同形点见 BL-42。
 
 | 编号 | 位置 | 问题 | 处置建议 |
 | --- | --- | --- | --- |
-| BL-38 | mapper/CinemaDirectoryMapper.selectAll 的等值筛选（province / city / district / brand） | 与 CinemaMapper.selectByFilmId 同形：只判 `!= null`、不判空串，空串入参落成 `= ''` 查出零行。本轮已按同一口径修 CinemaMapper 的 cinema.name/city/district，此处同形点未做。name 走 LIKE，空串落成 `LIKE '%%'` 行为无害，仅属同形不一致。UNCERTAIN：HTTP 路径当前不可达（前端 clearable 均以 `|| undefined` 发送）。 | 与 CinemaMapper 对齐补 `and x != ''`；确认不可达后可登记备查不整改。 |
+| BL-42 | mapper/ 其余字符串筛选：ActorMapper.actorName；AdminMapper.name；AreaMapper.title；NoticeMapper.title；TypeMapper.title；VideoMapper.title；UserMapper.name/username/phone/email；RoomMapper.name；CinemaMapper.selectAll.name（共 12 处） | 与 BL-38 同形：`<if>` 只判 `!= null`、不判空串。（CinemaMapper 的 selectByFilmId 已带判定，此处为其 selectAll 简易查询。）空串入参落成 `= ''` / `LIKE '%%'` 查出零行。 | 同 BL-38 补 `and x != ''`。**本轮未做（登记备查）**：这些文件为 mixed/CRLF 行尾，改一行即整篇重写 EOL（实测 AdminMapper 原始 diff 16 行 vs `--ignore-cr-at-eol` 1 行），噪声大于收益；且空串入参经实测不可达 —— `useCrud.searchForm` 起于空对象（不发键）、下拉无 `clearable`、唯一 clearable 的 `manage/CinemaDirectory.vue:141` 以 `|| undefined` 归一。 |
 
 ## DTO 层遗留（2026-10-14 dto 审查）
 

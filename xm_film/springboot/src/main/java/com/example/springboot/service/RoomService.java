@@ -118,6 +118,9 @@ public class RoomService extends BaseService<Room> {
     /** 批量删除影厅：逐条校验归属与引用后再删 */
     @Transactional(rollbackFor = Exception.class)
     public void deleteBatchScoped(List<Integer> ids, String role, Integer userId) {
+        if (ids == null || ids.isEmpty()) {
+            throw new CustomException(ErrorCode.PARAM_INVALID, "请选择影厅");
+        }
         for (Integer id : ids) {
             ensureRoomAccess(selectById(id), role, userId);
             ensureNoReferences(id);

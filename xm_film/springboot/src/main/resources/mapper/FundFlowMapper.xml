@@ -9,7 +9,7 @@
         SELECT * FROM fund_flow
         <where>
             <if test="userId != null">AND user_id = #{userId}</if>
-            <if test="source != null">AND source = #{source}</if>
+            <if test="source != null and source != ''">AND source = #{source}</if>
         </where>
         ORDER BY id DESC
     </select>
