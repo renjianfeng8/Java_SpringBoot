@@ -313,11 +313,24 @@ class AuthInterceptorAccessTest {
         assertThat(withBrokenToken("/api/v1/tickets/redeem", "POST")).isTrue();
     }
 
-    // ========== 影院名录：GET 公开，导入仅管理员 ==========
+    // ========== 影院名录：整条前缀仅管理员（读与写都不外放） ==========
 
     @Test
-    void anonymousCanReadCinemaDirectory() {
-        assertThat(anonymousAllowed("/api/v1/cinema-directory/page", "GET")).isTrue();
+    void anonymousCannotReadCinemaDirectory() {
+        assertThat(anonymousAllowed("/api/v1/cinema-directory/page", "GET")).isFalse();
+        assertThat(anonymousAllowed("/api/v1/cinema-directory/filters", "GET")).isFalse();
+    }
+
+    @Test
+    void userAndCinemaCannotReadCinemaDirectory() {
+        assertThat(hasAccess(newInterceptor(), "/api/v1/cinema-directory/page", "GET", RoleEnum.USER.name())).isFalse();
+        assertThat(hasAccess(newInterceptor(), "/api/v1/cinema-directory/page", "GET", RoleEnum.CINEMA.name())).isFalse();
+        assertThat(hasAccess(newInterceptor(), "/api/v1/cinema-directory/filters", "GET", RoleEnum.USER.name())).isFalse();
+    }
+
+    @Test
+    void adminCanReadCinemaDirectory() {
+        assertThat(hasAccess(newInterceptor(), "/api/v1/cinema-directory/page", "GET", RoleEnum.ADMIN.name())).isTrue();
     }
 
     @Test

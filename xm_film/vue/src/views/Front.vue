@@ -156,7 +156,6 @@ const NAV_ITEMS = [
     sections: ['/front/movie', '/front/search', '/front/filmDetail', '/front/filmCinema', '/front/filmMarks'],
   },
   { path: '/front/cinema', label: '影院', sections: ['/front/cinema', '/front/cinemaDetail'] },
-  { path: '/front/cinemaDirectory', label: '影院名录', sections: ['/front/cinemaDirectory'] },
   { path: '/front/rank', label: '排行榜', sections: ['/front/rank'] },
   { path: '/front/pickup', label: '取票大厅', sections: ['/front/pickup'] },
   { path: '/front/orders', label: '购票记录', sections: ['/front/orders'], requiresUser: true },
@@ -167,8 +166,7 @@ const visibleNavItems = computed(() =>
     NAV_ITEMS.filter(item => !item.requiresUser || showUserEntries.value)
 )
 
-// 前缀匹配必须带路径分隔符边界：否则 /front/cinema 会吞掉同前缀的 /front/cinemaDirectory，
-// 两个导航项同时点亮
+// 匹配用「相等或 prefix + '/'」而非裸 startsWith：避免前缀相同的两个导航项同时点亮
 const isNavActive = (item) =>
     item.sections.some(prefix =>
         route.path === prefix || route.path.startsWith(prefix + '/'))

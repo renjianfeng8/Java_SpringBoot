@@ -25,6 +25,9 @@ public class AuthInterceptor implements HandlerInterceptor {
 
     private static final Set<String> ADMIN_ONLY_PREFIXES = Set.of(
             "/api/v1/admins",
+            // 影院名录：读 /page、/filters 与写 /import 全在后台管理页，无前台消费方，
+            // 故整条前缀在此按方法无关拦下（不再拆成 PUBLIC_READ + ADMIN_WRITE 两份）
+            "/api/v1/cinema-directory",
             // TMDB 导入：/search 与 /movie/{id} 是 GET，/backfill-videos 是 POST。
             // 放进这里而不是 ADMIN_WRITE_PREFIXES —— 后者只拦写方法，放不住那两个 GET，
             // 结果是任何登录用户都能触发建行与落盘（与选座越权读同一类缺陷）。
@@ -38,9 +41,7 @@ public class AuthInterceptor implements HandlerInterceptor {
             "/api/v1/areas",
             "/api/v1/types",
             "/api/v1/notices",
-            "/api/v1/videos",
-            // 影院名录导入：抓取会写库（建目录行），非管理员不得触发；前缀命中 /import 与 /import/preview
-            "/api/v1/cinema-directory/import"
+            "/api/v1/videos"
     );
 
     private static final Set<String> PUBLIC_READ_PREFIXES = Set.of(
@@ -53,9 +54,7 @@ public class AuthInterceptor implements HandlerInterceptor {
             // 影院详情的放映场次列表需匿名可读，否则公开页会 401
             "/api/v1/records",
             // 影片详情页的评价列表是公开内容，需匿名可读
-            "/api/v1/marks",
-            // 影院名录是公开资料，游客可读
-            "/api/v1/cinema-directory"
+            "/api/v1/marks"
     );
 
     /**
