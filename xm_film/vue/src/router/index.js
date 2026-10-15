@@ -1,6 +1,4 @@
-import
-
-{ createRouter, createWebHistory, START_LOCATION } from 'vue-router'
+import { createRouter, createWebHistory, START_LOCATION } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { clearStoredUser, getStoredUser } from '@/utils/authStorage'
 
