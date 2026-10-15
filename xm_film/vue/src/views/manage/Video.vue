@@ -70,6 +70,7 @@
         </el-form-item>
         <el-form-item label="电影图片" prop="img">
           <el-upload :action="FILE_UPLOAD_URL" :headers="uploadHeaders"
+                     :file-list="imgFileList"
                      :on-success="handleFileUpload" :on-error="handleUploadError"
                      :auto-upload="true" list-type="picture">
             <el-button type="primary">点击上传电影图片</el-button>
@@ -83,6 +84,7 @@
         </el-form-item>
         <el-form-item label="预告视频" prop="preview">
           <el-upload :action="FILE_UPLOAD_URL" :headers="uploadHeaders"
+                     :file-list="previewFileList"
                      :on-success="handleVideoUpload" :on-error="handleUploadError"
                      :auto-upload="true" list-type="text">
             <el-button type="primary">点击上传视频</el-button>
@@ -100,6 +102,7 @@
 </template>
 
 <script setup>
+import { computed } from 'vue'
 import { Delete, Edit, Plus, Search } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { useCrud } from '@/composables/useCrud'
@@ -114,11 +117,20 @@ const { dialogVisible, formRef, form, rules, openAdd, openEdit, submit, close } 
   defaultForm: { title: '', name: '', img: '', preview: '', start: '' },
   rules: {
     title: [{ required: true, message: '请输入电影名称', trigger: 'blur' }],
-    start: [{ required: true, message: '请选择上映日期', trigger: 'change' }]
+    name: [{ required: true, message: '请输入视频名称', trigger: 'blur' }],
+    start: [{ required: true, message: '请选择发布时间', trigger: 'change' }]
   }
 })
 
 crud.load()
+
+// 编辑态回填已保存的图片/视频：上传控件默认从空列表起步，不回填就看不清当前文件
+const imgFileList = computed(() =>
+  form.img ? [{ name: 'image', url: form.img }] : []
+)
+const previewFileList = computed(() =>
+  form.preview ? [{ name: 'video', url: form.preview }] : []
+)
 
 function handleFileUpload(res) {
   if (res.code === '200') { form.img = res.data; ElMessage.success('图片上传成功') }

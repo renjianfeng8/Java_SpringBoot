@@ -75,7 +75,7 @@ const updateUser = async () => {
     } else {
       ElMessage.error(res.msg)
     }
-  })
+  }).catch(() => {})
 }
 
 </script>

@@ -77,6 +77,7 @@
         </el-form-item>
         <el-form-item label="电影图片" prop="img">
           <el-upload :action="FILE_UPLOAD_URL" :headers="uploadHeaders"
+                     :file-list="movieImgFileList"
                      :on-success="handleMovieImgUpload" :on-error="handleUploadError"
                      :auto-upload="true" list-type="picture">
             <el-button type="primary">点击上传</el-button>
@@ -90,6 +91,7 @@
         </el-form-item>
         <el-form-item label="演员照片" prop="picture">
           <el-upload :action="FILE_UPLOAD_URL" :headers="uploadHeaders"
+                     :file-list="actorImgFileList"
                      :on-success="handleActorImgUpload" :on-error="handleUploadError"
                      :auto-upload="true" list-type="picture">
             <el-button type="primary">点击上传</el-button>
@@ -115,6 +117,7 @@
 </template>
 
 <script setup>
+import { computed } from 'vue'
 import { Delete, Edit, Plus, Search } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { useCrud } from '@/composables/useCrud'
@@ -136,6 +139,14 @@ const { dialogVisible, formRef, form, rules, openAdd, openEdit, submit, close } 
 })
 
 crud.load()
+
+// 编辑态回填已保存的两张图片：上传控件默认从空列表起步，不回填就看不清当前图片
+const movieImgFileList = computed(() =>
+  form.img ? [{ name: 'movie', url: form.img }] : []
+)
+const actorImgFileList = computed(() =>
+  form.picture ? [{ name: 'actor', url: form.picture }] : []
+)
 
 function handleMovieImgUpload(res) {
   if (res.code === '200') { form.img = res.data; ElMessage.success('电影图片上传成功') }

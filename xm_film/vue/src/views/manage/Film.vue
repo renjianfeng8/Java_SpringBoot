@@ -36,7 +36,7 @@
               <el-descriptions-item label="上映日期">{{props.row.start}}</el-descriptions-item>
               <el-descriptions-item label="电影时长">{{props.row.time}}分钟</el-descriptions-item>
               <el-descriptions-item label="电影类型">
-                <el-tag v-for="item in props.row.typeList" class="tag-gap" :type="getTypeTagType(item)">{{ item.title }}</el-tag>
+                <el-tag v-for="item in props.row.typeList" :key="item.id ?? item.title" class="tag-gap" :type="getTypeTagType(item)">{{ item.title }}</el-tag>
               </el-descriptions-item>
               <el-descriptions-item label="电影语言">{{props.row.language}}</el-descriptions-item>
               <el-descriptions-item label="电影分辨率">{{props.row.resolution}}</el-descriptions-item>
@@ -80,7 +80,7 @@
         <el-table-column label="电影时长" prop="time" />
         <el-table-column label="电影类型" prop="typeList" width="180">
           <template v-slot="scope">
-            <el-tag v-for="item in scope.row.typeList" class="tag-gap" :type="getTypeTagType(item)">{{ item.title }}</el-tag>
+            <el-tag v-for="item in scope.row.typeList" :key="item.id ?? item.title" class="tag-gap" :type="getTypeTagType(item)">{{ item.title }}</el-tag>
           </template>
         </el-table-column>
         <el-table-column label="语言" prop="language" />
@@ -291,19 +291,19 @@ const actorData = ref([])
 function loadType() {
   return request.get(API_PATHS.TYPES).then(res => {
     if (res.code === '200') typeData.value = res.data
-  })
+  }).catch(() => {})
 }
 
 function loadArea() {
   return request.get(API_PATHS.AREAS).then(res => {
     if (res.code === '200') areaData.value = res.data
-  })
+  }).catch(() => {})
 }
 
 function loadActor() {
   return request.get(API_PATHS.ACTORS).then(res => {
     if (res.code === '200') actorData.value = res.data
-  })
+  }).catch(() => {})
 }
 
 crud.load()
@@ -327,7 +327,9 @@ function handleTypeChange(val) {
 
 function getTypeTagType(type) {
   const tagTypes = ['primary', 'success', 'warning', 'danger', 'info']
-  const seed = type?.id ?? String(type?.title || '').charCodeAt(0) ?? 0
+  // charCodeAt 在空串上返回 NaN，而 `?? 0` 只兜 null/undefined，NaN 会一路变成 tagTypes[NaN]
+  const raw = type?.id ?? String(type?.title || '').charCodeAt(0)
+  const seed = Number.isFinite(raw) ? raw : 0
   return tagTypes[Math.abs(seed) % tagTypes.length]
 }
 

@@ -57,7 +57,8 @@
 
       <div class="card chart-card">
         <div v-if="failed.overview && !overview.revenueTrend.length" class="empty-hint">数据加载失败，请稍后重试</div>
-        <div v-else-if="!overview.revenueTrend.length" class="chart-card__skeleton"><el-skeleton :rows="4" animated /></div>
+        <div v-else-if="!overview.revenueTrend.length && loading.overview" class="chart-card__skeleton"><el-skeleton :rows="4" animated /></div>
+        <div v-else-if="!overview.revenueTrend.length" class="empty-hint">暂无数据</div>
         <div v-else ref="trendChart" class="chart-card__body"></div>
         <p v-if="overview.updatedAt" class="chart-card__foot">
           <span v-if="failed.overview" class="chart-card__foot-error">刷新失败，请稍后重试 · </span>

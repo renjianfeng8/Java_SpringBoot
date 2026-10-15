@@ -383,6 +383,12 @@ const applyFilmDeepLink = async () => {
     return;
   }
 
+  // 场次请求失败与「真的没有场次」是两回事：失败时报「暂无场次」会把加载错误说成事实
+  if (sessionError[target]) {
+    ElMessage.warning('该影片场次加载失败，请稍后重试');
+    return;
+  }
+
   const sessions = sessionsByFilm[target] || [];
   const hit = dateTabs.value.find(
       tab => sessions.some(record => recordDateKey(record.start) === tab.key && canBuy(record)),

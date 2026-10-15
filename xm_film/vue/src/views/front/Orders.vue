@@ -7,7 +7,7 @@
         <el-select v-model="data.status" placeholder="请选择订单状态" aria-label="订单状态" class="search-input">
           <el-option v-for="status in ORDER_STATUS_OPTIONS" :key="status" :label="status" :value="status" />
         </el-select>
-        <el-button type="primary" @click="load">查 询</el-button>
+        <el-button type="primary" @click="search">查 询</el-button>
         <el-button type="warning" @click="reset">重 置</el-button>
       </div>
 
@@ -194,7 +194,11 @@ const goPickupHall = () => {
   router.push('/front/pickup');
 };
 
+// 请求序号：慢的旧响应后到时不得覆盖新结果（与 useCrud.load 同一口径）
+let loadSeq = 0
+
 const load = () => {
+  const seq = ++loadSeq
   request.get(apiPage(API_PATHS.ORDERS), {
     params: {
       pageNum: data.pageNumber,
@@ -203,14 +207,23 @@ const load = () => {
       status: data.status
     }
   }).then(res => {
+    if (seq !== loadSeq) return
     if (res && res.data) {
       data.tableData = res.data.list || [];
       data.total = res.data.total || 0;
     }
   }).catch(error => {
+    if (seq !== loadSeq) return
     console.error('加载数据失败:', error);
     ElMessage.error('加载数据失败，请重试');
   });
+}
+
+// 查询/重置都要回到第 1 页：否则在第 3 页发起筛选，过滤后 total 变小、该页为空，
+// 明明存在的订单会显示「暂无数据」
+const search = () => {
+  data.pageNumber = 1;
+  load();
 }
 
 const del = (id: number) => {
@@ -243,6 +256,7 @@ const cancelOrder = async (id: number) => {
 const reset = () => {
   data.orders = null;
   data.status = undefined;
+  data.pageNumber = 1;
   load();
 }
 

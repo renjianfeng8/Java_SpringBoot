@@ -13,7 +13,7 @@
           <el-input show-password v-model="data.form.confirmPassword" autocomplete="off" placeholder="请再次确认新密码"/>
         </el-form-item>
         <div class="form-actions">
-          <el-button @click="updatePassword" type="primary" class="submit-button" >立即修改</el-button>
+          <el-button :loading="submitting" @click="updatePassword" type="primary" class="submit-button" >立即修改</el-button>
         </div>
       </el-form>
 
@@ -36,6 +36,8 @@ const router = useRouter()
 const { logout } = useAuth()
 
 const formRef = ref()
+// 提交在途标记：双击会并发两次 PUT，第一次改成功后原密码已失效，第二次反报「原密码错误」
+const submitting = ref(false)
 
 const validatePass = (rule, value, callback) => {
   if (!value) {
@@ -64,10 +66,12 @@ const data = reactive({
 })
 
 const updatePassword = () => {
+  if (submitting.value) return
   data.form.id = data.user.id
   data.form.role = data.user.role
   formRef.value.validate((valid) => {
     if (valid) {
+      submitting.value = true
       request.put(AUTH_API.PASSWORD, data.form).then(res => {
         if (res.code === '200') {
           ElMessage.success('修改成功')
@@ -80,6 +84,8 @@ const updatePassword = () => {
         } else {
           ElMessage.error(res.msg)
         }
+      }).catch(() => {}).finally(() => {
+        submitting.value = false
       })
     }
   })

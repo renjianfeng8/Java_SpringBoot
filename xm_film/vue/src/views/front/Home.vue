@@ -431,8 +431,8 @@ const loadFilmBoxOfficeTop = () => {
       ElMessage.error(`票房数据加载失败：${res.msg || '未知错误'}`);
     }
   }).catch(err => {
+    // 网络/超时的提示由 request.js 拦截器统一给出，这里补一次就会弹两个
     console.error('票房接口请求异常：', err);
-    ElMessage.error('数据加载失败，请稍后重试');
   }).finally(() => {
     loading.boxOffice = false;
   });
@@ -450,8 +450,8 @@ const loadFilmMarkTop = () => {
       ElMessage.error(`评分数据加载失败：${res.msg || '未知错误'}`);
     }
   }).catch(err => {
+    // 网络/超时的提示由 request.js 拦截器统一给出，这里补一次就会弹两个
     console.error('评分接口请求异常：', err);
-    ElMessage.error('数据加载失败，请稍后重试');
   }).finally(() => {
     loading.mark = false;
   });

@@ -29,7 +29,7 @@
               <el-descriptions-item label="用户名称">{{props.row.userName}}</el-descriptions-item>
               <el-descriptions-item label="电影名称">{{props.row.filmName}}</el-descriptions-item>
               <el-descriptions-item label="影院名称">{{props.row.cinemaName}}</el-descriptions-item>
-              <el-descriptions-item label="影厅房间">{{ props.row.roomName || getRoomName(props.row.roomId) }}</el-descriptions-item>
+              <el-descriptions-item label="影厅房间">{{ props.row.roomName }}</el-descriptions-item>
               <el-descriptions-item label="座位号">{{props.row.seat}}</el-descriptions-item>
               <el-descriptions-item label="预约时间">{{props.row.start}}</el-descriptions-item>
               <el-descriptions-item label="电影票数量">{{props.row.number}}</el-descriptions-item>
@@ -69,7 +69,7 @@
         <el-table-column label="影院名称" prop="cinemaName"/>
         <el-table-column label="影厅名称">
           <template #default="prop">
-            {{ prop.row.roomName || getRoomName(prop.row.roomId) }}
+            {{ prop.row.roomName }}
           </template>
         </el-table-column>
         <el-table-column label="预约时间" prop="start" show-overflow-tooltip />
@@ -138,34 +138,15 @@ interface Ordered {
   refundAmount?: number;
 }
 
-interface RoomData {
-  id: number;
-  name: string;
-}
-
 const data = reactive({
   tableData: [] as Ordered[],
   pageNumber: 1,
   pageSize: 10,
   total: 0,
   ids: [] as number[],
-  rooms: [] as RoomData[],
   orders: null,
   status: undefined
 });
-
-const loadRoom = () => {
-  return request.get(API_PATHS.ROOMS).then(res => {
-    if(res.code === '200') {
-      data.rooms = res.data;
-    } else {
-      ElMessage.error(res.msg)
-    }
-  }).catch(error => {
-    console.error('获取影厅数据失败:', error);
-    ElMessage.error('获取影厅数据失败');
-  })
-}
 
 const load = () => {
   return request.get(apiPage(API_PATHS.ORDERS), {
@@ -184,15 +165,6 @@ const load = () => {
     console.error('加载数据失败:', error);
     ElMessage.error('加载数据失败，请重试');
   });
-}
-
-const getRoomName = (roomId?: number) => {
-  if (!roomId) return '无ID';
-  const room = data.rooms.find(room => room.id === roomId);
-  if (!room) {
-    return '未知影厅';
-  }
-  return room.name;
 }
 
 const del = (id: number) => {
@@ -250,12 +222,6 @@ const reset = () => {
   load();
 }
 
-// 先加载影厅数据，再加载订单，确保订单行能解析出影厅名称
-const initLoad = async () => {
-  await loadRoom();
-  load();
-}
-
-initLoad();
+load();
 </script>
 

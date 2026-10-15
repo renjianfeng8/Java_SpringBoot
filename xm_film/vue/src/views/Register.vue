@@ -44,6 +44,7 @@
         </el-form-item>
         <div class="auth-actions">
           <el-button
+              :loading="submitting"
               @click="register"
               type="primary"
               class="auth-submit"
@@ -89,10 +90,14 @@ const data = reactive({
 });
 
 const formRef = ref();
+// 提交在途标记：双击/回车会并发两次 POST /register，第二个必然回「账号已存在」
+const submitting = ref(false);
 
 const register = () => {
+  if (submitting.value) return;
   formRef.value.validate((valid) => {
     if (valid) {
+      submitting.value = true;
       request.post(AUTH_API.REGISTER, data.form).then((res) => {
         if (res.code === '200') {
           ElMessage.success('注册成功');
@@ -104,6 +109,8 @@ const register = () => {
         } else {
           ElMessage.error(res.msg || '注册失败，请检查信息');
         }
+      }).catch(() => {}).finally(() => {
+        submitting.value = false;
       });
     }
   });

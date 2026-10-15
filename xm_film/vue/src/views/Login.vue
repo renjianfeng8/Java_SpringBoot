@@ -90,6 +90,10 @@ const login = () => {
         && !redirectParam.startsWith('//')
       router.push(isSafePath ? redirectParam : getDefaultPath(user.role))
     } catch (e) {
+      // 传输类失败是 axios 错误，request.js 的响应拦截器已经弹过一次并给了中文提示；
+      // 接着再把它的英文 message（如 'Network Error'）塞进弹框就是二次提示 + 未翻译文案。
+      // 只有业务失败（useAuth 抛的普通 Error，带后端中文 msg）才需要这个弹框。
+      if (e?.isAxiosError) return
       ElMessageBox({
         message: e.message || '登录失败，请检查账号或密码是否正确',
         title: '登录失败',

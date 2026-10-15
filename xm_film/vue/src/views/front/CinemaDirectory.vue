@@ -11,7 +11,7 @@
       </el-select>
     </div>
 
-    <el-table :data="rows" border class="directory-table">
+    <el-table v-loading="data.loading" :data="rows" border class="directory-table">
       <el-table-column prop="name" label="影院名称" min-width="220"/>
       <el-table-column prop="brand" label="院线" width="140">
         <template #default="{ row }">{{ row.brand || '独立/其他' }}</template>
@@ -39,11 +39,12 @@
 <script setup>
 import { reactive, computed } from 'vue'
 import request from '@/utils/request.js'
+import { ElMessage } from 'element-plus'
 import { CINEMA_DIRECTORY_API } from '@/constants'
 
 const query = reactive({ city: null, brand: null, pageNum: 1, pageSize: 15 })
 const filterData = reactive({ cities: [], brands: [] })
-const data = reactive({ list: [], total: 0, error: false })
+const data = reactive({ list: [], total: 0, error: false, loading: false })
 const rows = computed(() => data.list)
 const total = computed(() => data.total)
 
@@ -57,19 +58,37 @@ const loadFilters = () => {
   }).catch(() => {})
 }
 
+// 请求序号：慢的旧响应后到不得覆盖新结果
+let loadSeq = 0
+
 const load = () => {
+  const seq = ++loadSeq
   data.error = false
+  data.loading = true
   request.get(CINEMA_DIRECTORY_API.PAGE, {
     params: { city: query.city || undefined, brand: query.brand || undefined,
               pageNum: query.pageNum, pageSize: query.pageSize }
   }).then(res => {
+    if (seq !== loadSeq) return
     if (res.code === '200') {
       data.list = res.data.list
       data.total = res.data.total
     } else {
+      // 业务码非 200 不过响应拦截器，这里补一次提示并清掉旧行
+      ElMessage.error(res.msg || '数据加载失败')
       data.error = true
+      data.list = []
+      data.total = 0
     }
-  }).catch(() => { data.error = true })
+  }).catch(() => {
+    if (seq !== loadSeq) return
+    data.error = true
+    // 清掉上一次的旧行，否则错误提示下面仍挂着上一个筛选条件的结果
+    data.list = []
+    data.total = 0
+  }).finally(() => {
+    if (seq === loadSeq) data.loading = false
+  })
 }
 
 const reload = () => { query.pageNum = 1; load() }

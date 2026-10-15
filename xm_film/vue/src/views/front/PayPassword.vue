@@ -76,10 +76,10 @@
           <el-link type="primary" :underline="false" @click="backToVerify">返回上一步</el-link>
         </template>
         <template v-else-if="isChange">
-          <el-link type="primary" :underline="false" @click="switchMode(false)">忘记支付密码？</el-link>
+          <el-link type="primary" :underline="false" :disabled="submitting" @click="switchMode(false)">忘记支付密码？</el-link>
         </template>
         <template v-else-if="hasPayPassword">
-          <el-link type="primary" :underline="false" @click="switchMode(true)">返回修改支付密码</el-link>
+          <el-link type="primary" :underline="false" :disabled="submitting" @click="switchMode(true)">返回修改支付密码</el-link>
         </template>
       </div>
     </div>
@@ -122,6 +122,8 @@ const resetFields = () => {
 };
 
 const switchMode = (change) => {
+  // 验证请求在途时不许切模式：响应回来会无条件把 step 推到 2，而新模式的身份从未被验证
+  if (submitting.value) return;
   mode.value = change ? 'change' : 'reset';
   step.value = 1;
   resetFields();

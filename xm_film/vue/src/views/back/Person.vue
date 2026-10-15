@@ -63,14 +63,16 @@ const data = reactive({
   }
 })
 
-const emit = defineEmits(['updateUser'])
-
 if (data.user.role === 'USER') {
-  request.get(apiById(API_PATHS.USERS, data.user.id)).then(res => {
-    data.form = res.data
-  })
+  request.get(apiById(API_PATHS.USERS, data.user.id))
+      .then(res => {
+        data.form = res.data
+      })
+      .catch(() => {})
 } else {
-  data.form = data.user
+  // 存储副本带 token（useAuth 落库时会并进去），直接当表单会把会话令牌塞进 PUT body
+  const { token: _token, ...profile } = data.user
+  data.form = profile
 }
 
 const updateUser = () => {
@@ -81,12 +83,10 @@ const updateUser = () => {
       // 登录态只能经 useAuth 变更：只写 storage 副本不会更新内存里的 user，
       // 顶栏的用户名与头像要等整页刷新才变。
       setUser({ ...user.value, ...data.form })
-      //触发父级从缓存里面取到最新的数据
-      emit('updateUser', data.form)
     } else {
       ElMessage.error(res.msg)
     }
-  })
+  }).catch(() => {})
 }
 
 </script>
