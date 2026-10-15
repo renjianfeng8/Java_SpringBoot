@@ -25,6 +25,11 @@
         </template>
       </el-table-column>
     </el-table>
+    <div v-if="data.total > data.pageSize" class="list-pagination">
+      <el-pagination v-model:current-page="data.pageNum" v-model:page-size="data.pageSize"
+                     background layout="total, prev, pager, next" :total="data.total"
+                     @current-change="handlePage" />
+    </div>
   </div>
 </template>
 
@@ -43,6 +48,8 @@ interface Notice {
 const data = reactive({
   tableData: [] as Notice[],
   total: 0,
+  pageNum: 1,
+  pageSize: 10,
 });
 
 const formatTime = (time: string | number | undefined) => {
@@ -69,7 +76,9 @@ const formatTime = (time: string | number | undefined) => {
 };
 
 const load = () => {
-  request.get(apiPage(API_PATHS.NOTICES)).then(res => {
+  request.get(apiPage(API_PATHS.NOTICES), {
+    params: { pageNum: data.pageNum, pageSize: data.pageSize }
+  }).then(res => {
     if (res && res.data) {
       data.tableData = res.data.list || [];
       data.total = res.data.total || 0;
@@ -78,6 +87,11 @@ const load = () => {
     console.error("加载公告失败:", error);
     ElMessage.error("公告加载失败，请稍后重试");
   });
+};
+
+const handlePage = (p: number) => {
+  data.pageNum = p;
+  load();
 };
 
 onMounted(() => {
@@ -122,6 +136,12 @@ onMounted(() => {
   font-size: var(--fs-xl);
   color: var(--el-text-color-primary);
   font-weight: var(--fw-bold);
+}
+
+.list-pagination {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: var(--space-16);
 }
 
 .total-count {

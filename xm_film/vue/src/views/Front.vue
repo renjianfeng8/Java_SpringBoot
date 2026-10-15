@@ -166,8 +166,11 @@ const visibleNavItems = computed(() =>
     NAV_ITEMS.filter(item => !item.requiresUser || showUserEntries.value)
 )
 
+// 前缀匹配必须带路径分隔符边界：否则 /front/cinema 会吞掉同前缀的 /front/cinemaDirectory，
+// 两个导航项同时点亮
 const isNavActive = (item) =>
-    item.sections.some(prefix => route.path.startsWith(prefix))
+    item.sections.some(prefix =>
+        route.path === prefix || route.path.startsWith(prefix + '/'))
 
 const goAdmin = () => {
   if (isAdmin.value) {

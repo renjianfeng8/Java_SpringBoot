@@ -26,7 +26,7 @@
           <div class="film-hero__info">
             <h1 class="film-hero__title">{{ film.title || '未知电影' }}</h1>
             <p class="film-hero__meta">{{ film.english || '无英文标题' }}</p>
-            <p class="film-hero__meta">{{ film.types.join(' / ') || '未知类型' }}</p>
+            <p class="film-hero__meta">{{ formatFilmTypes(film) }}</p>
             <p class="film-hero__meta">
               {{ film.area || '未知地区' }} / {{ film.time || '未知时长' }} / {{ film.language || '未知语言' }}
             </p>
@@ -159,7 +159,7 @@ import request from "@/utils/request.js";
 import 'element-plus/theme-chalk/el-pagination.css';
 import 'element-plus/theme-chalk/el-button.css';
 import { API_PATHS, apiById, apiPage } from '@/constants';
-import { formatBoxOffice, formatScore } from '@/utils/format.js';
+import { formatBoxOffice, formatScore, formatFilmTypes } from '@/utils/format.js';
 
 // 1. 路由相关（获取电影ID + 路由跳转）
 const route = useRoute();
@@ -167,7 +167,8 @@ const router = useRouter();
 const filmId = route.params.id; // 从路由参数获取当前电影ID（核心筛选条件）
 
 // 2. 电影信息状态（补充完整字段，与后端返回对齐）
-const loading = ref(false);
+// loading 初值为 true：首次进入即渲染骨架，否则电影信息到位前会闪一屏「未知电影」空态
+const loading = ref(true);
 const errorMsg = ref('');
 const film = reactive({
   id: '',
@@ -176,7 +177,7 @@ const film = reactive({
   img: '',
   score: null,
   boxOffice: 0,
-  types: [],
+  typeList: [],
   area: '',
   time: '',
   language: '',
@@ -235,7 +236,7 @@ const fetchFilmFullInfo = () => {
             img: data.img,
             score: data.score,
             boxOffice: data.boxOffice || 0,
-            types: (data.typeList || []).map(t => t.title),
+            typeList: data.typeList || [],
             area: data.areaName || '未知地区',
             time: data.time ? `${data.time}分钟` : '未知时长',
             language: data.language || '未知语言',

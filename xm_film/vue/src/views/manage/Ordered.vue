@@ -34,7 +34,7 @@
               <el-descriptions-item label="用户名称">{{props.row.userName}}</el-descriptions-item>
               <el-descriptions-item label="电影名称">{{props.row.filmName}}</el-descriptions-item>
               <el-descriptions-item label="影院名称">{{props.row.cinemaName}}</el-descriptions-item>
-              <el-descriptions-item label="影厅房间">{{ props.row.roomName || getRoomName(props.row.roomId) }}</el-descriptions-item>
+              <el-descriptions-item label="影厅房间">{{ props.row.roomName }}</el-descriptions-item>
               <el-descriptions-item label="座位号">{{props.row.seat}}</el-descriptions-item>
               <el-descriptions-item label="预约时间">{{props.row.start}}</el-descriptions-item>
               <el-descriptions-item label="电影票数量">{{props.row.number}}</el-descriptions-item>
@@ -73,7 +73,7 @@
         <el-table-column label="影院名称" prop="cinemaName"/>
         <el-table-column label="影厅名称">
           <template #default="prop">
-            {{ prop.row.roomName || getRoomName(prop.row.roomId) }}
+            {{ prop.row.roomName }}
           </template>
         </el-table-column>
         <el-table-column label="预约时间" prop="start" show-overflow-tooltip />
@@ -123,24 +123,10 @@ import { useRoute } from 'vue-router'
 import { Delete, Search } from '@element-plus/icons-vue'
 import { useCrud } from '@/composables/useCrud'
 import { API_PATHS, ORDER_STATUS_OPTIONS, getOrderStatusType as getStatusType, isOrderDeletable } from '@/constants'
-import request from '@/utils/request'
 
 const crud = useCrud(API_PATHS.ORDERS)
 const { dataList, total, pageNum, pageSize, searchForm, selectedIds, loading, error,
         confirmDel, confirmDelBatch, onSearch, onReset, onPageChange, onSizeChange, onSelectionChange } = crud
-
-const roomData = []
-
-function loadRoom() {
-  return request.get(API_PATHS.ROOMS).then(res => {
-    if (res.code === '200') { roomData.length = 0; roomData.push(...res.data) }
-  })
-}
-
-function getRoomName(roomId) {
-  if (!roomId) return '暂未关联影厅'
-  return roomData.find(r => r.id === roomId)?.name || '暂未关联影厅'
-}
 
 const route = useRoute()
 
@@ -149,6 +135,4 @@ watch(() => route.query.status, (status) => {
   if (status) searchForm.status = status
   onSearch()
 }, { immediate: true })
-
-loadRoom()
 </script>

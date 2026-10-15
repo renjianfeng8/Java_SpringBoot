@@ -26,7 +26,7 @@
           <div class="film-hero__info">
             <h1 class="film-hero__title">{{ film.title || '未知电影' }}</h1>
             <p class="film-hero__meta">{{ film.english || '无英文标题' }}</p>
-            <p class="film-hero__meta">{{ film.types.join(' / ') || '未知类型' }}</p>
+            <p class="film-hero__meta">{{ formatFilmTypes(film) }}</p>
             <p class="film-hero__meta">{{ film.area || '未知地区' }} / {{ film.time || '未知时长' }}</p>
             <p class="film-hero__meta">{{ film.language || '未知语言' }} / {{ film.resolution || '未知格式' }}</p>
             <p class="film-hero__meta">{{ film.start || '未知上映时间' }} 开始上映</p>
@@ -213,7 +213,7 @@ import {ElMessage} from 'element-plus';
 import request from "@/utils/request.js";
 import 'element-plus/theme-chalk/el-button.css';
 import { API_PATHS, MARK_API, apiById } from '@/constants';
-import { formatBoxOffice, formatScore } from '@/utils/format.js';
+import { formatBoxOffice, formatScore, formatFilmTypes } from '@/utils/format.js';
 
 
 // 初始化路由实例
@@ -232,7 +232,7 @@ const film = reactive({     // 电影基础数据（默认值避免渲染空白�
   img: '',
   score: null,
   start: '',
-  types: [],
+  typeList: [],
   area: '',
   time: '',
   language: '',
@@ -296,10 +296,10 @@ const fetchFilmDetail = () => {
           Object.assign(film, {
             id: data.id,
             title: data.title?.trim() || '未知电影',
-            img: data.img || '默认海报地址（可选）',
+            img: data.img || '',
             score: data.score,
             start: data.start || '未知上映时间',
-            types: (data.typeList || []).map(t => t.title),
+            typeList: data.typeList || [],
             area: data.areaName || '未知地区',
             time: data.time ? `${data.time}分钟` : '未知时长',
             language: data.language || '未知语言',

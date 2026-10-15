@@ -67,7 +67,13 @@ const scoreText = (film) => formatScoreBadge(film.score)
 const fetchSearchResults = async () => {
   const title = route.query.title || ''
   searchTitle.value = title
-  if (!title.trim()) return
+  if (!title.trim()) {
+    // 空关键字：清掉上一次的结果与错误态，否则同路由换 query 会残留旧搜索的列表
+    filmList.value = []
+    error.value = false
+    loading.value = false
+    return
+  }
 
   loading.value = true
   error.value = false

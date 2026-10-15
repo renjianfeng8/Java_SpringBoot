@@ -227,6 +227,9 @@ const myPendingOrders = ref([]); // 本人待支付订单，可继续支付或�
 const paymentDialogVisible = ref(false);
 const currentOrder = ref(null);
 
+// 单笔订单座位上限，与后端 OrderedService.MAX_SEATS_PER_ORDER 保持一致
+const MAX_SEATS_PER_ORDER = 6;
+
 // 下单在途标记：没有它时双击会发出两次 POST，第二个必然被"座位已售"拒绝
 const submitting = ref(false);
 const canSubmit = computed(() =>
@@ -322,6 +325,9 @@ onMounted(() => {
 // 初始化座位状态：0=可选 1=他人占用 2=已选 3=本人未支付锁座
 const initSeats = () => {
   return new Promise((resolve) => {
+    // 重载座位图即视为一次新的选座会话：支付/取消/超时后必须清掉上一次的选座，
+    // 否则 chips、计数、总价与 canSubmit 会残留，能对刚释放或已售的座位重复下单
+    selectedSeats.value = [];
     const rows = seatRows.value;
     const cols = seatCols.value;
     const emptyMatrix = () => Array(rows).fill().map(() => Array(cols).fill(0));
@@ -457,6 +463,10 @@ const selectSeat = (row, col) => {
     return;
   }
   if (!isSeatAvailable(row, col)) return;
+  if (selectedSeats.value.length >= MAX_SEATS_PER_ORDER) {
+    ElMessage.warning(`单笔订单最多选择 ${MAX_SEATS_PER_ORDER} 个座位`);
+    return;
+  }
 
   const r = row - 1;
   const c = col - 1;

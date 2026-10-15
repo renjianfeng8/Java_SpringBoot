@@ -54,6 +54,8 @@
       <el-pagination
           @size-change="handleSizeChange"
           @current-change="handleCurrentChange"
+          v-model:current-page="data.pageNum"
+          v-model:page-size="data.pageSize"
           :page-sizes="[5, 10, 15]"
           background
           layout="total, prev, pager, next"
@@ -95,7 +97,11 @@ const loadRegions = () => {
 const onCityChange = () => { query.district = null; reload() }
 const reload = () => { data.pageNum = 1; load() }
 
+// 请求序号：慢的旧响应后到不得覆盖新结果
+let loadSeq = 0
+
 const load = () => {
+  const seq = ++loadSeq
   data.error = false
   request.get(apiPage(API_PATHS.CINEMAS), {
     params: {
@@ -105,6 +111,7 @@ const load = () => {
       district: query.district || undefined,
     }
   }).then(res => {
+    if (seq !== loadSeq) return
     if (res.code === '200') {
       data.filmData = res.data.list
       data.total = res.data.total
@@ -112,12 +119,18 @@ const load = () => {
       // 业务码非 200 不经过响应拦截器（它只管网络/超时/HTTP 状态），故这里补一次提示
       ElMessage.error(res.msg)
       data.error = true
+      data.filmData = []
+      data.total = 0
     }
   }).catch(err => {
+    if (seq !== loadSeq) return
     // 网络与 5xx 那类失败的提示由 request.js 的响应拦截器给出，这里只落错误态，
     // 否则同一次失败会弹两次
     console.error(err)
     data.error = true
+    // 清掉上一次的结果，否则错误提示下面还挂着旧筛选的影院卡片
+    data.filmData = []
+    data.total = 0
   })
 }
 

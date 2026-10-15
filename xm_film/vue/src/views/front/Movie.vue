@@ -94,9 +94,11 @@
       <el-pagination
           @size-change="handleSizeChange"
           @current-change="handleCurrentChange"
+          v-model:current-page="data.pageNum"
+          v-model:page-size="data.pageSize"
           :page-sizes="[12, 24, 36]"
           background
-          layout="total, prev, pager, next"
+          layout="total, sizes, prev, pager, next"
           :total="data.total"
       />
     </div>
@@ -145,11 +147,16 @@ const load = () => {
     } else {
       data.error = true
       ElMessage.error(res.msg)
+      // 清掉上一次的结果，否则错误提示下面还挂着旧筛选的影片卡片
+      data.filmData = []
+      data.total = 0
     }
   }).catch(err => {
     // 网络异常的统一提示由 request.js 的响应拦截器给出，这里只落错误态
     console.error('电影列表接口请求异常：', err)
     data.error = true
+    data.filmData = []
+    data.total = 0
   }).finally(() => {
     data.loading = false
   })
@@ -162,7 +169,7 @@ const loadType = () => {
     } else {
       ElMessage.error(res.msg)
     }
-  })
+  }).catch(() => {})
 }
 
 const loadArea = () => {
@@ -172,7 +179,7 @@ const loadArea = () => {
     } else {
       ElMessage.error(res.msg)
     }
-  })
+  }).catch(() => {})
 }
 
 const loadYear = () => {
@@ -182,7 +189,7 @@ const loadYear = () => {
     } else {
       ElMessage.error(res.msg)
     }
-  })
+  }).catch(() => {})
 }
 
 // 切换筛选项后回到第一页：否则在第 3 页筛选只剩 1 页数据时会停在空页

@@ -116,7 +116,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref } from 'vue';
+import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import request from '@/utils/request.js';
@@ -128,8 +128,9 @@ const route = useRoute();
 const router = useRouter();
 const { user, isAdmin, isCinema } = useAuth();
 
-// 路由参数（影片ID）
-const filmId = route.params.id;
+// 路由参数（影片ID）。用 let 而非 const：同一路由记录只换 :id 时组件会被复用，
+// onMounted 不再触发，只有 watch 重取才能跟上（见下方 watch）
+let filmId = route.params.id;
 
 // 「取不到数据」的统一文案；失败提示由 request.js 的拦截器弹出，页面只落错误态
 const LOAD_FAILED = '数据加载失败，请稍后重试';
@@ -303,6 +304,14 @@ const submit = async () => {
 };
 
 onMounted(() => {
+  load();
+});
+
+// 复用同一组件实例跳到另一部片时（仅 :id 变化），重取该片数据
+watch(() => route.params.id, (id) => {
+  if (id === filmId) return;
+  filmId = id;
+  marks.pageNum = 1;
   load();
 });
 </script>

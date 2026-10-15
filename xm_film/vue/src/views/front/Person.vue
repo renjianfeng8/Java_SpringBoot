@@ -32,7 +32,7 @@
           </el-form-item>
 
           <div class="person-actions">
-            <el-button @click="updateUser" type="primary" class="person-submit">更新个人信息</el-button>
+            <el-button :loading="submitting" @click="updateUser" type="primary" class="person-submit">更新个人信息</el-button>
           </div>
         </el-form>
       </div>
@@ -51,6 +51,8 @@ import { useAuth } from "@/composables/useAuth";
 const { user, setUser } = useAuth()
 
 const formRef = ref();
+// 提交在途标记：双击/回车会并发两次 PUT 资料
+const submitting = ref(false);
 const formData = reactive({
   id: null,
   username: "",
@@ -82,8 +84,10 @@ onMounted(() => {
 });
 
 const updateUser = () => {
+  if (submitting.value) return;
   formRef.value.validate((valid) => {
     if (valid) {
+      submitting.value = true;
       request.put(API_PATHS.USERS, formData).then((res) => {
         if (res.code === "200") {
           ElMessage.success("更新成功");
@@ -93,6 +97,8 @@ const updateUser = () => {
         } else {
           ElMessage.error(res.msg);
         }
+      }).catch(() => {}).finally(() => {
+        submitting.value = false;
       });
     }
   });

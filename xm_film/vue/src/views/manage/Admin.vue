@@ -72,6 +72,7 @@
         </el-form-item>
         <el-form-item label="头像" prop="avatar">
           <el-upload :action="FILE_UPLOAD_URL" :headers="uploadHeaders"
+                     :file-list="avatarFileList"
                      :on-success="handleFileUpload" :on-error="handleUploadError"
                      :auto-upload="true" list-type="picture">
             <el-button type="primary">点击上传</el-button>
@@ -98,6 +99,7 @@
 </template>
 
 <script setup>
+import { computed } from 'vue'
 import { Delete, Edit, Plus, Search } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { useCrud } from '@/composables/useCrud'
@@ -119,6 +121,11 @@ const { dialogVisible, isEdit, formRef, form, rules, openAdd, openEdit, submit, 
 })
 
 crud.load()
+
+// 编辑态回填已保存的头像：上传控件默认从空列表起步，不回填就看不清当前头像
+const avatarFileList = computed(() =>
+  form.avatar ? [{ name: 'avatar', url: form.avatar }] : []
+)
 
 function handleFileUpload(res) {
   if (res.code === '200') { form.avatar = res.data; ElMessage.success('头像上传成功') }

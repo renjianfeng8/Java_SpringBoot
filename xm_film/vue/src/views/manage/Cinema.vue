@@ -215,13 +215,19 @@ const directoryOptions = ref([])
 const directoryLoading = ref(false)
 
 // 远程搜索名录：未输入不请求；错误提示由 request.js 统一弹
+let dirSeq = 0
 const searchDirectory = (keyword) => {
   if (!keyword) { directoryOptions.value = []; return }
+  const seq = ++dirSeq
   directoryLoading.value = true
   request.get(CINEMA_DIRECTORY_API.PAGE, { params: { name: keyword, pageNum: 1, pageSize: 20 } })
-    .then(res => { if (res.code === '200') directoryOptions.value = res.data.list })
+    .then(res => {
+      // 连打关键字时只认最后一次请求，慢的旧响应不得覆盖新候选
+      if (seq !== dirSeq) return
+      if (res.code === '200') directoryOptions.value = res.data?.list || []
+    })
     .catch(() => {})
-    .finally(() => { directoryLoading.value = false })
+    .finally(() => { if (seq === dirSeq) directoryLoading.value = false })
 }
 
 // 选中名录条目：预填名称/电话/地址（名录侧为空则保留原值）

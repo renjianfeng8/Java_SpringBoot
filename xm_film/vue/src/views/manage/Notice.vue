@@ -79,11 +79,18 @@ import { useCrud } from '@/composables/useCrud'
 import { useFormDialog } from '@/composables/useFormDialog'
 import { API_PATHS } from '@/constants'
 
+// 默认发布时间取本地时钟：toISOString 是 UTC，选择器按本地渲染会差一个时区
+const nowLocal = () => {
+  const d = new Date()
+  const p = (n) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`
+}
+
 const crud = useCrud(API_PATHS.NOTICES)
 const { dataList, total, pageNum, pageSize, searchForm, selectedIds, loading, error,
         confirmDel, confirmDelBatch, onSearch, onReset, onPageChange, onSizeChange, onSelectionChange } = crud
 const { dialogVisible, formRef, form, rules, openAdd, openEdit, submit, close } = useFormDialog(crud, {
-  defaultForm: { title: '', content: '', time: new Date().toISOString().slice(0, 19).replace('T', ' ') },
+  defaultForm: { title: '', content: '', time: nowLocal() },
   rules: {
     title: [{ required: true, message: '请输入公告标题', trigger: 'blur' }],
     content: [{ required: true, message: '请输入公告内容', trigger: 'blur' }],
