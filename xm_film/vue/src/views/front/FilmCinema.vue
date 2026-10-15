@@ -243,8 +243,7 @@ const fetchFilmFullInfo = () => {
           ElMessage.error(errMsg);
           return Promise.reject(errMsg);
         }
-      })
-      .catch(err => {
+      }, err => {
         const errMsg = `网络异常：${err.message || '无法加载电影信息'}`;
         errorMsg.value = errMsg;
         ElMessage.error(errMsg);
