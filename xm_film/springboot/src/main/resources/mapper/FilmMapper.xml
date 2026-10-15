@@ -21,7 +21,7 @@
     <!-- film 列清单 + 聚合票房（box_office 列保留但已恒为 0，仅此处别名承载聚合值） -->
     <sql id="filmColumnsWithRevenue">
         film.id, film.title, film.english, film.start, film.time,
-        film.language, film.resolution, film.content, film.img, film.employee,
+        film.language, film.content, film.img, film.employee,
         film.area_id, film.status, film.score, film.actor_id, film.video,
         COALESCE(rev.revenue, 0) AS box_office
     </sql>
@@ -145,7 +145,6 @@
             <if test="english != null">english,</if>
             <if test="start != null">start,</if>
             <if test="language != null">language,</if>
-            <if test="resolution != null">resolution,</if>
             <if test="img != null">img,</if>
             <if test="employee != null">employee,</if>
             <if test="areaId != null">area_id,</if>
@@ -162,7 +161,6 @@
             <if test="english != null">#{english},</if>
             <if test="start != null">#{start},</if>
             <if test="language != null">#{language},</if>
-            <if test="resolution != null">#{resolution},</if>
             <if test="img != null">#{img},</if>
             <if test="employee != null">#{employee},</if>
             <if test="areaId != null">#{areaId},</if>
@@ -182,7 +180,6 @@
             <if test="english != null">english = #{english},</if>
             <if test="start != null">start = #{start},</if>
             <if test="language != null">language = #{language},</if>
-            <if test="resolution != null">resolution = #{resolution},</if>
             <if test="img != null">img = #{img},</if>
             <if test="employee != null">employee = #{employee},</if>
             <if test="areaId != null">area_id = #{areaId},</if>

@@ -31,7 +31,7 @@
               {{ film.area || '未知地区' }} / {{ film.time || '未知时长' }} / {{ film.language || '未知语言' }}
             </p>
             <p class="film-hero__meta">
-              上映时间：{{ film.start || '未知' }} / 格式：{{ film.resolution || '未知' }}
+              上映时间：{{ film.start || '未知' }}
             </p>
             <el-button
                 class="film-hero__action"
@@ -176,7 +176,6 @@ const film = reactive({
   area: '',
   time: '',
   language: '',
-  resolution: '',
   start: '', // 上映时间
 });
 
@@ -235,7 +234,6 @@ const fetchFilmFullInfo = () => {
             area: data.areaName || '未知地区',
             time: data.time ? `${data.time}分钟` : '未知时长',
             language: data.language || '未知语言',
-            resolution: data.resolution || '未知格式',
             start: data.start || '未知'
           });
           return Promise.resolve(); // 加载成功，允许后续加载影院

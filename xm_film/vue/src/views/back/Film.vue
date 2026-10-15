@@ -24,7 +24,6 @@
                 <el-tag v-for="item in props.row.typeList" class="tag-gap" type="info">{{item.title}}</el-tag>
               </el-descriptions-item>
               <el-descriptions-item label="电影语言">{{props.row.language}}</el-descriptions-item>
-              <el-descriptions-item label="电影分辨率">{{props.row.resolution}}</el-descriptions-item>
               <el-descriptions-item label="电影简介">
                 <el-popover placement="top-start" title="电影简介" :width="200" trigger="hover" :content="props.row.content">
                   <template #reference>
@@ -117,7 +116,6 @@ interface Film {
   language?: string;    // 语言
   content?: string;     // 简介
   areaName?: string;    // 区域名称
-  resolution?: string;  // 分辨率
   employee?: string;    // 制作公司
   status?: string;      // 状态（待上映/已上映/停止上映）
   score?: number | null;  // 评分，无评价为 null
