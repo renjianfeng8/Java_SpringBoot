@@ -18,5 +18,4 @@ public class AdminRequest {
     private String token;
     private String avatar;
     private String phone;
-    private String email;
 }

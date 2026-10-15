@@ -27,7 +27,6 @@ public class AdminController extends BaseController<Admin, AdminRequest, AdminVi
         admin.setToken(request.getToken());
         admin.setAvatar(request.getAvatar());
         admin.setPhone(request.getPhone());
-        admin.setEmail(request.getEmail());
         return admin;
     }
 
@@ -40,7 +39,6 @@ public class AdminController extends BaseController<Admin, AdminRequest, AdminVi
         view.setName(admin.getName());
         view.setAvatar(admin.getAvatar());
         view.setPhone(admin.getPhone());
-        view.setEmail(admin.getEmail());
         return view;
     }
 }

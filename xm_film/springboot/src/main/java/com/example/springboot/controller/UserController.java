@@ -45,7 +45,6 @@ public class UserController extends BaseController<User, UserRequest, UserView> 
         user.setToken(request.getToken());
         user.setAvatar(request.getAvatar());
         user.setPhone(request.getPhone());
-        user.setEmail(request.getEmail());
         return user;
     }
 
@@ -58,7 +57,6 @@ public class UserController extends BaseController<User, UserRequest, UserView> 
         view.setName(user.getName());
         view.setAvatar(user.getAvatar());
         view.setPhone(user.getPhone());
-        view.setEmail(user.getEmail());
         return view;
     }
 

@@ -14,7 +14,6 @@ public class CinemaView {
     private String role;
     private String name;
     private String avatar;
-    private String email;
     private String address;
     private String leader;
     private String code;

@@ -20,5 +20,4 @@ public class Admin extends Account implements Serializable {
 
     private String avatar;
     private String phone;
-    private String email;
 }

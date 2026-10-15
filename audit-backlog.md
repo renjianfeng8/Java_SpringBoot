@@ -50,7 +50,7 @@
 | --- | --- | --- | --- |
 | BL-18 | entity/ 全 17 类 | 实体混入非持久化展示/派生字段并直接对外：Film.areaName/typeList、Cinema.province/city/district、Ordered/Mark/Record 的 join 字段。 | S10 展示字段剥离，移入对应 View（需改 JOIN 查询 resultType 与 Service 签名）。架构级，用户另立一轮。 |
 | BL-19 | entity/Account 及 User/Admin/Cinema | token/newPassword 置于 Account 被三子类继承；三子类 @AllArgsConstructor 只覆盖自身字段、不含父字段（误用会建出 role/password 为 null 的账号，当前无调用者）。 | S10 继承解耦，把 token/newPassword 移出 Account（需改 login/updatePassword 签名）。 |
-| BL-20 | entity/Admin 与 entity/User | 两实体字段完全一致；avatar/phone/email 在 Admin/User/Cinema 三处重复声明。 | 上提至 Account 或抽 Profile 基类（与 BL-19 同轮）。 |
+| BL-20 | entity/Admin 与 entity/User | 两实体字段完全一致；avatar/phone 在 Admin/User/Cinema 三处重复声明。 | 上提至 Account 或抽 Profile 基类（与 BL-19 同轮）。 |
 | BL-22 | entity/CinemaDirectory.createTime | 全仓唯一非 String 时间字段（LocalDateTime），序列化为 ISO 带 T 串，与其余 String 时间字段口径不一；前端未读取。 | 统一为 String，或全仓统一改 LocalDateTime（需联动 mapper/DTO/前端）。 |
 | BL-23 | entity/Room.title | 存的是所属影院名（RoomService 由 cinema.getName() 派生），而 name 才是影厅自身名。命名与语义不符，是未标注的冗余快照。 | 改名或去除（需联动 mapper/Service/前端）。 |
 | BL-24 | entity/Ordered 的 total/payAmount/refundAmount、entity/Film.boxOffice | 金额用 Double，而同实体 unitPrice、RechargeOrder.amount、FundFlow 各额均 BigDecimal。当前经 BigDecimal.valueOf(double) 往返未见精度损失，但与"金额用 BigDecimal"的既定口径不一致。 | 统一为 BigDecimal（需改库列类型与 mapper/DTO）。 |
@@ -90,7 +90,7 @@
 
 | 编号 | 位置 | 问题 | 处置建议 |
 | --- | --- | --- | --- |
-| BL-42 | mapper/ 其余字符串筛选：ActorMapper.actorName；AdminMapper.name；AreaMapper.title；NoticeMapper.title；TypeMapper.title；VideoMapper.title；UserMapper.name/username/phone/email；RoomMapper.name；CinemaMapper.selectAll.name（共 12 处） | 与 BL-38 同形：`<if>` 只判 `!= null`、不判空串。（CinemaMapper 的 selectByFilmId 已带判定，此处为其 selectAll 简易查询。）空串入参落成 `= ''` / `LIKE '%%'` 查出零行。 | 同 BL-38 补 `and x != ''`。**本轮未做（登记备查）**：这些文件为 mixed/CRLF 行尾，改一行即整篇重写 EOL（实测 AdminMapper 原始 diff 16 行 vs `--ignore-cr-at-eol` 1 行），噪声大于收益；且空串入参经实测不可达 —— `useCrud.searchForm` 起于空对象（不发键）、下拉无 `clearable`、唯一 clearable 的 `manage/CinemaDirectory.vue:141` 以 `|| undefined` 归一。 |
+| BL-42 | mapper/ 其余字符串筛选：ActorMapper.actorName；AdminMapper.name；AreaMapper.title；NoticeMapper.title；TypeMapper.title；VideoMapper.title；UserMapper.name/username/phone；RoomMapper.name；CinemaMapper.selectAll.name（共 11 处） | 与 BL-38 同形：`<if>` 只判 `!= null`、不判空串。（CinemaMapper 的 selectByFilmId 已带判定，此处为其 selectAll 简易查询。）空串入参落成 `= ''` / `LIKE '%%'` 查出零行。 | 同 BL-38 补 `and x != ''`。**本轮未做（登记备查）**：这些文件为 mixed/CRLF 行尾，改一行即整篇重写 EOL（实测 AdminMapper 原始 diff 16 行 vs `--ignore-cr-at-eol` 1 行），噪声大于收益；且空串入参经实测不可达 —— `useCrud.searchForm` 起于空对象（不发键）、下拉无 `clearable`、唯一 clearable 的 `manage/CinemaDirectory.vue:141` 以 `|| undefined` 归一。 |
 
 ## DTO 层遗留（2026-10-14 dto 审查）
 

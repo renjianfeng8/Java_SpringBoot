@@ -16,9 +16,6 @@
         <el-form-item label="电话" >
           <el-input v-model="data.form.phone" autocomplete="off" placeholder="请输入电话"/>
         </el-form-item>
-        <el-form-item label="邮箱" >
-          <el-input v-model="data.form.email" autocomplete="off" placeholder="请输入邮箱"/>
-        </el-form-item>
 
         <el-form-item label="影院介绍">
           <el-input type="textarea" :rows="3" v-model="data.form.description" autocomplete="off" placeholder="请输入影院介绍"/>
@@ -56,9 +53,6 @@ const data = reactive({
     ],
     name: [
       { required: true, message: '请输入名称', trigger: 'blur' }
-    ],
-    email: [
-      { type: 'email', message: '请输入正确的邮箱地址', trigger: ['blur', 'change'] }
     ]
   }
 })

@@ -27,10 +27,6 @@
             <el-input v-model="formData.phone" autocomplete="off" placeholder="请输入电话" @keyup.enter="updateUser" />
           </el-form-item>
 
-          <el-form-item label="邮箱" prop="email">
-            <el-input v-model="formData.email" autocomplete="off" placeholder="请输入邮箱" @keyup.enter="updateUser" />
-          </el-form-item>
-
           <div class="person-actions">
             <el-button :loading="submitting" @click="updateUser" type="primary" class="person-submit">更新个人信息</el-button>
           </div>
@@ -58,7 +54,6 @@ const formData = reactive({
   username: "",
   name: "",
   phone: "",
-  email: "",
   avatar: "",
 });
 
@@ -66,9 +61,6 @@ const rules = {
   id: [{ required: true, message: "用户ID不能为空", trigger: "blur" }],
   username: [{ required: true, message: "请输入账号", trigger: "blur" }],
   name: [{ required: true, message: "请输入名称", trigger: "blur" }],
-  email: [
-    { type: "email", message: "请输入正确的邮箱地址", trigger: ["blur", "change"] },
-  ],
 };
 
 onMounted(() => {
@@ -77,7 +69,6 @@ onMounted(() => {
     formData.username = current.username;
     formData.name = current.name || current.username;
     formData.phone = current.phone || "";
-    formData.email = current.email || "";
     formData.avatar = current.avatar || "";
     formData.id = current.id || null;
   }
@@ -112,7 +103,7 @@ function handleFileUpload(res) {
 /**
  * 头像上传成功后立即落库，不等用户再点「更新个人信息」。
  * 载荷只带 avatar 与定位用的 id：整体 PUT 会把表单里尚未校验、尚未保存的
- * 其他改动（比如写了一半的邮箱）一起写进去。id 是 WHERE 键，其余字段为 null 时
+ * 其他改动（比如写了一半的电话）一起写进去。id 是 WHERE 键，其余字段为 null 时
  * updateById 的动态 set 不会碰它们，所以本次只改 avatar 一列。
  * 失败则把表单回退到服务端的真值 —— 没落库就不该在页面上显示成已生效。
  */

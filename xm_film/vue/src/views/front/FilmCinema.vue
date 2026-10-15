@@ -103,12 +103,6 @@
                     <span>{{ cinema.phone || '暂无' }}</span>
                   </div>
 
-                  <!-- 邮箱 -->
-                  <div class="cinema-card__detail-row">
-                    <span class="cinema-card__detail-label">邮箱：</span>
-                    <span>{{ cinema.email || '暂无' }}</span>
-                  </div>
-
                   <!-- 地址（控制单行显示，避免高度过高） -->
                   <div class="cinema-card__detail-row cinema-card__detail-row--ellipsis">
                     <span class="cinema-card__detail-label">地址：</span>
