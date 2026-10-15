@@ -2,9 +2,9 @@
 
 本文件是本仓唯一的技术债登记处，承接已删除的 `后端代码规范审查报告.md` 的全部"登记备查"项，并汇总 2026-10-13 两轮代码审查（`entity/`、`service/`）、2026-10-14 控制器层审查（`controller/`）、2026-10-14 mapper 层审查（`mapper/`）与 2026-10-14 DTO 层审查（`dto/`）中判定延后或建议的条目。已完成项不进本表；已判定非缺陷的条目集中在末节，避免二次误报。
 
-维护口径：一处事实一处归属；每条给出 `文件` 与符号，行号随改动可能漂移、以符号为准。状态分三档：待办、有意不整改（与既定政策一致，非债务）、已核验非缺陷。
+维护口径：一处事实一处归属；每条给出 `文件` 与符号，行号随改动可能漂移、以符号为准。状态分三档：待办、有意不整改（与既定政策一致，非债务）、已核验非缺陷；修复完成的条目从表中移出，在该节以「本轮修复并移出本表」一句登记。
 
-更新日期：2026-10-14。基线：master `b6a39f4c`。
+更新日期：2026-10-15。基线：master `bfdd1c07`。
 
 ## 并发与事务
 
@@ -21,7 +21,8 @@
 | 编号 | 位置 | 问题 | 处置建议 |
 | --- | --- | --- | --- |
 | BL-06 | service/OrderedService.payOrder | 支付时不复议场次是否仍可购；isPurchasable 只在建单时判。建单后、到期前付款即可为已开演场次出票（退票已过截止，只能取票或作废）。 | 支付前复核 RecordService.isPurchasable，或在开场时强制取消。 |
-| BL-07 | service/UserService.updateScoped、service/CinemaService.update | updateById 前不判存在性，影响行数为 0 也返回成功。管理员对已删行提交（陈旧表单）得 200，实际未改；RecordService/RoomService.updateScoped 反而先 selectById 再抛 NOT_FOUND，口径不一。 | 更新前校验存在性并抛 NOT_FOUND（行为变更，需确认前端可接受）。 |
+
+本轮修复并移出本表：BL-07 —— update 路径收口。新增 `common/Identifiable`，`BaseService<T extends Identifiable>.update` 前置判存在（主键缺失或查无此行抛 NOT_FOUND），User/Admin/Cinema/Film 的 `update` 覆写改为委派 `super.update`；OrderedService.update 需回读库行回填 pending_timeout_at，就地判存在，口径相同。行为变更：陈旧表单（行已删）由 200 变 404。
 
 ## 性能
 
@@ -82,9 +83,10 @@
 
 ## Mapper 层遗留（2026-10-14 mapper 审查）
 
+本轮修复并移出本表：BL-36 —— 该条所列 13 个 mapper 之外漏登 RechargeOrderMapper，实为 14 个；全部在 `updateById` 的 `<set>` 末尾加 `id = #{id}` 自赋值兜底，SET 恒非空，`UPDATE t WHERE id=?` 触发的 1064 不再出现。实测渲染：`UPDATE area SET id = ? WHERE id = ?`。
+
 | 编号 | 位置 | 问题 | 处置建议 |
 | --- | --- | --- | --- |
-| BL-36 | mapper/ 全部 `updateById`（UserMapper、AdminMapper、ActorMapper、AreaMapper、TypeMapper、VideoMapper、NoticeMapper、RoomMapper、RecordMapper、MarkMapper、FilmMapper、CinemaMapper、OrderedMapper） | `<set>` 内所有 `<if>` 均不成立时 MyBatis 不输出 SET 关键字，整句退化为 `UPDATE t WHERE id = ?`。本轮以 BoundSql 实测渲染确认（OrderedMapper.updateById 传仅含 id 的实体 → `UPDATE ordered WHERE id = ?`），MySQL 报 1064；经未覆写 update 的控制器（BaseController.update → service.update）以 HTTP 500 暴露，请求体仅带 id 即可触发。 | BaseService.update 前置校验"除主键外无待更新字段"并抛 PARAM_INVALID，或在 mapper 侧保证 SET 恒非空。行为变更，需确认前端可接受。 |
 | BL-38 | mapper/CinemaDirectoryMapper.selectAll 的等值筛选（province / city / district / brand） | 与 CinemaMapper.selectByFilmId 同形：只判 `!= null`、不判空串，空串入参落成 `= ''` 查出零行。本轮已按同一口径修 CinemaMapper 的 cinema.name/city/district，此处同形点未做。name 走 LIKE，空串落成 `LIKE '%%'` 行为无害，仅属同形不一致。UNCERTAIN：HTTP 路径当前不可达（前端 clearable 均以 `|| undefined` 发送）。 | 与 CinemaMapper 对齐补 `and x != ''`；确认不可达后可登记备查不整改。 |
 
 ## DTO 层遗留（2026-10-14 dto 审查）

@@ -68,9 +68,10 @@ public class UserService extends BaseService<User> {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void update(User user) {
+        // 角色与密码不由此入口改写；置空后交基类——先判存在，再落库
         user.setPassword(null);
         user.setRole(null);
-        mapper().updateById(user);
+        super.update(user);
     }
 
     public User login(Account account) {

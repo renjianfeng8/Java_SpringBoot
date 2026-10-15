@@ -52,6 +52,8 @@
             <if test="name != null">name = #{name},</if>
             <if test="seatRows != null">seat_rows = #{seatRows},</if>
             <if test="seatCols != null">seat_cols = #{seatCols},</if>
+            <!-- id 兜底：上方 <if> 均不成立时 <set> 会退化成 "UPDATE t WHERE id=?"（1064），本行保证 SET 恒非空 -->
+            <if test="id != null">id = #{id},</if>
         </set>
         WHERE id = #{id}
     </update>

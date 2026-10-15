@@ -58,7 +58,7 @@ public class AdminService extends BaseService<Admin> {
     public void update(Admin admin) {
         admin.setPassword(null);
         admin.setRole(null);
-        mapper().updateById(admin);
+        super.update(admin);
     }
 
     public Admin login(Account account) {
