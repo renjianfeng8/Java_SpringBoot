@@ -18,7 +18,7 @@ import java.util.List;
  * {@code T}=实体（Service/DAO 只认它），{@code R}=请求 DTO，{@code V}=响应 DTO。
  * 控制器出入参一律用 R/V，实体不下沉到 HTTP 边界。
  */
-public abstract class BaseController<T, R, V> {
+public abstract class BaseController<T extends Identifiable, R, V> {
 
     protected final BaseService<T> service;
 

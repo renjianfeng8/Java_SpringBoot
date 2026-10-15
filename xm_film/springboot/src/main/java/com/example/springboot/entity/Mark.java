@@ -1,4 +1,6 @@
 package com.example.springboot.entity;
+
+import com.example.springboot.common.Identifiable;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
@@ -15,7 +17,7 @@ import java.io.Serializable;
 @Setter // 生成 setter 方法
 @NoArgsConstructor // 生成无参构造方法
 @AllArgsConstructor // 生成包含所有字段的全参构造方法
-public class Mark implements Serializable {
+public class Mark implements Serializable, Identifiable {
     private static final long serialVersionUID = 1L;
 
     // 核心业务字段（与数据库表字段对应）

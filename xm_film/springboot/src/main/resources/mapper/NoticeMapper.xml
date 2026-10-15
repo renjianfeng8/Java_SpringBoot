@@ -34,6 +34,8 @@
             <if test="title != null">title = #{title},</if>
             <if test="content != null">content = #{content},</if>
             <if test="time != null">time = #{time},</if>
+            <!-- id 兜底：上方 <if> 均不成立时 <set> 会退化成 "UPDATE t WHERE id=?"（1064），本行保证 SET 恒非空 -->
+            <if test="id != null">id = #{id},</if>
         </set>
         WHERE id = #{id}
     </update>

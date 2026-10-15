@@ -190,6 +190,8 @@
             <if test="boxOffice != null">box_office = #{boxOffice},</if>
             <if test="video != null">video = #{video},</if>
             <if test="actorId != null">actor_id = #{actorId},</if>
+            <!-- id 兜底：上方 <if> 均不成立时 <set> 会退化成 "UPDATE t WHERE id=?"（1064），本行保证 SET 恒非空 -->
+            <if test="id != null">id = #{id},</if>
         </set>
         WHERE id = #{id}
     </update>

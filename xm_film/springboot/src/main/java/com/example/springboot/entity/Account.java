@@ -1,5 +1,6 @@
 package com.example.springboot.entity;
 
+import com.example.springboot.common.Identifiable;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonProperty.Access;
 import lombok.Getter;
@@ -17,7 +18,7 @@ import java.io.Serializable;
 @Setter // 生成setter方法
 @NoArgsConstructor // 生成无参构造方法
 @AllArgsConstructor // 生成全参构造方法
-public class Account implements Serializable {
+public class Account implements Serializable, Identifiable {
     private static final long serialVersionUID = 1L;
 
     private Integer id;

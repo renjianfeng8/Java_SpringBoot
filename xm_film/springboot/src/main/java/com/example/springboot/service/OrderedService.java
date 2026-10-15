@@ -289,10 +289,13 @@ public class OrderedService extends BaseService<Ordered> {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void update(Ordered ordered) {
+        // 需要库内行回填 pending_timeout_at，故就地读一次；存在性随之在此判定，
+        // 不另调 super.update（那会重复一次 selectById）。口径与基类一致：查不到即 NOT_FOUND。
         Ordered db = mapper().selectById(ordered.getId());
-        if (db != null) {
-            ordered.setPendingTimeoutAt(db.getPendingTimeoutAt());
+        if (db == null) {
+            throw new CustomException(ErrorCode.NOT_FOUND, "订单不存在，可能已被删除");
         }
+        ordered.setPendingTimeoutAt(db.getPendingTimeoutAt());
         ordered.setStatus(null);
         mapper().updateById(ordered);
     }

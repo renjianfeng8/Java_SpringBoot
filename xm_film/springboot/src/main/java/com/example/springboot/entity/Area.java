@@ -1,5 +1,6 @@
 package com.example.springboot.entity;
 
+import com.example.springboot.common.Identifiable;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.NoArgsConstructor;
@@ -15,7 +16,7 @@ import java.io.Serializable;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class Area implements Serializable {
+public class Area implements Serializable, Identifiable {
     private static final long serialVersionUID = 1L;
 
     private Integer id;

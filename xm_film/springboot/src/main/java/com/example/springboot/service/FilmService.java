@@ -78,7 +78,9 @@ public class FilmService extends BaseService<Film> {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void update(Film film) {
-        mapper().updateById(film);
+        // 先判存在再落库：片不存在时基类直接 NOT_FOUND，避免下面按 film.getId()
+        // 写出一批指向空片的 film_type 关联行
+        super.update(film);
         if (film.getTypeIds() != null) {
             filmMapper.deleteFilmTypesByFilmId(film.getId());
             if (!film.getTypeIds().isEmpty()) {

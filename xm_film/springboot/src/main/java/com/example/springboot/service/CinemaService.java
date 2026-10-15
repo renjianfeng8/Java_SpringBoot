@@ -150,7 +150,7 @@ public class CinemaService extends BaseService<Cinema> {
     public void update(Cinema cinema) {
         cinema.setPassword(null);
         cinema.setRole(null);
-        mapper().updateById(cinema);
+        super.update(cinema);
     }
 
     public Cinema login(Account account) {
