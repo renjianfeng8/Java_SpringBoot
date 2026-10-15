@@ -19,7 +19,6 @@ public class Cinema extends Account implements Serializable {
     private static final long serialVersionUID = 1L;
 
     private String avatar;
-    private String email;
     private String address;
     private String leader;
     private String code;

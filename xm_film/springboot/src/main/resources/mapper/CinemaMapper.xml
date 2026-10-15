@@ -83,7 +83,6 @@
             <if test="role != null">role = #{role},</if>
             <if test="name != null">name = #{name},</if>
             <if test="avatar != null">avatar = #{avatar},</if>
-            <if test="email != null">email = #{email},</if>
             <if test="address != null">address = #{address},</if>
             <if test="leader != null">leader = #{leader},</if>
             <if test="code != null">code = #{code},</if>
@@ -110,7 +109,6 @@
             <if test="role != null">role,</if>
             <if test="name != null">name,</if>
             <if test="avatar != null">avatar,</if>
-            <if test="email != null">email,</if>
             <if test="address != null">address,</if>
             <if test="leader != null">leader,</if>
             <if test="code != null">code,</if>
@@ -127,7 +125,6 @@
             <if test="role != null">#{role},</if>
             <if test="name != null">#{name},</if>
             <if test="avatar != null">#{avatar},</if>
-            <if test="email != null">#{email},</if>
             <if test="address != null">#{address},</if>
             <if test="leader != null">#{leader},</if>
             <if test="code != null">#{code},</if>

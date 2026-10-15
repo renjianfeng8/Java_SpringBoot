@@ -36,7 +36,6 @@
         </el-table-column>
         <el-table-column label="姓名" prop="name" />
         <el-table-column label="电话" prop="phone" />
-        <el-table-column label="邮箱" prop="email" show-overflow-tooltip />
         <el-table-column label="角色" prop="role">
           <template #default="scope">
             <el-tag :type="getRoleType(scope.row.role)">{{ scope.row.role }}</el-tag>
@@ -89,9 +88,6 @@
         <el-form-item label="电话" prop="phone">
           <el-input v-model="form.phone" autocomplete="off" placeholder="请输入电话" @keyup.enter="submit" />
         </el-form-item>
-        <el-form-item label="邮箱" prop="email">
-          <el-input v-model="form.email" autocomplete="off" placeholder="请输入邮箱" @keyup.enter="submit" />
-        </el-form-item>
       </el-form>
       <template #footer>
         <div class="dialog-footer">
@@ -117,7 +113,7 @@ const crud = useCrud(API_PATHS.ADMINS)
 const { dataList, total, pageNum, pageSize, searchForm, selectedIds, loading, error,
         confirmDel, confirmDelBatch, onSearch, onReset, onPageChange, onSizeChange, onSelectionChange } = crud
 const { dialogVisible, isEdit, formRef, form, rules, openAdd, openEdit, submit, close } = useFormDialog(crud, {
-  defaultForm: { username: '', password: '', avatar: '', name: '', phone: '', email: '' },
+  defaultForm: { username: '', password: '', avatar: '', name: '', phone: '' },
   rules: {
     username: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
     // 只在新增态生效：编辑态的密码框被 v-if 卸载，AdminService.update 又显式置空 password

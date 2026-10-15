@@ -22,8 +22,8 @@
 
     <!-- 插入操作 -->
     <insert id="insert" parameterType="com.example.springboot.entity.Admin">
-        INSERT INTO admin (id, username, password, role, name, avatar, phone, email)
-        VALUES (#{id}, #{username}, #{password}, #{role}, #{name}, #{avatar}, #{phone}, #{email})
+        INSERT INTO admin (id, username, password, role, name, avatar, phone)
+        VALUES (#{id}, #{username}, #{password}, #{role}, #{name}, #{avatar}, #{phone})
     </insert>
 
     <!-- 查询管理员名字   -->
@@ -41,7 +41,6 @@
             <if test="name != null">name = #{name},</if>
             <if test="avatar != null">avatar = #{avatar},</if>
             <if test="phone != null">phone = #{phone},</if>
-            <if test="email != null">email = #{email},</if>
             <!-- id 兜底：上方 <if> 均不成立时 <set> 会退化成 "UPDATE t WHERE id=?"（1064），本行保证 SET 恒非空 -->
             <if test="id != null">id = #{id},</if>
         </set>

@@ -19,7 +19,6 @@ public class AccountView {
     private String token;
     private String avatar;
     private String phone;
-    private String email;
     private String address;
     private String leader;
     private String code;

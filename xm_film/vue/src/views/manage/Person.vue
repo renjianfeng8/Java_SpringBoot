@@ -17,9 +17,6 @@
         <el-form-item label="电话" prop="phone">
           <el-input v-model="data.form.phone" autocomplete="off" placeholder="请输入电话" @keyup.enter="updateUser"/>
         </el-form-item>
-        <el-form-item label="邮箱" prop="email">
-          <el-input v-model="data.form.email" autocomplete="off" placeholder="请输入邮箱" @keyup.enter="updateUser"/>
-        </el-form-item>
 
         <div class="form-actions">
           <el-button @click="updateUser" type="primary" class="submit-button" >更新个人信息</el-button>
@@ -49,9 +46,6 @@ const data = reactive({
     ],
     name: [
       { required: true ,message: '请输入名称', trigger: 'blur'}
-    ],
-    email: [
-      { type: 'email', message: '请输入正确的邮箱地址', trigger: ['blur', 'change'] }
     ]
   }
 })

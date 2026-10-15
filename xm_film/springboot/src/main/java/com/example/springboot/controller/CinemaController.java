@@ -60,7 +60,6 @@ public class CinemaController extends BaseController<Cinema, CinemaRequest, Cine
         cinema.setNewPassword(request.getNewPassword());
         cinema.setToken(request.getToken());
         cinema.setAvatar(request.getAvatar());
-        cinema.setEmail(request.getEmail());
         cinema.setAddress(request.getAddress());
         cinema.setLeader(request.getLeader());
         cinema.setCode(request.getCode());
@@ -83,7 +82,6 @@ public class CinemaController extends BaseController<Cinema, CinemaRequest, Cine
         view.setRole(cinema.getRole());
         view.setName(cinema.getName());
         view.setAvatar(cinema.getAvatar());
-        view.setEmail(cinema.getEmail());
         view.setAddress(cinema.getAddress());
         view.setLeader(cinema.getLeader());
         view.setCode(cinema.getCode());

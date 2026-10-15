@@ -37,9 +37,6 @@
               <span class="cinema-card__detail-label">电话:</span>{{ cinema.phone }}
             </p>
             <p class="cinema-card__detail-row">
-              <span class="cinema-card__detail-label">邮箱:</span>{{ cinema.email }}
-            </p>
-            <p class="cinema-card__detail-row">
               <span class="cinema-card__detail-label">地址:</span>{{ cinema.address }}
             </p>
           </div>

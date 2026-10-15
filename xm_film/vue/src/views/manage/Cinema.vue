@@ -40,7 +40,6 @@
               </el-descriptions-item>
               <el-descriptions-item label="电影院名称">{{ props.row.name }}</el-descriptions-item>
               <el-descriptions-item label="手机号">{{ props.row.phone }}</el-descriptions-item>
-              <el-descriptions-item label="邮箱">{{ props.row.email }}</el-descriptions-item>
               <el-descriptions-item label="影院地址">{{ props.row.address }}</el-descriptions-item>
               <el-descriptions-item label="所在区域">
                 {{ [props.row.province, props.row.city, props.row.district].filter(Boolean).join(' / ') || '未关联名录' }}
@@ -76,7 +75,6 @@
         </el-table-column>
         <el-table-column label="影院名称" prop="name" />
         <el-table-column label="电话" prop="phone" show-overflow-tooltip/>
-        <el-table-column label="邮箱" prop="email" show-overflow-tooltip/>
         <el-table-column label="地址" prop="address" show-overflow-tooltip/>
         <el-table-column label="审核状态" prop="status">
           <template #default="scope">
@@ -141,9 +139,6 @@
         <el-form-item label="电话" prop="phone">
           <el-input v-model="form.phone" autocomplete="off" placeholder="请输入电话" @keyup.enter="submit"/>
         </el-form-item>
-        <el-form-item label="邮箱" prop="email">
-          <el-input v-model="form.email" autocomplete="off" placeholder="请输入邮箱" @keyup.enter="submit"/>
-        </el-form-item>
         <el-form-item label="地址" prop="address">
           <el-input type="textarea" v-model="form.address" autocomplete="off" placeholder="请输入影院地址"/>
         </el-form-item>
@@ -206,13 +201,12 @@ const crud = useCrud(API_PATHS.CINEMAS)
 const { dataList, total, pageNum, pageSize, searchForm, selectedIds, loading, error,
         confirmDel, confirmDelBatch, onSearch, onReset, onPageChange, onSizeChange, onSelectionChange } = crud
 const { dialogVisible, isEdit, formRef, form, rules, openAdd, openEdit, submit, close } = useFormDialog(crud, {
-  defaultForm: { username: '', password: '', name: '', phone: '', email: '', address: '', leader: '', code: '', certificate: '', avatar: '', status: CINEMA_STATUS.UNAUDITED, directoryId: null },
+  defaultForm: { username: '', password: '', name: '', phone: '', address: '', leader: '', code: '', certificate: '', avatar: '', status: CINEMA_STATUS.UNAUDITED, directoryId: null },
   rules: {
     username: [{ required: true, message: '请输入账号', trigger: 'blur' }],
     // 只在新增态生效：编辑态的密码框被 v-if 卸载，CinemaService.update 又显式置空 password
     password: [{ required: true, message: '请输入初始密码', trigger: 'blur' }],
     name: [{ required: true, message: '请输入影院名称', trigger: 'blur' }],
-    email: [{ type: 'email', message: '请输入正确的邮箱地址', trigger: ['blur', 'change'] }],
     address: [{ required: true, message: '请输入影院地址', trigger: 'blur' }],
     leader: [{ required: true, message: '请输入负责人姓名', trigger: 'blur' }],
     code: [{ required: true, message: '请输入身份证号', trigger: 'blur' }],
