@@ -68,6 +68,8 @@
 
 本轮修复并移出本表：BL-28 —— Record/Room/User 的 `deleteBatchScoped` 各补空 ids 守卫，与同签名的 `OrderedService.deleteBatchScoped` 同款抛 `PARAM_INVALID`（"请选择排片/影厅/用户"）。行为变更：空 ids 由静默 200（经 `BaseService.deleteBatch` 兜底）变 400；该入参现由前端不可达，属口径对齐。
 
+2026-10-15 补充（同层；与前端 FE-34 同形）：common/config/AuthInterceptor 的三个前缀集合原本用裸 `startsWith` 匹配，没有路径分隔符边界 —— 与某个前缀只差字符相邻的新端点会静默继承该档位（放行的被多放行、拦下的被多拦下）。已抽出 `matchesPrefix`（相等，或以 `前缀 + '/'` 开头），`isAnonymousRead` / `hasAccess` 三处调用点全部换用；AuthInterceptorAccessTest 补 3 条用例，其中 2 条在改回裸匹配时各失败一条（已实测）。全部 23 个控制器基路径实测无碰撞，即改动前也无可达缺陷，属防未来误判。
+
 | 编号 | 位置 | 问题 | 处置建议 |
 | --- | --- | --- | --- |
 | BL-29 | entity/Cinema.province/city/district | /auth/me 与 /login 经 CinemaMapper.selectById/selectByUsername（SELECT *，无 JOIN）取影院，区域字段恒为 null；/cinemas/page 则有值。UNCERTAIN：当前无前端读取该路径的区域。 | 若需在登录态展示区域，给该查询补 JOIN。 |
