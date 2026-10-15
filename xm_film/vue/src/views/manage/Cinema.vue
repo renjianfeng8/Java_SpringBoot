@@ -44,17 +44,6 @@
               <el-descriptions-item label="所在区域">
                 {{ [props.row.province, props.row.city, props.row.district].filter(Boolean).join(' / ') || '未关联名录' }}
               </el-descriptions-item>
-              <el-descriptions-item label="负责人姓名">{{ props.row.leader }}</el-descriptions-item>
-              <el-descriptions-item label="身份证号">
-                <el-popover placement="top-start" title="身份证号码" :width="200" trigger="hover" :content="props.row.code">
-                  <template #reference>
-                    <div class="line line--code">{{ props.row.code }}</div>
-                  </template>
-                </el-popover>
-              </el-descriptions-item>
-              <el-descriptions-item label="营业执照">
-                <el-image class="cell-thumb" :src="props.row.certificate"/>
-              </el-descriptions-item>
               <el-descriptions-item label="审核状态">
                 <el-tag :type="getStatusType(props.row.status)">{{ props.row.status || '未知状态' }}</el-tag>
               </el-descriptions-item>
@@ -152,18 +141,6 @@
                        :value="o.id"/>
           </el-select>
         </el-form-item>
-        <el-form-item label="负责人" prop="leader">
-          <el-input v-model="form.leader" autocomplete="off" placeholder="请输入负责人姓名" @keyup.enter="submit"/>
-        </el-form-item>
-        <el-form-item label="身份证号" prop="code">
-          <el-input v-model="form.code" autocomplete="off" placeholder="请输入负责人身份证号" @keyup.enter="submit"/>
-        </el-form-item>
-        <el-form-item label="营业执照" prop="certificate">
-          <el-upload :action="FILE_UPLOAD_URL" :headers="uploadHeaders"
-                     :on-success="handleCertificateUpload" :on-error="handleUploadError" list-type="picture">
-            <el-button type="primary">上传影院的营业执照</el-button>
-          </el-upload>
-        </el-form-item>
         <!-- 新增时状态由后端固定为「未审核」，故仅在编辑时暴露审核状态。
              判据用 isEdit 而不是 form.id：后者会被上次编辑的残留 id 污染（见上方密码项注释） -->
         <el-form-item v-if="isEdit" label="审核状态" prop="status">
@@ -201,16 +178,13 @@ const crud = useCrud(API_PATHS.CINEMAS)
 const { dataList, total, pageNum, pageSize, searchForm, selectedIds, loading, error,
         confirmDel, confirmDelBatch, onSearch, onReset, onPageChange, onSizeChange, onSelectionChange } = crud
 const { dialogVisible, isEdit, formRef, form, rules, openAdd, openEdit, submit, close } = useFormDialog(crud, {
-  defaultForm: { username: '', password: '', name: '', phone: '', address: '', leader: '', code: '', certificate: '', avatar: '', status: CINEMA_STATUS.UNAUDITED, directoryId: null },
+  defaultForm: { username: '', password: '', name: '', phone: '', address: '', avatar: '', status: CINEMA_STATUS.UNAUDITED, directoryId: null },
   rules: {
     username: [{ required: true, message: '请输入账号', trigger: 'blur' }],
     // 只在新增态生效：编辑态的密码框被 v-if 卸载，CinemaService.update 又显式置空 password
     password: [{ required: true, message: '请输入初始密码', trigger: 'blur' }],
     name: [{ required: true, message: '请输入影院名称', trigger: 'blur' }],
-    address: [{ required: true, message: '请输入影院地址', trigger: 'blur' }],
-    leader: [{ required: true, message: '请输入负责人姓名', trigger: 'blur' }],
-    code: [{ required: true, message: '请输入身份证号', trigger: 'blur' }],
-    certificate: [{ required: true, message: '请上传营业执照', trigger: 'change' }]
+    address: [{ required: true, message: '请输入影院地址', trigger: 'blur' }]
   }
 })
 
@@ -264,11 +238,6 @@ watch(() => route.query.status, (status) => {
 function handleFileUpload(res) {
   if (res.code === '200') { form.avatar = res.data; ElMessage.success('头像上传成功') }
   else { ElMessage.error(res.msg || '头像上传失败') }
-}
-
-function handleCertificateUpload(res) {
-  if (res.code === '200') { form.certificate = res.data; ElMessage.success('营业执照上传成功') }
-  else { ElMessage.error(res.msg || '营业执照上传失败') }
 }
 
 // 审核通过：只提交状态，后端按 id 局部更新（影院信息其余字段不变）

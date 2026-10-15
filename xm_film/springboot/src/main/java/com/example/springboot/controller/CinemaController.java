@@ -61,9 +61,6 @@ public class CinemaController extends BaseController<Cinema, CinemaRequest, Cine
         cinema.setToken(request.getToken());
         cinema.setAvatar(request.getAvatar());
         cinema.setAddress(request.getAddress());
-        cinema.setLeader(request.getLeader());
-        cinema.setCode(request.getCode());
-        cinema.setCertificate(request.getCertificate());
         cinema.setStatus(request.getStatus());
         cinema.setPhone(request.getPhone());
         cinema.setDescription(request.getDescription());
@@ -83,9 +80,6 @@ public class CinemaController extends BaseController<Cinema, CinemaRequest, Cine
         view.setName(cinema.getName());
         view.setAvatar(cinema.getAvatar());
         view.setAddress(cinema.getAddress());
-        view.setLeader(cinema.getLeader());
-        view.setCode(cinema.getCode());
-        view.setCertificate(cinema.getCertificate());
         view.setStatus(cinema.getStatus());
         view.setPhone(cinema.getPhone());
         view.setDescription(cinema.getDescription());
@@ -158,9 +152,6 @@ public class CinemaController extends BaseController<Cinema, CinemaRequest, Cine
             cinema.setStatus(null);
             // 名录关联决定区域展示，属管理员字段，影院自助更新不得改动
             cinema.setDirectoryId(null);
-            // code/certificate 是管理员审核所依据的资质字段，自助更新同样不得改写
-            cinema.setCode(null);
-            cinema.setCertificate(null);
             cinemaService.update(cinema);
             return Result.success();
         }

@@ -20,9 +20,6 @@ public class AccountView {
     private String avatar;
     private String phone;
     private String address;
-    private String leader;
-    private String code;
-    private String certificate;
     private String status;
     private String description;
     private Integer directoryId;
