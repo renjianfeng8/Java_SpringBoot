@@ -140,7 +140,7 @@ public class AuthInterceptor implements HandlerInterceptor {
     /** 匿名可读判定：GET + 命中公开只读前缀 */
     private boolean isAnonymousRead(HttpServletRequest request) {
         return "GET".equalsIgnoreCase(request.getMethod())
-                && PUBLIC_READ_PREFIXES.stream().anyMatch(p -> request.getRequestURI().startsWith(p));
+                && PUBLIC_READ_PREFIXES.stream().anyMatch(p -> matchesPrefix(request.getRequestURI(), p));
     }
 
     /** 匿名可写判定：POST + 路径**全等**命中白名单（不是 startsWith，避免子路径被连带放行） */
@@ -159,10 +159,24 @@ public class AuthInterceptor implements HandlerInterceptor {
         if (RoleEnum.ADMIN.name().equals(role)) {
             return true;
         }
-        if (ADMIN_ONLY_PREFIXES.stream().anyMatch(path::startsWith)) {
+        if (ADMIN_ONLY_PREFIXES.stream().anyMatch(p -> matchesPrefix(path, p))) {
             return false;
         }
-        return !isWriteMethod(method) || ADMIN_WRITE_PREFIXES.stream().noneMatch(path::startsWith);
+        return !isWriteMethod(method) || ADMIN_WRITE_PREFIXES.stream().noneMatch(p -> matchesPrefix(path, p));
+    }
+
+    /**
+     * 前缀命中必须带路径分隔符边界，不能裸 startsWith。
+     *
+     * 裸前缀会让「只是字符前缀相邻」的新端点静默继承既有档位：/api/v1/cinemasX
+     * 会被当成 /api/v1/cinemas 一并放行，/api/v1/tmdbX 会被当成 /api/v1/tmdb
+     * 一并按管理员拦下 —— 两个方向都是错的，且新增端点的人不会想到要改这里的集合。
+     * 与前端导航 FE-34 是同一类缺陷（/front/cinema 吞掉 /front/cinemaDirectory）。
+     *
+     * 命中条件：路径等于前缀本身（无尾斜杠的基路径），或以 前缀 + '/' 开头。
+     */
+    private static boolean matchesPrefix(String path, String prefix) {
+        return path.equals(prefix) || path.startsWith(prefix + "/");
     }
 
     private boolean isWriteMethod(String method) {
