@@ -104,8 +104,8 @@
     margin-bottom: var(--space-4);
   }
 
-  /* 单元格单行截断基类（宽度档见下）。此前在 manage/Cinema.vue、manage/Film.vue、
-     back/Film.vue 三处各写一份逐字相同的副本，此处收敛为一处。 */
+  /* 单元格单行截断基类（宽度档见下）。此前在 manage/Film.vue、back/Film.vue
+     两处各写一份逐字相同的副本，此处收敛为一处。 */
   .line {
     white-space: nowrap;
     overflow: hidden;
