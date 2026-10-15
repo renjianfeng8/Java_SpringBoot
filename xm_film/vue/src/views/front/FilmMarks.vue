@@ -46,9 +46,11 @@
         <div v-else-if="!marks.list.length" class="marks-hint">暂无数据</div>
         <div v-else class="marks-list">
           <div v-for="item in marks.list" :key="item.id" class="mark-item">
-            <el-avatar class="mark-item__avatar" :size="40" :src="item.avatar || ''"
+            <el-avatar class="mark-item__avatar" :size="40" :src="avatarSrc(item.avatar)"
                        :alt="`${item.userName || '匿名用户'}的头像`">
-              {{ initial(item) }}
+              <!-- 槽内容只在图片加载失败时渲染（空值已由 avatarSrc 换成默认头像）：
+                   评价人头像同样兜默认，不再退回名字首字 -->
+              <img :src="DEFAULT_AVATAR" alt="" aria-hidden="true">
             </el-avatar>
             <div class="mark-item__main">
               <div class="mark-item__head">
@@ -123,6 +125,7 @@ import request from '@/utils/request.js';
 import { formatScore } from '@/utils/format.js';
 import { API_PATHS, MARK_API, apiById } from '@/constants';
 import { useAuth } from '@/composables/useAuth';
+import { avatarSrc, DEFAULT_AVATAR } from '@/utils/avatar';
 
 const route = useRoute();
 const router = useRouter();
@@ -152,8 +155,6 @@ const isGuest = computed(() => !user.value?.role);
 const goBackToFilmList = () => {
   router.push('/front/movie');
 };
-
-const initial = (item) => (item.userName || '匿名用户').charAt(0);
 
 const loadFilm = async () => {
   const res = await request.get(apiById(API_PATHS.FILMS, filmId));

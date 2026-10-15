@@ -78,7 +78,7 @@
             <div v-for="(cinema, index) in cinemaData.filmData" :key="index" class="cinema-card">
               <!-- 1. 图片容器 -->
               <div class="cinema-card__poster">
-                <img :src="cinema.avatar" :alt="`${cinema.name || '影院'} 图片`" class="cinema-card__img">
+                <img :src="avatarSrc(cinema.avatar)" :alt="`${cinema.name || '影院'} 图片`" class="cinema-card__img" @error="onAvatarError">
               </div>
 
               <!-- 2. 信息容器 -->
@@ -160,6 +160,7 @@ import 'element-plus/theme-chalk/el-pagination.css';
 import 'element-plus/theme-chalk/el-button.css';
 import { API_PATHS, apiById, apiPage } from '@/constants';
 import { formatBoxOffice, formatScore, formatFilmTypes } from '@/utils/format.js';
+import { avatarSrc, onAvatarError } from '@/utils/avatar';
 
 // 1. 路由相关（获取电影ID + 路由跳转）
 const route = useRoute();

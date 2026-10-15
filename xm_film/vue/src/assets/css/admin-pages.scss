@@ -48,6 +48,15 @@
     object-fit: cover;
   }
 
+  /* el-image 破图兜底图（#error 插槽内）：外层 .cell-avatar / .cell-thumb 已定死尺寸并
+     overflow: hidden，这里铺满即可。刻意不吃它们的 margin-top —— 那是给外层在表格单元格里
+     定位用的，内层再吃一次会把图挤出圆框。 */
+  .cell-fallback {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
   /* 弹窗内表单：右侧留出滚动条与校验提示的空间 */
   .dialog-form {
     padding-top: var(--space-20);

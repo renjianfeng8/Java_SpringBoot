@@ -20,7 +20,7 @@
 
         <el-dropdown trigger="click">
           <div class="user-info">
-            <img :src="userAvatar" alt="用户头像" class="avatar">
+            <img :src="userAvatar" alt="用户头像" class="avatar" @error="onAvatarError">
             <span class="username">{{ userName }}</span>
             <el-icon><CaretBottom /></el-icon>
           </div>
@@ -177,6 +177,7 @@ import {
   VideoPlay,
 } from '@element-plus/icons-vue'
 import { useAuth } from '@/composables/useAuth'
+import { avatarSrc, onAvatarError } from '@/utils/avatar'
 
 const router = useRouter()
 const { user, logout: authLogout } = useAuth()
@@ -184,7 +185,7 @@ const { user, logout: authLogout } = useAuth()
 const userName = computed(() => user.value?.username || '')
 
 const userAvatar = computed(() => {
-  return user.value?.avatar || null
+  return avatarSrc(user.value?.avatar)
 })
 
 const openedMenuKeys = ref(['1', '2'])

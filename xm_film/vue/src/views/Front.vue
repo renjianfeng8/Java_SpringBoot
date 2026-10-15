@@ -48,7 +48,7 @@
           </el-button>
           <el-dropdown trigger="click">
             <div class="user-info">
-              <img :src="userAvatar" alt="用户头像" class="avatar">
+              <img :src="userAvatar" alt="用户头像" class="avatar" @error="onAvatarError">
               <span class="username">{{ userName }}</span>
               <el-icon><CaretBottom /></el-icon>
             </div>
@@ -134,6 +134,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { CaretBottom } from '@element-plus/icons-vue'
 import { useAuth } from '@/composables/useAuth'
+import { avatarSrc, onAvatarError } from '@/utils/avatar'
 
 const router = useRouter()
 const route = useRoute()
@@ -189,7 +190,7 @@ const showUserEntries = computed(() => !isAdmin.value && !isCinema.value)
 // 与同源情形都能命中。**不要在这里拼 API_BASE_URL** —— 同源（`/`）时会拼出 `//files/...`，
 // 浏览器按协议相对 URL 解析，反而指向不存在的 host（Back.vue / Manage.vue 亦不拼）。
 const userAvatar = computed(() => {
-  return user.value?.avatar || null
+  return avatarSrc(user.value?.avatar)
 })
 
 const logout = () => {

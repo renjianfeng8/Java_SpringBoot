@@ -32,7 +32,11 @@
               <el-descriptions-item label="账号">{{ props.row.username }}</el-descriptions-item>
               <el-descriptions-item label="角色">{{ props.row.role }}</el-descriptions-item>
               <el-descriptions-item label="头像">
-                <el-image class="cell-thumb" :src="props.row.avatar"/>
+                <el-image class="cell-thumb" :src="avatarSrc(props.row.avatar)">
+                  <template #error>
+                    <img :src="DEFAULT_AVATAR" alt="" class="cell-fallback" aria-hidden="true">
+                  </template>
+                </el-image>
               </el-descriptions-item>
               <el-descriptions-item label="电影院名称">{{ props.row.name }}</el-descriptions-item>
               <el-descriptions-item label="手机号">{{ props.row.phone }}</el-descriptions-item>
@@ -62,8 +66,12 @@
         <el-table-column label="头像">
           <template #default="scope">
             <el-image class="cell-avatar"
-                      v-if="scope.row.avatar" :src="scope.row.avatar"
-                      :preview-src-list="[scope.row.avatar]" preview-teleported/>
+                      :src="avatarSrc(scope.row.avatar)"
+                      :preview-src-list="[avatarSrc(scope.row.avatar)]" preview-teleported>
+              <template #error>
+                <img :src="DEFAULT_AVATAR" alt="" class="cell-fallback" aria-hidden="true">
+              </template>
+            </el-image>
           </template>
         </el-table-column>
         <el-table-column label="影院名称" prop="name" />
@@ -188,6 +196,7 @@ import { useCrud } from '@/composables/useCrud'
 import { useFormDialog } from '@/composables/useFormDialog'
 import request from '@/utils/request'
 import { uploadHeaders, handleUploadError } from '@/utils/upload'
+import { avatarSrc, DEFAULT_AVATAR } from '@/utils/avatar'
 import {
   API_PATHS, CINEMA_DIRECTORY_API, CINEMA_STATUS, CINEMA_STATUS_OPTIONS, FILE_UPLOAD_URL,
   getCinemaStatusType as getStatusType
