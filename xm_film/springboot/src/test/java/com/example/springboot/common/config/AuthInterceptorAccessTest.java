@@ -356,4 +356,28 @@ class AuthInterceptorAccessTest {
         assertThat(withBrokenToken("/api/v1/cinema-directory/import", "POST")).isFalse();
         assertThat(withBrokenToken("/api/v1/cinema-directory/import/preview", "POST")).isFalse();
     }
+
+    // ========== 前缀命中必须带路径分隔符边界（与前端 FE-34 同形） ==========
+    // 裸 startsWith 会让只是字符前缀相邻的端点静默继承档位，两个方向都是错的：
+    // 放行的会被多放行，拦下的会被多拦下。前一个用例是正例（改动前后都该通过），
+    // 后两个用例在改回裸 startsWith 时各失败一条。
+
+    @Test
+    void realSubPathsStillMatchTheirPrefix() {
+        assertThat(anonymousAllowed("/api/v1/cinemas/page", "GET")).isTrue();
+        assertThat(anonymousAllowed("/api/v1/cinemas/regions", "GET")).isTrue();
+        assertThat(hasAccess(newInterceptor(), "/api/v1/tmdb/movie/550", "GET", RoleEnum.USER.name())).isFalse();
+    }
+
+    @Test
+    void charAdjacentPathDoesNotInheritPublicRead() {
+        // 与 /api/v1/cinemas 只差一个字符：不得被当成它一并匿名放行
+        assertThat(anonymousAllowed("/api/v1/cinemas-archive", "GET")).isFalse();
+    }
+
+    @Test
+    void charAdjacentPathDoesNotInheritAdminOnly() {
+        // 与 admin-only 的 /api/v1/cinema-directory 只差一个字符：普通用户不该被它拦下
+        assertThat(hasAccess(newInterceptor(), "/api/v1/cinema-directoryx/page", "GET", RoleEnum.USER.name())).isTrue();
+    }
 }
