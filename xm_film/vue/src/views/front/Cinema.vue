@@ -23,14 +23,17 @@
       <div class="filter-panel">
         <div class="filter-row">
           <div class="filter-label">城市 :</div>
-          <div class="filter-options">
+          <!-- role=group + aria-label：.filter-label 是并列的 <div>，与按钮没有
+               for / aria-labelledby 关联，不加这一层的话读屏只会念「北京 按钮」，
+               且两行的「全部」按钮无法区分（改按钮前这里是 el-select 的 aria-label） -->
+          <div class="filter-options" role="group" aria-label="按城市筛选">
             <button
                 class="filter-chip"
                 :class="{ 'filter-chip--active': !query.city }"
                 @click="selectCity(null)"
             >全部</button>
             <button
-                v-for="city in filters.cities"
+                v-for="city in cityOptions"
                 :key="city"
                 class="filter-chip"
                 :class="{ 'filter-chip--active': query.city === city }"
@@ -41,7 +44,7 @@
 
         <div class="filter-row filter-row--last">
           <div class="filter-label">区域 :</div>
-          <div class="filter-options">
+          <div class="filter-options" role="group" aria-label="按区域筛选">
             <!-- 区域依赖城市，未选城市时给出说明而不是一排必然为空的选项 -->
             <span v-if="!query.city" class="filter-hint">请先选择城市</span>
             <template v-else>
@@ -84,7 +87,7 @@
             :to="`/front/cinemaDetail/${cinema.id}`"
         >
           <div class="cinema-card__poster">
-            <img :src="avatarSrc(cinema.avatar)" :alt="`${cinema.name || '影院'} 图片`" class="cinema-card__img" @error="onAvatarError">
+            <img :src="avatarSrc(cinema.avatar)" :alt="`${cinema.name || '影院'} 图片`" class="cinema-card__img" loading="lazy" @error="onAvatarError">
           </div>
 
           <div class="cinema-card__info">
@@ -144,6 +147,7 @@
             background
             layout="total, prev, pager, next"
             :total="data.total"
+            :disabled="data.loading"
         />
       </div>
     </div>
@@ -171,7 +175,11 @@ const data = reactive({
 })
 
 const query = reactive({ city: null, district: null })
-const filters = reactive({ cities: [], districtsByCity: {} })
+// 城市列表不再单独存一份：它就是 districtsByCity 的键。
+// 两份都由同一个 res.data 派生、又各自赋值，是必得手工同步的重复状态。
+// 后端 regions() 用 LinkedHashMap 且保证 city 非空，Object.keys 的顺序与展示顺序一致。
+const filters = reactive({ districtsByCity: {} })
+const cityOptions = computed(() => Object.keys(filters.districtsByCity))
 const districtOptions = computed(() =>
     query.city ? (filters.districtsByCity[query.city] || []) : [])
 const hasFilter = computed(() => Boolean(query.city || query.district))
@@ -180,7 +188,6 @@ const hasFilter = computed(() => Boolean(query.city || query.district))
 const loadRegions = () => {
   request.get(CINEMA_API.REGIONS).then(res => {
     if (res.code === '200') {
-      filters.cities = res.data.map(r => r.city)
       filters.districtsByCity = Object.fromEntries(res.data.map(r => [r.city, r.districts]))
     }
   }).catch(() => {})
