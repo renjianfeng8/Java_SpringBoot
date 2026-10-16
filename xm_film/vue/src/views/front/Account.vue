@@ -151,12 +151,14 @@
                显式 width 的列定宽；**没有 width 的列一律算 flex 列**，富余宽度按各列 min-width
                的比例分摊（table/src/table-layout.mjs 的 updateColumnsWidth）。
                所以这里的 min-width 表达的是「配比」，不是「下限」：
-                 金额 / 状态 / 回调 三列定宽；时间戳、单号、备注、四个数值列给 min-width 参与配比。
+                 充值单据表：金额 / 状态 / 回调 三列定宽，其余给 min-width；
+                 资金流水表：全列 min-width，无定宽列。
                只有一列是 flex 列时它会独吞全部富余 —— 本表原先只有「发生时间」没有 width，
                于是它一列涨到 550px，其余列全被挤到右侧、左边空出一大片，正是这个原因。
-               约束：各表 min-width 之和必须不超过最窄情形的内容宽（视口 1120px → 页宽 85%
+               约束：各表 min-width 与 width 之和必须不超过最窄情形的内容宽（视口 1120px → 页宽 85%
                → 扣掉卡片 1px 边框与 24px 内边距后约 902px），超出会让表内出现横向滚动条。
-               本表 min-width 合计 800，充值单据表 380 + 520 = 900，两者都在 902 以内。 -->
+               本表合计 170 + 90 + 120 + 140 + 140 = 660，充值单据表 380 + 520 = 900，
+               两者都在 902 以内。 -->
         <!-- 列序：标识在前（发生时间 / 业务来源 / 关联单据ID）、数值在后。
              数值只留两列：变动金额 + 变动后余额。
              变动前余额不展示 —— 它与「往下数一行」的变动后余额恒为同值（账本要求每笔余额
@@ -230,6 +232,9 @@ const amount = ref(50);
 const submitting = ref(false);
 const loadingRecharges = ref(false);
 const loadingFlows = ref(false);
+// 回调进行中的单一守卫：按钮是自绘的，没有 EP 的 disabled 通道，
+// 双击会发两次 POST，第二次必被后端拒绝并弹一条无谓的失败提示
+const callbacking = ref(false);
 // 失败态与「确实没有记录」分开：空表可能是一次请求失败，而非真的没有资金凭证
 const rechargeError = ref(false);
 const flowError = ref(false);
@@ -240,6 +245,12 @@ const flowError = ref(false);
 const rechargePage = reactive({ pageNum: 1, pageSize: 10, total: 0 });
 const flowPage = reactive({ pageNum: 1, pageSize: 10, total: 0 });
 
+// 递增序号：只让最后一次 load 的结果落地。翻页请求与写操作后的重载会重叠，
+// 慢响应后到会覆盖新页的数据与 loading（useCrud.js 同款守卫）。
+let rechargeSeq = 0;
+let flowSeq = 0;
+let trendSeq = 0;
+
 const money = (value) => Number(value ?? 0).toFixed(2);
 
 const loadSummary = async () => {
@@ -247,6 +258,9 @@ const loadSummary = async () => {
     const res = await request.get(ACCOUNT_API.SUMMARY);
     if (res.code === '200') {
       balance.value = res.data?.balance ?? 0;
+    } else {
+      // 与非 200 的业务码同样补一次提示，否则余额会静默停在旧值上
+      ElMessage.error(res.msg || '余额加载失败');
     }
   } catch (error) {
     // request.js 已统一提示
@@ -254,66 +268,75 @@ const loadSummary = async () => {
 };
 
 const loadRecharges = async () => {
+  const seq = ++rechargeSeq;
   loadingRecharges.value = true;
   rechargeError.value = false;
   try {
     const res = await request.get(RECHARGE_API.PAGE, {
       params: { pageNum: rechargePage.pageNum, pageSize: rechargePage.pageSize },
     });
+    if (seq !== rechargeSeq) return;
     if (res.code === '200') {
       recharges.value = res.data?.list || [];
       rechargePage.total = res.data?.total ?? 0;
     } else {
       // 业务码非 200 不经过响应拦截器（它只管网络 / 超时 / HTTP 状态），故这里补一次提示
-      ElMessage.error(res.msg);
+      ElMessage.error(res.msg || '充值单据加载失败');
       rechargeError.value = true;
       recharges.value = [];
       rechargePage.total = 0;
     }
   } catch (error) {
+    if (seq !== rechargeSeq) return;
     // 网络与 5xx 那类失败由 request.js 提示，这里只落错误态，否则同一次失败弹两次
     rechargeError.value = true;
     // 清掉上一次的结果，否则失败文案下面还挂着旧页的数据
     recharges.value = [];
     rechargePage.total = 0;
   } finally {
-    loadingRecharges.value = false;
+    if (seq === rechargeSeq) loadingRecharges.value = false;
   }
 };
 
 const loadFlows = async () => {
+  const seq = ++flowSeq;
   loadingFlows.value = true;
   flowError.value = false;
   try {
     const res = await request.get(FUND_FLOW_API.PAGE, {
       params: { pageNum: flowPage.pageNum, pageSize: flowPage.pageSize },
     });
+    if (seq !== flowSeq) return;
     if (res.code === '200') {
       flows.value = res.data?.list || [];
       flowPage.total = res.data?.total ?? 0;
     } else {
-      ElMessage.error(res.msg);
+      ElMessage.error(res.msg || '资金流水加载失败');
       flowError.value = true;
       flows.value = [];
       flowPage.total = 0;
     }
   } catch (error) {
+    if (seq !== flowSeq) return;
     flowError.value = true;
     flows.value = [];
     flowPage.total = 0;
   } finally {
-    loadingFlows.value = false;
+    if (seq === flowSeq) loadingFlows.value = false;
   }
 };
 
 const loadTrend = async () => {
+  const seq = ++trendSeq;
   try {
     const res = await request.get(FUND_FLOW_API.PAGE, {
       params: { pageNum: 1, pageSize: TREND_WINDOW },
     });
+    if (seq !== trendSeq) return;
     // 后端按 id DESC 返回（新的在前），折线要从旧画到新
     trends.value = res.code === '200' ? (res.data?.list || []).reverse() : [];
   } catch (error) {
+    if (seq !== trendSeq) return;
     // 走势图是补充信息，取不到就不出这一块；同一批流水在下方流水表里仍会报失败态
     trends.value = [];
   }
@@ -399,6 +422,10 @@ const submitRecharge = async () => {
 
 /** 演示环境手动触发回调；正式环境由支付网关调用同一端点 */
 const triggerCallback = async (order, success) => {
+  if (callbacking.value) {
+    return;
+  }
+  callbacking.value = true;
   try {
     const res = await request.post(RECHARGE_API.CALLBACK(order.id), {
       success,
@@ -412,6 +439,8 @@ const triggerCallback = async (order, success) => {
     }
   } catch (error) {
     // request.js 已统一提示
+  } finally {
+    callbacking.value = false;
   }
 };
 
@@ -525,8 +554,10 @@ onMounted(loadAll);
 /* 两表全列居中，故一律保留 EP 每个单元格那 12px 水平内边距（.el-table .cell 的
    padding: 0 12px）—— 它左右对称，居中才不会偏。若像早先那样为对齐分区标题而只消掉
    首列的左侧内边距，该列内容就会偏离列心 6px（其余列仍是真居中）。
-   另注：末列不能用 :last-child 定位 —— EP 行末恒定渲染一个 gutter 单元格（补纵向滚动条
-   宽度，table/src/layout-observer.mjs 只把它的宽度置 0、并不移除），:last-child 命中的是它。 */
+   另注：给某列挂钩不要走 :last-child，改挂列自身的 class-name / label-class-name ——
+   th / td 由 EP 自己渲染，行末有没有多出的单元格由库决定，按 nth 位置猜不可靠。
+   （曾以为 EP 恒定渲染一个补滚动条宽度的 gutter 单元格，该断言在 element-plus 2.14.2
+   上不成立 —— 见「前端表格设计规范.md」§3。） */
 
 /* 操作列的按钮组是 flex 容器，text-align 管不到它的主轴分布：
    列的 align="center" 只让 .cell 里的行内内容居中，两个按钮仍会贴左。
