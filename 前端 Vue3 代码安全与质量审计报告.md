@@ -72,6 +72,27 @@
 | FE-55 | views/front/Cinema.vue 影院卡片 `img` | 卡片图缺 `loading="lazy"`。前身 Cinema.vue 同样缺，重做时被原样带过来：一屏之外的十余张仍立即加载，且每次翻页/换筛选重来一遍。同仓列表组件 FilmPosterCard.vue 已设该属性，是既定口径。 | 补 `loading="lazy"`。 |
 | FE-56 | views/front/Cinema.vue `filters.cities` | 该字段恒等于 `Object.keys(filters.districtsByCity)` —— 同一份 `res.data` 派生、又各自赋值，是一份永远不该不一致、却必须手工同步的重复状态。 | 删除 `filters.cities`，改 `computed cityOptions = Object.keys(filters.districtsByCity)`。后端 `regions()` 用 LinkedHashMap 且保证 city 非空，派生值与展示顺序一致。 |
 
+## 已修复（2026-10-16 账户页视觉重做）
+
+前台账户页重做，排版取控制台口径：四个同款 el-card 平铺改为一行页头（左侧页面标题、右侧品牌红余额大字，下压一条与内容同宽的发丝线收口）+ 四段 `.card page-card` 分区（充值 / 充值单据 / 余额走势 / 资金流水）；卡片由阴影改 1px 淡边框，表头改灰底弱化小字，去斑马纹改行 hover。新增余额走势折线图，由资金流水逐行自带的 `balanceBefore` / `balanceAfter` / `createTime` 重建（手写 SVG，未引入 echarts —— 产物核对：账户 chunk 8.43 kB，其中 echarts/zrender 命中 0 次），故图上只标注「最近 N 笔」的窗口，不做需要全量求和的累计值。另有三处顺带修正：回调按钮用状态色表达动作；两表空态与失败态同文案；两表表头的文字色与字重（见 FE-63）。原余额卡上的「刷新」按钮随重做删除，页头只留标题与余额。
+
+对齐统一到一条竖线：卡片内容自「1px 边框 + `--space-24` 内边距」处起，该值即 `--page-inset`（25px），同时用作页头文字与发丝线的内缩 —— 于是页头标题、三条 `.section-head` 通栏线、走势图两端全部落在同一条线上（发丝线因此不能用 `border-bottom`：border 连着左右内边距一起铺，会比分区线各宽 25px，改为伪元素）。表格不参与这条竖线 —— 两张表全列居中，居中内容没有左缘。
+
+对齐口径：两表**每一列**一律 `align="center"` + `header-align="center"`，同一列的表头与内容必然同侧（EP 是把对齐打成单元格上的 `is-center` / `is-right` 类，`align` 管内容、`header-align` 管表头，两者不设其一就会各走各的）。两条随之而来的约束：其一，单元格那 12px 水平内边距（`.el-table .cell` 的 `padding: 0 12px`）必须左右对称地留着 —— 早先为让表首列与分区标题共竖线而只消掉左侧内边距，那在居中列上会让内容偏离列心 6px；其二，操作列里的按钮组是 flex 容器，列的 `align="center"` 只管 `.cell` 内的行内内容，管不到 flex 主轴分布，须另补 `justify-content: center`，否则该列表头居中、按钮却贴左。
+
+该表列序也理过一遍，并删掉一列：原序「变动金额 / 变动前余额 / 变动后余额」把差额排在它所关联的两个余额之前，一行读出来是 300 → 128 → 428，从左到右验不了算；现为「发生时间 / 业务来源 / 关联单据ID / 变动金额 / 变动后余额」，标识在前、数值在后。**变动前余额整列不再展示** —— 它与「往下数一行」的变动后余额恒为同值（`FundSource` 要求每笔余额变动都归入一个来源，故流水连续完整），两列是同一串数字错开一行、属重复展示，银行流水亦只留「发生额 + 余额」。数据层字段保留，走势图起点仍在用它，删的只是展示列。
+
+两条同位 EP 陷阱，对全仓任何动表格的地方都成立：其一，末列**不能**用 `:last-child` 定位 —— EP 在每行行末恒定渲染一个 gutter 单元格（补纵向滚动条宽度，`table/src/layout-observer.mjs` 只把它的宽度置 0、并不移除），命中的是它而非末列，要挂钩只能走列自身的 `class-name` / `label-class-name`；其二，表头与表体是两个**独立的 `<table>`**（`.el-table__header` / `.el-table__body`，均 `border-collapse: separate`），两边行高各算各的 —— 不显式钉成同一值，就会出现表头偏上、单元格偏下这类「表头与内容对不齐」的观感。现统一 `--table-row-height: 44px` + `vertical-align: middle`，顺带把两表行高也统一了（充值单据表因 `el-tag` 原本比资金流水表高 1px）。
+
+列宽还有一条，同样出自 EP 且同样不显然：`updateColumnsWidth` 把「没有显式 `width` 的列」**一律**当 flex 列，富余宽度按各列 `min-width` 的比例分摊（`parseWidth` 会把 `width="110"` 这类字符串属性 `parseInt` 成数字，故定宽仍定宽）；而当 flex 列**只剩一个**时，它走 `realWidth = (minWidth || 80) + totalFlexWidth` —— 独吞全部富余。资金流水表原先六列里只有「发生时间」没给 `width`，于是它涨到 550px，其余五列被挤到表格右侧、左边空出一大片。现两表一律用 `width` 定死金额 / 状态 / 操作列，用 `min-width` 表达配比（含首列），并保证各表 `min-width` 之和不超过最窄情形的内容宽（视口 1120px 时约 902px）——超了 EP 会置 `scrollX` 并让每个 flex 列退回其 `minWidth`，表内出现横向滚动条。
+
+| 编号 | 位置 | 问题 | 处置 |
+| --- | --- | --- | --- |
+| FE-52 | views/front/Account.vue 充值单据/资金流水两列表 | 两处均硬编码 `pageNum:1`/`pageSize:50` 且无分页控件，累计超 50 条后更早的记录在页面上无任何入口（对账场景是资金凭证不可见）。 | 两表各加 `reactive({ pageNum, pageSize: 10, total })` 与 `el-pagination`（`background`，layout 含 `total` 即「共 N 条」，`:disabled` 绑各自 loading —— 与 FE-54 同口径）。后端两处 `/page` 本就按 id DESC 返回且已按当前用户归属过滤（RechargeService.java 的 `selectScoped`），故提交充值 / 触发回调后一并回到第 1 页，新记录必然落在视野内。 |
+| FE-61 | views/front/Account.vue 回调列 `el-button link type="success"` / `type="danger"` | 「模拟成功 / 模拟失败」是动作，却用 success / danger 承载 —— 这对色在本页已是状态语义（`el-tag` 用它表达单据状态），同一行里动作与状态同色；且使演示控件的视觉权重与业务列持平。 | 改自绘 `.callback-action`（常规文字色 6.11:1 → hover 主色 5.58:1，两态达 AA）并压到 `--fs-sm`，降为行内次要操作；保留图标以维持可扫读性。仅「处理中」行可见这一约束不变。 |
+| FE-62 | views/front/Account.vue 两表空态 | 两表均无 `#empty`，复用 EP 默认「暂无数据」：请求失败与「确实没有充值记录 / 资金流水」同文案，把一次失败说成「没有资金凭证」。Cinema.vue 已确立「失败与空态文案必须区分」的口径，本页未跟上。 | 两表各补 `#empty`、各加一个 error 标志：失败显示「数据加载失败，请稍后重试」，确实为空显示「暂无充值记录 / 暂无资金流水」。失败时清空列表与 `total`，避免失败文案下挂着旧页数据；业务码非 200 补一次 `ElMessage.error`（不经过响应拦截器），网络类失败仍只落错误态以免弹两次。 |
+| FE-63 | 全站 el-table 表头（EP 默认；本页 views/front/Account.vue 已就地修） | EP 表头读两个变量，默认值两头都不合适：`--el-table-header-text-color` 取 `--el-text-color-secondary`（实测 #909399，白底 3.08:1，不达 AA——表头是 14px 常规字，需 4.5:1），`--el-table-header-bg-color` 取 `--el-fill-color-blank`（实测 #ffffff，故表头与表体之间只有一条 1px 线，无底色分界）；且 `.el-table thead th` 写死 `font-weight: 600`，与 tokens.scss「禁用 600」相悖（中文字体栈 Microsoft YaHei 只有 400 / 700，600 会触发伪粗体，渲染比 700 更脏）。项目此前对表头零覆盖，故这是全站每一张表格的现状。 | 本页已就地修：`.account-section :deep(.el-table)` 覆写两个变量（灰底 + 常规文字色 6.11:1），`thead th` 字重落回 `--fw-bold`。**全站未做（登记备查）**：属跨全站外观变更，与「账户页重做」不同轮。建议的整类修法是在 global.css 覆写同样两处（一处生效全站），动之前需逐个确认没有页面依赖当前的白底表头。 |
+
 ## 本轮登记未做
 
 | 编号 | 位置 | 问题 | 处置建议 |
@@ -92,9 +113,8 @@
 | FE-49 | views/front/Cinema.vue；views/front/Orders.vue；views/front/Movie.vue；views/manage/CinemaDirectory.vue | 分页列表各自手搓（`pageNum`/`pageSize`/`total`/`load`/`handlePage`），未复用 `useCrud`，因而不带它已有的请求序号与越界回退。第三轮已就地补齐由此派生的具体缺陷（FE-25/FE-26/FE-30/FE-31），但两套口径并存本身仍在。 | 收敛到 `useCrud`（同端点 `manage/Cinema.vue` 已在用）；跨文件重构，属独立一轮。另：`front/Cinema.vue` 的 `:page-sizes`/`@size-change` 因 layout 无 `sizes` 仍为死配置。 |
 | FE-50 | views/Front.vue；views/back/Back.vue；views/manage/Manage.vue | 退出登录确认块（`ElMessageBox.confirm` → `logout()` → `push('/login')` → 成功/取消提示）在三处逐字重复，改文案或跳转目标需同步三处。 | 抽共享 `confirmLogout`（置于 `composables/useAuth.js` 或 `utils/`），三处共用。与 FE-06/FE-07 同族。 |
 | FE-51 | views/manage/Person.vue `form: { ...user.value }` | setup 时对 `user.value` 一次性浅拷贝快照，`verifyToken` 异步回填的 `/me` 权威资料不落进表单；存储与后端不一致时表单显示陈旧值，直接保存会用旧值覆盖。 | 需 dirty-check 设计（异步回填不得覆盖用户已改字段），属行为变更，先定口径。 |
-| FE-52 | views/front/Account.vue 充值单据/资金流水两列表 | 两处均硬编码 `pageNum:1`/`pageSize:50` 且无分页控件，累计超 50 条后更早的记录在页面上无任何入口（对账场景是资金凭证不可见）。 | 加分页控件（或至少「共 N 条」与翻页）。属 UI 变更。 |
 | FE-57 | views/front/Cinema.vue；views/front/CinemaDetail.vue；views/front/FilmCinema.vue | 影院服务三项（退票无忧 / 儿童优惠 / WiFi覆盖）的标签与图标在三处硬编码，只有底色 `.service-tag--*` 是共享的：改一个服务名要动三个模板，而底色共享、文案不共享，同一底色可以挂在两个不同名字下。 | 上提 `SERVICES` 数据常量到 constants/index.js（key 映射既有底色类），三处按各自形状 v-for。三处渲染形状不同（纯片 / 片+说明 / 无图标），共享单元应是常量而非组件。**本轮未做（登记备查）**：CinemaDetail.vue、FilmCinema.vue 不在本次 diff 内，属跨文件重构。 |
-| FE-58 | views/front/Cinema.vue 页头内层；views/front/CinemaDetail.vue、FilmDetail.vue、FilmCinema.vue、FilmMarks.vue 的 hero 与内容层 | 「1200px 居中内容测度」（`width: 55%`/`60%` + `max-width: 1200px`）手写在约 10 处，`.page-narrow`/`.page-wide` 只是其中两份：改一次内容宽度要动 10 个文件，新增页头一旦漂移就与其下方列表错位。 | 上提为共享 measure（front-pages.scss 的变量/mixin，或一个类加「无纵向外边距」变体），各页引用。**本轮未做（登记备查）**：系统性缺口，跨 5 个文件，另起一轮。 |
+| FE-58 | views/front/Cinema.vue 页头内层；views/front/CinemaDetail.vue、FilmDetail.vue、FilmCinema.vue、FilmMarks.vue 的 hero 与内容层 | 「1200px 居中内容测度」（`width: 55%`/`60%` + `max-width: 1200px`）手写在约 10 处，`.page-narrow`/`.page-wide` 只是其中两份：改一次内容宽度要动 10 个文件，新增页头一旦漂移就与其下方列表错位。 | 上提为共享 measure（front-pages.scss 的变量/mixin，或一个类加「无纵向外边距」变体），各页引用。**本轮未做（登记备查）**：系统性缺口，跨 5 个文件，另起一轮。2026-10-16 追加：Account.vue 重做时其内容区已改用 `.page-wide`（消掉一份手写），但同页页头内层仍按该口径手写一份（与 Cinema.vue 页头同形），故手写份数并未净减 —— 页头这一层正是该项最难收敛的部分。 |
 | FE-59 | views/Front.vue `NAV_ITEMS`；router/index.js 路由表 | 顶部导航由数组手工维护、与路由表并列，两者之间没有任何机制关联：删路由忘删导航项则会落 `/:pathMatch` 兜底 404，加路由忘加导航项则页面无入口。本次下线影院名录就需同时改两处，正是该漂移的实例。 | 导航改由路由 meta（如 `meta.nav`）派生，或加断言：/front 下需出现在导航的路由必须各有对应项。属结构变更。 |
 | FE-60 | App.vue `path.startsWith('/front')`；utils/request.js `pathname.startsWith('/login')` | 与 FE-34 同形的裸前缀匹配残余两处：只差字符前缀相邻的路径也会命中（`/frontx` 会被套上前台主题、`/loginx` 会走登录页的跳过分支）。当前路由表下均无可达碰撞，属同形未做点。 | 与 FE-34 同口径改为「相等或 `prefix + '/'`」。两条均非当前可达缺陷。 |
 
@@ -106,3 +126,4 @@
 - router/index.js 的 `/:pathMatch(.*)*` 兜底与 `/` 重定向：均落在 guest 路由，行为正确。
 - composables/useCrud.js 的 add/update/del/delBatch 失败后不清空 `dataList`：写失败时列表既有数据仍然有效，只有 `load`（读）需要清空兜底，非缺陷。
 - composables/useFormDialog.js `openAdd` 删除 defaultForm 之外键的清理逻辑：是 load-bearing 而非冗余——`openEdit` 把整行拷进 form，五张显式写 id 的表会在「编辑→新增」时撞主键，注释已述。
+- views/front/Account.vue 充值单据表的「备注」列不是冗余（尽管资金流水表的「变动前余额」列是，已删）：后者与被删列之间是**可证明的恒等关系**（账本连续完整 → 某行变动前余额 == 下一行变动后余额），属同一串数据错开一行；而备注是独立自由文本字段，失败单据里存的是失败原因（本页演示控件写入「模拟支付回调失败」）、其余由后台填写，与「状态」不是同一份数据的两种写法。勿照搬删列。
