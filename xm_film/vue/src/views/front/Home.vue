@@ -151,7 +151,7 @@
         </div>
         <div class="rank-box">
           <div v-if="loading.boxOffice" class="rank-box__loading">
-            <el-skeleton :rows="10" :columns="3" avatar class="skeleton--sm" />
+            <el-skeleton :rows="10" :columns="3" avatar />
           </div>
           <template v-else-if="boxOfficeTop10.length">
             <router-link
@@ -180,7 +180,7 @@
         </div>
         <div class="rank-box">
           <div v-if="loading.mark" class="rank-box__loading">
-            <el-skeleton :rows="5" :columns="3" avatar class="skeleton--lg" />
+            <el-skeleton :rows="5" :columns="3" avatar />
           </div>
           <template v-else-if="ratingTop5.length">
             <router-link
@@ -803,14 +803,6 @@ onUnmounted(() => {
 
 .rank-box__loading {
   padding: var(--space-4) 0;
-}
-
-.skeleton--sm {
-  --el-skeleton-avatar-size: 24px;
-}
-
-.skeleton--lg {
-  --el-skeleton-avatar-size: 80px;
 }
 
 /* 整行是 router-link（原生 <a>，可 Tab 聚焦），因此不写 cursor: pointer 也不挂 @click */
