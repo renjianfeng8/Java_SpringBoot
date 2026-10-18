@@ -76,7 +76,25 @@ dto/request (31) dto/response (32) ── HTTP 边界只用 DTO，实体不出 c
 - 成功 `code = "200"`；**业务失败也返回 HTTP 200**，业务码写在 body（`ErrorCode`）。
 - 唯一的 HTTP 非 200 来自 `AuthInterceptor`：未登录 401、越权 403（body 同样是 `Result`）。
 - `ErrorCode`：401 / 403 / 400 / 404 / 409 / 415 / 500。
-- `CustomException` → `GlobalExceptionHandler`（`@ControllerAdvice` 限定 controller 包），未知异常一律 500 且不泄露内部信息。
+- `CustomException` → `GlobalExceptionHandler`（`@ControllerAdvice` 限定 controller 包）。
+
+**异常处理器分六档**（2026-10-18 补齐，此前只有"业务异常 + 兜底"两档）：
+
+| 异常 | 返回 |
+| --- | --- |
+| `CustomException` | 自己的 code/msg |
+| `MethodArgumentNotValidException` | 400 + 字段错误（`@Valid` 失败） |
+| `MethodArgumentTypeMismatchException` | 400「参数「x」格式不正确」 |
+| `MissingServletRequestParameterException` | 400「缺少必填参数「x」」 |
+| `HttpMessageNotReadableException` | 400「请求体缺失或格式不正确」 |
+| `HttpRequestMethodNotSupportedException` / `HttpMediaTypeNotSupportedException` | 400 / 415 |
+| `DataIntegrityViolationException` | 409（外键/唯一键，不透露约束名） |
+| `RestClientException` | 500 + TMDB 代理提示 |
+| `Exception`（兜底） | 500「系统错误」——**只该接服务端自身的问题** |
+
+**硬规则**：调用方引起的错误**不得**落到兜底。若某类请求返回「系统错误」，正确做法是加具名处理器，而不是放宽兜底。
+
+> 由来：2026-10-18 实测发现 11 条路径（参数类型错、缺必填参数、空请求体、空对象请求体）全部返回 500。三次并发工单（BL-01/02/03）都撞在这同一个点上。
 
 ## 5 鉴权
 

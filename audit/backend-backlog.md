@@ -10,6 +10,32 @@
 
 **复核时的实测基线**：`mvn -o test` = **309/309** 通过（2026-10-18 收尾；此前长期 6 红，见 §测试隔离）。开发库 `xm-film` 已由 `springboot/demo-data.sql` 补入演示影厅、排片与账号，购票主链已实测跑通。
 
+## 异常处理与入参（2026-10-18 专项梳理）
+
+**背景**：BL-01/02/03 三次工单都撞在同一个薄弱点上 —— `GlobalExceptionHandler` 除业务异常外只有一个兜底分支，**任何调用方引起的错误都变成 500「系统错误」**。因此做了一次专项梳理：用真实 HTTP 请求逐类打接口，记录实际返回。
+
+**实测确认 11 条会返回 500 的路径**：
+
+| 类别 | 例 | 修复前 | 修复后 |
+| --- | --- | --- | --- |
+| 路径参数类型错 | `GET /films/abc`、`/films/999…（超长）` | 500 | 400「参数「id」格式不正确」 |
+| 缺必填查询参数 | `/films/search`、`/films/by-cinema`、`/orders/seats`、`/marks/by-film` | 500 | 400「缺少必填参数「title」」 |
+| 查询参数类型错 | `/films/page?pageNum=abc` | 500 | 400 |
+| 请求体缺失 | `POST /films` 空 body、`PUT /orders/1/pay` 空 body、`POST /auth/register` 空 body | 500 | 400「请求体缺失或格式不正确」 |
+| 空对象请求体 | `POST /films {}` | 500（`INSERT INTO film () VALUES ()` 语法错） | 400「请至少填写一项内容」 |
+
+**修复**：
+
+1. `GlobalExceptionHandler` 补 5 个具名处理器：`MethodArgumentTypeMismatchException`、`MissingServletRequestParameterException`、`HttpMessageNotReadableException`、`HttpRequestMethodNotSupportedException`、`HttpMediaTypeNotSupportedException`。提示只回中文，参数名进日志（Spring 默认消息带内部方法签名，不能直接外泄）。
+2. `BaseController.add` 在 `toEntity` 之后加 `requireNonEmptyEntity`：实体所有字段为 null 时抛 400。理由：mapper 的 `<trim>` 逐字段拼接，全空会生成非法 SQL。用反射而非逐个补 `@NotBlank`（后者需连带改 `@Valid` 链，属另一轮重构）。
+3. 兜底分支的日志补上异常类型，并注明「走到这里的都应是服务端自身的问题；若某类异常明明由调用方引起，正确做法是加具名处理器，而不是放宽兜底」。
+
+**验证**：11/11 路径全部从 500 变 400；新增 `ExceptionMappingTest` 7 条用例（其中两条钉住「真正的服务端异常仍返回 500」「业务异常仍透传自己的 code」，防止这次改动把兜底放宽）。另做了一次正向回归：地区/类型/公告/影片的新增全部正常，未被新守卫误拦。
+
+**附带发现（未修，登记备查）**：`POST /films {}` 的根因是 mapper 的 `<trim>` 允许全空插入。本仓多个 `insert` 都有同样形状（`<if>` 全部不成立即产出空列清单）。`BaseController` 的守卫覆盖了走基类的新增路径，但**子类自行实现的写入端点**（如 `OrderedController.create`、`CinemaController` 的 from-directory）不在保护范围内 —— 那些端点目前都有各自的必填校验，暂无可达缺陷。
+
+---
+
 ## 并发与事务
 
 本轮修复并移出本表：**BL-03** —— 并发注册同名。
