@@ -102,10 +102,17 @@
           <div class="submit-row">
             <button class="submit-button"
                     :disabled="!canSubmit"
+                    :aria-busy="submitting"
                     @click="confirmBooking"
             >
-              {{ submitting ? '提交中…' : `确认购票（${selectedSeats.length}张）` }}
+              <span v-if="submitting" class="submit-button__spinner" aria-hidden="true"></span>
+              {{ submitting ? '正在锁定座位…' : `确认购票（${selectedSeats.length}张）` }}
             </button>
+            <!-- 同场次的下单在服务端是以场次行锁串行的：并发抢座时后到者会等待前一笔事务提交，
+                 这段等待可能持续到秒级。只说"提交中"会让人以为卡死，这里明确讲清在等什么。 -->
+            <p v-if="submitting" class="submit-row__hint" role="status">
+              正在校验座位，若有人同时选中请不要重复点击
+            </p>
           </div>
         </div>
 
@@ -814,6 +821,26 @@ const confirmBooking = async () => {
 .submit-button:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+/* 提交中的转圈：与请求在途一一对应，让"等锁"看起来是在干活而不是卡死。
+   rotating 关键帧是 global.css 里的共享定义（prefers-reduced-motion 已在那里兜底）。 */
+.submit-button__spinner {
+  display: inline-block;
+  width: 0.9em;
+  height: 0.9em;
+  margin-right: var(--space-8);
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  vertical-align: -0.1em;
+  animation: rotating 0.8s linear infinite;
+}
+
+.submit-row__hint {
+  margin-top: var(--space-8);
+  color: var(--el-text-color-secondary);
+  font-size: var(--fs-xs);
 }
 
 /* ---------- 右侧电影信息 ---------- */
