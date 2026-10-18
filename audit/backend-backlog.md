@@ -12,6 +12,20 @@
 
 ## 并发与事务
 
+本轮修复并移出本表：**BL-03** —— 并发注册同名。
+
+**先纠正原描述**：该条原写「并发注册同名双双通过落两行」，**实测不成立**。库中 `user` / `admin` / `cinema` 三表都已有 `username` 唯一索引，撞键时第二个 INSERT 会被拒绝，不存在双插。
+
+**也澄清一次失败的复现**：先查后插的窗口在本地单实例下**无法通过 HTTP 稳定复现** —— MySQL 的 INSERT 会阻塞同名并发插入。实测三种角色各 6 轮（2 线程）与各 5 轮（8 线程），全部是「1 个 200 + 其余 409」，没有出现双插、也没有 500。
+
+**真实缺陷**：唯一索引虽然挡住了双插，但 `DuplicateKeyException` 无人处理，会落到 `GlobalExceptionHandler` 的兜底分支变成 **500「系统错误」**。这条路径在当前部署下难以撞到，但在**多实例部署**或**将来把先查后插改成直接插入**时就是唯一的正确性来源 —— 那时它会立刻变成用户可见的 500。
+
+**修复**：`UserService.insertUser` / `AdminService.add` / `CinemaService.insertCinema` 三处 `mapper().insert(...)` 外包 `catch (DuplicateKeyException)`，转成与串行路径**逐字相同**的 `409 + "账号已存在,请更换别的账号"`。
+
+**验证**：新增 `DuplicateUsernameGuardTest` 4 条用例（Mockito 让 mapper 抛 `DuplicateKeyException` 模拟"窗口被撞上"）；实测移除任一 `catch` 后对应用例立即变红。另有一条用例钉住「串行路径与撞键路径的提示必须一致」。
+
+---
+
 本轮修复并移出本表：**BL-02** —— 删排片与下单的竞态。
 
 **先纠正原描述**：该条原写「订单会悬空（record_id 指向已删行）」，**实测不成立**。`ordered.record_id` 有外键 `ordered_ibfk_1 ... ON DELETE RESTRICT`，删除有订单的排片会被数据库直接拒绝，不可能留下悬空订单。
@@ -44,7 +58,6 @@
 
 | 编号 | 位置 | 问题 | 处置建议 |
 | --- | --- | --- | --- |
-| BL-03 | service/UserService.insertUser、service/AdminService.add、service/CinemaService.insertCinema | 注册用户名为"先 selectByUsername 判空、后 insert"，无锁、无 DuplicateKeyException 兜底（MarkService 有先例）。并发注册同名双双通过落两行；selectByUsername 无 LIMIT 1，之后登录 TooManyResultsException。**2026-10-18 复核**：库中 `user` / `admin` / `cinema` 三表**均已有 `username` 唯一索引**（见 `db/inventory.tsv`），故"撞键"这一半在库端已被挡住，缺的只剩 Java 侧把 `DuplicateKeyException` 转成与串行路径同一句提示；`selectByUsername` 确认仍是 `SELECT * FROM user WHERE username = ?`、无 `LIMIT 1`，但唯一索引存在时不可能返回多行。 | 捕获 `DuplicateKeyException` 转同一句"账号已存在"（唯一索引已具备，无需另建）。 |
 | BL-04 | service/CinemaService.importFromDirectory | 名录导入的"已收录"判定为无锁读，生成用户名 amap_+poiId 也无唯一兜底。两个管理员并发导入同一名录 id，各读 linked=false 双插同名影院；命中唯一键则整批 @Transactional 回滚报 500。~~UNCERTAIN：名录行 poi_id 是否可能为空。~~ **2026-10-18 复核**：`cinema_directory.poi_id` 为 `NOT NULL` 且 `UNIQUE`，该 UNCERTAIN **不成立**，无需补非空校验。 | 导入路径加锁或捕获唯一键冲突（`cinema.username` 已有唯一索引）。 |
 | BL-05 | service/OrderedService.insertOrder（写 pending_timeout_at 处） | pending_timeout_at 用 JVM 时钟写入，却在 SQL 里与 DB 的 NOW() 比较（OrderedMapper.seatActiveCondition、selectExpiredPendingOrders）。JVM 与 DB 时区不一致时清理任务永不命中（废单永久占座），或提前取消有效订单（前端倒计时仍在走）。 | 超时值与判定统一由 DB 时钟产生（INSERT ... NOW() + INTERVAL 或存时间戳），另立一轮。 |
 

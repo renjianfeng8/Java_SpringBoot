@@ -30,7 +30,7 @@ npm run build      # 产物到 dist/
 
 ```bash
 cd xm_film/springboot
-mvn -o test                                   # 313 个用例
+mvn -o test                                   # 317 个用例
 mvn -o test -Dtest=OrderedServiceTest         # 单类
 mvn -o clean test -Dtest=XxxTest              # 改了 mapper XML / 改了 main 代码后，用这个
 ```
