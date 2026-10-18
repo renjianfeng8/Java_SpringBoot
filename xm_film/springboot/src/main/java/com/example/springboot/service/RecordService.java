@@ -251,7 +251,13 @@ public class RecordService extends BaseService<Record> {
     /** 删除排片：校验归属，且已产生订单的场次禁止物理删除 */
     @Transactional(rollbackFor = Exception.class)
     public void deleteScoped(Integer id, String role, Integer userId) {
-        Record recordItem = selectById(id);
+        // 先锁排片行再数订单（BL-02）。与下单路径的 selectByIdForUpdate 抢同一把锁，
+        // 于是「数订单 → DELETE」之间不会插进一笔新订单。
+        // 不锁的话：管理员数到 0 笔 → 用户下单并提交 → DELETE，结果由外键
+        // ON DELETE RESTRICT 挡住，但这个异常会漏成 500「系统错误」，管理员拿不到
+        // 「该场次已有订单」这句可操作的提示（实测 25 轮里 19 次如此）。
+        // 锁是必需的而非可选：单调 selectById 是非锁定读，挡不住后插的订单。
+        Record recordItem = recordMapper.selectByIdForUpdate(id);
         ensureRecordAccess(recordItem, role, userId);
         ensureNoOrders(id);
         delete(id);
@@ -264,7 +270,9 @@ public class RecordService extends BaseService<Record> {
             throw new CustomException(ErrorCode.PARAM_INVALID, "请选择排片");
         }
         for (Integer id : ids) {
-            ensureRecordAccess(selectById(id), role, userId);
+            // 与 deleteScoped 同口径：先锁行再数订单（BL-02）。
+            // 批量删除同样要防「数完订单后有人下单」，否则外键异常漏成 500。
+            ensureRecordAccess(recordMapper.selectByIdForUpdate(id), role, userId);
             ensureNoOrders(id);
         }
         deleteBatch(ids);

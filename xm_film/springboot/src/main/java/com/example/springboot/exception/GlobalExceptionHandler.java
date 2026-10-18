@@ -4,6 +4,7 @@ import com.example.springboot.common.Result;
 import com.example.springboot.common.enums.ErrorCode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -54,6 +55,33 @@ public class GlobalExceptionHandler {
     public Result<Void> restClientError(RestClientException e) {
         logger.warn("外部接口请求失败: {}", e.getMessage());
         return Result.error(ErrorCode.SYSTEM_ERROR.code(), "TMDB 接口不可达，请确认本机代理已开启");
+    }
+
+    /**
+     * 数据库约束冲突（外键 / 唯一键）。
+     *
+     * <p>为什么需要单独处理：这类异常原先落到下面的兜底分支，变成一句「系统错误」，
+     * 管理员既不知道发生了什么、也不知道该怎么做。最典型的场景是删排片时
+     * {@code ordered_ibfk_1 ON DELETE RESTRICT} 拒绝删除（BL-02）——正确提示应当是
+     * 「该场次已有订单」。
+     *
+     * <p>提示刻意<b>不透露具体约束名与表名</b>：约束名是内部实现细节，且直接回显
+     * 数据库报错会暴露表结构。这里只给一句可操作的中文。
+     */
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    @ResponseBody
+    public Result<Void> dataIntegrityError(DataIntegrityViolationException e) {
+        String detail = e.getMostSpecificCause().getMessage();
+        logger.warn("数据约束冲突: {}", detail);
+
+        // 外键拒绝删除：绝大多数是「删排片时该场次已有订单」。给可操作的话术，
+        // 而不是让管理员对着「系统错误」猜。
+        if (detail != null && detail.contains("foreign key")) {
+            return Result.error(ErrorCode.BUSINESS_CONFLICT.code(),
+                    "该记录仍被其他数据引用，无法删除；如涉及场次请将状态改为「停售」");
+        }
+        return Result.error(ErrorCode.BUSINESS_CONFLICT.code(),
+                "数据违反唯一性或完整性约束，请检查后重试");
     }
 
     /**
