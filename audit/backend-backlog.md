@@ -12,6 +12,23 @@
 
 ## 并发与事务
 
+本轮修复并移出本表：**BL-02** —— 删排片与下单的竞态。
+
+**先纠正原描述**：该条原写「订单会悬空（record_id 指向已删行）」，**实测不成立**。`ordered.record_id` 有外键 `ordered_ibfk_1 ... ON DELETE RESTRICT`，删除有订单的排片会被数据库直接拒绝，不可能留下悬空订单。
+
+**真实缺陷**（实测 25 轮，21 次撞上竞态）：删除路径是 `selectById`（非锁定读）+ 非锁定 COUNT + DELETE。管理员数到 0 笔后、DELETE 前用户下单并提交，外键异常 `DataIntegrityViolationException` 落到 `GlobalExceptionHandler` 的兜底分支，变成一句 **500「系统错误」**——21 次里 19 次如此。管理员既不知道发生了什么，也收不到「该场次已有订单」这句本可以给出的提示。
+
+**修复**：
+
+1. `RecordService.deleteScoped` / `deleteBatchScoped` 改用 `recordMapper.selectByIdForUpdate(id)` —— 与下单路径抢同一把排片行锁，「数订单 → DELETE」之间不会插进新订单。
+2. `GlobalExceptionHandler` 新增 `DataIntegrityViolationException` 处理，外键冲突返回 409 + 可操作提示（「如涉及场次请将状态改为「停售」」），不再漏成 500。
+
+**验证**：修复后 25 轮并发，10 次删除被拒**全部**返回正确业务提示，零「系统错误」，零悬空订单。新增 `RecordDeleteGuardTest` 4 条用例（Mockito 直接盯调用序列）；实测把删除路径改回 `selectById` 后 3 条立即变红。
+
+**踩坑记录**：写该测试时一度改成 `@SpringBootTest` + 真实库，结果**去掉锁后测试依然全绿** —— 因为真实库只能验证「有订单就拒绝」，而串行场景下锁不锁都成立。断言「调用了哪个 mapper 方法」必须用 Mockito。
+
+---
+
 本轮修复并移出本表：**BL-01** —— 排片时段重叠的「先查后插」。实测复现：两个并发请求对同一影厅同一时段提交，双双返回 200、库里落 2 场完全重叠的排片。
 
 **修复分两步，缺一不可**：
@@ -27,7 +44,6 @@
 
 | 编号 | 位置 | 问题 | 处置建议 |
 | --- | --- | --- | --- |
-| BL-02 | service/RecordService.deleteScoped | 删除前置校验 ensureNoOrders 是非锁定 COUNT，随后才 DELETE；下单路径对 record 行取 FOR UPDATE，两者互不排斥。管理员删排片读到 0 订单后、DELETE 前，用户下单并提交，排片被删而订单悬空（record_id 指向已删行，无座位/凭证来源）。 | 删除路径同样对 record 行取锁，或改软删除/下架状态。 |
 | BL-03 | service/UserService.insertUser、service/AdminService.add、service/CinemaService.insertCinema | 注册用户名为"先 selectByUsername 判空、后 insert"，无锁、无 DuplicateKeyException 兜底（MarkService 有先例）。并发注册同名双双通过落两行；selectByUsername 无 LIMIT 1，之后登录 TooManyResultsException。**2026-10-18 复核**：库中 `user` / `admin` / `cinema` 三表**均已有 `username` 唯一索引**（见 `db/inventory.tsv`），故"撞键"这一半在库端已被挡住，缺的只剩 Java 侧把 `DuplicateKeyException` 转成与串行路径同一句提示；`selectByUsername` 确认仍是 `SELECT * FROM user WHERE username = ?`、无 `LIMIT 1`，但唯一索引存在时不可能返回多行。 | 捕获 `DuplicateKeyException` 转同一句"账号已存在"（唯一索引已具备，无需另建）。 |
 | BL-04 | service/CinemaService.importFromDirectory | 名录导入的"已收录"判定为无锁读，生成用户名 amap_+poiId 也无唯一兜底。两个管理员并发导入同一名录 id，各读 linked=false 双插同名影院；命中唯一键则整批 @Transactional 回滚报 500。~~UNCERTAIN：名录行 poi_id 是否可能为空。~~ **2026-10-18 复核**：`cinema_directory.poi_id` 为 `NOT NULL` 且 `UNIQUE`，该 UNCERTAIN **不成立**，无需补非空校验。 | 导入路径加锁或捕获唯一键冲突（`cinema.username` 已有唯一索引）。 |
 | BL-05 | service/OrderedService.insertOrder（写 pending_timeout_at 处） | pending_timeout_at 用 JVM 时钟写入，却在 SQL 里与 DB 的 NOW() 比较（OrderedMapper.seatActiveCondition、selectExpiredPendingOrders）。JVM 与 DB 时区不一致时清理任务永不命中（废单永久占座），或提前取消有效订单（前端倒计时仍在走）。 | 超时值与判定统一由 DB 时钟产生（INSERT ... NOW() + INTERVAL 或存时间戳），另立一轮。 |

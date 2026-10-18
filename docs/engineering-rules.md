@@ -30,9 +30,12 @@ npm run build      # 产物到 dist/
 
 ```bash
 cd xm_film/springboot
-mvn -o test                                   # 309 个用例
+mvn -o test                                   # 313 个用例
 mvn -o test -Dtest=OrderedServiceTest         # 单类
+mvn -o clean test -Dtest=XxxTest              # 改了 mapper XML / 改了 main 代码后，用这个
 ```
+
+> ⚠️ **务必先 `clean` 的情况**：改过 `src/main/resources/mapper/*.xml`，或用编辑工具整体替换过 main 下的 `.java`（`target/classes` 里的旧副本不会自动失效）。本仓已两次因此出现「改了没生效」：BL-01 修完重跑仍落 2 行、BL-02 的测试在旧 class 上假失败。判断方法：测试结果与代码明显不符时，先 `clean` 再判。
 
 **测试库是 `xm_film_test`，不是 `xm-film`。** 两库分离靠三样东西，缺一不可：
 

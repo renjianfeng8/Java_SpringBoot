@@ -19,7 +19,7 @@
 | 展示状态 | 未开始 / 放映中 / 已结束**由 start 派生**，不落库 | 前端 + `RECORD_STATUS` |
 | 排片冲突 | `countRoomOverlap(room, id, start, start+片长)`；**先锁影厅行再查（当前读）** | `validateSchedule`；见下 |
 | 片长兜底 | 影片 `time` ≤ 0 时用 120 分钟 | `DEFAULT_DURATION_MINUTES` |
-| 已产生订单的场次 | 禁止物理删除 | `ensureNoOrders`（非锁定 COUNT，BL-02） |
+| 删除守卫 | 已产生订单的场次禁止物理删除；`deleteScoped` 先锁行再数订单 | `ensureNoOrders`（BL-02，见 §2.2） |
 | `room.title` | 存的是**影院名**，`room.name` 才是影厅名 | BL-23 |
 
 ### 2.1 排片并发（BL-01，2026-10-18 修复）
@@ -32,6 +32,16 @@
 **为什么第 2 条不能省**：MySQL 默认 `REPEATABLE-READ`，普通 `SELECT COUNT(*)` 是一致性非锁定读，读的是事务开始时的快照。实测只做第 1 条时仍然落 2 行 —— 等锁方拿到锁后，看到的还是旧快照，对方刚提交的排片它看不见。
 
 **回归守卫**：`RecordOverlapLockTest.countRoomOverlapUsesLockingRead` 断言 SQL 含 `FOR UPDATE`；删掉该片段测试立即变红。改这条语句前先看它的注释。
+
+### 2.2 删排片与下单（BL-02，2026-10-18 修复）
+
+**原描述需要纠正**：该条原写「订单会悬空（record_id 指向已删行）」。实测不成立 —— `ordered.record_id` 有外键 `ON DELETE RESTRICT`，删除有订单的排片会被数据库直接拒绝。
+
+**真实缺陷**：删除路径原是非锁定读 + 非锁定 COUNT + DELETE。管理员数到 0 笔后、DELETE 前用户下单并提交，外键异常落到兜底分支变成 **500「系统错误」**（实测 25 轮 21 次竞态，19 次如此），管理员收不到「该场次已有订单」这句本可给出的提示。
+
+**修复**：`deleteScoped` / `deleteBatchScoped` 先 `selectByIdForUpdate` 锁行，再数订单；`GlobalExceptionHandler` 补 `DataIntegrityViolationException` → 409 + 可操作提示。
+
+**教训**：写守卫测试时先用了 `@SpringBootTest` + 真实库，**去掉锁后依然全绿** —— 串行场景下锁不锁都成立。断言「调用了哪个 mapper」必须用 Mockito 盯调用序列。
 
 ## 3 订单状态机
 
