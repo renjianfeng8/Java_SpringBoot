@@ -8,6 +8,7 @@ import com.example.springboot.common.enums.ErrorCode;
 import com.example.springboot.common.enums.RoleEnum;
 import com.example.springboot.exception.CustomException;
 import com.example.springboot.mapper.AdminMapper;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -50,7 +51,13 @@ public class AdminService extends BaseService<Admin> {
         }
         admin.setRole(RoleEnum.ADMIN.name());
         admin.setPassword(passwordEncoder.encode(admin.getPassword()));
-        mapper().insert(admin);
+        try {
+            mapper().insert(admin);
+        } catch (DuplicateKeyException e) {
+            // 先查后插的窗口：并发注册同名时两个请求都可能读到 null，username 唯一索引
+            // 是最终防线。撞键必须给出与串行路径同一句提示，而不是漏成 500。
+            throw new CustomException(ErrorCode.BUSINESS_CONFLICT.code(), "账号已存在,请更换别的账号");
+        }
     }
 
     @Override

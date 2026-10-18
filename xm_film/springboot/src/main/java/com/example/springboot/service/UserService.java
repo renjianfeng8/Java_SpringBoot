@@ -11,6 +11,7 @@ import com.example.springboot.mapper.UserMapper;
 import com.github.pagehelper.PageInfo;
 import com.github.pagehelper.page.PageMethod;
 import org.springframework.beans.BeanUtils;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -62,7 +63,17 @@ public class UserService extends BaseService<User> {
         }
         user.setRole(RoleEnum.USER.name());
         user.setPassword(passwordEncoder.encode(user.getPassword()));
-        mapper().insert(user);
+        try {
+            mapper().insert(user);
+        } catch (DuplicateKeyException e) {
+            // 上面的 selectByUsername 是"先查后插"：并发注册同名时两个请求都可能读到 null。
+            // username 上的唯一索引是最终防线，撞键时这里必须给出与串行路径**同一句**
+            // 提示，而不是让 DuplicateKeyException 漏到全局处理器变成 500。
+            // 本地单实例下 MySQL 的 INSERT 会阻塞同名并发插入，该窗口难以通过 HTTP
+            // 复现（实测 8 线程 × 5 轮均为 1 成功 + 7 个 409），但守护仍不可省：
+            // 多实例部署或重试场景下它就是唯一的正确性来源。
+            throw new CustomException(ErrorCode.BUSINESS_CONFLICT.code(), "账号已存在,请更换别的账号");
+        }
     }
 
     @Override

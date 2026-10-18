@@ -16,6 +16,7 @@ import com.example.springboot.mapper.CinemaMapper;
 import com.github.pagehelper.PageInfo;
 import com.github.pagehelper.page.PageMethod;
 import org.springframework.beans.BeanUtils;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -142,7 +143,14 @@ public class CinemaService extends BaseService<Cinema> {
         cinema.setRole(RoleEnum.CINEMA.name());
         cinema.setStatus(CinemaStatus.UNAUDITED);
         cinema.setPassword(passwordEncoder.encode(cinema.getPassword()));
-        mapper().insert(cinema);
+        try {
+            mapper().insert(cinema);
+        } catch (DuplicateKeyException e) {
+            // 先查后插的窗口：并发注册同名影院时两个请求都可能读到 null。
+            // username 唯一索引是最终防线；撞键转成同一句提示，而不是 500。
+            // 名录导入（importFromDirectory）生成的 amap_+poiId 也走这里。
+            throw new CustomException(ErrorCode.BUSINESS_CONFLICT.code(), "账号已存在,请更换别的账号");
+        }
     }
 
     @Override
