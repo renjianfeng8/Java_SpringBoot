@@ -187,6 +187,9 @@ class CinemaServiceTest {
         cinema.setPassword("should-be-cleared");
         cinema.setRole("should-be-cleared");
 
+        // 基类 update 先判存在（BL-07）：没有这一行，update 会在写库前抛 NOT_FOUND
+        when(cinemaMapper.selectById(1)).thenReturn(mockCinema);
+
         cinemaService.update(cinema);
 
         assertNull(cinema.getPassword());

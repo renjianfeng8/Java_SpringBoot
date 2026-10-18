@@ -9,6 +9,8 @@ import com.example.springboot.mapper.TypeMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.transaction.annotation.Transactional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -17,9 +19,19 @@ import static org.assertj.core.api.Assertions.assertThat;
  * 只有真正执行才暴露。这里把 TMDB 导入用到的两条 type/area 语句各跑一遍。
  * <p>
  * 判重查询传一个不可能存在的标题，证明绑定有效且不触碰真实数据；
- * 自增 id 回填必须真插一行，用 finally 立即删除，保证可反复运行、不留痕。
+ * 自增 id 回填必须真插一行，靠 <b>类级 {@code @Transactional} 回滚</b> 收尾。
+ * <p>
+ * 回滚而不是 {@code finally deleteById}：断言失败、JVM 被杀、断电都不会走到 finally，
+ * 脏行就留在库里；事务回滚由 Spring 在用例结束后无条件执行。
+ * 那些 {@code finally} 块保留，是为了让 {@code selectByTitleExact} 在**同一事务内**
+ * 看不到自己刚插的行之外的行 —— 实际上同名唯一性靠的是标题探针，不是删除。
+ * <p>
+ * {@code @ActiveProfiles("ci")} 指向独立空结构库 xm_film_test（见 application-ci.yml）：
+ * 本类会写库，绝不能落在开发库 xm-film 上。
  */
 @SpringBootTest
+@ActiveProfiles("ci")
+@Transactional
 class TmdbLookupMapperLoadTest {
 
     private static final String PROBE_TITLE = "__tmdb_import_probe__";

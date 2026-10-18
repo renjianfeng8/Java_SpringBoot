@@ -1,0 +1,25 @@
+# 测试专用 profile（`@ActiveProfiles("ci")` 的全部落点）。
+#
+# 为什么需要本文件：此前没有任何测试类声明 profile，`@SpringBootTest` 一律落到
+# application.yml —— 即**开发库 xm-film**。绑定层守卫测试会真插真删
+# （TmdbLookupMapperLoadTest 插 type/area/actor 再 finally 删除），
+# `mvn test` 于是成了对业务库的写操作，且失败/中断会残留脏行。
+#
+# 本 profile 只改数据源与日志：换成独立的空结构库 xm_film_test，
+# 表结构取自 src/test/resources/db/schema.sql（见该目录 README）。
+# 不含任何数据行 —— 绑定层测试只需要"表存在、列名对得上"，
+# 任何依赖种子数据的测试都不该跑在这里（那类测试本就该是 Mock 单测）。
+server:
+  port: 0          # 不占用 9090；-Dtest 单跑时也不会与开发机实例冲突
+
+spring:
+  datasource:
+    username: root
+    password: ""
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/xm_film_test?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&characterEncoding=UTF-8
+
+mybatis:
+  configuration:
+    log-impl: org.apache.ibatis.logging.nologging.NoLoggingImpl
+  mapper-locations: classpath:mapper/*.xml

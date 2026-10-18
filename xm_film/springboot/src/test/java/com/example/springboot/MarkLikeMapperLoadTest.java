@@ -5,6 +5,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.transaction.annotation.Transactional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -14,8 +16,13 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  * 只有启动 Spring 上下文并真正执行语句时才会暴露。这里逐条跑一遍 MarkLikeMapper 的四条语句。
  * <p>
  * 全部传不存在的 id(-1)：既能证明绑定有效，又保证不写入/不删除任何真实数据，可反复运行、不留痕。
+ * <p>
+ * 仍加 {@code @Transactional} + {@code ci} profile：外键拒绝的反向用例本身不留痕，
+ * 但「改回 INSERT IGNORE」的回归若被触发，事务回滚能让误写入的行一并消失。
  */
 @SpringBootTest
+@ActiveProfiles("ci")
+@Transactional
 class MarkLikeMapperLoadTest {
 
     @Autowired

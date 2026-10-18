@@ -125,6 +125,9 @@ class FilmServiceTest {
         film.setTitle("更新电影");
         film.setTypeIds(List.of(2, 3));
 
+        // 基类 update 先判存在（BL-07）：没有这一行，film_type 的同步永远不会执行
+        when(filmMapper.selectById(1)).thenReturn(new Film());
+
         filmService.update(film);
 
         verify(filmMapper).updateById(film);
@@ -138,6 +141,8 @@ class FilmServiceTest {
         film.setId(1);
         film.setTypeIds(Collections.emptyList());
 
+        when(filmMapper.selectById(1)).thenReturn(new Film());
+
         filmService.update(film);
 
         verify(filmMapper).deleteFilmTypesByFilmId(1);
@@ -149,6 +154,8 @@ class FilmServiceTest {
         Film film = new Film();
         film.setId(1);
         film.setTypeIds(null);
+
+        when(filmMapper.selectById(1)).thenReturn(new Film());
 
         filmService.update(film);
 

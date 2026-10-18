@@ -5,6 +5,7 @@ import com.example.springboot.mapper.CinemaDirectoryMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
 
 import java.util.List;
 
@@ -15,10 +16,11 @@ import static org.assertj.core.api.Assertions.assertThat;
  * 与 d. 前缀写错都要启动 Spring 上下文、真正执行语句才会暴露；CinemaServiceTest 那边把 mapper
  * mock 掉了，XML 本身永远跑不到。
  * <p>
- * 全部是只读查询，不写库，可反复运行。断言一律取「与库里现有行数无关」的不变量
- * ——钉死具体条数会让这条守卫随开发库现状变红。
+ * 全部是只读查询，不写库。断言一律取「与库里现有行数无关」的不变量
+ * ——钉死具体条数会让这条守卫随开发库现状变红；ci 库是空表，故不能断言「有行」。
  */
 @SpringBootTest
+@ActiveProfiles("ci")
 class CinemaDirectoryMapperLoadTest {
 
     @Autowired

@@ -6,6 +6,7 @@ import com.example.springboot.mapper.UserMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -17,10 +18,11 @@ import static org.assertj.core.api.Assertions.assertThat;
  * 只有启动 Spring 上下文并真正执行语句时才会暴露。这里逐条跑一遍大盘用到的每条语句
  * —— 它们的单元测试一律 mock 掉 mapper，XML 本身在那边永远跑不到。
  * <p>
- * 全部是只读 COUNT / 聚合，不写库；窗口取一个不可能有数据的远古区间，
- * 保证对开发库零影响，可反复运行。
+ * 全部是只读 COUNT / 聚合，不写库；窗口取一个不可能有数据的远古区间。
+ * 仍走 ci profile：全仓 @SpringBootTest 一律落在独立空结构库，不碰开发库。
  */
 @SpringBootTest
+@ActiveProfiles("ci")
 class StatisticsMapperLoadTest {
 
     @Autowired
