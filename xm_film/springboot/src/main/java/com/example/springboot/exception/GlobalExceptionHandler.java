@@ -5,11 +5,16 @@ import com.example.springboot.common.enums.ErrorCode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.HttpMediaTypeNotSupportedException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.client.RestClientException;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import java.util.stream.Collectors;
 
@@ -85,14 +90,81 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * 请求参数类型不匹配 —— 例如 {@code GET /films/abc}（id 声明为 Integer）、
+     * {@code ?pageNum=abc}。
+     *
+     * <p>这类异常原先落到兜底分支变成 500「系统错误」，但它是**调用方传错**，
+     * 属于 400。Spring 的默认消息是英文且带内部方法签名（
+     * "Method parameter 'id': Failed to convert value of type 'java.lang.String'"），
+     * 因此这里只回一句中文，具体参数名写进日志。
+     */
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    @ResponseBody
+    public Result<Void> typeMismatch(MethodArgumentTypeMismatchException e) {
+        logger.warn("参数类型不匹配: name={}, value={}, requiredType={}",
+                e.getName(), e.getValue(),
+                e.getRequiredType() == null ? "?" : e.getRequiredType().getSimpleName());
+        return Result.error(ErrorCode.PARAM_INVALID.code(),
+                "参数「" + e.getName() + "」格式不正确");
+    }
+
+    /**
+     * 缺少必填的查询参数 —— 例如 {@code GET /films/search}（未带 title）、
+     * {@code GET /orders/seats}（未带 recordId）。
+     *
+     * <p>原先同样落到兜底变成 500。缺参数是调用方的问题，应回 400。
+     */
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    @ResponseBody
+    public Result<Void> missingParameter(MissingServletRequestParameterException e) {
+        logger.warn("缺少必填参数: {}", e.getParameterName());
+        return Result.error(ErrorCode.PARAM_INVALID.code(),
+                "缺少必填参数「" + e.getParameterName() + "」");
+    }
+
+    /**
+     * 缺少请求体或 JSON 无法解析 —— 例如空 body 的 POST、语法错误的 JSON。
+     *
+     * <p>原先落到兜底变成 500。请求体是调用方给的，格式不对属 400。
+     * 不回显解析器的原始消息：它带完整的类名与方法签名，属于内部细节。
+     */
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    @ResponseBody
+    public Result<Void> unreadableBody(HttpMessageNotReadableException e) {
+        logger.warn("请求体无法解析: {}", e.getMessage());
+        return Result.error(ErrorCode.PARAM_INVALID.code(), "请求体缺失或格式不正确");
+    }
+
+    /** 不支持的请求方法（如对只读端点发 DELETE）—— 应为 405 语义，归到参数错误档 */
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    @ResponseBody
+    public Result<Void> methodNotSupported(HttpRequestMethodNotSupportedException e) {
+        logger.warn("不支持的请求方法: {}", e.getMessage());
+        return Result.error(ErrorCode.PARAM_INVALID.code(),
+                "该接口不支持 " + e.getMethod() + " 请求");
+    }
+
+    /** 不支持的 Content-Type（如给 JSON 接口发 text/plain） */
+    @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
+    @ResponseBody
+    public Result<Void> mediaTypeNotSupported(HttpMediaTypeNotSupportedException e) {
+        logger.warn("不支持的 Content-Type: {}", e.getContentType());
+        return Result.error(ErrorCode.FILE_INVALID.code(),
+                "不支持的请求格式，请使用 " + e.getSupportedMediaTypes());
+    }
+
+    /**
      * 处理所有未捕获的Exception异常
-     * @param e 异常对象
-     * @return 返回包含错误信息的统一响应格式
+     *
+     * <p>走到这里的都应是<strong>服务端自身</strong>的问题（空指针、SQL 写错、依赖故障）。
+     * 前端拿到的「系统错误」本身不携带信息，排查只能靠日志 —— 所以这里用 error 级别
+     * 并保留完整堆栈。若某类异常明明由调用方引起却落到这里，正确做法是给它加一个
+     * 上面的具名处理器，而不是放宽这里。
      */
     @ExceptionHandler(Exception.class)
     @ResponseBody
     public Result<Void> error(Exception e) {
-        logger.error("系统异常:", e);
+        logger.error("系统异常: type={}, message={}", e.getClass().getName(), e.getMessage(), e);
         return Result.error();
     }
 }
