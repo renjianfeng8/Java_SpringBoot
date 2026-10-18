@@ -1,6 +1,10 @@
-# 前端 Vue3 代码安全与质量审计报告
+# 前端 Vue3 代码安全与质量审计（FE-01…FE-63）
 
-本文件登记 2026-10-14 起前端代码安全与质量审查的结论。第一轮审查 `xm_film/vue/src/router/`（导航守卫与路由表，vue-router 4.5.1），并登记该轮牵连核实的跨文件前端问题（前端鉴权与跳转口径：`utils/request.js`、`composables/useAuth.js`、`views/Login.vue`、`views/404.vue`、`views/Front.vue`、`views/back/Back.vue`、`views/manage/Manage.vue`）。同日第二轮审查 `xm_film/vue/src/composables/` 三个复用件（`useAuth.js`、`useCrud.js`、`useFormDialog.js`）及其调用方（`views/manage/*`、`views/back/*`、`views/front/*`），结论见「已修复（composables 复用件）」一节。2026-10-15 第三轮审查 `xm_film/vue/src/views/` 全目录（47 个视图文件，约 12.8k 行），结论见「已修复（views/ 目录）」及「本轮登记未做」新增条目；同日就 FE-48 做契约对齐（前端读错键名，非后端缺字段），见「已修复（契约对齐）」，多角色 1:N 需求转登 audit-backlog.md。后端条目另见 audit-backlog.md，本文件不重复。2026-10-15 另对重做后的前台影院列表页做了复查（并核到与 FE-34 同形的后端前缀匹配），结论见「已修复（影院列表页复查）」及「本轮登记未做」新增条目。
+> 2026-10-18 全盘复核：本文件原为仓库根的 `前端 Vue3 代码安全与质量审计报告.md`，已移入 `audit/` 并改名，`git mv` 保留了历史。复核只改动了确有出入的描述（见下），条目编号与结论未动。索引见根目录 `项目索引.md`。
+>
+> 复核更正：原第 3 行写「47 个视图文件」，实测 `views/` 下共 **46 个 `.vue`**（另有 3 个壳 `Front.vue` / `Back.vue` / `Manage.vue` 与 `Login` / `Register` / `404` 也在此目录，均已计入）。原写「约 12.8k 行」，实测 13,399 行。
+
+本文件登记 2026-10-14 起前端代码安全与质量审查的结论。第一轮审查 `xm_film/vue/src/router/`（导航守卫与路由表，vue-router 4.5.1），并登记该轮牵连核实的跨文件前端问题（前端鉴权与跳转口径：`utils/request.js`、`composables/useAuth.js`、`views/Login.vue`、`views/404.vue`、`views/Front.vue`、`views/back/Back.vue`、`views/manage/Manage.vue`）。同日第二轮审查 `xm_film/vue/src/composables/` 三个复用件（`useAuth.js`、`useCrud.js`、`useFormDialog.js`）及其调用方（`views/manage/*`、`views/back/*`、`views/front/*`），结论见「已修复（composables 复用件）」一节。2026-10-15 第三轮审查 `xm_film/vue/src/views/` 全目录（**46 个视图文件，13,399 行**；原文误作 47 / 12.8k），结论见「已修复（views/ 目录）」及「本轮登记未做」新增条目；同日就 FE-48 做契约对齐（前端读错键名，非后端缺字段），见「已修复（契约对齐）」，多角色 1:N 需求转登 `audit/backend-backlog.md`。后端条目另见 `audit/backend-backlog.md`，本文件不重复。2026-10-15 另对重做后的前台影院列表页做了复查（并核到与 FE-34 同形的后端前缀匹配），结论见「已修复（影院列表页复查）」及「本轮登记未做」新增条目。
 
 维护口径：一处事实一处归属；每条给出 `文件` 与符号，行号随改动可能漂移、以符号为准。状态分三档：已修复、本轮登记未做、已核验非缺陷。编号 FE-xx 与后端 BL-xx 区隔。
 
@@ -59,7 +63,7 @@
 
 | 编号 | 位置 | 问题 | 处置 |
 | --- | --- | --- | --- |
-| FE-48 | views/front/FilmDetail.vue `fetchCastBySingleId` | 读 `actorData.roleType`/`role` 两键，后端响应里均不存在：`roleType` 恒落兜底 2、`role` 恒为空。原记「后端缺字段、越出前端范围」经复核不成立——后端 `ActorView.java` 的 `figure`/`grade`、`ActorController.toView` 的回填、`ActorMapper.xml` 的 `SELECT *` 三处俱在，数据在库、接口在返，只是前端读错了键名（`figure`=饰演角色名、`grade`=所属角色，取值域见 `manage/Actor.vue:102-105`）。 | 前端改读真字段：`roleType` 由 `constants.getActorRoleType(grade)` 派生（`ACTOR_ROLE_TYPE_MAP`，缺省 2=主演），`role` 改读 `actorData.figure`。后端零改动，无需加列落库。导演/编剧/二级演员三组仍空——库中 `grade` 65 行全为「主演」、无该类数据，属正确空态而非死 UI；多角色 1:N 需求另登记 audit-backlog.md BL-41。 |
+| FE-48 | views/front/FilmDetail.vue `fetchCastBySingleId` | 读 `actorData.roleType`/`role` 两键，后端响应里均不存在：`roleType` 恒落兜底 2、`role` 恒为空。原记「后端缺字段、越出前端范围」经复核不成立——后端 `ActorView.java` 的 `figure`/`grade`、`ActorController.toView` 的回填、`ActorMapper.xml` 的 `SELECT *` 三处俱在，数据在库、接口在返，只是前端读错了键名（`figure`=饰演角色名、`grade`=所属角色，取值域见 `manage/Actor.vue:102-105`）。 | 前端改读真字段：`roleType` 由 `constants.getActorRoleType(grade)` 派生（`ACTOR_ROLE_TYPE_MAP`，缺省 2=主演），`role` 改读 `actorData.figure`。后端零改动，无需加列落库。导演/编剧/二级演员三组仍空——库中 `grade` 65 行全为「主演」、无该类数据，属正确空态而非死 UI；多角色 1:N 需求另登记 `audit/backend-backlog.md` BL-41。 |
 
 ## 已修复（2026-10-15 影院列表页复查）
 
@@ -117,6 +121,17 @@
 | FE-58 | views/front/Cinema.vue 页头内层；views/front/CinemaDetail.vue、FilmDetail.vue、FilmCinema.vue、FilmMarks.vue 的 hero 与内容层 | 「1200px 居中内容测度」（`width: 55%`/`60%` + `max-width: 1200px`）手写在约 10 处，`.page-narrow`/`.page-wide` 只是其中两份：改一次内容宽度要动 10 个文件，新增页头一旦漂移就与其下方列表错位。 | 上提为共享 measure（front-pages.scss 的变量/mixin，或一个类加「无纵向外边距」变体），各页引用。**本轮未做（登记备查）**：系统性缺口，跨 5 个文件，另起一轮。2026-10-16 追加：Account.vue 重做时其内容区已改用 `.page-wide`（消掉一份手写），但同页页头内层仍按该口径手写一份（与 Cinema.vue 页头同形），故手写份数并未净减 —— 页头这一层正是该项最难收敛的部分。 |
 | FE-59 | views/Front.vue `NAV_ITEMS`；router/index.js 路由表 | 顶部导航由数组手工维护、与路由表并列，两者之间没有任何机制关联：删路由忘删导航项则会落 `/:pathMatch` 兜底 404，加路由忘加导航项则页面无入口。本次下线影院名录就需同时改两处，正是该漂移的实例。 | 导航改由路由 meta（如 `meta.nav`）派生，或加断言：/front 下需出现在导航的路由必须各有对应项。属结构变更。 |
 | FE-60 | App.vue `path.startsWith('/front')`；utils/request.js `pathname.startsWith('/login')` | 与 FE-34 同形的裸前缀匹配残余两处：只差字符前缀相邻的路径也会命中（`/frontx` 会被套上前台主题、`/loginx` 会走登录页的跳过分支）。当前路由表下均无可达碰撞，属同形未做点。 | 与 FE-34 同口径改为「相等或 `prefix + '/'`」。两条均非当前可达缺陷。 |
+
+## 2026-10-18 全盘复核新增
+
+本轮按「读代码 + 实测」复核了下列此前未记录的点。前三条是**已修复**，第四条登记备查。
+
+| 编号 | 位置 | 问题 | 处置 |
+| --- | --- | --- | --- |
+| FE-64 | views/Back.vue 与 views/Manage.vue | 两个后台外壳 **91% 行完全相同**（`Back.vue` 150 行非空行中有 137 行也出现在 `Manage.vue` 196 行里）：logout 块、header、用户下拉、面包屑、`el-menu` 结构逐字重复，差异只在菜单数据。与 FE-50 同族但范围更大——改一处 header 行为要动两个文件。 | 合并为一个外壳 + 菜单配置（两块 `el-menu` 的差异可收成 `menuGroups` 数据）。属结构变更，另起一轮。**未做（登记备查）**。 |
+| FE-65 | views/front/Cinema.vue、Orders.vue、Movie.vue；views/back/* | FE-49 已登记"两套分页口径并存"，但未量化：这 4 个页面的 `pageNum/pageSize/total/load/handlePage` 各自手写，**请求序号守卫只在 `useCrud` 与 FE-25/26 修过的那几处**，其余仍可能旧响应覆盖新结果。 | 收敛到 `useCrud`，或至少抽出带 `loadSeq` 的 `usePagedList`。与 FE-49 同一轮处理。**未做（登记备查）**，本条只是把基数补全。 |
+| FE-66 | 全站 `res.code === '200'` | FE-19 估的是"约 101 处 / 37 文件"。实测（2026-10-18，正则 `code\s*===?\s*['"]200['"]`，`.vue` + `.js`）为 **98 处 / 35 文件**：`views/` 87、`composables/` 7（其中 `useCrud.js` 5）、`components/` 4。最多的单文件各 6 处（`back/Record.vue`、`front/Account.vue`、`manage/Film.vue`）。 | 数量下调不影响结论（仍无单一出处）。改法同 FE-19：拦截器内归一，或至少收敛 `SUCCESS_CODE` 常量。**未做（登记备查）**。 |
+| FE-63 复核 | 全站 el-table 表头 | 复核确认「全站未做」仍然成立：全仓**只有** `views/front/Account.vue:534` 覆写了 `--el-table-header-text-color`，其余页面（`manage/*` 17 页、`back/*` 4 页、`front/Orders.vue` 等）仍走 EP 默认白底表头 + 600 字重。 | 结论不变，维持登记。 |
 
 ## 已核验为非缺陷（防二次误报）
 

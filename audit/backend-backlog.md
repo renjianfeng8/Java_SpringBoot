@@ -1,10 +1,14 @@
-# 待办技术债清单（audit-backlog）
+# 待办技术债清单（backend-backlog）
 
-本文件是本仓唯一的技术债登记处，承接已删除的 `后端代码规范审查报告.md` 的全部"登记备查"项，并汇总 2026-10-13 两轮代码审查（`entity/`、`service/`）、2026-10-14 控制器层审查（`controller/`）、2026-10-14 mapper 层审查（`mapper/`）与 2026-10-14 DTO 层审查（`dto/`）中判定延后或建议的条目。已完成项不进本表；已判定非缺陷的条目集中在末节，避免二次误报。2026-10-15 承 FE-48 契约对齐复查演职人员数据模型，补登 BL-41；同日做纯清理四项（BL-28/33/34/38），另登记 BL-42（同形字符串筛选未做）、BL-43（UserController 读口径分歧）。
+> 2026-10-18 全盘复核：本文件原为仓库根的 `audit-backlog.md`，已移入 `audit/` 并改名。标题保留 `BL-` 编号以维持历史引用。复核中修正了 BL-03 / BL-04 / BL-42 三处的过时描述（见各自「2026-10-18 复核」段），其余条目未改。索引见根目录 `项目索引.md`。
+
+本文件是本仓唯一的技术债登记处，承接已删除的 `后端代码规范审查报告.md`（**该文件已不在仓内**，以下为历史引用）的全部"登记备查"项，并汇总 2026-10-13 两轮代码审查（`entity/`、`service/`）、2026-10-14 控制器层审查（`controller/`）、2026-10-14 mapper 层审查（`mapper/`）与 2026-10-14 DTO 层审查（`dto/`）中判定延后或建议的条目。已完成项不进本表；已判定非缺陷的条目集中在末节，避免二次误报。2026-10-15 承 FE-48 契约对齐复查演职人员数据模型，补登 BL-41；同日做纯清理四项（BL-28/33/34/38），另登记 BL-42（同形字符串筛选未做）、BL-43（UserController 读口径分歧）。
 
 维护口径：一处事实一处归属；每条给出 `文件` 与符号，行号随改动可能漂移、以符号为准。状态分三档：待办、有意不整改（与既定政策一致，非债务）、已核验非缺陷；修复完成的条目从表中移出，在该节以「本轮修复并移出本表」一句登记。
 
-更新日期：2026-10-15。基线：master `bfdd1c07`（清单）、`a2144fc4`（纯清理起点）。
+更新日期：2026-10-15（2026-10-18 复核增补）。基线：master `bfdd1c07`（清单）、`a2144fc4`（纯清理起点）；复核基线 `3112f8b7`。
+
+**复核时的实测基线**：`mvn -o test` = 305/305 通过（此前长期 6 红，见 §测试隔离）；开发库 `xm-film` 中 `record` / `ordered` / `room` / `mark` 均为 **0 行**。
 
 ## 并发与事务
 
@@ -12,8 +16,8 @@
 | --- | --- | --- | --- |
 | BL-01 | service/RecordService.validateSchedule（countRoomOverlap 调用处） | 影厅时段重叠是"先查后插"的无锁判定：countRoomOverlap 与随后的 INSERT 间无行锁，库端也建不了时间段唯一约束。两个管理员并发为同一影厅提交重叠时段，各读 overlap=0，双双落库成两场重叠排片；用户在两场上各订同一物理座位（countSeatInUse 以 record_id 为界）即同座双卖。 | 建库时对 (room_id, start) 加唯一约束，或 add/update 路径对 room 行加锁串行化。schema 级改动，另立一轮。 |
 | BL-02 | service/RecordService.deleteScoped | 删除前置校验 ensureNoOrders 是非锁定 COUNT，随后才 DELETE；下单路径对 record 行取 FOR UPDATE，两者互不排斥。管理员删排片读到 0 订单后、DELETE 前，用户下单并提交，排片被删而订单悬空（record_id 指向已删行，无座位/凭证来源）。 | 删除路径同样对 record 行取锁，或改软删除/下架状态。 |
-| BL-03 | service/UserService.insertUser、service/AdminService.add、service/CinemaService.insertCinema | 注册用户名为"先 selectByUsername 判空、后 insert"，无锁、无 DuplicateKeyException 兜底（MarkService 有先例）。并发注册同名双双通过落两行；selectByUsername 无 LIMIT 1，之后登录 TooManyResultsException。 | 捕获 DuplicateKeyException 转同一句"账号已存在"，并给 username 加唯一索引兜底。 |
-| BL-04 | service/CinemaService.importFromDirectory | 名录导入的"已收录"判定为无锁读，生成用户名 amap_+poiId 也无唯一兜底。两个管理员并发导入同一名录 id，各读 linked=false 双插同名影院；命中唯一键则整批 @Transactional 回滚报 500。poiId 为 null 时两行亦撞同名。UNCERTAIN：名录行 poi_id 是否可能为空。 | 导入路径加锁或捕获唯一键冲突；补 poi_id 非空校验。 |
+| BL-03 | service/UserService.insertUser、service/AdminService.add、service/CinemaService.insertCinema | 注册用户名为"先 selectByUsername 判空、后 insert"，无锁、无 DuplicateKeyException 兜底（MarkService 有先例）。并发注册同名双双通过落两行；selectByUsername 无 LIMIT 1，之后登录 TooManyResultsException。**2026-10-18 复核**：库中 `user` / `admin` / `cinema` 三表**均已有 `username` 唯一索引**（见 `db/inventory.tsv`），故"撞键"这一半在库端已被挡住，缺的只剩 Java 侧把 `DuplicateKeyException` 转成与串行路径同一句提示；`selectByUsername` 确认仍是 `SELECT * FROM user WHERE username = ?`、无 `LIMIT 1`，但唯一索引存在时不可能返回多行。 | 捕获 `DuplicateKeyException` 转同一句"账号已存在"（唯一索引已具备，无需另建）。 |
+| BL-04 | service/CinemaService.importFromDirectory | 名录导入的"已收录"判定为无锁读，生成用户名 amap_+poiId 也无唯一兜底。两个管理员并发导入同一名录 id，各读 linked=false 双插同名影院；命中唯一键则整批 @Transactional 回滚报 500。~~UNCERTAIN：名录行 poi_id 是否可能为空。~~ **2026-10-18 复核**：`cinema_directory.poi_id` 为 `NOT NULL` 且 `UNIQUE`，该 UNCERTAIN **不成立**，无需补非空校验。 | 导入路径加锁或捕获唯一键冲突（`cinema.username` 已有唯一索引）。 |
 | BL-05 | service/OrderedService.insertOrder（写 pending_timeout_at 处） | pending_timeout_at 用 JVM 时钟写入，却在 SQL 里与 DB 的 NOW() 比较（OrderedMapper.seatActiveCondition、selectExpiredPendingOrders）。JVM 与 DB 时区不一致时清理任务永不命中（废单永久占座），或提前取消有效订单（前端倒计时仍在走）。 | 超时值与判定统一由 DB 时钟产生（INSERT ... NOW() + INTERVAL 或存时间戳），另立一轮。 |
 
 ## 状态机与契约
@@ -92,7 +96,7 @@
 
 | 编号 | 位置 | 问题 | 处置建议 |
 | --- | --- | --- | --- |
-| BL-42 | mapper/ 其余字符串筛选：ActorMapper.actorName；AdminMapper.name；AreaMapper.title；NoticeMapper.title；TypeMapper.title；VideoMapper.title；UserMapper.name/username/phone；RoomMapper.name；CinemaMapper.selectAll.name（共 11 处） | 与 BL-38 同形：`<if>` 只判 `!= null`、不判空串。（CinemaMapper 的 selectByFilmId 已带判定，此处为其 selectAll 简易查询。）空串入参落成 `= ''` / `LIKE '%%'` 查出零行。 | 同 BL-38 补 `and x != ''`。**本轮未做（登记备查）**：这些文件为 mixed/CRLF 行尾，改一行即整篇重写 EOL（实测 AdminMapper 原始 diff 16 行 vs `--ignore-cr-at-eol` 1 行），噪声大于收益；且空串入参经实测不可达 —— `useCrud.searchForm` 起于空对象（不发键）、下拉无 `clearable`、唯一 clearable 的 `manage/CinemaDirectory.vue:141` 以 `|| undefined` 归一。 |
+| BL-42 | mapper/ 其余字符串筛选：ActorMapper.actorName；AdminMapper.name；AreaMapper.title；NoticeMapper.title；TypeMapper.title；VideoMapper.title；UserMapper.name/username/phone；RoomMapper.name；CinemaMapper.selectAll.name（共 11 处） | 与 BL-38 同形：`<if>` 只判 `!= null`、不判空串。（CinemaMapper 的 selectByFilmId 已带判定，此处为其 selectAll 简易查询。）空串入参落成 `= ''` / `LIKE '%%'` 查出零行。 | 同 BL-38 补 `and x != ''`。**本轮未做（登记备查）**：这些文件为 mixed/CRLF 行尾，改一行即整篇重写 EOL（实测 AdminMapper 原始 diff 16 行 vs `--ignore-cr-at-eol` 1 行），噪声大于收益。**2026-10-18 复核**：空串入参不可达 —— `useCrud.searchForm` 起于 `reactive({})`（不发键，`onReset` 写 `undefined`），文本输入框均无 `clearable`；`manage/CinemaDirectory.vue:141` 的 `|| undefined` 归一属于 `query.city/brand`（clearable 下拉），该页并**没有** `searchForm`，旧文把两处事实混写在一句里。真正 clearable 的输入类控件是 `manage/Admin.vue:12`、`manage/User.vue:12`，清空得 `''`，但只经 `onSearch` 发出，`onReset` 已把键写为 `undefined`。结论不变。 |
 
 ## DTO 层遗留（2026-10-14 dto 审查）
 
