@@ -17,10 +17,21 @@
 | --- | --- | --- |
 | 可购票性 | `start` 晚于当前时间且 status ≠ 停售 | `RecordService.isPurchasable`（静态，全场唯一权威） |
 | 展示状态 | 未开始 / 放映中 / 已结束**由 start 派生**，不落库 | 前端 + `RECORD_STATUS` |
-| 排片冲突 | `countRoomOverlap(room, id, start, start+片长)` | `validateSchedule`；**先查后插，无锁无约束**（BL-01） |
+| 排片冲突 | `countRoomOverlap(room, id, start, start+片长)`；**先锁影厅行再查（当前读）** | `validateSchedule`；见下 |
 | 片长兜底 | 影片 `time` ≤ 0 时用 120 分钟 | `DEFAULT_DURATION_MINUTES` |
 | 已产生订单的场次 | 禁止物理删除 | `ensureNoOrders`（非锁定 COUNT，BL-02） |
 | `room.title` | 存的是**影院名**，`room.name` 才是影厅名 | BL-23 |
+
+### 2.1 排片并发（BL-01，2026-10-18 修复）
+
+「同一影厅不能有重叠场次」在**数据库层无法表达**（那是区间约束，不是列约束），只能靠应用层。两道防线缺一不可：
+
+1. **锁影厅行**：`validateSchedule` 在查重之前 `SELECT * FROM room WHERE id=? FOR UPDATE`，同一影厅的「查 → 插」因此串行，不同影厅互不影响。
+2. **查重必须是当前读**：`countRoomOverlap` 写成 `SELECT COUNT(*) FROM (SELECT ... FOR UPDATE) locked_rows`。
+
+**为什么第 2 条不能省**：MySQL 默认 `REPEATABLE-READ`，普通 `SELECT COUNT(*)` 是一致性非锁定读，读的是事务开始时的快照。实测只做第 1 条时仍然落 2 行 —— 等锁方拿到锁后，看到的还是旧快照，对方刚提交的排片它看不见。
+
+**回归守卫**：`RecordOverlapLockTest.countRoomOverlapUsesLockingRead` 断言 SQL 含 `FOR UPDATE`；删掉该片段测试立即变红。改这条语句前先看它的注释。
 
 ## 3 订单状态机
 

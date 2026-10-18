@@ -8,13 +8,25 @@
 
 更新日期：2026-10-15（2026-10-18 复核增补）。基线：master `bfdd1c07`（清单）、`a2144fc4`（纯清理起点）；复核基线 `3112f8b7`。
 
-**复核时的实测基线**：`mvn -o test` = 305/305 通过（此前长期 6 红，见 §测试隔离）；开发库 `xm-film` 中 `record` / `ordered` / `room` / `mark` 均为 **0 行**。
+**复核时的实测基线**：`mvn -o test` = **309/309** 通过（2026-10-18 收尾；此前长期 6 红，见 §测试隔离）。开发库 `xm-film` 已由 `springboot/demo-data.sql` 补入演示影厅、排片与账号，购票主链已实测跑通。
 
 ## 并发与事务
 
+本轮修复并移出本表：**BL-01** —— 排片时段重叠的「先查后插」。实测复现：两个并发请求对同一影厅同一时段提交，双双返回 200、库里落 2 场完全重叠的排片。
+
+**修复分两步，缺一不可**：
+
+1. `RecordService.validateSchedule` 在查重**之前**加 `RoomMapper.selectByIdForUpdate(roomId)`，锁影厅行 —— 让同一影厅的「查 → 插」串行。锁粒度选影厅，因为要保护的是"该影厅内所有排片"这个集合。
+2. `RecordMapper.countRoomOverlap` 改为**锁定读**（`SELECT COUNT(*) FROM (SELECT ... FOR UPDATE) locked_rows`）—— 这一步是被实测逼出来的：只加第 1 步时**依然落 2 行**。原因是 MySQL 默认 `REPEATABLE-READ`，普通 `SELECT COUNT(*)` 是一致性非锁定读，读事务开始时的快照；等锁方拿到锁后看到的仍是旧快照，对方刚提交的排片它看不见。改用当前读才能读到最新已提交版本。
+
+**验证**：修复前 1/1 复现（2 行）；修复后 8/8 轮并发，每轮恰好一场落库、另一方 409，胜负交替（不是某一方恒定先到）。新增 `RecordOverlapLockTest` 4 条用例，其中 `countRoomOverlapUsesLockingRead` 断言 SQL 含 `FOR UPDATE` —— 实测把该片段删掉后它立即变红。
+
+**遗留**：`updateScoped`（改期）同样经 `validateSchedule`，自动获得同一保护；但「改期」与「另一场新建」的并发仍靠同一把影厅行锁串行，属预期行为。库端仍无区间约束（MySQL 建不了"任意时段不重叠"的列级约束），故行锁是唯一防线，**不要移除**。
+
+---
+
 | 编号 | 位置 | 问题 | 处置建议 |
 | --- | --- | --- | --- |
-| BL-01 | service/RecordService.validateSchedule（countRoomOverlap 调用处） | 影厅时段重叠是"先查后插"的无锁判定：countRoomOverlap 与随后的 INSERT 间无行锁，库端也建不了时间段唯一约束。两个管理员并发为同一影厅提交重叠时段，各读 overlap=0，双双落库成两场重叠排片；用户在两场上各订同一物理座位（countSeatInUse 以 record_id 为界）即同座双卖。 | 建库时对 (room_id, start) 加唯一约束，或 add/update 路径对 room 行加锁串行化。schema 级改动，另立一轮。 |
 | BL-02 | service/RecordService.deleteScoped | 删除前置校验 ensureNoOrders 是非锁定 COUNT，随后才 DELETE；下单路径对 record 行取 FOR UPDATE，两者互不排斥。管理员删排片读到 0 订单后、DELETE 前，用户下单并提交，排片被删而订单悬空（record_id 指向已删行，无座位/凭证来源）。 | 删除路径同样对 record 行取锁，或改软删除/下架状态。 |
 | BL-03 | service/UserService.insertUser、service/AdminService.add、service/CinemaService.insertCinema | 注册用户名为"先 selectByUsername 判空、后 insert"，无锁、无 DuplicateKeyException 兜底（MarkService 有先例）。并发注册同名双双通过落两行；selectByUsername 无 LIMIT 1，之后登录 TooManyResultsException。**2026-10-18 复核**：库中 `user` / `admin` / `cinema` 三表**均已有 `username` 唯一索引**（见 `db/inventory.tsv`），故"撞键"这一半在库端已被挡住，缺的只剩 Java 侧把 `DuplicateKeyException` 转成与串行路径同一句提示；`selectByUsername` 确认仍是 `SELECT * FROM user WHERE username = ?`、无 `LIMIT 1`，但唯一索引存在时不可能返回多行。 | 捕获 `DuplicateKeyException` 转同一句"账号已存在"（唯一索引已具备，无需另建）。 |
 | BL-04 | service/CinemaService.importFromDirectory | 名录导入的"已收录"判定为无锁读，生成用户名 amap_+poiId 也无唯一兜底。两个管理员并发导入同一名录 id，各读 linked=false 双插同名影院；命中唯一键则整批 @Transactional 回滚报 500。~~UNCERTAIN：名录行 poi_id 是否可能为空。~~ **2026-10-18 复核**：`cinema_directory.poi_id` 为 `NOT NULL` 且 `UNIQUE`，该 UNCERTAIN **不成立**，无需补非空校验。 | 导入路径加锁或捕获唯一键冲突（`cinema.username` 已有唯一索引）。 |
