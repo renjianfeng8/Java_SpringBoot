@@ -51,15 +51,25 @@
         SELECT * FROM record WHERE id = #{id} FOR UPDATE
     </select>
 
-    <!-- 同一影厅时段冲突检测（已停售的场次不占用影厅） -->
+    <!-- 同一影厅时段冲突检测（已停售的场次不占用影厅）。
+         **必须 FOR UPDATE，不能去掉**：调用方在 REPEATABLE-READ 下先锁 room 行再调本语句，
+         而普通 SELECT 是一致性非锁定读，读的是事务开始时的快照 —— 等锁期间对方刚提交的
+         排片它看不见，于是两个并发请求都能读到 0、双双插入（BL-01 实测复现 2 行）。
+         锁定读走的是当前读，拿到的永远是最新已提交版本。
+         写法为什么是子查询加 FOR UPDATE 而不是 SELECT COUNT(*) ... FOR UPDATE：
+         后者在 MySQL 里直接报语法错（FOR UPDATE 不能用于聚合）。子查询锁定行、
+         外层 COUNT 计数，效果等价且合法。 -->
     <select id="countRoomOverlap" resultType="int">
-        SELECT COUNT(*) FROM record r
-        LEFT JOIN film f ON r.film_id = f.id
-        WHERE r.room_id = #{roomId}
-          AND COALESCE(r.status, '正常') != '停售'
-          AND #{start} &lt; DATE_ADD(r.start, INTERVAL GREATEST(COALESCE(f.time, 120), 1) MINUTE)
-          AND #{end} &gt; r.start
-        <if test="id != null">AND r.id != #{id}</if>
+        SELECT COUNT(*) FROM (
+            SELECT r.id FROM record r
+            LEFT JOIN film f ON r.film_id = f.id
+            WHERE r.room_id = #{roomId}
+              AND COALESCE(r.status, '正常') != '停售'
+              AND #{start} &lt; DATE_ADD(r.start, INTERVAL GREATEST(COALESCE(f.time, 120), 1) MINUTE)
+              AND #{end} &gt; r.start
+            <if test="id != null">AND r.id != #{id}</if>
+            FOR UPDATE
+        ) locked_rows
     </select>
 
     <!-- 删除守卫引用计数：被排片引用的影片/影院/影厅不允许物理删除 -->

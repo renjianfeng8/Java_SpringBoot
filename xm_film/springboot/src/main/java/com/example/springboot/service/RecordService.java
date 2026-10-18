@@ -146,6 +146,17 @@ public class RecordService extends BaseService<Record> {
                 ? film.getTime()
                 : DEFAULT_DURATION_MINUTES;
         String storedStart = start.format(STORE_FORMATTER);
+
+        // 先锁影厅行，再查重叠 —— 顺序不能反（BL-01）。
+        // 不锁的话：两个管理员并发为同一影厅提交重叠时段，各自的 countRoomOverlap
+        // 都读到 0，随后双双 INSERT，库里出现两场物理重叠的排片，而库端建不了
+        // 「任意时段不重叠」的区间约束。锁住影厅行后，同一影厅的「查 → 插」串行，
+        // 后到者必然看到先到者已提交的场次。
+        // 锁的有效性依赖调用方的事务：validateSchedule 只由 addScoped / updateScoped
+        // 在 @Transactional 内调用，锁随该事务提交或回滚释放。若有人把它挪到事务外
+        // 调用，这里的 FOR UPDATE 会退化成普通读，等于没锁。
+        roomMapper.selectByIdForUpdate(recordItem.getRoomId());
+
         int overlap = recordMapper.countRoomOverlap(
                 recordItem.getRoomId(),
                 recordItem.getId(),

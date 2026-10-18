@@ -23,6 +23,14 @@
         SELECT * FROM room WHERE id = #{id}
     </select>
 
+    <!-- 排片写入的串行化入口：见 RoomMapper.selectByIdForUpdate 的注释。
+         用 SELECT ... FOR UPDATE 锁影厅行，同一影厅的「查重叠 → 插入」因此互斥；
+         不同影厅之间不受影响。锁随所在事务提交/回滚释放。 -->
+    <select id="selectByIdForUpdate" parameterType="java.lang.Integer"
+            resultType="com.example.springboot.entity.Room">
+        SELECT * FROM room WHERE id = #{id} FOR UPDATE
+    </select>
+
     <insert id="insert" parameterType="com.example.springboot.entity.Room"
             useGeneratedKeys="true" keyProperty="id">
         INSERT INTO room
