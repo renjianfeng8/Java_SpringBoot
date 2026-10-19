@@ -2,6 +2,7 @@ package com.example.springboot.service;
 
 import com.example.springboot.common.BaseMapper;
 import com.example.springboot.common.BaseService;
+import com.example.springboot.common.PasswordMatcher;
 import com.example.springboot.entity.Account;
 import com.example.springboot.entity.Cinema;
 import com.example.springboot.entity.CinemaDirectory;
@@ -22,7 +23,6 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DeadlockLoserDataAccessException;
 import org.springframework.dao.DuplicateKeyException;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -55,7 +55,7 @@ public class CinemaService extends BaseService<Cinema> {
 
     private static final String DEFAULT_PASSWORD = "cinema123";
 
-    private final PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+    private final PasswordEncoder passwordEncoder = PasswordMatcher.instance();
 
     public CinemaService(CinemaMapper cinemaMapper, CinemaDirectoryMapper directoryMapper) {
         this.cinemaMapper = cinemaMapper;
@@ -185,7 +185,7 @@ public class CinemaService extends BaseService<Cinema> {
         String username = cinema.getUsername();
         Cinema dbCinema = cinemaMapper.selectByUsername(username);
         if (dbCinema != null) {
-            throw new CustomException(ErrorCode.BUSINESS_CONFLICT.code(), "账号已存在,请更换别的账号");
+            throw new CustomException(ErrorCode.BUSINESS_CONFLICT, "账号已存在,请更换别的账号");
         }
         if (cinema.getPassword() == null) {
             cinema.setPassword(DEFAULT_PASSWORD);
@@ -203,7 +203,7 @@ public class CinemaService extends BaseService<Cinema> {
             // username 唯一索引是最终防线；撞键转成同一句提示，而不是 500。
             // 注意：名录导入（importFromDirectory）**不经过这个方法**，它直接调
             // cinemaMapper.insert，并自己捕获 DuplicateKeyException 按幂等跳过。
-            throw new CustomException(ErrorCode.BUSINESS_CONFLICT.code(), "账号已存在,请更换别的账号");
+            throw new CustomException(ErrorCode.BUSINESS_CONFLICT, "账号已存在,请更换别的账号");
         }
     }
 
@@ -280,15 +280,14 @@ public class CinemaService extends BaseService<Cinema> {
         String username = account.getUsername();
         Cinema dbCinema = cinemaMapper.selectByUsername(username);
         if (dbCinema == null) {
-            throw new CustomException(ErrorCode.UNAUTHORIZED.code(), "账号不存在");
+            throw new CustomException(ErrorCode.UNAUTHORIZED, "账号不存在");
         }
         String password = account.getPassword();
-        if (!passwordEncoder.matches(password, dbCinema.getPassword())
-                && !password.equals(dbCinema.getPassword())) {
-            throw new CustomException(ErrorCode.UNAUTHORIZED.code(), "账号或密码错误");
+        if (!PasswordMatcher.matches(passwordEncoder, password, dbCinema.getPassword())) {
+            throw new CustomException(ErrorCode.UNAUTHORIZED, "账号或密码错误");
         }
         if (!CinemaStatus.APPROVED.equals(dbCinema.getStatus())) {
-            throw new CustomException(ErrorCode.UNAUTHORIZED.code(),
+            throw new CustomException(ErrorCode.UNAUTHORIZED,
                     "影院账号尚未通过审核，暂时无法登录");
         }
         return dbCinema;
@@ -299,11 +298,10 @@ public class CinemaService extends BaseService<Cinema> {
         Integer id = account.getId();
         Cinema cinema = selectById(id);
         if (cinema == null) {
-            throw new CustomException(ErrorCode.UNAUTHORIZED.code(), "账号不存在");
+            throw new CustomException(ErrorCode.UNAUTHORIZED, "账号不存在");
         }
-        if (!passwordEncoder.matches(account.getPassword(), cinema.getPassword())
-                && !account.getPassword().equals(cinema.getPassword())) {
-            throw new CustomException(ErrorCode.UNAUTHORIZED.code(), "原密码错误");
+        if (!PasswordMatcher.matches(passwordEncoder, account.getPassword(), cinema.getPassword())) {
+            throw new CustomException(ErrorCode.UNAUTHORIZED, "原密码错误");
         }
         cinema.setPassword(passwordEncoder.encode(account.getNewPassword()));
         cinemaMapper.updatePassword(cinema);

@@ -151,7 +151,7 @@ public class AuthInterceptor implements HandlerInterceptor {
 
     private void writeUnauthorized(HttpServletResponse response) throws IOException {
         writeJsonError(response, HttpServletResponse.SC_UNAUTHORIZED,
-                Result.error(ErrorCode.UNAUTHORIZED.code(), "登录已过期，请重新登录"));
+                Result.error(ErrorCode.UNAUTHORIZED, "登录已过期，请重新登录"));
     }
 
     /** 包私有以便同包测试直接覆盖门禁规则，无需反射 */
@@ -188,7 +188,7 @@ public class AuthInterceptor implements HandlerInterceptor {
 
     private void writeForbidden(HttpServletResponse response) throws IOException {
         writeJsonError(response, HttpServletResponse.SC_FORBIDDEN,
-                Result.error(ErrorCode.FORBIDDEN.code(), "权限不足"));
+                Result.error(ErrorCode.FORBIDDEN, "权限不足"));
     }
 
     /** 统一回写错误体：HTTP 状态码与 Result 业务码同源，不再在拦截器里另抄一份字面 JSON */

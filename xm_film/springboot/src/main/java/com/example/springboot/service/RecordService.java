@@ -2,6 +2,8 @@ package com.example.springboot.service;
 
 import com.example.springboot.common.BaseMapper;
 import com.example.springboot.common.BaseService;
+import com.example.springboot.common.DateTimeFormats;
+import com.example.springboot.common.PriceParser;
 import com.example.springboot.common.enums.ErrorCode;
 import com.example.springboot.common.enums.RecordStatus;
 import com.example.springboot.common.enums.RoleEnum;
@@ -16,7 +18,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
@@ -45,7 +46,7 @@ public class RecordService extends BaseService<Record> {
             .parseDefaulting(ChronoField.SECOND_OF_MINUTE, 0)
             .toFormatter();
 
-    private static final DateTimeFormatter STORE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+    private static final DateTimeFormatter STORE_FORMATTER = DateTimeFormats.DATE_TIME;
 
     private final RecordMapper recordMapper;
 
@@ -322,14 +323,14 @@ public class RecordService extends BaseService<Record> {
         }
     }
 
+    /**
+     * 票价格式解析：非空、可解析为十进制数。
+     *
+     * <p>与 {@code OrderedService.parsePrice} 共用同一个 {@link PriceParser}：
+     * 同一张排片的票价，写端（录排片）与读端（下单算钱）必须用同一套"什么算合法"，
+     * 否则会出现"能存进去、下单时才报系统错误"这种口径分裂。
+     */
     private static BigDecimal parsePrice(String price) {
-        if (price == null) {
-            throw new CustomException(ErrorCode.PARAM_INVALID, "票价格式错误");
-        }
-        try {
-            return new BigDecimal(price).setScale(2, RoundingMode.HALF_UP);
-        } catch (NumberFormatException e) {
-            throw new CustomException(ErrorCode.PARAM_INVALID, "票价格式错误", e);
-        }
+        return PriceParser.parse(price);
     }
 }

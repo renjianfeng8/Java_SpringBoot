@@ -2,6 +2,7 @@ package com.example.springboot.service;
 
 import com.example.springboot.common.BaseMapper;
 import com.example.springboot.common.BaseService;
+import com.example.springboot.common.PasswordMatcher;
 import com.example.springboot.entity.Account;
 import com.example.springboot.entity.Admin;
 import com.example.springboot.common.enums.ErrorCode;
@@ -9,7 +10,6 @@ import com.example.springboot.common.enums.RoleEnum;
 import com.example.springboot.exception.CustomException;
 import com.example.springboot.mapper.AdminMapper;
 import org.springframework.dao.DuplicateKeyException;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,7 +24,7 @@ public class AdminService extends BaseService<Admin> {
 
     private final AdminMapper adminMapper;
 
-    private final PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+    private final PasswordEncoder passwordEncoder = PasswordMatcher.instance();
 
     public AdminService(AdminMapper adminMapper) {
         this.adminMapper = adminMapper;
@@ -41,7 +41,7 @@ public class AdminService extends BaseService<Admin> {
         String username = admin.getUsername();
         Admin dbAdmin = adminMapper.selectByUsername(username);
         if (dbAdmin != null) {
-            throw new CustomException(ErrorCode.BUSINESS_CONFLICT.code(), "账号已存在,请更换别的账号");
+            throw new CustomException(ErrorCode.BUSINESS_CONFLICT, "账号已存在,请更换别的账号");
         }
         if (admin.getPassword() == null) {
             admin.setPassword("admin123");
@@ -56,7 +56,7 @@ public class AdminService extends BaseService<Admin> {
         } catch (DuplicateKeyException e) {
             // 先查后插的窗口：并发注册同名时两个请求都可能读到 null，username 唯一索引
             // 是最终防线。撞键必须给出与串行路径同一句提示，而不是漏成 500。
-            throw new CustomException(ErrorCode.BUSINESS_CONFLICT.code(), "账号已存在,请更换别的账号");
+            throw new CustomException(ErrorCode.BUSINESS_CONFLICT, "账号已存在,请更换别的账号");
         }
     }
 
@@ -72,12 +72,11 @@ public class AdminService extends BaseService<Admin> {
         String username = account.getUsername();
         Admin dbAdmin = adminMapper.selectByUsername(username);
         if (dbAdmin == null) {
-            throw new CustomException(ErrorCode.UNAUTHORIZED.code(), "账号不存在");
+            throw new CustomException(ErrorCode.UNAUTHORIZED, "账号不存在");
         }
         String password = account.getPassword();
-        if (!passwordEncoder.matches(password, dbAdmin.getPassword())
-                && !password.equals(dbAdmin.getPassword())) {
-            throw new CustomException(ErrorCode.UNAUTHORIZED.code(), "账号或密码错误");
+        if (!PasswordMatcher.matches(passwordEncoder, password, dbAdmin.getPassword())) {
+            throw new CustomException(ErrorCode.UNAUTHORIZED, "账号或密码错误");
         }
         return dbAdmin;
     }
@@ -87,11 +86,10 @@ public class AdminService extends BaseService<Admin> {
         Integer id = account.getId();
         Admin admin = selectById(id);
         if (admin == null) {
-            throw new CustomException(ErrorCode.UNAUTHORIZED.code(), "账号不存在");
+            throw new CustomException(ErrorCode.UNAUTHORIZED, "账号不存在");
         }
-        if (!passwordEncoder.matches(account.getPassword(), admin.getPassword())
-                && !account.getPassword().equals(admin.getPassword())) {
-            throw new CustomException(ErrorCode.UNAUTHORIZED.code(), "原密码错误");
+        if (!PasswordMatcher.matches(passwordEncoder, account.getPassword(), admin.getPassword())) {
+            throw new CustomException(ErrorCode.UNAUTHORIZED, "原密码错误");
         }
         admin.setPassword(passwordEncoder.encode(account.getNewPassword()));
         adminMapper.updatePassword(admin);

@@ -1,5 +1,7 @@
 package com.example.springboot.service;
 
+import com.example.springboot.common.OrderNumber;
+import com.example.springboot.common.SystemClock;
 import com.example.springboot.common.enums.ErrorCode;
 import com.example.springboot.common.enums.RechargeStatus;
 import com.example.springboot.common.enums.RoleEnum;
@@ -11,12 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
 import java.util.List;
-import java.util.UUID;
 
 /**
  * 充值单据：提交申请只生成「处理中」单据且不改变余额；
@@ -27,8 +24,6 @@ public class RechargeService {
 
     /** 单笔充值上限，防止演示时误输入天文数字 */
     public static final BigDecimal MAX_AMOUNT = new BigDecimal("50000.00");
-
-    private static final String DATE_TIME_PATTERN = "yyyy-MM-dd HH:mm:ss";
 
     private final RechargeOrderMapper rechargeOrderMapper;
 
@@ -52,7 +47,8 @@ public class RechargeService {
         }
 
         RechargeOrder order = new RechargeOrder();
-        order.setRechargeNo(generateRechargeNo());
+        // R 前缀让充值单号与订单号一眼可分；单号生成规则统一在 OrderNumber 里
+        order.setRechargeNo(OrderNumber.generate("R"));
         order.setUserId(tokenUserId);
         order.setAmount(normalizeAmount(amount));
         order.setStatus(RechargeStatus.PROCESSING);
@@ -118,13 +114,6 @@ public class RechargeService {
     }
 
     private String now() {
-        return LocalDateTime.now(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern(DATE_TIME_PATTERN));
-    }
-
-    /** 充值单号：R + 日期 + 8 位随机，与订单号一眼可分 */
-    private String generateRechargeNo() {
-        String date = LocalDate.now(ZoneId.systemDefault()).format(DateTimeFormatter.BASIC_ISO_DATE);
-        String suffix = UUID.randomUUID().toString().replace("-", "").substring(0, 8).toUpperCase();
-        return "R" + date + suffix;
+        return SystemClock.nowFormatted();
     }
 }

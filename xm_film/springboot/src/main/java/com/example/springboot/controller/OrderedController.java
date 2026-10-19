@@ -168,7 +168,7 @@ public class OrderedController extends BaseController<Ordered, OrderedRequest, O
         if (orderedService.payOrder(id, AuthContext.role(), AuthContext.userId(), request.getPayPassword())
                 == PayResult.TIMEOUT_CANCELLED) {
             // 超时取消必须已落库，因此服务层不抛异常回滚，由此处翻译成业务错误返回客户端
-            return Result.error(ErrorCode.BUSINESS_CONFLICT.code(), "支付超时，订单已自动取消");
+            return Result.error(ErrorCode.BUSINESS_CONFLICT, "支付超时，订单已自动取消");
         }
         return Result.success();
     }

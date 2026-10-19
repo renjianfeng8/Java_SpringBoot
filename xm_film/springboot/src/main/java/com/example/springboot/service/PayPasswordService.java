@@ -1,11 +1,12 @@
 package com.example.springboot.service;
 
+import com.example.springboot.common.DateTimeFormats;
+import com.example.springboot.common.PasswordMatcher;
 import com.example.springboot.common.enums.ErrorCode;
 import com.example.springboot.dto.response.PayPasswordStateView;
 import com.example.springboot.entity.User;
 import com.example.springboot.exception.CustomException;
 import com.example.springboot.mapper.UserMapper;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
@@ -37,12 +38,11 @@ public class PayPasswordService {
     /** 锁定时长（分钟） */
     private static final int LOCK_MINUTES = 15;
 
-    private static final DateTimeFormatter DATE_TIME_FORMATTER =
-            DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+    private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormats.DATE_TIME;
 
     private final UserMapper userMapper;
 
-    private final PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+    private final PasswordEncoder passwordEncoder = PasswordMatcher.instance();
 
     public PayPasswordService(UserMapper userMapper) {
         this.userMapper = userMapper;
@@ -132,8 +132,7 @@ public class PayPasswordService {
         if (user == null) {
             throw new CustomException(ErrorCode.UNAUTHORIZED, "账号不存在");
         }
-        String stored = user.getPassword();
-        if (!passwordEncoder.matches(rawLoginPassword, stored) && !rawLoginPassword.equals(stored)) {
+        if (!PasswordMatcher.matches(passwordEncoder, rawLoginPassword, user.getPassword())) {
             throw new CustomException(ErrorCode.UNAUTHORIZED, "登录密码错误");
         }
     }

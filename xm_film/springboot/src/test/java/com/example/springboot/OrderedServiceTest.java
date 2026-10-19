@@ -184,6 +184,39 @@ class OrderedServiceTest {
                 .hasMessageContaining("已开场");
     }
 
+    /**
+     * 票价为非法值时，下单返回 {@code PARAM_INVALID}（400），而不是
+     * {@code SYSTEM_ERROR}（500）。
+     *
+     * <p><b>这是单元级契约，不代表生产可复现</b>：{@code record.price} 是
+     * {@code decimal(10,2)}，库层拒绝非法字符串（实测 SQL 直接报错），
+     * 所以真实链路里 {@code Record.getPrice()} 不会拿到 "abc"。
+     * 本用例守的是"解析失败时的错误码口径与录入侧一致" —— 一旦将来列类型放宽，
+     * 或者有人把这条解析搬去处理用户输入，错误码不能退回 500。
+     */
+    @Test
+    void invalidRecordPriceIsParamInvalidNotSystemError() {
+        Record recordRow = new Record();
+        recordRow.setId(1);
+        recordRow.setFilmId(24);
+        recordRow.setCinemaId(10);
+        recordRow.setRoomId(7);
+        recordRow.setPrice("abc");
+        recordRow.setStart(futureStart());
+        when(recordMapper.selectByIdForUpdate(1)).thenReturn(recordRow);
+        when(orderedMapper.countSeatInUse(1, "1排1座")).thenReturn(0);
+
+        Ordered ordered = new Ordered();
+        ordered.setRecordId(1);
+        ordered.setSeat("1排1座");
+
+        assertThatThrownBy(() -> orderedService.createOrder(ordered, RoleEnum.USER.name(), 8))
+                .isInstanceOf(CustomException.class)
+                .satisfies(e -> assertThat(((CustomException) e).getCode())
+                        .isEqualTo(ErrorCode.PARAM_INVALID.code()));
+        verify(orderedMapper, never()).insert(any(Ordered.class));
+    }
+
     @Test
     void cannotCreateOrderForStoppedRecord() {
         Record recordRow = new Record();

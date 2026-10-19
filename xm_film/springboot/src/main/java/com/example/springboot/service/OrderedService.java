@@ -1,6 +1,10 @@
 package com.example.springboot.service;
 
 import com.example.springboot.common.BaseMapper;
+import com.example.springboot.common.OrderNumber;
+import com.example.springboot.common.PriceParser;
+import com.example.springboot.common.SeatParser;
+import com.example.springboot.common.SystemClock;
 import com.example.springboot.dto.response.TodayRevenueView;
 import com.example.springboot.common.BaseService;
 import com.example.springboot.common.enums.ErrorCode;
@@ -26,18 +30,11 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
-import java.util.Arrays;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 /**
  * 订单状态机与座位占用的唯一出处：选座建单（锁座、超时废单）、支付、取消、退票、
@@ -47,17 +44,7 @@ import java.util.regex.Pattern;
 @Transactional(readOnly = true)
 public class OrderedService extends BaseService<Ordered> {
 
-    private static final String DATE_TIME_PATTERN = "yyyy-MM-dd HH:mm:ss";
-
-    /** 座位号形状：{行}排{列}座；合法范围由所属影厅的座位行列数决定，不再写死 8×8 */
-    private static final Pattern SEAT_SHAPE = Pattern.compile("(\\d{1,2})排(\\d{1,2})座");
-
-    /** 影厅座位数缺失时的兜底，与 room 表列默认值一致 */
-    private static final int DEFAULT_SEAT_ROWS = 8;
-    private static final int DEFAULT_SEAT_COLS = 8;
-
-    /** 单笔订单最多选择的座位数，防止恶意一次性锁满整个影厅 */
-    private static final int MAX_SEATS_PER_ORDER = 6;
+    /** 座位号形状与上限统一在 {@link SeatParser} —— 所有"什么算合法座位"都在那里 */
 
     /** 退票截止：放映前 60 分钟（与前台词：未取票用户在放映前60分钟可退票） */
     private static final int REFUND_DEADLINE_MINUTES = 60;
@@ -190,7 +177,7 @@ public class OrderedService extends BaseService<Ordered> {
         ordered.setUnitPrice(price);
         ordered.setStatus(OrderStatus.PENDING_PAYMENT);
         ordered.setSeat(String.join(",", seats));
-        ordered.setCreateTime(LocalDateTime.now(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern(DATE_TIME_PATTERN)));
+        ordered.setCreateTime(SystemClock.nowFormatted());
         // 超时点交给数据库算（BL-05）：这一列只在 SQL 里与 NOW() 比较，
         // 用 JVM 时钟写会让两边时区不一致时差出整小时。哨兵的说明见 Ordered.pendingTimeoutFromDb。
         ordered.setPendingTimeoutFromDb(true);
@@ -318,7 +305,7 @@ public class OrderedService extends BaseService<Ordered> {
     }
 
     private String now() {
-        return LocalDateTime.now(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern(DATE_TIME_PATTERN));
+        return SystemClock.nowFormatted();
     }
 
     @Override
@@ -600,59 +587,32 @@ public class OrderedService extends BaseService<Ordered> {
      * 影厅已删除或未配置座位数时退回 8×8（与 room 表列默认值一致）。
      */
     private List<String> normalizeSeats(String rawSeats, Integer roomId) {
-        if (rawSeats == null || rawSeats.trim().isEmpty()) {
-            throw new CustomException(ErrorCode.PARAM_INVALID, "请选择座位");
-        }
-        List<String> rawTokens = Arrays.stream(rawSeats.replace('，', ',').split(","))
-                .map(String::trim)
-                .filter(seat -> !seat.isEmpty())
-                .toList();
-        if (rawTokens.isEmpty()) {
-            throw new CustomException(ErrorCode.PARAM_INVALID, "请选择座位");
-        }
-
+        // 解析、范围校验、规范化与去重统一由 SeatParser 负责；这里只负责取影厅
         Room room = roomId == null ? null : roomMapper.selectById(roomId);
-        int rows = room != null && room.getSeatRows() != null ? room.getSeatRows() : DEFAULT_SEAT_ROWS;
-        int cols = room != null && room.getSeatCols() != null ? room.getSeatCols() : DEFAULT_SEAT_COLS;
-
-        // 统一成规范形 "R排C座"（去前导零）后再去重、再存库：否则 "1排01座" 与 "1排1座"
-        // 会被当成两个座位串，countSeatInUse 的 FIND_IN_SET 逐字节比对就漏判，同一座位双卖。
-        Set<String> seats = new LinkedHashSet<>();
-        for (String raw : rawTokens) {
-            Matcher matcher = SEAT_SHAPE.matcher(raw);
-            if (!matcher.matches()) {
-                throw new CustomException(ErrorCode.PARAM_INVALID, "座位格式错误: " + raw);
-            }
-            int row = Integer.parseInt(matcher.group(1));
-            int col = Integer.parseInt(matcher.group(2));
-            if (row < 1 || row > rows || col < 1 || col > cols) {
-                throw new CustomException(ErrorCode.PARAM_INVALID,
-                        "座位超出影厅范围: " + raw + "（本厅 " + rows + " 排 " + cols + " 座）");
-            }
-            seats.add(row + "排" + col + "座");
-        }
-        if (seats.size() > MAX_SEATS_PER_ORDER) {
-            throw new CustomException(ErrorCode.PARAM_INVALID,
-                    "单笔订单最多选择 " + MAX_SEATS_PER_ORDER + " 个座位");
-        }
-        return List.copyOf(seats);
+        return SeatParser.normalize(rawSeats, room);
     }
 
+    /**
+     * 把库里的票价文本解析为金额。库列是 {@code decimal(10,2)}，因此这里
+     * <b>几乎不可能</b>拿到非法值 —— 约束在数据库层已经生效。
+     *
+     * <p>但它仍然必须存在且必须与 {@code RecordService.parsePrice} 同口径：
+     * <ol>
+     *   <li>{@code Record.price} 在实体里是 {@code String}（前端提交与回显都按字符串走），
+     *       而非空解析失败在本项目里是真实可发生的（见 RecordService 的录入校验）；</li>
+     *   <li>一旦库被改成宽松模式、或某天换成 varchar 列，这条就是唯一的防线。
+     *       届时若不在这里拦住，异常会漏成 500「系统错误」。</li>
+     * </ol>
+     *
+     * @see PriceParser
+     */
     private BigDecimal parsePrice(String price) {
-        if (price == null) {
-            throw new CustomException(ErrorCode.SYSTEM_ERROR, "场次票价配置错误");
-        }
-        try {
-            return new BigDecimal(price).setScale(2, RoundingMode.HALF_UP);
-        } catch (NumberFormatException e) {
-            throw new CustomException(ErrorCode.SYSTEM_ERROR, "场次票价配置错误", e);
-        }
+        return PriceParser.parse(price);
     }
 
+    /** 订单号：无前缀；生成规则统一在 {@link OrderNumber}（与充值单号同一份实现） */
     private String generateOrderNo() {
-        String date = LocalDate.now(ZoneId.systemDefault()).format(DateTimeFormatter.BASIC_ISO_DATE);
-        String suffix = UUID.randomUUID().toString().replace("-", "").substring(0, 8).toUpperCase();
-        return date + suffix;
+        return OrderNumber.generate("");
     }
 
     /**

@@ -30,17 +30,17 @@ public class FileUploadController {
     public Result<String> uploadFile(@RequestParam("file") MultipartFile file) {
         try {
             if (file == null || file.isEmpty()) {
-                return Result.error(ErrorCode.PARAM_INVALID.code(), "上传文件不能为空");
+                return Result.error(ErrorCode.PARAM_INVALID, "上传文件不能为空");
             }
             String fileName = FileUtil.uploadFile(file, uploadDir);
             String fileUrl = accessPrefix + fileName;
             log.info("生成的文件URL: {}", fileUrl);
             return Result.success(fileUrl);
         } catch (IllegalArgumentException e) {
-            return Result.error(ErrorCode.PARAM_INVALID.code(), e.getMessage());
+            return Result.error(ErrorCode.PARAM_INVALID, e.getMessage());
         } catch (IOException e) {
             log.error("File upload failed", e);
-            return Result.error(ErrorCode.SYSTEM_ERROR.code(), "文件上传失败: " + e.getMessage());
+            return Result.error(ErrorCode.SYSTEM_ERROR, "文件上传失败: " + e.getMessage());
         }
     }
 }

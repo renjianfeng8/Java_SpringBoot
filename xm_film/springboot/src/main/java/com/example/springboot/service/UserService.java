@@ -2,6 +2,7 @@ package com.example.springboot.service;
 
 import com.example.springboot.common.BaseMapper;
 import com.example.springboot.common.BaseService;
+import com.example.springboot.common.PasswordMatcher;
 import com.example.springboot.entity.Account;
 import com.example.springboot.entity.User;
 import com.example.springboot.common.enums.ErrorCode;
@@ -12,7 +13,6 @@ import com.github.pagehelper.PageInfo;
 import com.github.pagehelper.page.PageMethod;
 import org.springframework.beans.BeanUtils;
 import org.springframework.dao.DuplicateKeyException;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,7 +31,7 @@ public class UserService extends BaseService<User> {
 
     private final OrderedService orderedService;
 
-    private final PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+    private final PasswordEncoder passwordEncoder = PasswordMatcher.instance();
 
     public UserService(UserMapper userMapper, OrderedService orderedService) {
         this.userMapper = userMapper;
@@ -53,7 +53,7 @@ public class UserService extends BaseService<User> {
         String username = user.getUsername();
         User dbUser = userMapper.selectByUsername(username);
         if (dbUser != null) {
-            throw new CustomException(ErrorCode.BUSINESS_CONFLICT.code(), "账号已存在,请更换别的账号");
+            throw new CustomException(ErrorCode.BUSINESS_CONFLICT, "账号已存在,请更换别的账号");
         }
         if (user.getPassword() == null) {
             user.setPassword("user123");
@@ -72,7 +72,7 @@ public class UserService extends BaseService<User> {
             // 本地单实例下 MySQL 的 INSERT 会阻塞同名并发插入，该窗口难以通过 HTTP
             // 复现（实测 8 线程 × 5 轮均为 1 成功 + 7 个 409），但守护仍不可省：
             // 多实例部署或重试场景下它就是唯一的正确性来源。
-            throw new CustomException(ErrorCode.BUSINESS_CONFLICT.code(), "账号已存在,请更换别的账号");
+            throw new CustomException(ErrorCode.BUSINESS_CONFLICT, "账号已存在,请更换别的账号");
         }
     }
 
@@ -89,12 +89,11 @@ public class UserService extends BaseService<User> {
         String username = account.getUsername();
         User dbUser = userMapper.selectByUsername(username);
         if (dbUser == null) {
-            throw new CustomException(ErrorCode.UNAUTHORIZED.code(), "账号不存在");
+            throw new CustomException(ErrorCode.UNAUTHORIZED, "账号不存在");
         }
         String password = account.getPassword();
-        if (!passwordEncoder.matches(password, dbUser.getPassword())
-                && !password.equals(dbUser.getPassword())) {
-            throw new CustomException(ErrorCode.UNAUTHORIZED.code(), "账号或密码错误");
+        if (!PasswordMatcher.matches(passwordEncoder, password, dbUser.getPassword())) {
+            throw new CustomException(ErrorCode.UNAUTHORIZED, "账号或密码错误");
         }
         return dbUser;
     }
@@ -104,11 +103,10 @@ public class UserService extends BaseService<User> {
         Integer id = account.getId();
         User user = selectById(id);
         if (user == null) {
-            throw new CustomException(ErrorCode.UNAUTHORIZED.code(), "账号不存在");
+            throw new CustomException(ErrorCode.UNAUTHORIZED, "账号不存在");
         }
-        if (!passwordEncoder.matches(account.getPassword(), user.getPassword())
-                && !account.getPassword().equals(user.getPassword())) {
-            throw new CustomException(ErrorCode.UNAUTHORIZED.code(), "原密码错误");
+        if (!PasswordMatcher.matches(passwordEncoder, account.getPassword(), user.getPassword())) {
+            throw new CustomException(ErrorCode.UNAUTHORIZED, "原密码错误");
         }
         user.setPassword(passwordEncoder.encode(account.getNewPassword()));
         userMapper.updatePassword(user);

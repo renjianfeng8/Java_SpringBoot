@@ -46,7 +46,7 @@ public class GlobalExceptionHandler {
                 .map(error -> error.getField() + ": " + error.getDefaultMessage())
                 .collect(Collectors.joining("; "));
         logger.warn("参数校验失败: {}", message);
-        return Result.error(ErrorCode.PARAM_INVALID.code(), message);
+        return Result.error(ErrorCode.PARAM_INVALID, message);
     }
 
     /**
@@ -70,7 +70,7 @@ public class GlobalExceptionHandler {
     @ResponseBody
     public Result<Void> restClientError(RestClientException e) {
         logger.warn("外部接口请求失败: {}", e.getMessage());
-        return Result.error(ErrorCode.SYSTEM_ERROR.code(), "TMDB 接口不可达，请确认本机代理已开启");
+        return Result.error(ErrorCode.SYSTEM_ERROR, "TMDB 接口不可达，请确认本机代理已开启");
     }
 
     /**
@@ -93,10 +93,10 @@ public class GlobalExceptionHandler {
         // 外键拒绝删除：绝大多数是「删排片时该场次已有订单」。给可操作的话术，
         // 而不是让管理员对着「系统错误」猜。
         if (detail != null && detail.contains("foreign key")) {
-            return Result.error(ErrorCode.BUSINESS_CONFLICT.code(),
+            return Result.error(ErrorCode.BUSINESS_CONFLICT,
                     "该记录仍被其他数据引用，无法删除；如涉及场次请将状态改为「停售」");
         }
-        return Result.error(ErrorCode.BUSINESS_CONFLICT.code(),
+        return Result.error(ErrorCode.BUSINESS_CONFLICT,
                 "数据违反唯一性或完整性约束，请检查后重试");
     }
 
@@ -115,7 +115,7 @@ public class GlobalExceptionHandler {
         logger.warn("参数类型不匹配: name={}, value={}, requiredType={}",
                 e.getName(), e.getValue(),
                 e.getRequiredType() == null ? "?" : e.getRequiredType().getSimpleName());
-        return Result.error(ErrorCode.PARAM_INVALID.code(),
+        return Result.error(ErrorCode.PARAM_INVALID,
                 "参数「" + e.getName() + "」格式不正确");
     }
 
@@ -129,7 +129,7 @@ public class GlobalExceptionHandler {
     @ResponseBody
     public Result<Void> missingParameter(MissingServletRequestParameterException e) {
         logger.warn("缺少必填参数: {}", e.getParameterName());
-        return Result.error(ErrorCode.PARAM_INVALID.code(),
+        return Result.error(ErrorCode.PARAM_INVALID,
                 "缺少必填参数「" + e.getParameterName() + "」");
     }
 
@@ -143,7 +143,7 @@ public class GlobalExceptionHandler {
     @ResponseBody
     public Result<Void> unreadableBody(HttpMessageNotReadableException e) {
         logger.warn("请求体无法解析: {}", e.getMessage());
-        return Result.error(ErrorCode.PARAM_INVALID.code(), "请求体缺失或格式不正确");
+        return Result.error(ErrorCode.PARAM_INVALID, "请求体缺失或格式不正确");
     }
 
     /** 不支持的请求方法（如对只读端点发 DELETE）—— 应为 405 语义，归到参数错误档 */
@@ -151,7 +151,7 @@ public class GlobalExceptionHandler {
     @ResponseBody
     public Result<Void> methodNotSupported(HttpRequestMethodNotSupportedException e) {
         logger.warn("不支持的请求方法: {}", e.getMessage());
-        return Result.error(ErrorCode.PARAM_INVALID.code(),
+        return Result.error(ErrorCode.PARAM_INVALID,
                 "该接口不支持 " + e.getMethod() + " 请求");
     }
 
@@ -160,7 +160,7 @@ public class GlobalExceptionHandler {
     @ResponseBody
     public Result<Void> mediaTypeNotSupported(HttpMediaTypeNotSupportedException e) {
         logger.warn("不支持的 Content-Type: {}", e.getContentType());
-        return Result.error(ErrorCode.FILE_INVALID.code(),
+        return Result.error(ErrorCode.FILE_INVALID,
                 "不支持的请求格式，请使用 " + e.getSupportedMediaTypes());
     }
 
@@ -183,7 +183,7 @@ public class GlobalExceptionHandler {
     @ResponseBody
     public Result<Void> concurrentConflict(PessimisticLockingFailureException e) {
         logger.warn("并发冲突（可重试）: type={}, message={}", e.getClass().getSimpleName(), e.getMessage());
-        return Result.error(ErrorCode.BUSINESS_CONFLICT.code(),
+        return Result.error(ErrorCode.BUSINESS_CONFLICT,
                 "操作与他人发生冲突，请稍后重试");
     }
 
