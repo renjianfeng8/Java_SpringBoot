@@ -2,12 +2,17 @@ package com.example.springboot.service;
 
 import com.example.springboot.common.BaseMapper;
 import com.example.springboot.common.BaseService;
+import com.example.springboot.common.enums.ErrorCode;
 import com.example.springboot.dto.response.FilmTypeJoinView;
 import com.example.springboot.entity.Film;
 import com.example.springboot.entity.Type;
+import com.example.springboot.exception.CustomException;
 import com.example.springboot.mapper.FilmMapper;
+import com.example.springboot.mapper.OrderedMapper;
+import com.example.springboot.mapper.RecordMapper;
 import com.github.pagehelper.PageInfo;
 import com.github.pagehelper.page.PageMethod;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -15,6 +20,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * 影片的增删改查，外加类型关联的同步读写与按票房/评分的榜单查询。
@@ -26,8 +32,19 @@ public class FilmService extends BaseService<Film> {
 
     private final FilmMapper filmMapper;
 
+    private RecordMapper recordMapper;
+
+    private OrderedMapper orderedMapper;
+
     public FilmService(FilmMapper filmMapper) {
         this.filmMapper = filmMapper;
+    }
+
+    /** 删除守卫的计数源，setter 注入以免破坏直接 new 的既有用法 */
+    @Autowired
+    private void setReferenceMappers(RecordMapper recordMapper, OrderedMapper orderedMapper) {
+        this.recordMapper = recordMapper;
+        this.orderedMapper = orderedMapper;
     }
 
     @Override
@@ -87,6 +104,34 @@ public class FilmService extends BaseService<Film> {
                 filmMapper.insertFilmTypes(film.getId(), film.getTypeIds());
             }
         }
+    }
+
+    /**
+     * 删除影片：先锁影片行，再数排片/订单引用，最后删除。
+     *
+     * <p>与 {@link CinemaService#deleteGuarded} 同一口径：守卫从 Controller 下沉到
+     * 事务内，消除「数到 0 → 有人插入排片 → DELETE」的窗口；批量按 id 升序加锁，
+     * 避免 [A,B] 与 [B,A] 交叉等待死锁。完整理由见 CinemaService 的同名方法。
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public void deleteGuarded(List<Integer> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return;
+        }
+        List<Integer> ordered = ids.stream().filter(Objects::nonNull).distinct().sorted().toList();
+        for (Integer id : ordered) {
+            if (filmMapper.selectByIdForUpdate(id) == null) {
+                throw new CustomException(ErrorCode.NOT_FOUND, "影片不存在，可能已被删除");
+            }
+            int records = recordMapper.countByFilmId(id);
+            int orders = orderedMapper.countByFilmId(id);
+            if (records > 0 || orders > 0) {
+                throw new CustomException(ErrorCode.BUSINESS_CONFLICT,
+                        "影片 ID " + id + " 已有 " + records + " 个排片、" + orders
+                                + " 笔订单，无法删除；如需下架请将状态改为「停止上映」");
+            }
+        }
+        deleteBatch(ordered);
     }
 
     public List<Film> getBoxOfficeTop(Film film) {

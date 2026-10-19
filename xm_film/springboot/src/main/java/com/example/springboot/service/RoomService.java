@@ -75,6 +75,13 @@ public class RoomService extends BaseService<Room> {
             throw new CustomException(ErrorCode.PARAM_INVALID, "请选择所属影院");
         }
         validateSeatLayout(room);
+        // 锁影院行再派生名称（与 CinemaService 的删除守卫抢同一把锁）。
+        // 顺序是「先锁父行、再插子行」：若先插后锁，删除方可能在两者之间数完 0 就删，
+        // 库里随即出现指向不存在影院的影厅行。锁住影院行后，并发的删除要么先完成
+        // （这里随之查不到影院、拒绝新增），要么被这里挡住直到新增提交。
+        if (cinemaService.selectByIdForUpdate(room.getCinemaId()) == null) {
+            throw new CustomException(ErrorCode.BUSINESS_CONFLICT, "所属影院不存在，无法确定影厅归属");
+        }
         // 影院名称由影院记录派生，不接受前端手填
         String title = cinemaTitleOf(room.getCinemaId());
         if (title == null) {

@@ -10,6 +10,9 @@ import java.util.List;
 
 public interface FilmMapper extends BaseMapper<Film> {
 
+    /** 删除守卫用：锁影片行（须在 @Transactional 内调用，否则退化为普通读） */
+    Film selectByIdForUpdate(Integer id);
+
     List<Film> selectByTitle(String title);
 
     List<Film> selectByCinema(@Param("cinemaId") Integer cinemaId, @Param("filmId") Integer filmId);

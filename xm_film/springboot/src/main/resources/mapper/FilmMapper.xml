@@ -53,6 +53,15 @@
         WHERE film.id = #{id}
     </select>
 
+    <!-- 删除守卫的串行化入口：删除前先锁影片行，与 RecordService 写入排片时
+         锁影厅行的口径一致 —— 都先锁被引用的父行，再数/写子表。
+         不加锁时，「数到 0 个排片 → DELETE」之间可以插进一场新排片，
+         DELETE 撞外键 RESTRICT，管理员拿到的是通用提示而非「已有 N 个排片」。 -->
+    <select id="selectByIdForUpdate" parameterType="java.lang.Integer"
+            resultType="com.example.springboot.entity.Film">
+        SELECT * FROM film WHERE id = #{id} FOR UPDATE
+    </select>
+
     <select id="selectAll" resultType="com.example.springboot.entity.Film">
         SELECT
         <include refid="filmColumnsWithRevenue"/>,

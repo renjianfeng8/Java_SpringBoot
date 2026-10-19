@@ -93,7 +93,7 @@ public class AmapClient {
         URI uri = UriComponentsBuilder.fromHttpUrl(DISTRICT_URL)
                 .queryParam("key", key)
                 .queryParam("keywords", cityName)
-                .queryParam("subdistrict", 1)
+                .queryParam("subdistrict", 2)
                 .queryParam("extensions", "base")
                 .build()
                 .encode()
@@ -106,8 +106,19 @@ public class AmapClient {
             return result;
         }
         JsonNode city = districts.get(0);
+        boolean municipality = "province".equals(text(city, "level"));
         for (JsonNode d : districts) {
             if ("city".equals(text(d, "level"))) {
+                city = d;
+                municipality = false;
+                break;
+            }
+        }
+        // 直辖市实测只返回一个省级节点，且其下只有「北京城区」这一个 level=city 节点、无区县；
+        // 区县再挂在 city 的下一层，因此必须多要一层（2026-10-19 实测：subdistrict=1 时
+        // 北京只返回 1 个「北京城区」，导入因此永远抓到 0 条）。
+        for (JsonNode d : city.path("districts")) {
+            if (municipality && "city".equals(text(d, "level"))) {
                 city = d;
                 break;
             }

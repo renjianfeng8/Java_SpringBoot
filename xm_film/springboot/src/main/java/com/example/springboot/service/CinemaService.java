@@ -13,9 +13,13 @@ import com.example.springboot.dto.response.CinemaRegionView;
 import com.example.springboot.exception.CustomException;
 import com.example.springboot.mapper.CinemaDirectoryMapper;
 import com.example.springboot.mapper.CinemaMapper;
+import com.example.springboot.mapper.OrderedMapper;
+import com.example.springboot.mapper.RecordMapper;
+import com.example.springboot.mapper.RoomMapper;
 import com.github.pagehelper.PageInfo;
 import com.github.pagehelper.page.PageMethod;
 import org.springframework.beans.BeanUtils;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DeadlockLoserDataAccessException;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -28,6 +32,7 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -42,6 +47,12 @@ public class CinemaService extends BaseService<Cinema> {
 
     private final CinemaDirectoryMapper directoryMapper;
 
+    private RoomMapper roomMapper;
+
+    private RecordMapper recordMapper;
+
+    private OrderedMapper orderedMapper;
+
     private static final String DEFAULT_PASSWORD = "cinema123";
 
     private final PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
@@ -49,6 +60,19 @@ public class CinemaService extends BaseService<Cinema> {
     public CinemaService(CinemaMapper cinemaMapper, CinemaDirectoryMapper directoryMapper) {
         this.cinemaMapper = cinemaMapper;
         this.directoryMapper = directoryMapper;
+    }
+
+    /**
+     * 删除守卫所需的只读计数源，用 setter 注入而不是扩构造器：
+     * 构造器已被单测直接 new，扩参数会破坏既有用例；这三个 mapper 只在
+     * {@link #deleteGuarded} 里用到，没有循环依赖风险。
+     */
+    @Autowired
+    private void setReferenceMappers(RoomMapper roomMapper, RecordMapper recordMapper,
+                                     OrderedMapper orderedMapper) {
+        this.roomMapper = roomMapper;
+        this.recordMapper = recordMapper;
+        this.orderedMapper = orderedMapper;
     }
 
     @Override
@@ -189,6 +213,67 @@ public class CinemaService extends BaseService<Cinema> {
         cinema.setPassword(null);
         cinema.setRole(null);
         super.update(cinema);
+    }
+
+    /**
+     * 删除影院：先锁影院行，再数子表引用（影厅/排片/订单），最后删除。
+     *
+     * <p><b>为什么守卫必须在 Service 且在事务内</b>（原实现放在 Controller）：
+     * Controller 的计数与 {@code delete} 分属两个事务，中间存在窗口 —— 管理员数到
+     * 「0 个影厅」之后、DELETE 之前，影院角色可以新增一个影厅，DELETE 随即撞外键
+     * RESTRICT。数据不会坏（外键挡住了），但管理员拿到的是通用提示
+     * 「仍被其他数据引用」，而不是「已有 1 个影厅」。锁住影院行后，
+     * {@code RoomService.addScoped} 的新增会被挡到删除提交之后（届时影院已不存在，新增被拒）。
+     *
+     * <p><b>批量删除按 id 升序加锁</b>：两个管理员同时提交 [A,B] 与 [B,A] 时，
+     * 若各自按请求顺序加锁就会互相等待而死锁（BL-04 已实测该库会报死锁）。
+     *
+     * <p>计数与删除之间不再需要留缝，所以整段没有 SLEEP 之类的东西；
+     * 这里刻意不把 delete 挪回 Controller —— 那正是本节要消除的两套口径。
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public void deleteGuarded(List<Integer> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return;
+        }
+        List<Integer> ordered = ids.stream().filter(Objects::nonNull).distinct().sorted().toList();
+        List<String> conflicts = new ArrayList<>();
+        for (Integer id : ordered) {
+            if (cinemaMapper.selectByIdForUpdate(id) == null) {
+                throw new CustomException(ErrorCode.NOT_FOUND, "影院不存在，可能已被删除");
+            }
+            String conflict = describeReferences(id);
+            if (conflict != null) {
+                conflicts.add(conflict);
+            }
+        }
+        if (!conflicts.isEmpty()) {
+            throw new CustomException(ErrorCode.BUSINESS_CONFLICT, String.join("；", conflicts) + "，无法删除");
+        }
+        deleteBatch(ordered);
+    }
+
+    /** 汇总影院下挂的影厅/排片/订单数，有任一条即返回可读提示，否则返回 null */
+    private String describeReferences(Integer cinemaId) {
+        int rooms = roomMapper.countByCinemaId(cinemaId);
+        int records = recordMapper.countByCinemaId(cinemaId);
+        int orders = orderedMapper.countByCinemaId(cinemaId);
+        if (rooms == 0 && records == 0 && orders == 0) {
+            return null;
+        }
+        return "ID " + cinemaId + " 已关联 " + rooms + " 个影厅、" + records + " 个排片、" + orders + " 笔订单";
+    }
+
+    /**
+     * 锁影院行并返回；删除守卫的加锁读入口。
+     * 供 {@code RoomService.addScoped} 在插入影厅前调用，使「新增影厅」与「删影院」互斥。
+     * 须在事务内执行，否则 FOR UPDATE 退化为普通读。这里的注解保证两个调用方都安全：
+     * {@code RoomService.addScoped} 是跨 bean 调用，会进来并加入其外层事务；
+     * {@code deleteGuarded} 是同类内部调用（注解不经过代理），但本类方法自带事务，锁同样有效。
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public Cinema selectByIdForUpdate(Integer id) {
+        return cinemaMapper.selectByIdForUpdate(id);
     }
 
     public Cinema login(Account account) {

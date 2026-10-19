@@ -20,6 +20,16 @@
         SELECT * FROM cinema WHERE id = #{id}
     </select>
 
+    <!-- 删除守卫的串行化入口：删除前先锁影院行，使「数子表引用 → DELETE」与
+         RoomService.addScoped 的锁影院行互斥。反过来若不在这里加锁，管理员数到
+         「0 个影厅」之后、真正 DELETE 之前，影院角色可以插入一个影厅，
+         随后 DELETE 撞外键 RESTRICT —— 数据不会坏，但管理员拿到的是
+         「仍被其他数据引用」而不是「已有 1 个影厅」。 -->
+    <select id="selectByIdForUpdate" parameterType="java.lang.Integer"
+            resultType="com.example.springboot.entity.Cinema">
+        SELECT * FROM cinema WHERE id = #{id} FOR UPDATE
+    </select>
+
 
     <!-- 根据用户名查询影院 -->
     <select id="selectByUsername" parameterType="java.lang.String" resultType="com.example.springboot.entity.Cinema">

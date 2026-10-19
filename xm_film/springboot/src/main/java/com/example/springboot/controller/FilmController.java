@@ -2,16 +2,13 @@ package com.example.springboot.controller;
 
 import com.example.springboot.common.BaseController;
 import com.example.springboot.common.Result;
-import com.example.springboot.common.enums.ErrorCode;
 import com.example.springboot.dto.request.FilmRequest;
 import com.example.springboot.dto.response.FilmView;
 import com.example.springboot.dto.response.TodayRevenueView;
 import com.example.springboot.dto.response.TypeView;
 import com.example.springboot.entity.Film;
-import com.example.springboot.exception.CustomException;
 import com.example.springboot.service.FilmService;
 import com.example.springboot.service.OrderedService;
-import com.example.springboot.service.RecordService;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -27,15 +24,12 @@ import java.util.List;
 public class FilmController extends BaseController<Film, FilmRequest, FilmView> {
 
     private final FilmService filmService;
-    private final RecordService recordService;
     private final OrderedService orderedService;
 
     public FilmController(FilmService filmService,
-                          RecordService recordService,
                           OrderedService orderedService) {
         super(filmService);
         this.filmService = filmService;
-        this.recordService = recordService;
         this.orderedService = orderedService;
     }
 
@@ -97,29 +91,15 @@ public class FilmController extends BaseController<Film, FilmRequest, FilmView> 
     @Override
     @DeleteMapping("/{id}")
     public Result<Void> delete(@PathVariable Integer id) {
-        ensureNoReferences(id);
-        filmService.delete(id);
+        filmService.deleteGuarded(List.of(id));
         return Result.success();
     }
 
     @Override
     @DeleteMapping("/batch")
     public Result<Void> deleteBatch(@RequestBody List<Integer> ids) {
-        for (Integer id : ids) {
-            ensureNoReferences(id);
-        }
-        filmService.deleteBatch(ids);
+        filmService.deleteGuarded(ids);
         return Result.success();
-    }
-
-    /** 影片被排片或订单引用时禁止物理删除，下架请改用 status = 停止上映 */
-    private void ensureNoReferences(Integer filmId) {
-        int records = recordService.countByFilmId(filmId);
-        int orders = orderedService.countByFilmId(filmId);
-        if (records > 0 || orders > 0) {
-            throw new CustomException(ErrorCode.BUSINESS_CONFLICT,
-                    "该影片已有 " + records + " 个排片、" + orders + " 笔订单，无法删除；如需下架请将状态改为「停止上映」");
-        }
     }
 
     @GetMapping("/search")

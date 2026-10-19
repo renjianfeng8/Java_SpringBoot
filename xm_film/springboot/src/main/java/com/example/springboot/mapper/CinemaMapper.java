@@ -10,6 +10,9 @@ import java.util.List;
 
 public interface CinemaMapper extends BaseMapper<Cinema> {
 
+    /** 删除守卫用：锁影院行（须在 @Transactional 内调用，否则退化为普通读） */
+    Cinema selectByIdForUpdate(Integer id);
+
     Cinema selectByUsername(String username);
 
     List<Cinema> selectByFilmId(@Param("cinema") Cinema cinema,

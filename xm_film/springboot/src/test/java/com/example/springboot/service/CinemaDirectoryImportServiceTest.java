@@ -1,8 +1,10 @@
 package com.example.springboot.service;
 
 import com.example.springboot.common.AmapClient;
+import com.example.springboot.common.enums.ErrorCode;
 import com.example.springboot.dto.response.CinemaImportView;
 import com.example.springboot.entity.CinemaDirectory;
+import com.example.springboot.exception.CustomException;
 import com.example.springboot.mapper.CinemaDirectoryMapper;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -83,8 +85,7 @@ class CinemaDirectoryImportServiceTest {
      * 高德 v5 不给总命中数（count 只是本页条数），所以只能靠「是否触顶」判断。
      */
     @Test
-    void subdividesByDistrictWhenCityHitsTwoHundredCap() {
-        AmapClient client = mock(AmapClient.class);
+    void subdividesByDistrictWhenCityHitsTwoHundredCap() {        AmapClient client = mock(AmapClient.class);
         CinemaDirectoryMapper mapper = mock(CinemaDirectoryMapper.class);
         // 城市级 8 页全满 = 200 条 → 触顶
         when(client.searchCinemas(eq("北京"), anyInt(), anyInt())).thenAnswer(inv -> {
@@ -106,5 +107,33 @@ class CinemaDirectoryImportServiceTest {
         // 城市级那 200 条不参与计数，真正入库的两个区县 POI 才计数
         assertThat(preview.getTotal()).isEqualTo(2);
         verify(client).districts("北京");
+    }
+
+    /**
+     * 某个区县抓取失败（高德并发超限等）不应让整次预览/导入失败：
+     * 记录 warning、跳过该区县，其余区县照常返回。
+     */
+    @Test
+    void oneFailingDistrictDoesNotAbortTheWholeFetch() {
+        AmapClient client = mock(AmapClient.class);
+        CinemaDirectoryMapper mapper = mock(CinemaDirectoryMapper.class);
+        when(client.searchCinemas(eq("北京"), anyInt(), anyInt())).thenAnswer(inv -> {
+            int page = inv.getArgument(1);
+            return page <= 8 ? fullPage("C" + page + "-") : List.of();
+        });
+        when(client.districts("北京")).thenReturn(List.of(
+                new AmapClient.District("东城区", "110101"),
+                new AmapClient.District("通州区", "110112")));
+        when(client.searchCinemas(eq("110101"), eq(1), anyInt()))
+                .thenReturn(List.of(poi("D1", "影院1", "北京市")));
+        // 第二个区县每次都失败
+        when(client.searchCinemas(eq("110112"), anyInt(), anyInt()))
+                .thenThrow(new CustomException(ErrorCode.SYSTEM_ERROR, "高德接口返回异常：CUQPS_HAS_EXCEEDED_THE_LIMIT"));
+        when(mapper.selectExistingPoiIds(anyList())).thenReturn(List.of());
+
+        CinemaImportView preview = service(client, mapper).preview(List.of("北京"));
+
+        assertThat(preview.getTotal()).isEqualTo(1);
+        assertThat(preview.getWarnings()).anySatisfy(w -> assertThat(w).contains("通州区").contains("缺失"));
     }
 }

@@ -13,9 +13,6 @@ import com.example.springboot.dto.response.CinemaView;
 import com.example.springboot.entity.Cinema;
 import com.example.springboot.exception.CustomException;
 import com.example.springboot.service.CinemaService;
-import com.example.springboot.service.OrderedService;
-import com.example.springboot.service.RecordService;
-import com.example.springboot.service.RoomService;
 import com.github.pagehelper.PageInfo;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -34,19 +31,10 @@ import java.util.List;
 public class CinemaController extends BaseController<Cinema, CinemaRequest, CinemaView> {
 
     private final CinemaService cinemaService;
-    private final RoomService roomService;
-    private final RecordService recordService;
-    private final OrderedService orderedService;
 
-    public CinemaController(CinemaService cinemaService,
-                            RoomService roomService,
-                            RecordService recordService,
-                            OrderedService orderedService) {
+    public CinemaController(CinemaService cinemaService) {
         super(cinemaService);
         this.cinemaService = cinemaService;
-        this.roomService = roomService;
-        this.recordService = recordService;
-        this.orderedService = orderedService;
     }
 
     @Override
@@ -162,8 +150,7 @@ public class CinemaController extends BaseController<Cinema, CinemaRequest, Cine
     @DeleteMapping("/{id}")
     public Result<Void> delete(@PathVariable Integer id) {
         requireAdmin();
-        ensureNoReferences(id);
-        cinemaService.delete(id);
+        cinemaService.deleteGuarded(List.of(id));
         return Result.success();
     }
 
@@ -171,23 +158,8 @@ public class CinemaController extends BaseController<Cinema, CinemaRequest, Cine
     @DeleteMapping("/batch")
     public Result<Void> deleteBatch(@RequestBody List<Integer> ids) {
         requireAdmin();
-        for (Integer id : ids) {
-            ensureNoReferences(id);
-        }
-        cinemaService.deleteBatch(ids);
+        cinemaService.deleteGuarded(ids);
         return Result.success();
-    }
-
-    /** 影院下挂影厅/排片/订单时禁止物理删除，避免连带删除交易凭证 */
-    private void ensureNoReferences(Integer cinemaId) {
-        int rooms = roomService.countByCinemaId(cinemaId);
-        int records = recordService.countByCinemaId(cinemaId);
-        int orders = orderedService.countByCinemaId(cinemaId);
-        if (rooms > 0 || records > 0 || orders > 0) {
-            throw new CustomException(ErrorCode.BUSINESS_CONFLICT,
-                    "该影院已有 " + rooms + " 个影厅、" + records + " 个排片、" + orders
-                            + " 笔订单，无法删除");
-        }
     }
 
     private boolean isAdmin() {

@@ -4,9 +4,11 @@ import com.example.springboot.common.AmapClient;
 import com.example.springboot.common.CinemaBrand;
 import com.example.springboot.dto.response.CinemaImportView;
 import com.example.springboot.entity.CinemaDirectory;
+import com.example.springboot.exception.CustomException;
 import com.example.springboot.mapper.CinemaDirectoryMapper;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -32,10 +34,18 @@ public class CinemaDirectoryImportService {
 
     private final AmapClient client;
     private final CinemaDirectoryMapper mapper;
+    private final TransactionTemplate transactionTemplate;
 
     public CinemaDirectoryImportService(AmapClient client, CinemaDirectoryMapper mapper) {
+        this(client, mapper, null);
+    }
+
+    @Autowired
+    public CinemaDirectoryImportService(AmapClient client, CinemaDirectoryMapper mapper,
+                                        TransactionTemplate transactionTemplate) {
         this.client = client;
         this.mapper = mapper;
+        this.transactionTemplate = transactionTemplate;
     }
 
     public CinemaImportView preview(List<String> cities) {
@@ -55,11 +65,28 @@ public class CinemaDirectoryImportService {
         return preview;
     }
 
-    /** 重新抓一次并幂等插入：刚被并发导入过的 poi_id 由 INSERT IGNORE 静默跳过。返回真正插入数。 */
-    @Transactional(rollbackFor = Exception.class)
+    /**
+     * 重新抓一次并幂等插入：刚被并发导入过的 poi_id 由 INSERT IGNORE 静默跳过。返回真正插入数。
+     *
+     * <p><b>事务边界</b>：抓取在事务之外，只有写库阶段开事务。原实现把整个方法包在
+     * {@code @Transactional} 里，于是可能十余次外部 HTTP（1–10 秒）全程占着数据库连接
+     * 与行锁，既拖垮连接池，又让并发导入互相排队。这里用 {@link TransactionTemplate}
+     * 而不是再拆一个 bean：事务范围显式可见，也不必依赖 Spring AOP 代理
+     * （同类内部调用加 {@code @Transactional} 是不生效的，拆方法最容易踩这个坑）。
+     */
     public int importAll(List<String> cities) {
         List<String> warnings = new ArrayList<>();
         List<AmapClient.CinemaPoi> unique = fetchUnique(cities, warnings);
+        if (transactionTemplate == null) {
+            // 仅单元测试用两参构造器时走到这里：没有事务设施，直接执行写库逻辑
+            return persist(unique);
+        }
+        Integer inserted = transactionTemplate.execute(status -> persist(unique));
+        return inserted == null ? 0 : inserted;
+    }
+
+    /** 写库内核：必须在事务内调用。幂等性由 poi_id 唯一索引保证，不依赖事务外那次预查。 */
+    int persist(List<AmapClient.CinemaPoi> unique) {
         Set<String> existing = existingPoiIds(unique.stream().map(AmapClient.CinemaPoi::poiId).toList());
 
         int inserted = 0;
@@ -89,6 +116,11 @@ public class CinemaDirectoryImportService {
      * 高德 v5 响应没有总命中数字段，count 只是本页条数（实测恒等于本页返回数），
      * 所以只能靠"是否触顶"来判断，不能拿 count 跟 200 比。
      */
+    /**
+     * 区县抓取的并发超限是可预期事件：逐区县 × 逐页抓取会背靠背打几十个请求，
+     * 单是直辖市就有 16 个区县。任一个区县最终失败，目前会抛异常让整个预览/导入失败。
+     * 这里改为记录 warning 并跳过该区县 —— 漏一个区县远好过让整次操作白跑。
+     */
     private List<AmapClient.CinemaPoi> fetchCity(String city, List<String> warnings) {
         List<AmapClient.CinemaPoi> all = fetchAllPages(city);
         if (all.size() < PAGE_LIMIT) {
@@ -102,7 +134,13 @@ public class CinemaDirectoryImportService {
         }
         List<AmapClient.CinemaPoi> byDistrict = new ArrayList<>();
         for (AmapClient.District district : districts) {
-            List<AmapClient.CinemaPoi> sub = fetchAllPages(district.adcode());
+            List<AmapClient.CinemaPoi> sub;
+            try {
+                sub = fetchAllPages(district.adcode());
+            } catch (CustomException e) {
+                warnings.add(city + district.name() + " 抓取失败（" + e.getMessage() + "），该区县结果缺失");
+                continue;
+            }
             if (sub.size() >= PAGE_LIMIT) {
                 warnings.add(city + district.name() + " 影院仍达 " + PAGE_LIMIT + " 条上限，可能未取全");
             }

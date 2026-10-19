@@ -18,7 +18,17 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 
 import java.util.stream.Collectors;
 
-@ControllerAdvice("com.example.springboot.controller") //提供全局异常处理
+/**
+ * 全局异常处理：把各类异常统一映射为 {@link Result} 外壳，前端只需看 {@code code}。
+ *
+ * <p><b>为什么用 {@code basePackages} 限定到 controller 包</b>：Spring 的处理器是
+ * 「就近优先」的，限定之后 controller 自己的 {@code @ExceptionHandler} 仍然优先，
+ * 而本类的 9 档映射只作用于 REST 接口，不会劫持框架自身的页面/资源请求。
+ * 代价是它依赖一个<b>字符串包名</b>：一旦 controller 包被移动，本类会静默不再生效，
+ * 所有异常退回 Spring 默认 JSON —— 所以 {@code GlobalExceptionHandlerCoverageTest}
+ * 会断言它确实在生效（见该测试的注释）。
+ */
+@ControllerAdvice(basePackages = "com.example.springboot.controller")
 public class GlobalExceptionHandler {
 
     private static final Logger logger = LoggerFactory.getLogger(GlobalExceptionHandler.class);

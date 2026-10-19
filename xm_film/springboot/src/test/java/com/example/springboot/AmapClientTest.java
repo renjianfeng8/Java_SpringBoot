@@ -41,14 +41,18 @@ class AmapClientTest {
             ]}
             """;
 
-    /** 直辖市实测形态：顶层多一个省级条目「北京市」，真实区县挂在同级 level=city 的「北京城区」下 */
+    /**
+     * 直辖市实测形态（2026-10-19 用真实 key 复核）：顶层只有<b>一个</b>省级条目「北京市」，
+     * 它下面只有「北京城区」（level=city），区县在这再下一层。
+     * 旧 fixture 假设「同级还有一个带区县的 level=city 条目」，与线上不符 ——
+     * 正是这个错误假设让「直辖市按区县细分」在真实环境恒返回 0 个区县、导入抓到 0 条。
+     */
     private static final String DISTRICT_JSON = """
             {"status":"1","info":"OK","districts":[
               {"name":"北京市","adcode":"110000","level":"province","districts":[
-                {"name":"北京城区","adcode":"110100","level":"city","districts":[]}]},
-              {"name":"北京城区","adcode":"110100","level":"city","districts":[
-                {"name":"东城区","adcode":"110101","level":"district"},
-                {"name":"通州区","adcode":"110112","level":"district"}]}]}
+                {"name":"北京城区","adcode":"110100","level":"city","districts":[
+                  {"name":"东城区","adcode":"110101","level":"district"},
+                  {"name":"通州区","adcode":"110112","level":"district"}]}]}]}
             """;
 
     /** 实测自并发超限时的响应体 */
@@ -116,7 +120,8 @@ class AmapClientTest {
     void districtsSkipsProvinceLayerForMunicipality() {
         server.expect(once(), r -> {
             assertThat(r.getURI().getPath()).isEqualTo("/v3/config/district");
-            assertThat(q(r)).contains("keywords=北京").contains("subdistrict=1");
+            // 直辖市要 subdistrict=2 才能把区县带回来（线上实测，见 DISTRICT_JSON 注释）
+            assertThat(q(r)).contains("keywords=北京").contains("subdistrict=2");
         }).andRespond(withSuccess(DISTRICT_JSON, MediaType.APPLICATION_JSON));
 
         assertThat(client.districts("北京"))
@@ -124,10 +129,10 @@ class AmapClientTest {
                 .containsExactly("110101", "110112");
     }
 
-    /** 地级市：第一层即 city 节点，直接取之 */
+    /** 地级市：第一层即 city 节点，直接取之（多要一层不会影响，children 直接就是区县） */
     @Test
     void districtsReadsPrefectureCityDirectly() {
-        server.expect(once(), r -> assertThat(q(r)).contains("keywords=石家庄"))
+        server.expect(once(), r -> assertThat(q(r)).contains("keywords=石家庄").contains("subdistrict=2"))
                 .andRespond(withSuccess(DISTRICT_JSON_PREFECTURE, MediaType.APPLICATION_JSON));
 
         assertThat(client.districts("石家庄"))
