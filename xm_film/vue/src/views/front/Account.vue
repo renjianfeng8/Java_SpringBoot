@@ -525,19 +525,11 @@ onMounted(loadAll);
   box-shadow: none;
 }
 
-/* 表头：EP 默认是白底 + --el-text-color-secondary 文字（#909399，白底 3.08:1，不达 AA），
-   且 .el-table thead th 写死 font-weight: 600 —— 与 tokens.scss「禁用 600」相悖
-   （中文字体栈只有 400 / 700，600 会触发伪粗体）。故改灰底 + 常规文字色，粗体落回 700。
-   覆写变量而不是覆写规则：EP 的表头样式全部读这两个变量，改这里就够了。 */
+/* 表头样式（灰底 + 常规文字色 + 700 字重）已提到 global.css，全站统一（FE-63），
+   这里只保留本页特有的表格间距：给分区标题的通栏线留出呼吸，
+   EP 的表头自带灰底，紧贴那条线会连成两道横杠。 */
 .account-section :deep(.el-table) {
-  --el-table-header-bg-color: var(--el-fill-color-light);
-  --el-table-header-text-color: var(--el-text-color-regular);
-  /* 给分区标题的通栏线留出呼吸：EP 的表头自带灰底，紧贴那条线会连成两道横杠 */
   margin-top: var(--space-16);
-}
-
-.account-section :deep(.el-table thead th) {
-  font-weight: var(--fw-bold);
 }
 
 /* 表头与表体的垂直口径钉成同一组值。EP 把表头与表体渲染成两个独立的 <table>

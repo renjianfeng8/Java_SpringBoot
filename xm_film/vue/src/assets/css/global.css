@@ -49,3 +49,31 @@ body {
     scroll-behavior: auto !important;
   }
 }
+
+/* ---------- el-table 表头（FE-63） ----------
+ * EP 默认两头都不合适：
+ *   1. --el-table-header-text-color 取 --el-text-color-secondary（#909399），
+ *      白底对比度 3.08:1，不达 AA（表头是 14px 常规字，需 4.5:1）；
+ *   2. --el-table-header-bg-color 取 --el-fill-color-blank（#ffffff），
+ *      表头与表体因此只有一条 1px 线，没有底色分界；
+ *   3. 且 .el-table thead th 写死 font-weight: 600 —— 与 tokens.scss「禁用 600」相悖
+ *      （中文字体栈 Microsoft YaHei 只有 400/700，600 会触发伪粗体，比 700 更脏）。
+ *
+ * 覆写变量而不是逐条覆写规则：EP 的表头样式全部读这两个变量，改这里一处生效全站。
+ * 改前已逐个确认没有任何页面自定义过表头背景（深色只用于前台 hero 区，不在表格内）。
+ *
+ * 用 .el-table.el-table 提高特异性：EP 自己的 `.el-table { --el-table-header-bg-color: ... }`
+ * 同样是单类选择器，而 global.css 在 EP 样式**之前**加载 —— 同优先级下后加载者胜，
+ * 只写 `.el-table` 会被 EP 原样覆盖回去（实测：规则确在样式表里，计算值仍是 #ffffff）。
+ */
+.el-table.el-table {
+  --el-table-header-bg-color: var(--el-fill-color-light);
+  --el-table-header-text-color: var(--el-text-color-regular);
+}
+
+/* 字重同理：EP 写的是 `.el-table thead th { font-weight: 600 }`，
+ * 本选择器多一个类压过它（同优先级时会输给后加载的 EP）。 */
+.el-table.el-table thead th {
+  /* 落回 700：中文字体栈没有 600，用 600 会被浏览器合成伪粗体 */
+  font-weight: var(--fw-bold);
+}
