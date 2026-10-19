@@ -8,7 +8,21 @@
 
 更新日期：2026-10-19（2026-10-18 复核增补）。基线：master `bfdd1c07`（清单）、`a2144fc4`（纯清理起点）；复核基线 `3112f8b7`。
 
-**复核时的实测基线**：`mvn -o test` = **309/309** 通过（2026-10-18 收尾；此前长期 6 红，见 §测试隔离）。开发库 `xm-film` 已由 `springboot/demo-data.sql` 补入演示影厅、排片与账号，购票主链已实测跑通。**2026-10-19 更新为 335/335**。
+**复核时的实测基线**：`mvn -o test` = **309/309** 通过（2026-10-18 收尾；此前长期 6 红，见 §测试隔离）。开发库 `xm-film` 已由 `springboot/demo-data.sql` 补入演示影厅、排片与账号，购票主链已实测跑通。**2026-10-19 更新为 343/343**。
+
+## 架构分层（2026-10-19 专项，三项均已修复）
+
+**背景**：综合评分里「架构与分层 85」的三条扣分项。其中第一条不是纯风格问题 —— 它是**真实的并发窗口**（详见下条），只是后果被外键 RESTRICT 兜住了，表现为提示不可读而非数据损坏。这一点与 BL-02 完全同构。
+
+| 编号 | 问题 | 实测/复核 | 处置 |
+| --- | --- | --- | --- |
+| **BL-44** | **删除守卫在 Controller，计数与 DELETE 分属两个事务**（`CinemaController.ensureNoReferences`、`FilmController.ensureNoReferences`）。 | 直接 SQL 实验：A 会话「数到 0 → SLEEP 3s → DELETE」，B 在 3s 内插入影厅 → A 的 DELETE 被外键挡住（`ERROR 1451`），**数据未损坏**；但 HTTP 层这条路径拿到的是通用提示「仍被其他数据引用」（`GlobalExceptionHandler.dataIntegrityError`），而非「已有 1 个影厅」。用 MySQL EVENT 卡到 JVM 毫秒级窗口的尝试**未能命中**（4 个时刻点全部走了正常计数路径），所以「接口层能稳定复现」这句不成立 —— 只能证明窗口在事务语义上存在。 | 守卫下沉到 `CinemaService.deleteGuarded` / `FilmService.deleteGuarded`：**先 `selectByIdForUpdate` 锁父行 → 再数子表 → 再删**，全程一个事务；批量按 id **升序**加锁防交叉死锁。`RoomService.addScoped` 改为先锁影院行再插影厅，两端抢同一把锁。守卫 `DeleteGuardLockOrderTest`（6 条，InOrder 断言顺序），已做反证（改回「先数后锁」→ 2 条变红）。 |
+| **BL-45** | **`CinemaDirectoryImportService.importAll` 把外部抓取包在 `@Transactional` 里**。 | 抓取实测 13 秒（北京 555 条、上海 536 条），旧实现在这 13 秒内全程持有数据库连接与事务。 | 改成 `TransactionTemplate` 显式包住**写库阶段**，抓取在事务外。守卫 `CinemaDirectoryImportTxBoundaryTest` 直接断言「抓取被调用时无活跃事务」，已做反证（把抓取挪回事务内 → `expected: 0 but was: 1`）。HTTP 实测：抓取期间另开连接对 `cinema_directory` 加表锁耗时 33ms（无阻塞）。 |
+| **BL-46** | `@ControllerAdvice("com.example.springboot.controller")` 用字符串包名限定，语义不直观，且包被移动后会**静默失效**。 | 无运行时缺陷；属可读性/可维护性。 | 改为具名属性 `basePackages = "com.example.springboot.controller"` 并注明「为何限定」与「为何依赖字符串」，与该类原有 9 档处理器放在一起解释。 |
+
+**顺带修掉一个真实功能缺陷（不在原评分项内）**：核查 BL-45 时用真实 key 复测名录导入，发现**北京/上海导入恒为 0 条**。根因是 `AmapClient.districts` 假定直辖市「顶层有 province + 一个同级 level=city 且带区县」——**线上实际只返回一个省级节点**，区县在 city 节点的再下一层。旧单测的 fixture 正是按错误假设写的，于是测试绿灯而线上恒空。修复：`subdistrict` 改为 2 并多下钻一层；fixture 改为实测形态。修复后实测北京 16 个区县、上海 16 个、石家庄 22 个；预览北京 total=555、上海 536。另：逐区县抓取时单个区县失败（高德并发超限）改为记 warning 跳过，不再让整次预览/导入失败。
+
+**这一节的教训**：`information_schema.INNODB_TRX` 在**本机恒为 0**（手动开事务后仍查不到），一度让我把「查不到事务」误当成「没有事务」。事务边界的判定改用 `TransactionSynchronizationManager.isActualTransactionActive()` 与「另开连接能否加锁」这类不依赖该表的信号。
 
 ## 安全（2026-10-19 独立审计，三条已实测触发）
 

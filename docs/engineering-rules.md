@@ -122,6 +122,8 @@ python dump-schema.py --target xm_film_test   # 用来初始化测试库
 | 调用方引起的错误不得落到兜底 500；在 `GlobalExceptionHandler` 加具名处理器 | `architecture.md` §4 |
 | 时间比较只能用 DB `NOW()`；超时判断必须 `include` `pendingExpiredCondition`，不得另写谓词 | `domain.md` §3.4 |
 | **回调/入账类端点必须有服务端可验证的凭证**；「归属校验通过」不等于「授权通过」 | `backend-backlog.md` §安全 SEC-01 |
+| **删除守卫必须在 Service 且在同一事务内**：先锁父行 → 再数子表 → 再删；批量按 id 升序加锁 | `backend-backlog.md` §架构分层 BL-44 |
+| **外部 HTTP/文件 IO 不得出现在 `@Transactional` 方法体内**；用 `TransactionTemplate` 只包写库段 | `backend-backlog.md` §架构分层 BL-45 |
 | 状态是中文字面量，改动须跨 Java/XML/JS 同步 | `domain.md` §1 |
 
 ### 4.2 前端
