@@ -61,12 +61,14 @@
     </select>
 
     <!-- 核销：状态条件更新，受影响行数即"本次是否真的出票"。已取票/已退票/已取消/待支付
-         都不满足 status = '待取票'，因此这一个谓词同时实现"用过即废"与"废单不发码"。 -->
-    <update id="markPickedUpByCode" parameterType="java.lang.String">
+         都不满足 status = '待取票'，因此这一个谓词同时实现"用过即废"与"废单不发码"。
+         状态两端的取值都来自 OrderStatus 常量（由 mapper 方法传入），不在此写中文串：
+         写死的字面量与枚举一旦漂移，编译器与数据库都不会报错，只会静静少更新几行。 -->
+    <update id="markPickedUpByCode">
         UPDATE ordered
-        SET status = '已取票'
+        SET status = #{pickedUp}
         WHERE pickup_code = #{pickupCode}
-          AND status = '待取票'
+          AND status = #{pending}
     </update>
 
     <!-- 评价门禁：只有对该片取过票的用户才能评价。已取票是终态（退票/删除都进不来），
@@ -75,15 +77,16 @@
         SELECT COUNT(*) FROM ordered
         WHERE user_id = #{userId}
           AND film_id = #{filmId}
-          AND status = '已取票'
+          AND status = #{pickedUp}
     </select>
 
     <!-- 座位占用的唯一判定：已取消/已退票都不再锁座；待支付仅在未超时时锁座。
          selectActiveByRecordId（占座列表）与 countSeatInUse（下单前查重）共用本片段 ——
-         两处口径一旦分叉，就会出现"列表说占用、查重说空闲"的双卖。 -->
+         两处口径一旦分叉，就会出现"列表说占用、查重说空闲"的双卖。
+         状态取值由 OrderStatusCriteria 以 @Param("s") 传入，SQL 里不出现中文状态字面量。 -->
     <sql id="seatActiveCondition">
-        status NOT IN ('已取消', '已退票')
-        AND (status != '待支付' OR pending_timeout_at IS NULL OR pending_timeout_at &gt; NOW())
+        status NOT IN (#{s.cancelled}, #{s.refunded})
+        AND (status != #{s.pendingPayment} OR pending_timeout_at IS NULL OR pending_timeout_at &gt; NOW())
     </sql>
 
     <select id="selectActiveByRecordId" resultType="com.example.springboot.entity.Ordered">
@@ -113,21 +116,22 @@
     </select>
 
     <!-- 「待支付且已超时」的唯一谓词定义。凡是判断超时的地方都必须 include 本片段：
-         分叉会让支付路径与清理任务对同一张订单给出相反答案。 -->
+         分叉会让支付路径与清理任务对同一张订单给出相反答案。
+         与 seatActiveCondition 一样，状态取值由 OrderStatusCriteria 传入。 -->
     <sql id="pendingExpiredCondition">
-        status = '待支付'
+        status = #{s.pendingPayment}
           AND pending_timeout_at IS NOT NULL
           AND pending_timeout_at &lt; NOW()
     </sql>
 
     <update id="batchCancelExpiredOrders">
         UPDATE ordered
-        SET status = '已取消', pending_timeout_at = NULL
+        SET status = #{s.cancelled}, pending_timeout_at = NULL
         WHERE id IN
         <foreach collection="list" item="id" open="(" separator="," close=")">
             #{id}
         </foreach>
-          AND status = '待支付'
+          AND status = #{s.pendingPayment}
     </update>
 
     <!-- 「已支付」的状态集合：本文件三条聚合语句（countTodayPaidOrders /

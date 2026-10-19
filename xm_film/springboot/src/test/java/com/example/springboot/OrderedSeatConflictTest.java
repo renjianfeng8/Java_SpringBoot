@@ -7,6 +7,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import com.example.springboot.common.OrderStatusCriteria;
 
 /** 只读守卫；仍走 ci profile，保证全仓 @SpringBootTest 只有一处数据源来源 */
 @SpringBootTest
@@ -18,7 +19,7 @@ class OrderedSeatConflictTest {
 
     @Test
     void mapperLoadsCountSeatInUseStatement() {
-        int count = orderedMapper.countSeatInUse(-1, "1排1座");
+        int count = orderedMapper.countSeatInUse(-1, "1排1座", OrderStatusCriteria.INSTANCE);
         assertThat(count).isZero();
     }
 }

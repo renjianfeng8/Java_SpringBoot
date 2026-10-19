@@ -48,6 +48,8 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import com.example.springboot.common.OrderStatusCriteria;
+import com.example.springboot.common.enums.OrderStatus;
 
 @SpringBootTest(classes = OrderedService.class)
 class OrderedServiceTest {
@@ -154,7 +156,7 @@ class OrderedServiceTest {
         recordRow.setPrice("45.00");
         recordRow.setStart(futureStart());
         when(recordMapper.selectByIdForUpdate(1)).thenReturn(recordRow);
-        when(orderedMapper.countSeatInUse(1, "1排1座")).thenReturn(0);
+        when(orderedMapper.countSeatInUse(1, "1排1座", OrderStatusCriteria.INSTANCE)).thenReturn(0);
 
         Ordered ordered = new Ordered();
         ordered.setRecordId(1);
@@ -204,7 +206,7 @@ class OrderedServiceTest {
         recordRow.setPrice("abc");
         recordRow.setStart(futureStart());
         when(recordMapper.selectByIdForUpdate(1)).thenReturn(recordRow);
-        when(orderedMapper.countSeatInUse(1, "1排1座")).thenReturn(0);
+        when(orderedMapper.countSeatInUse(1, "1排1座", OrderStatusCriteria.INSTANCE)).thenReturn(0);
 
         Ordered ordered = new Ordered();
         ordered.setRecordId(1);
@@ -361,7 +363,7 @@ class OrderedServiceTest {
                 1 == u.getId()
                         && "待取票".equals(u.getStatus())
                         && u.getPayTime() != null
-                        && Double.valueOf(90.0).equals(u.getPayAmount())
+                        && u.getPayAmount().compareTo(new BigDecimal("90.00")) == 0
         ));
     }
 
@@ -380,7 +382,7 @@ class OrderedServiceTest {
         Ordered ordered = pendingPaymentOrder();
         ordered.setPendingTimeoutAt(minutesFromNow(-1));
         when(orderedMapper.selectByIdForUpdate(1)).thenReturn(ordered);
-        when(orderedMapper.countExpiredById(1)).thenReturn(1);
+        when(orderedMapper.countExpiredById(1, OrderStatusCriteria.INSTANCE)).thenReturn(1);
 
         PayResult result = orderedService.payOrder(1, RoleEnum.USER.name(), 100, PAY_PASSWORD);
 
@@ -418,7 +420,7 @@ class OrderedServiceTest {
                 1 == u.getId()
                         && "已退票".equals(u.getStatus())
                         && u.getRefundTime() != null
-                        && Double.valueOf(90.0).equals(u.getRefundAmount())
+                        && u.getRefundAmount().compareTo(new BigDecimal("90.00")) == 0
         ));
     }
 
@@ -549,7 +551,7 @@ class OrderedServiceTest {
         verify(orderedMapper).insert(argThat(o ->
                 o.getUnitPrice() != null
                         && o.getUnitPrice().compareTo(new BigDecimal("45.00")) == 0
-                        && Double.valueOf(90.0).equals(o.getTotal())
+                        && o.getTotal().compareTo(new BigDecimal("90.00")) == 0
         ));
     }
 
@@ -721,7 +723,7 @@ class OrderedServiceTest {
         other.setOrders("20260928DEADBEEF");
         other.setSeat("1排1座");
         other.setStatus("待取票");
-        other.setTotal(45.00);
+        other.setTotal(new BigDecimal("45.00"));
         other.setPendingTimeoutAt("2026-09-28 12:00:00");
         when(orderedMapper.selectActiveByRecordId(1)).thenReturn(List.of(other));
 
@@ -746,7 +748,7 @@ class OrderedServiceTest {
         mine.setOrders("20260928DEADBEEF");
         mine.setSeat("1排1座");
         mine.setStatus("待支付");
-        mine.setTotal(45.00);
+        mine.setTotal(new BigDecimal("45.00"));
         mine.setPendingTimeoutAt("2026-09-28 12:00:00");
         when(orderedMapper.selectActiveByRecordId(1)).thenReturn(List.of(mine));
 
@@ -758,7 +760,7 @@ class OrderedServiceTest {
         assertThat(view.get(0).getOrderId()).isEqualTo(11);
         assertThat(view.get(0).getOrders()).isEqualTo("20260928DEADBEEF");
         assertThat(view.get(0).getStatus()).isEqualTo("待支付");
-        assertThat(view.get(0).getTotal()).isEqualTo(45.00);
+        assertThat(view.get(0).getTotal()).isEqualByComparingTo("45.00");
         assertThat(view.get(0).getPendingTimeoutAt()).isEqualTo("2026-09-28 12:00:00");
     }
 
@@ -799,7 +801,7 @@ class OrderedServiceTest {
     @Test
     void redeemByCodeMarksPickedUpAndReturnsVoucher() {
         when(orderedMapper.selectByPickupCode("8F3A-2C71")).thenReturn(redeemableOrder());
-        when(orderedMapper.markPickedUpByCode("8F3A-2C71")).thenReturn(1);
+        when(orderedMapper.markPickedUpByCode("8F3A-2C71", OrderStatus.PICKED_UP, OrderStatus.PENDING)).thenReturn(1);
         when(filmMapper.selectById(24)).thenReturn(filmRow(24, "流浪地球2", 120));
         when(cinemaMapper.selectById(10)).thenReturn(cinemaRow(10, "奥斯卡赛影城"));
         when(roomMapper.selectById(7)).thenReturn(roomRow(7, "一号厅"));
@@ -831,7 +833,7 @@ class OrderedServiceTest {
         assertThatThrownBy(() -> orderedService.redeemByCode("8F3A-2C71"))
                 .isInstanceOf(CustomException.class)
                 .hasMessageContaining("无效");
-        verify(orderedMapper, never()).markPickedUpByCode(any());
+        verify(orderedMapper, never()).markPickedUpByCode(any(), any(), any());
     }
 
     /**
@@ -853,7 +855,7 @@ class OrderedServiceTest {
         assertThatThrownBy(() -> orderedService.redeemByCode("8F3A-2C71"))
                 .isInstanceOf(CustomException.class)
                 .hasMessageContaining(expectedMessage);
-        verify(orderedMapper, never()).markPickedUpByCode(any());
+        verify(orderedMapper, never()).markPickedUpByCode(any(), any(), any());
     }
 
     static Stream<Arguments> unredeemableOrders() {
@@ -879,7 +881,7 @@ class OrderedServiceTest {
         assertThatThrownBy(() -> orderedService.redeemByCode("8F3A-2C71"))
                 .isInstanceOf(CustomException.class)
                 .hasMessageContaining("不可取票");
-        verify(orderedMapper, never()).markPickedUpByCode(any());
+        verify(orderedMapper, never()).markPickedUpByCode(any(), any(), any());
     }
 
     /**
@@ -891,7 +893,7 @@ class OrderedServiceTest {
     void redeemByCodeDetectsConcurrentRedemption() {
         when(orderedMapper.selectByPickupCode("8F3A-2C71")).thenReturn(redeemableOrder());
         when(filmMapper.selectById(24)).thenReturn(filmRow(24, "流浪地球2", 120));
-        when(orderedMapper.markPickedUpByCode("8F3A-2C71")).thenReturn(0);
+        when(orderedMapper.markPickedUpByCode("8F3A-2C71", OrderStatus.PICKED_UP, OrderStatus.PENDING)).thenReturn(0);
 
         assertThatThrownBy(() -> orderedService.redeemByCode("8F3A-2C71"))
                 .isInstanceOf(CustomException.class)
@@ -987,7 +989,7 @@ class OrderedServiceTest {
         // null 会被裁定为「场次已不存在」
         ordered.setRecordId(1);
         ordered.setStatus("待支付");
-        ordered.setTotal(90.0);
+        ordered.setTotal(new BigDecimal("90.00"));
         // 未超时：留 5 分钟窗口，默认走正常支付路径而不是超时取消
         ordered.setPendingTimeoutAt(minutesFromNow(5));
         return ordered;
@@ -1010,7 +1012,7 @@ class OrderedServiceTest {
         ordered.setId(1);
         ordered.setUserId(100);
         ordered.setStatus("待取票");
-        ordered.setTotal(90.0);
+        ordered.setTotal(new BigDecimal("90.00"));
         return ordered;
     }
 

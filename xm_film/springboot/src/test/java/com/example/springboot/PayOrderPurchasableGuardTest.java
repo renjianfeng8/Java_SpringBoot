@@ -20,6 +20,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
@@ -93,7 +94,7 @@ class PayOrderPurchasableGuardTest {
         ordered.setRecordId(7);
         ordered.setUserId(9);
         ordered.setStatus(OrderStatus.PENDING_PAYMENT);
-        ordered.setTotal(45.0);
+        ordered.setTotal(new BigDecimal("45.00"));
         ordered.setPendingTimeoutAt(format(LocalDateTime.now(ZoneId.systemDefault()).plusMinutes(5)));
         return ordered;
     }

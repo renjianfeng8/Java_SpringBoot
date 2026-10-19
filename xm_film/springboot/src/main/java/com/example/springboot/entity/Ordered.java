@@ -26,11 +26,18 @@ public class Ordered implements Serializable, Identifiable {
     private Integer roomId;
     private String appointment;
     /**
-     * 必须用包装类型：updateById 里是 <if test="total != null">，
+     * 订单总金额（元）。必须用包装类型：updateById 里是 <if test="total != null">，
      * 原始类型 double 永远非 null，导致任何不带 total 的状态流转（支付/取票/取消）
      * 都会把订单金额写成 0.00。
+     *
+     * <p><b>为什么是 BigDecimal 而不是 Double</b>（BL-24）：这是钱。java.math.BigDecimal 的
+     * 类型本身就向读者声明"这里不做二进制浮点运算"；用 Double 时每个读者都得自己在心里确认
+     * "哦，它只是往返，没有累加"。库列也确实是 {@code decimal(10,2)}，
+     * 用 BigDecimal 之后 Java 类型与库类型一一对应，不再靠一次隐式转换维持正确性
+     * （实测 decimal(10,2) 范围内 Double 往返无损，但那是巧合，不是保证）。
+     * 与同实体的 {@link #unitPrice}、充值单 {@code amount}、资金流水各额口径一致。
      */
-    private Double total;
+    private BigDecimal total;
     /** 下单时的单价快照，取自场次票价；场次改价不影响历史订单 */
     private BigDecimal unitPrice;
     private Integer number;
@@ -40,9 +47,11 @@ public class Ordered implements Serializable, Identifiable {
     private String createTime;
     private String pendingTimeoutAt;
     private String payTime;
-    private Double payAmount;
+    /** 实付金额（元）。见 {@link #total} 的说明 */
+    private BigDecimal payAmount;
     private String refundTime;
-    private Double refundAmount;
+    /** 退款金额（元）。见 {@link #total} 的说明 */
+    private BigDecimal refundAmount;
     /**
      * 取票码（支付成功时生成，一单一码）。可用性派生自 status，本身不带有效/失效标记：
      * 核销只接受 待取票，因此「用过即废 / 退票作废 / 未付款不出发」都由状态迁移保证。

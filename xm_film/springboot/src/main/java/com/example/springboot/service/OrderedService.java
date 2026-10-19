@@ -2,6 +2,7 @@ package com.example.springboot.service;
 
 import com.example.springboot.common.BaseMapper;
 import com.example.springboot.common.OrderNumber;
+import com.example.springboot.common.OrderStatusCriteria;
 import com.example.springboot.common.PriceParser;
 import com.example.springboot.common.SeatParser;
 import com.example.springboot.common.SystemClock;
@@ -45,6 +46,11 @@ import java.util.concurrent.ThreadLocalRandom;
 public class OrderedService extends BaseService<Ordered> {
 
     /** 座位号形状与上限统一在 {@link SeatParser} —— 所有"什么算合法座位"都在那里 */
+
+    /**
+     * 传给 mapper 的状态取值。XML 里不再写中文状态字面量，见 {@link OrderStatusCriteria}。
+     */
+    private static final OrderStatusCriteria STATUS = OrderStatusCriteria.INSTANCE;
 
     /** 退票截止：放映前 60 分钟（与前台词：未取票用户在放映前60分钟可退票） */
     private static final int REFUND_DEADLINE_MINUTES = 60;
@@ -155,7 +161,7 @@ public class OrderedService extends BaseService<Ordered> {
         List<String> seats = normalizeSeats(ordered.getSeat(), recordItem.getRoomId());
         int number = seats.size();
         for (String seat : seats) {
-            if (orderedMapper.countSeatInUse(recordItem.getId(), seat) > 0) {
+            if (orderedMapper.countSeatInUse(recordItem.getId(), seat, STATUS) > 0) {
                 throw new CustomException(ErrorCode.BUSINESS_CONFLICT, "座位已售: " + seat);
             }
         }
@@ -172,7 +178,7 @@ public class OrderedService extends BaseService<Ordered> {
         ordered.setAppointment("场次ID:" + recordItem.getId());
         ordered.setStart(recordItem.getStart());
         ordered.setNumber(number);
-        ordered.setTotal(total.doubleValue());
+        ordered.setTotal(total);
         // 单价快照：场次日后改价不影响这张订单的金额还原
         ordered.setUnitPrice(price);
         ordered.setStatus(OrderStatus.PENDING_PAYMENT);
@@ -301,7 +307,7 @@ public class OrderedService extends BaseService<Ordered> {
         //
         // 这里改成与清理任务同一条 SQL 谓词判定的代价最直接：
         // 直接问库「这一行是否已超时」，JVM 时钟彻底不参与。
-        return orderedMapper.countExpiredById(ordered.getId()) > 0;
+        return orderedMapper.countExpiredById(ordered.getId(), STATUS) > 0;
     }
 
     private String now() {
@@ -369,7 +375,7 @@ public class OrderedService extends BaseService<Ordered> {
             throw new CustomException(ErrorCode.BUSINESS_CONFLICT, "该场次已结束，取票码已失效");
         }
 
-        if (orderedMapper.markPickedUpByCode(code) == 0) {
+        if (orderedMapper.markPickedUpByCode(code, OrderStatus.PICKED_UP, OrderStatus.PENDING) == 0) {
             // 读状态到改库之间被人抢先核销了同一个码。不靠悲观锁，靠状态条件更新的行数判定。
             throw new CustomException(ErrorCode.BUSINESS_CONFLICT, "该票已取出，请勿重复取票");
         }
@@ -539,12 +545,12 @@ public class OrderedService extends BaseService<Ordered> {
 
     @Transactional(rollbackFor = Exception.class)
     public void cancelExpiredPendingOrders() {
-        List<Ordered> expired = orderedMapper.selectExpiredPendingOrders();
+        List<Ordered> expired = orderedMapper.selectExpiredPendingOrders(STATUS);
         if (expired.isEmpty()) {
             return;
         }
         List<Integer> ids = expired.stream().map(Ordered::getId).toList();
-        orderedMapper.batchCancelExpiredOrders(ids);
+        orderedMapper.batchCancelExpiredOrders(ids, STATUS);
     }
 
     /**
@@ -563,7 +569,7 @@ public class OrderedService extends BaseService<Ordered> {
         if (ordered.getTotal() == null) {
             throw new CustomException(ErrorCode.SYSTEM_ERROR, "订单缺失金额，无法完成资金操作，请联系管理员");
         }
-        return BigDecimal.valueOf(ordered.getTotal());
+        return ordered.getTotal();
     }
 
     private void ensureOrderAccess(Ordered ordered, String role, Integer userId) {

@@ -2,6 +2,8 @@ package com.example.springboot.dto.response;
 
 import lombok.Data;
 
+import java.math.BigDecimal;
+
 /**
  * 选座图上的单个占用视角。
  *
@@ -23,6 +25,7 @@ public class SeatOccupancyView {
     private Integer orderId;
     private String orders;
     private String status;
-    private Double total;
+    /** 本人订单的总金额（元）；他人订单恒为 null。金额一律 BigDecimal（BL-24） */
+    private BigDecimal total;
     private String pendingTimeoutAt;
 }

@@ -20,7 +20,8 @@ public class OrderedRequest {
     private Integer cinemaId;
     private Integer roomId;
     private String appointment;
-    private Double total;
+    /** 总金额（元）。金额字段一律 BigDecimal，见 entity/Ordered#total 的说明（BL-24） */
+    private BigDecimal total;
     private BigDecimal unitPrice;
     private Integer number;
     private String status;
@@ -29,9 +30,9 @@ public class OrderedRequest {
     private String createTime;
     private String pendingTimeoutAt;
     private String payTime;
-    private Double payAmount;
+    private BigDecimal payAmount;
     private String refundTime;
-    private Double refundAmount;
+    private BigDecimal refundAmount;
     private String pickupCode;
     private String userName;
     private String filmName;

@@ -1,6 +1,7 @@
 package com.example.springboot.mapper;
 
 import com.example.springboot.common.BaseMapper;
+import com.example.springboot.common.OrderStatusCriteria;
 import com.example.springboot.dto.response.DailyRevenueView;
 import com.example.springboot.dto.response.NameValueView;
 import com.example.springboot.dto.response.TodayRevenueView;
@@ -42,7 +43,9 @@ public interface OrderedMapper extends BaseMapper<Ordered> {
      */
     List<NameValueView> countGroupByStatus();
 
-    int countSeatInUse(@Param("recordId") Integer recordId, @Param("seat") String seat);
+    int countSeatInUse(@Param("recordId") Integer recordId,
+                       @Param("seat") String seat,
+                       @Param("s") OrderStatusCriteria criteria);
 
     Ordered selectByIdForUpdate(Integer id);
 
@@ -53,21 +56,25 @@ public interface OrderedMapper extends BaseMapper<Ordered> {
      * 凭码核销的落库动作，返回受影响行数。条件里带 {@code status = '待取票'} 是关键：
      * 并发的两次核销只有一个能改到行，另一个拿到 0 行 —— 不靠先读后写，因此不需要
      * 悲观锁也不会各出一张票。与余额扣减的 {@code UPDATE ... WHERE balance >= ?} 同一手法。
+     *
+     * <p>状态取值由 {@code criteria} 带入，不在 XML 里写中文字面量。
      */
-    int markPickedUpByCode(String pickupCode);
+    int markPickedUpByCode(@Param("pickupCode") String pickupCode,
+                           @Param("pickedUp") String pickedUp,
+                           @Param("pending") String pending);
 
     /** 评价门禁：该用户对该影片是否有已取票订单（已取票是终态，一旦成立不会被推翻） */
     int countPickedUpByUserAndFilm(@Param("userId") Integer userId, @Param("filmId") Integer filmId);
 
-    List<Ordered> selectExpiredPendingOrders();
+    List<Ordered> selectExpiredPendingOrders(@Param("s") OrderStatusCriteria criteria);
 
     /**
      * 单笔订单是否已过支付期限（BL-05）。与 {@link #selectExpiredPendingOrders} 共用
      * {@code pendingExpiredCondition} 片段，只看数据库时钟。
      */
-    int countExpiredById(@Param("id") Integer id);
+    int countExpiredById(@Param("id") Integer id, @Param("s") OrderStatusCriteria criteria);
 
-    int batchCancelExpiredOrders(List<Integer> ids);
+    int batchCancelExpiredOrders(@Param("list") List<Integer> ids, @Param("s") OrderStatusCriteria criteria);
 
     /* 删除守卫引用计数：被订单引用的影片/影院/影厅/场次/用户不允许物理删除 */
 
