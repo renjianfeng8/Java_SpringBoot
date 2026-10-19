@@ -130,8 +130,34 @@
 | --- | --- | --- | --- |
 | FE-64 | views/Back.vue 与 views/Manage.vue | 两个后台外壳 **91% 行完全相同**（`Back.vue` 150 行非空行中有 137 行也出现在 `Manage.vue` 196 行里）：logout 块、header、用户下拉、面包屑、`el-menu` 结构逐字重复，差异只在菜单数据。与 FE-50 同族但范围更大——改一处 header 行为要动两个文件。 | 合并为一个外壳 + 菜单配置（两块 `el-menu` 的差异可收成 `menuGroups` 数据）。属结构变更，另起一轮。**未做（登记备查）**。 |
 | FE-65 | views/front/Cinema.vue、Orders.vue、Movie.vue；views/back/* | FE-49 已登记"两套分页口径并存"，但未量化：这 4 个页面的 `pageNum/pageSize/total/load/handlePage` 各自手写，**请求序号守卫只在 `useCrud` 与 FE-25/26 修过的那几处**，其余仍可能旧响应覆盖新结果。 | 收敛到 `useCrud`，或至少抽出带 `loadSeq` 的 `usePagedList`。与 FE-49 同一轮处理。**未做（登记备查）**，本条只是把基数补全。 |
-| FE-66 | 全站 `res.code === '200'` | FE-19 估的是"约 101 处 / 37 文件"。实测（2026-10-18，正则 `code\s*===?\s*['"]200['"]`，`.vue` + `.js`）为 **98 处 / 35 文件**：`views/` 87、`composables/` 7（其中 `useCrud.js` 5）、`components/` 4。最多的单文件各 6 处（`back/Record.vue`、`front/Account.vue`、`manage/Film.vue`）。 | 数量下调不影响结论（仍无单一出处）。改法同 FE-19：拦截器内归一，或至少收敛 `SUCCESS_CODE` 常量。**未做（登记备查）**。 |
+| FE-66 | 全站 `res.code === '200'` | FE-19 估的是"约 101 处 / 37 文件"。实测（2026-10-18，正则 `code\s*===?\s*['"]200['"]`，`.vue` + `.js`）为 **98 处 / 35 文件**：`views/` 87、`composables/` 7（其中 `useCrud.js` 5）、`components/` 4。最多的单文件各 6 处（`back/Record.vue`、`front/Account.vue`、`manage/Film.vue`）。 | **2026-10-19 已修复**（见下）。 |
 | FE-63 复核 | 全站 el-table 表头 | 2026-10-18 复核确认「全站未做」成立；**2026-10-19 已修复**，见上表。 | 已关闭。 |
+
+### FE-66 修复记录（2026-10-19）
+
+**做了什么**：`constants/index.js` 新增 `SUCCESS_CODE` 常量和 `isSuccess(response)` 助手，
+全站 102 处 `x.code === '200'` / `x.code !== '200'` 收敛为 `isSuccess(x)` / `!isSuccess(x)`，
+涉及 35 个文件。存在多处 `@/constants` import 的文件已合并为一条。
+
+**为什么选 `isSuccess` 而不是只在拦截器里归一**：拦截器改成 `code !== '200'` 就 reject 看起来更彻底，
+但它会改变**每个失败分支的控制流**——很多页面当前依赖 `else` 分支做局部降级（比如排行榜某一块失败
+只把该块置空、其余照常渲染），拦截器 reject 会把整页打断。那是行为变更，不是重构。
+本轮的约束是「语义完全等价」，只抽常量，不动控制流。
+
+**做了哪些验证**：
+- `npm run build` 通过；
+- 后端 26 条接口口径实测：成功路径全部 `code='200'`，失败路径（401/404/400/403）**没有一条**
+  返回 `'200'`；
+- 真浏览器（无头 Chrome + CDP）跑 **16 个页面**：6 个游客页 + 10 个登录后页面（用户 4 + 管理后台 6），
+  **全部 0 个 Axios 错误、0 个数据缺失、0 次被踢回登录页**。
+
+**顺带修掉一个既有小 bug**：`components/ErrorBoundary.vue` 用了 `<WarningFilled />` 却没 import，
+浏览器控制台一直报 `Failed to resolve component: WarningFilled`（引入自 `a4ec7c10`）。已补 import。
+
+**验证过程中发现、但不在本条范围的问题（已登记）**：
+`BaseController.getById` 对不存在的 id 返回 **200 + `data:null`**（实测 `GET /api/v1/films/99999999`）。
+`isSuccess` 只回答"请求成功了没有"，不回答"有没有拿到东西"，需要数据的调用方必须自己判 `res.data`。
+这一点已写进 `SUCCESS_CODE` 的注释，后端侧的契约修正另登 BL-49。
 
 ## 已核验为非缺陷（防二次误报）
 
