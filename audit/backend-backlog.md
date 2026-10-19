@@ -91,7 +91,9 @@
 
 | 编号 | 位置 | 问题 | 处置建议 |
 | --- | --- | --- | --- |
-| BL-06 | service/OrderedService.payOrder | 支付时不复议场次是否仍可购；isPurchasable 只在建单时判。建单后、到期前付款即可为已开演场次出票（退票已过截止，只能取票或作废）。 | 支付前复核 RecordService.isPurchasable，或在开场时强制取消。 |
+| BL-06a | db/record.status | `record.status` 是自由字符串（`"正常"`/`"停售"`），库端无 `CHECK`。2026-10-19 验证脚本误写 `"已停售"` 时 `UPDATE` 不报错、`isPurchasable` 也认不出来，导致「停售场次仍可支付」被误判为通过 —— 同样的错误若发生在手工改库或导入里，会静默变成「永远可售」。 | 加 `CHECK (status IN ('正常','停售'))` 或改为枚举列。 |
+
+本节原登记 **BL-06（支付不复核场次可购性）**，2026-10-19 已修复并移出：`payOrder` 在验密与扣款之前，用 `recordMapper.selectByIdForUpdate` 锁排片行复核 `isPurchasable`；不可购时报 409 且一分钱不动。实测复现与修复细节见 `docs/domain.md` §3.3，守卫 `PayOrderPurchasableGuardTest`（5 条，做过禁用复核的反证）。
 
 本轮修复并移出本表：BL-07 —— update 路径收口。新增 `common/Identifiable`，`BaseService<T extends Identifiable>.update` 前置判存在（主键缺失或查无此行抛 NOT_FOUND），User/Admin/Cinema/Film 的 `update` 覆写改为委派 `super.update`；OrderedService.update 需回读库行回填 pending_timeout_at，就地判存在，口径相同。行为变更：陈旧表单（行已删）由 200 变 404。
 
