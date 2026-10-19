@@ -72,18 +72,19 @@ src/                       70 文件 / 16,579 行（vue+js+scss）
 | 文件 | 作用 |
 | --- | --- |
 | `tokens.scss` | **唯一数值权威**：字号 11 档（`--fs-xs` 12px → `--fs-5xl` 36px）、间距 4px 网格（`--space-4…64`）、深色表面、扩展色、`--color-brand` |
-| `global.css` | reset、`.card`、page 灰底、`prefers-reduced-motion` |
+| `global.css` | reset、`.card`、page 灰底、`prefers-reduced-motion`、el-table 表头（全站） |
 | `index.scss` | 注入 EP 主色 `#165DFF` |
 | `front-pages.scss` | `.page-narrow`(55%)、`.page-wide`(85%)、`.page-card`、`.section-head`、`.poster-grid`、`.filter-*` |
 | `admin-pages.scss` | `.crud-page`、`.list-toolbar`、`.table-card`、`.field-*`、`.profile-*` |
 | `admin-layout.scss` | 后台外壳（50px 头 / 175px 侧栏） |
 | `auth-layout.scss` | 登录/注册共用卡片 |
 
-三条硬规则：
+四条硬规则：
 
 1. **字重只有 400 / 500 / 700**，可能含中文的文本不得用 500（雅黑只有 400/700，500 触发伪粗体）。
 2. 颜色/字号/间距一律引用令牌，禁止硬编码。
 3. 前台主题色由 `html.theme-front` 覆写（`App.vue` 按路由切换）—— EP 弹层 teleport 到 body，只能挂在 html 上。
+4. **覆盖 EP 自带样式必须提高特异性**（如 `.el-table.el-table`）。`global.css` 在 EP 样式**之前**加载，同优先级的选择器会被 EP 覆盖 —— 规则明明在样式表里、计算值却没变，这一坑在 FE-63 上实际发生过。
 
 ## 7 页面清单
 
