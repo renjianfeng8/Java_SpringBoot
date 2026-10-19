@@ -84,10 +84,10 @@
 </template>
 
 <script setup>
+import { isSuccess, TICKET_API } from '@/constants';
 import { reactive, ref } from 'vue';
 import { Ticket } from '@element-plus/icons-vue';
 import request from '@/utils/request.js';
-import { TICKET_API } from '@/constants';
 
 const formRef = ref(null);
 const form = reactive({ code: '' });
@@ -112,7 +112,7 @@ const submit = async () => {
   voucher.value = null;
   try {
     const res = await request.post(TICKET_API.REDEEM, { code: form.code.trim() });
-    if (res.code === '200') {
+    if (isSuccess(res)) {
       voucher.value = res.data;
       form.code = '';
       formRef.value?.clearValidate();

@@ -22,12 +22,12 @@
 </template>
 
 <script setup>
+import { isSuccess, AUTH_API } from '@/constants';
 
 import { reactive, ref } from "vue";
 import { useRouter } from "vue-router";
 import request from "@/utils/request.js";
 import { ElMessage } from "element-plus";
-import { AUTH_API } from "@/constants";
 import { getStoredUser } from "@/utils/authStorage";
 import { useAuth } from "@/composables/useAuth";
 
@@ -73,7 +73,7 @@ const updatePassword = () => {
     if (valid) {
       submitting.value = true
       request.put(AUTH_API.PASSWORD, data.form).then(res => {
-        if (res.code === '200') {
+        if (isSuccess(res)) {
           ElMessage.success('修改成功')
           // 改密后必须走 useAuth.logout()：它同时清单例与 storage 副本。只调
           // clearStoredUser() 的话内存里仍持 token、外壳继续渲染成已登录 —— 原写法

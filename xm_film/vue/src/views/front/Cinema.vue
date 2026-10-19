@@ -155,11 +155,11 @@
 </template>
 
 <script setup>
+import { isSuccess, API_PATHS, apiPage, CINEMA_API } from '@/constants';
 import { reactive, computed } from 'vue';
 import request from "@/utils/request.js";
 import { ElMessage } from 'element-plus';
 import { ArrowRight, Connection, Location, Phone, RefreshLeft, User } from '@element-plus/icons-vue';
-import { API_PATHS, apiPage, CINEMA_API } from '@/constants';
 import { avatarSrc, onAvatarError } from '@/utils/avatar';
 
 // 骨架条数：一屏能看到的卡片量，多了白渲染
@@ -187,7 +187,7 @@ const hasFilter = computed(() => Boolean(query.city || query.district))
 // 拉不到筛选项只留空下拉，不打断列表；网络错误提示由 request.js 统一弹
 const loadRegions = () => {
   request.get(CINEMA_API.REGIONS).then(res => {
-    if (res.code === '200') {
+    if (isSuccess(res)) {
       filters.districtsByCity = Object.fromEntries(res.data.map(r => [r.city, r.districts]))
     }
   }).catch(() => {})
@@ -232,7 +232,7 @@ const load = () => {
     }
   }).then(res => {
     if (seq !== loadSeq) return
-    if (res.code === '200') {
+    if (isSuccess(res)) {
       data.filmData = res.data.list
       data.total = res.data.total
     } else {

@@ -207,12 +207,12 @@
 </template>
 
 <script setup>
+import { isSuccess, API_PATHS, MARK_API, apiById, getActorRoleType } from '@/constants';
 import {reactive, ref, onMounted, computed} from 'vue';
 import {useRoute} from 'vue-router';
 import {ElMessage} from 'element-plus';
 import request from "@/utils/request.js";
 import 'element-plus/theme-chalk/el-button.css';
-import { API_PATHS, MARK_API, apiById, getActorRoleType } from '@/constants';
 import { formatBoxOffice, formatScore, formatFilmTypes } from '@/utils/format.js';
 
 
@@ -289,7 +289,7 @@ const fetchFilmDetail = () => {
   loading.value = true;
   errorMsg.value = '';
   request.get(apiById(API_PATHS.FILMS, filmId)).then(res => {
-        if (res.code === '200' && res.data) {
+        if (isSuccess(res) && res.data) {
           const data = res.data;
           // 电影数据映射
           Object.assign(film, {
@@ -348,7 +348,7 @@ const fetchCastBySingleId = (actorId) => {
   // 调用后端接口：按单个演员ID查询详情（含角色类型）
   request.get(apiById(API_PATHS.ACTORS, actorId))
       .then(res => {
-        if (res.code === '200' && res.data) {
+        if (isSuccess(res) && res.data) {
           const actorData = res.data;
           // 验证演员数据是否包含必要字段
           if (actorData.id && actorData.actorName) {
@@ -403,7 +403,7 @@ const fetchMarks = () => {
   marksError.value = false;
   request.get(MARK_API.BY_FILM, { params: { filmId, pageNum: 1, pageSize: 3 } })
       .then(res => {
-        if (res.code === '200' && res.data) {
+        if (isSuccess(res) && res.data) {
           hotMarks.value = res.data.list || [];
           marksTotal.value = res.data.total || 0;
         } else {

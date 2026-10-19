@@ -1,8 +1,8 @@
 import { ref, computed } from 'vue'
+import { isSuccess, AUTH_API } from '@/constants'
 import { ElMessage } from 'element-plus'
 import request from '@/utils/request'
 import { getStoredUser, setStoredUser, clearStoredUser } from '@/utils/authStorage'
-import { AUTH_API } from '@/constants'
 
 const globalUser = ref(null)
 const globalVerifying = ref(true)
@@ -41,7 +41,7 @@ export function useAuth() {
       const res = await request.get(AUTH_API.ME)
       // 验签期间登录态可能已变（登出 / 换号 / 他标签页清空），此结果作废，避免复活半个会话
       if (user.value?.token !== currentToken) return
-      if (res.code === '200') {
+      if (isSuccess(res)) {
         setUser({ ...res.data, token: currentToken })
       } else {
         logout()
@@ -68,7 +68,7 @@ export function useAuth() {
 
   async function login(credentials) {
     const res = await request.post(AUTH_API.LOGIN, credentials)
-    if (res.code === '200') {
+    if (isSuccess(res)) {
       setUser(res.data)
       ElMessage.success('登录成功')
       return res.data

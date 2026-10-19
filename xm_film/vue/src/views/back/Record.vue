@@ -110,11 +110,11 @@
 </template>
 
 <script setup lang="ts">
+import { isSuccess, API_PATHS, apiBatch, apiById, apiPage, getRecordStatusType as getStatusType } from '@/constants';
 import { computed, reactive, ref } from "vue";
 import { Delete, Edit, Search } from "@element-plus/icons-vue";
 import request from "@/utils/request.js";
 import { ElMessage, ElMessageBox } from "element-plus";
-import { API_PATHS, apiBatch, apiById, apiPage, getRecordStatusType as getStatusType } from "@/constants";
 import { useAuth } from "@/composables/useAuth";
 
 interface Record {
@@ -173,7 +173,7 @@ const delBatch = () => {
   }
   ElMessageBox.confirm('删除数据后无法恢复,您确认删除吗?', '删除确认', { type: 'warning' }).then(() => {
     request.delete(apiBatch(API_PATHS.RECORDS), { data: data.ids }).then(res => {
-      if (res.code === '200') {
+      if (isSuccess(res)) {
         ElMessage.success('操作成功')
         load()
       } else {
@@ -218,7 +218,7 @@ const load = () => {
 const del = (id: number) => {
   ElMessageBox.confirm('删除数据后无法恢复,您确认删除吗?', '删除确认', { type: 'warning' }).then(() => {
     request.delete(apiById(API_PATHS.RECORDS, id)).then(res => {
-      if (res.code === '200') {
+      if (isSuccess(res)) {
         ElMessage.success('操作成功');
         load();
         data.formVisible = false;
@@ -231,7 +231,7 @@ const del = (id: number) => {
 
 const add = () => {
   request.post(API_PATHS.RECORDS, data.form).then(res => {
-    if (res.code === '200') {
+    if (isSuccess(res)) {
       ElMessage.success('添加成功');
       data.formVisible = false;
       load();
@@ -245,7 +245,7 @@ const add = () => {
 
 const update = () => {
   request.put(API_PATHS.RECORDS, data.form).then(res => {
-    if (res.code === '200') {
+    if (isSuccess(res)) {
       ElMessage.success('更新成功');
       data.formVisible = false;
       load();
@@ -269,7 +269,7 @@ const save = () => {
 
 const loadRoom = () => {
   return request.get(API_PATHS.ROOMS).then(res => {
-    if (res.code === '200') {
+    if (isSuccess(res)) {
       data.roomData = res.data;
     } else {
       ElMessage.error(res.msg);
@@ -280,7 +280,7 @@ const loadRoom = () => {
 // 片库为全局资源，影院从中选片排期；影院上映列表由排片反推
 const loadFilm = () => {
   return request.get(API_PATHS.FILMS).then(res => {
-    if (res.code === '200') {
+    if (isSuccess(res)) {
       data.filmData = res.data;
     } else {
       ElMessage.error(res.msg);

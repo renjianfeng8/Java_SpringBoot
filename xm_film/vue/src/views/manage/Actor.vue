@@ -117,12 +117,12 @@
 </template>
 
 <script setup>
+import { isSuccess, API_PATHS, FILE_UPLOAD_URL } from '@/constants'
 import { computed } from 'vue'
 import { Delete, Edit, Plus, Search } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { useCrud } from '@/composables/useCrud'
 import { useFormDialog } from '@/composables/useFormDialog'
-import { API_PATHS, FILE_UPLOAD_URL } from '@/constants'
 import { uploadHeaders, handleUploadError } from '@/utils/upload'
 
 const crud = useCrud(API_PATHS.ACTORS)
@@ -149,12 +149,12 @@ const actorImgFileList = computed(() =>
 )
 
 function handleMovieImgUpload(res) {
-  if (res.code === '200') { form.img = res.data; ElMessage.success('电影图片上传成功') }
+  if (isSuccess(res)) { form.img = res.data; ElMessage.success('电影图片上传成功') }
   else { ElMessage.error(res.msg || '电影图片上传失败') }
 }
 
 function handleActorImgUpload(res) {
-  if (res.code === '200') { form.picture = res.data; ElMessage.success('主演照片上传成功') }
+  if (isSuccess(res)) { form.picture = res.data; ElMessage.success('主演照片上传成功') }
   else { ElMessage.error(res.msg || '主演照片上传失败') }
 }
 

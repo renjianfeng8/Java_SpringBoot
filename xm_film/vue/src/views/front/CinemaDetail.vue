@@ -164,6 +164,7 @@
 </template>
 
 <script setup>
+import { isSuccess, API_PATHS, FILM_API, apiById, apiPage } from '@/constants';
 import { computed, nextTick, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
@@ -172,7 +173,6 @@ import {
 } from '@element-plus/icons-vue';
 import request from "@/utils/request.js";
 import { formatScore } from '@/utils/format.js';
-import { API_PATHS, FILM_API, apiById, apiPage } from '@/constants';
 import { avatarSrc, onAvatarError } from '@/utils/avatar';
 
 // 1. 路由相关：参数提取与监听
@@ -305,7 +305,7 @@ const fetchCinemaInfo = async () => {
 
   try {
     const res = await request.get(apiById(API_PATHS.CINEMAS, validCinemaId));
-    if (res.code === '200' && res.data) {
+    if (isSuccess(res) && res.data) {
       Object.assign(cinema, {
         id: res.data.id,
         name: res.data.name,
@@ -331,7 +331,7 @@ const fetchFilms = async () => {
     const res = await request.get(FILM_API.BY_CINEMA, {
       params: { cinemaId: Number(cinemaId.value) },
     });
-    if (res.code === '200' && Array.isArray(res.data)) {
+    if (isSuccess(res) && Array.isArray(res.data)) {
       films.value = res.data;
     } else {
       films.value = [];
@@ -361,7 +361,7 @@ const fetchFilmSessions = async (filmIdValue) => {
         pageSize: SESSION_PAGE_SIZE,
       },
     });
-    if (res.code === '200' && res.data) {
+    if (isSuccess(res) && res.data) {
       sessionsByFilm[filmIdValue] = res.data.list || [];
       delete sessionError[filmIdValue];
     } else {

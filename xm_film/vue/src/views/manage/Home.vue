@@ -162,6 +162,7 @@
 </template>
 
 <script setup lang="ts">
+import { isSuccess, FILM_API, STATISTICS_API, ORDER_STATUS_OPTIONS, getOrderStatusType } from '@/constants';
 import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from "vue";
 import request from "@/utils/request.js";
 import { Refresh, Money, Tickets, User, OfficeBuilding, CreditCard, VideoCamera } from "@element-plus/icons-vue";
@@ -169,7 +170,6 @@ import { Refresh, Money, Tickets, User, OfficeBuilding, CreditCard, VideoCamera 
 // formatBoxOffice 给「累计票房」（榜单），0 表示该片还没有收入，渲染「暂无数据」。
 // 两者刻意不混用 —— 见 utils/format.js 里两个函数各自的注释。
 import { formatYuan, formatBoxOffice, formatScore } from "@/utils/format.js";
-import { FILM_API, STATISTICS_API, ORDER_STATUS_OPTIONS, getOrderStatusType } from "@/constants";
 import * as echarts from 'echarts/core';
 import { BarChart, LineChart, PieChart } from 'echarts/charts';
 import { GridComponent, TooltipComponent } from 'echarts/components';
@@ -323,7 +323,7 @@ const loadOverview = async () => {
   loading.overview = true;
   try {
     const res = await request.get(STATISTICS_API.OVERVIEW);
-    if (res.code === '200') {
+    if (isSuccess(res)) {
       const d = res.data || {};
       overview.summary = d.summary || null;
       overview.cinemaStatus = d.cinemaStatus || [];
@@ -348,7 +348,7 @@ const loadFilmBoxOfficeTop = async () => {
   loading.boxOffice = true;
   try {
     const res = await request.get(FILM_API.BOX_OFFICE_TOP, { params: { topNum: 10 } });
-    if (res.code === '200') {
+    if (isSuccess(res)) {
       boxOfficeTop.value = (res.data || []).slice(0, RANK_LIMIT);
       failed.boxOffice = false;
     } else {
@@ -366,7 +366,7 @@ const loadFilmMarkTop = async () => {
   loading.mark = true;
   try {
     const res = await request.get(FILM_API.MARK_TOP, { params: { topNum: 10 } });
-    if (res.code === '200') {
+    if (isSuccess(res)) {
       markTop.value = (res.data || []).slice(0, RANK_LIMIT);
       failed.mark = false;
     } else {

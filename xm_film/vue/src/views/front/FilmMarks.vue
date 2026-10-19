@@ -118,12 +118,12 @@
 </template>
 
 <script setup>
+import { isSuccess, API_PATHS, MARK_API, apiById } from '@/constants';
 import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import request from '@/utils/request.js';
 import { formatScore } from '@/utils/format.js';
-import { API_PATHS, MARK_API, apiById } from '@/constants';
 import { useAuth } from '@/composables/useAuth';
 import { avatarSrc, DEFAULT_AVATAR } from '@/utils/avatar';
 
@@ -158,7 +158,7 @@ const goBackToFilmList = () => {
 
 const loadFilm = async () => {
   const res = await request.get(apiById(API_PATHS.FILMS, filmId));
-  if (res.code !== '200' || !res.data) {
+  if (!isSuccess(res) || !res.data) {
     throw new Error('影片不存在');
   }
   const data = res.data;
@@ -174,7 +174,7 @@ const loadMarks = async () => {
   const res = await request.get(MARK_API.BY_FILM, {
     params: { filmId, pageNum: marks.pageNum, pageSize: marks.pageSize },
   });
-  if (res.code !== '200' || !res.data) {
+  if (!isSuccess(res) || !res.data) {
     throw new Error('评价加载失败');
   }
   marks.total = res.data.total || 0;
@@ -247,7 +247,7 @@ const onLike = async (item) => {
   togglingId.value = item.id;
   try {
     const res = await request.put(MARK_API.LIKE(item.id), { liked: !item.liked });
-    if (res.code === '200' && res.data) {
+    if (isSuccess(res) && res.data) {
       item.liked = !!res.data.liked;
       item.likeCount = res.data.likeCount;
     }
@@ -289,7 +289,7 @@ const submit = async () => {
     const res = form.id
         ? await request.put(API_PATHS.MARKS, { id: form.id, ...payload })
         : await request.post(API_PATHS.MARKS, { filmId: Number(filmId), ...payload });
-    if (res.code === '200') {
+    if (isSuccess(res)) {
       ElMessage.success(form.id ? '评价已更新' : '评价发表成功');
       dialogVisible.value = false;
       // 影片均分与「我的评价」都会变，两条请求一起重取

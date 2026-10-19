@@ -174,11 +174,11 @@
 </template>
 
 <script setup>
+import { isSuccess, ACCOUNT_API, ORDER_API } from '@/constants';
 import { computed, nextTick, onUnmounted, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import request from '@/utils/request.js';
-import { ACCOUNT_API, ORDER_API } from '@/constants';
 import PayPasswordInput from '@/components/PayPasswordInput.vue';
 
 const DEFAULT_PAY_SECONDS = 300;
@@ -232,7 +232,7 @@ const close = () => emit('update:modelValue', false);
 const loadBalance = async () => {
   try {
     const res = await request.get(ACCOUNT_API.SUMMARY);
-    if (res.code === '200') {
+    if (isSuccess(res)) {
       balance.value = Number(res.data?.balance ?? 0);
       hasPayPassword.value = Boolean(res.data?.hasPayPassword);
     } else {
@@ -266,7 +266,7 @@ const goOrders = () => {
 const loadVoucher = async () => {
   try {
     const res = await request.get(ORDER_API.DETAIL(props.order.id));
-    if (res.code === '200' && res.data?.pickupCode) {
+    if (isSuccess(res) && res.data?.pickupCode) {
       voucherOrder.value = res.data;
     } else {
       voucherFailed.value = true;
@@ -375,7 +375,7 @@ const submitPayment = async () => {
   submitting.value = true;
   try {
     const res = await request.put(ORDER_API.PAY(props.order.id), { payPassword: payPassword.value });
-    if (res.code === '200') {
+    if (isSuccess(res)) {
       stopCountdown();
       showPasswordInput.value = false;
       payPassword.value = '';
@@ -406,7 +406,7 @@ const cancelOrder = async () => {
   submitting.value = true;
   try {
     const res = await request.put(ORDER_API.CANCEL(props.order.id));
-    if (res.code === '200') {
+    if (isSuccess(res)) {
       stopCountdown();
       ElMessage.success('订单已取消');
       close();

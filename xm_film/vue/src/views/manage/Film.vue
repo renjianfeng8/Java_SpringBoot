@@ -246,12 +246,12 @@
 </template>
 
 <script setup>
+import { isSuccess, API_PATHS, FILE_UPLOAD_URL, TMDB_API, getFilmStatusType as getStatusType } from '@/constants'
 import { ref, reactive } from 'vue'
 import { Delete, Download, Edit, Plus, Search, VideoPlay } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { useCrud } from '@/composables/useCrud'
 import { useFormDialog } from '@/composables/useFormDialog'
-import { API_PATHS, FILE_UPLOAD_URL, TMDB_API, getFilmStatusType as getStatusType } from '@/constants'
 import request from '@/utils/request'
 import { uploadHeaders, handleUploadError } from '@/utils/upload'
 
@@ -282,19 +282,19 @@ const actorData = ref([])
 // 三个都返回 Promise：导入回填前必须等下拉数据刷新完，否则新回填的 id 在下拉里找不到标签
 function loadType() {
   return request.get(API_PATHS.TYPES).then(res => {
-    if (res.code === '200') typeData.value = res.data
+    if (isSuccess(res)) typeData.value = res.data
   }).catch(() => {})
 }
 
 function loadArea() {
   return request.get(API_PATHS.AREAS).then(res => {
-    if (res.code === '200') areaData.value = res.data
+    if (isSuccess(res)) areaData.value = res.data
   }).catch(() => {})
 }
 
 function loadActor() {
   return request.get(API_PATHS.ACTORS).then(res => {
-    if (res.code === '200') actorData.value = res.data
+    if (isSuccess(res)) actorData.value = res.data
   }).catch(() => {})
 }
 
@@ -304,7 +304,7 @@ loadArea()
 loadActor()
 
 function handleFileUpload(res) {
-  if (res.code === '200') { form.img = res.data; ElMessage.success('电影封面上传成功') }
+  if (isSuccess(res)) { form.img = res.data; ElMessage.success('电影封面上传成功') }
   else { ElMessage.error(res.msg || '电影封面上传失败') }
 }
 
@@ -352,7 +352,7 @@ async function doImportSearch() {
   searching.value = true
   try {
     const res = await request.get(TMDB_API.SEARCH, { params: { query } })
-    if (res.code === '200') {
+    if (isSuccess(res)) {
       importResults.value = res.data || []
       importSelectedId.value = null
       if (!importResults.value.length) ElMessage.warning('TMDB 没有匹配的影片')
@@ -371,7 +371,7 @@ async function applyImport() {
   importing.value = true
   try {
     const res = await request.get(TMDB_API.MOVIE(importSelectedId.value))
-    if (res.code !== '200') {
+    if (!isSuccess(res)) {
       ElMessage.error(res.msg || '导入失败')
       return
     }
@@ -421,7 +421,7 @@ async function runBackfill() {
   backfilling.value = true
   try {
     const res = await request.post(TMDB_API.BACKFILL_VIDEOS)
-    if (res.code === '200') {
+    if (isSuccess(res)) {
       Object.assign(backfillResult, { scanned: 0, updated: 0, missed: [] }, res.data)
       backfillVisible.value = true
       ElMessage.success(`已补 ${backfillResult.updated} 部预告片`)

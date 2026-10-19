@@ -60,12 +60,12 @@
 </template>
 
 <script setup>
+import { isSuccess, AUTH_API } from '@/constants';
 import {reactive, ref} from "vue";
 import { useRouter } from 'vue-router';
 import { User, Lock } from '@element-plus/icons-vue';
 import request from "@/utils/request.js";
 import {ElMessage} from "element-plus";
-import { AUTH_API } from "@/constants";
 
 const router = useRouter();
 
@@ -99,7 +99,7 @@ const register = () => {
     if (valid) {
       submitting.value = true;
       request.post(AUTH_API.REGISTER, data.form).then((res) => {
-        if (res.code === '200') {
+        if (isSuccess(res)) {
           ElMessage.success('注册成功');
           // 走 router.push 而非 location.href：注册后没有需要重置的运行态，
           // 整页重载只是白白把应用再下载一遍

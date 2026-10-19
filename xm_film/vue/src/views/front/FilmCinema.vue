@@ -146,13 +146,13 @@
 </template>
 
 <script setup>
+import { isSuccess, API_PATHS, apiById, apiPage } from '@/constants';
 import {reactive, ref, onMounted} from 'vue';
 import {useRoute, useRouter} from 'vue-router';
 import {ElMessage} from 'element-plus';
 import request from "@/utils/request.js";
 import 'element-plus/theme-chalk/el-pagination.css';
 import 'element-plus/theme-chalk/el-button.css';
-import { API_PATHS, apiById, apiPage } from '@/constants';
 import { formatBoxOffice, formatScore, formatFilmTypes } from '@/utils/format.js';
 import { avatarSrc, onAvatarError } from '@/utils/avatar';
 
@@ -220,7 +220,7 @@ const fetchFilmFullInfo = () => {
 
   return request.get(apiById(API_PATHS.FILMS, filmId))
       .then(res => {
-        if (res.code === '200' && res.data) {
+        if (isSuccess(res) && res.data) {
           const data = res.data;
           // 完整赋值电影信息（覆盖所有前端展示字段）
           Object.assign(film, {
@@ -270,7 +270,7 @@ const loadCinemaList = () => {
     }
   })
       .then(res => {
-        if (res.code === '200' && res.data) {
+        if (isSuccess(res) && res.data) {
           // 后端返回PageInfo对象，提取list和total（与后端Service返回的PageInfo对齐）
           cinemaData.filmData = res.data.list || [];
           cinemaData.total = res.data.total || 0;

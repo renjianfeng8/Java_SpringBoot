@@ -100,12 +100,12 @@
 </template>
 
 <script setup>
+import { isSuccess, API_PATHS, FILE_UPLOAD_URL, getRoleType } from '@/constants'
 import { computed } from 'vue'
 import { Delete, Edit, Plus, Search } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { useCrud } from '@/composables/useCrud'
 import { useFormDialog } from '@/composables/useFormDialog'
-import { API_PATHS, FILE_UPLOAD_URL, getRoleType } from '@/constants'
 import { uploadHeaders, handleUploadError } from '@/utils/upload'
 import { avatarSrc, DEFAULT_AVATAR } from '@/utils/avatar'
 
@@ -130,7 +130,7 @@ const avatarFileList = computed(() =>
 )
 
 function handleFileUpload(res) {
-  if (res.code === '200') { form.avatar = res.data; ElMessage.success('头像上传成功') }
+  if (isSuccess(res)) { form.avatar = res.data; ElMessage.success('头像上传成功') }
   else { ElMessage.error(res.msg || '头像上传失败') }
 }
 </script>

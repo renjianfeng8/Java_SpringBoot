@@ -171,7 +171,7 @@ import { uploadHeaders, handleUploadError } from '@/utils/upload'
 import { avatarSrc, DEFAULT_AVATAR } from '@/utils/avatar'
 import {
   API_PATHS, CINEMA_DIRECTORY_API, CINEMA_STATUS, CINEMA_STATUS_OPTIONS, FILE_UPLOAD_URL,
-  getCinemaStatusType as getStatusType
+  getCinemaStatusType as getStatusType, isSuccess
 } from '@/constants'
 
 const crud = useCrud(API_PATHS.CINEMAS)
@@ -201,7 +201,7 @@ const searchDirectory = (keyword) => {
     .then(res => {
       // 连打关键字时只认最后一次请求，慢的旧响应不得覆盖新候选
       if (seq !== dirSeq) return
-      if (res.code === '200') directoryOptions.value = res.data?.list || []
+      if (isSuccess(res)) directoryOptions.value = res.data?.list || []
     })
     .catch(() => {})
     .finally(() => { if (seq === dirSeq) directoryLoading.value = false })
@@ -236,7 +236,7 @@ watch(() => route.query.status, (status) => {
 }, { immediate: true })
 
 function handleFileUpload(res) {
-  if (res.code === '200') { form.avatar = res.data; ElMessage.success('头像上传成功') }
+  if (isSuccess(res)) { form.avatar = res.data; ElMessage.success('头像上传成功') }
   else { ElMessage.error(res.msg || '头像上传失败') }
 }
 
@@ -246,7 +246,7 @@ function approve(row) {
     .then(async () => {
       try {
         const res = await request.put(API_PATHS.CINEMAS, { id: row.id, status: CINEMA_STATUS.APPROVED })
-        if (res.code === '200') {
+        if (isSuccess(res)) {
           ElMessage.success('审核通过')
           await crud.load()
         } else {

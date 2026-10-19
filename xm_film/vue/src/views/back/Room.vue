@@ -72,6 +72,7 @@
 </template>
 
 <script setup lang="ts">
+import { isSuccess } from '@/constants'
 import { computed, reactive, ref } from "vue";
 import { Delete, Edit, Search } from "@element-plus/icons-vue";
 import request from "@/utils/request.js";
@@ -135,7 +136,7 @@ const load = () => {
 
 const add = () => {
   request.post(API_PATHS.ROOMS, data.form).then(res => {
-    if (res.code === '200') {
+    if (isSuccess(res)) {
       ElMessage.success('添加成功');
       data.formVisible = false;
       load();
@@ -149,7 +150,7 @@ const add = () => {
 
 const update = () => {
   request.put(API_PATHS.ROOMS, data.form).then(res => {
-    if (res.code === '200') {
+    if (isSuccess(res)) {
       ElMessage.success('更新成功');
       data.formVisible = false;
       load();
@@ -189,7 +190,7 @@ const del = (id: number) => {
   ElMessageBox.confirm('删除数据后无法恢复，您确认删除吗?', '删除确认', { type: 'warning' })
       .then(() => {
         request.delete(apiById(API_PATHS.ROOMS, id)).then(res => {
-          if (res.code === '200') {
+          if (isSuccess(res)) {
             ElMessage.success('删除成功');
             load();
           } else {
@@ -214,7 +215,7 @@ const delBatch = () => {
   ElMessageBox.confirm(`确定删除选中的 ${data.ids.length} 条数据吗？删除后无法恢复`, '删除确认', { type: 'warning' })
       .then(() => {
         request.delete(apiBatch(API_PATHS.ROOMS), { data: data.ids }).then(res => {
-          if (res.code === '200') {
+          if (isSuccess(res)) {
             ElMessage.success('批量删除成功');
             load();
           } else {

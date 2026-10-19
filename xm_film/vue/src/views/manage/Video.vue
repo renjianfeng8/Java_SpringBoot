@@ -102,12 +102,12 @@
 </template>
 
 <script setup>
+import { isSuccess, API_PATHS, FILE_UPLOAD_URL } from '@/constants'
 import { computed } from 'vue'
 import { Delete, Edit, Plus, Search } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { useCrud } from '@/composables/useCrud'
 import { useFormDialog } from '@/composables/useFormDialog'
-import { API_PATHS, FILE_UPLOAD_URL } from '@/constants'
 import { uploadHeaders, handleUploadError } from '@/utils/upload'
 
 const crud = useCrud(API_PATHS.VIDEOS)
@@ -133,12 +133,12 @@ const previewFileList = computed(() =>
 )
 
 function handleFileUpload(res) {
-  if (res.code === '200') { form.img = res.data; ElMessage.success('图片上传成功') }
+  if (isSuccess(res)) { form.img = res.data; ElMessage.success('图片上传成功') }
   else { ElMessage.error(res.msg || '图片上传失败') }
 }
 
 function handleVideoUpload(res) {
-  if (res.code === '200') { form.preview = res.data; ElMessage.success('视频上传成功') }
+  if (isSuccess(res)) { form.preview = res.data; ElMessage.success('视频上传成功') }
   else { ElMessage.error(res.msg || '视频上传失败') }
 }
 </script>

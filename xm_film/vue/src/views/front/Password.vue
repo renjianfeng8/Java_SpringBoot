@@ -30,12 +30,12 @@
 </template>
 
 <script setup>
+import { isSuccess, API_PATHS } from '@/constants';
 
 import {reactive, ref} from "vue";
 import { useRouter } from "vue-router";
 import request from "@/utils/request.js";
 import { ElMessage } from "element-plus";
-import { API_PATHS } from '@/constants';
 import { getStoredUser } from "@/utils/authStorage";
 import { useAuth } from "@/composables/useAuth";
 
@@ -80,7 +80,7 @@ const updatePassword = () => {
     if (valid) {
       submitting.value = true
       request.put(`${API_PATHS.AUTH}/password`,data.form).then(res => {
-        if (res.code === '200') {
+        if (isSuccess(res)) {
           ElMessage.success('修改成功')
           // 必须走 useAuth 的 logout 而不是只清 storage：登录态的唯一来源是 useAuth 里
           // 那个模块级 ref，只清 storage 的话内存里仍留着 token，界面会继续当作已登录

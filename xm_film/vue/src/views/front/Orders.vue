@@ -133,12 +133,12 @@
 </template>
 
 <script setup lang="ts">
+import { isSuccess, API_PATHS, ORDER_API, ORDER_STATUS_OPTIONS, getOrderStatusType as getStatusType, apiById, apiPage, isOrderDeletable } from '@/constants';
 import { reactive, ref } from "vue";
 import { useRouter } from "vue-router";
 import { Delete, Search } from "@element-plus/icons-vue";
 import request from "@/utils/request.js";
 import { ElMessage, ElMessageBox } from "element-plus";
-import { API_PATHS, ORDER_API, ORDER_STATUS_OPTIONS, getOrderStatusType as getStatusType, apiById, apiPage, isOrderDeletable } from '@/constants';
 import OrderPayDialog from '@/components/OrderPayDialog.vue';
 import { useAuth } from '@/composables/useAuth';
 
@@ -229,7 +229,7 @@ const search = () => {
 const del = (id: number) => {
   ElMessageBox.confirm('删除数据后无法恢复,您确认删除吗?', '删除确认', { type: 'warning' }).then(() => {
     request.delete(apiById(API_PATHS.ORDERS, id)).then(res => {
-      if (res.code === '200') {
+      if (isSuccess(res)) {
         ElMessage.success('操作成功')
         load()
       } else {
@@ -242,7 +242,7 @@ const del = (id: number) => {
 const cancelOrder = async (id: number) => {
   try {
     const res = await request.put(ORDER_API.CANCEL(id))
-    if (res.code === '200') {
+    if (isSuccess(res)) {
       ElMessage.success('订单已取消')
       await load()
     } else {
@@ -277,7 +277,7 @@ const refundOrder = (order: Ordered) => {
   ).then(async () => {
     try {
       const res = await request.put(ORDER_API.REFUND(order.id))
-      if (res.code === '200') {
+      if (isSuccess(res)) {
         ElMessage.success('退票成功')
         await load()
       } else {
@@ -301,7 +301,7 @@ const loadMyMarks = async () => {
   if (!userId) return;
   try {
     const res = await request.get(API_PATHS.MARKS, { params: { userId } });
-    if (res.code === '200') {
+    if (isSuccess(res)) {
       myMarks.value = res.data || [];
     }
   } catch (error) {

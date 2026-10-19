@@ -27,6 +27,7 @@
 <script setup>
 import { ref, onErrorCaptured } from 'vue'
 import { useRouter } from 'vue-router'
+import { WarningFilled } from '@element-plus/icons-vue'
 
 const props = defineProps({
   boundaryName: { type: String, default: '未知区域' }

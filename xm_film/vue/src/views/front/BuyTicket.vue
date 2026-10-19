@@ -172,12 +172,12 @@
 </template>
 
 <script setup>
+import { isSuccess, API_PATHS, ORDER_API, apiById } from '@/constants';
 import { computed, ref, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { CircleCloseFilled, Loading } from '@element-plus/icons-vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import request from "@/utils/request.js";
-import { API_PATHS, ORDER_API, apiById } from '@/constants';
 import { clearStoredUser, getStoredUser } from '@/utils/authStorage';
 import OrderPayDialog from '@/components/OrderPayDialog.vue';
 
@@ -260,7 +260,7 @@ const cancelPendingOrder = (order) => {
   ElMessageBox.confirm('取消后座位将被释放，确认取消该未支付订单吗？', '取消确认', { type: 'warning' })
       .then(() => {
         request.put(ORDER_API.CANCEL(order.id)).then(res => {
-          if (res.code === '200') {
+          if (isSuccess(res)) {
             ElMessage.success('订单已取消');
             initSeats();
           } else {
@@ -344,7 +344,7 @@ const initSeats = () => {
         recordId: Number(recordId)
       }
     }).then(res => {
-      if (res.code !== '200') {
+      if (!isSuccess(res)) {
         seatError.value = res.msg || '座位数据加载失败';
         seats.value = emptyMatrix();
         resolve();
@@ -397,7 +397,7 @@ const fetchBaseInfo = () => {
   return Promise.all([
     // 电影信息（与影院页接口一致）
     request.get(apiById(API_PATHS.FILMS, Number(filmId))).then(res => {
-      if (res.code === '200' && res.data) {
+      if (isSuccess(res) && res.data) {
         filmInfo.value = res.data;
       } else {
         throw new Error(`电影信息加载失败：${res.msg || '未知错误'}`);
@@ -405,7 +405,7 @@ const fetchBaseInfo = () => {
     }),
     // 影院信息（与影院页接口一致）
     request.get(apiById(API_PATHS.CINEMAS, Number(cinemaId))).then(res => {
-      if (res.code === '200' && res.data) {
+      if (isSuccess(res) && res.data) {
         cinemaInfo.value = res.data;
       } else {
         throw new Error(`影院信息加载失败：${res.msg || '未知错误'}`);
@@ -413,7 +413,7 @@ const fetchBaseInfo = () => {
     }),
     // 场次信息（获取影厅、座位布局等关键字段）
     request.get(apiById(API_PATHS.RECORDS, Number(recordId))).then(res => {
-      if (res.code === '200' && res.data) {
+      if (isSuccess(res) && res.data) {
         showInfo.value = {
           id: res.data.id,
           roomId: res.data.roomId || 0, // 确保为数字，避免后端报错
@@ -529,7 +529,7 @@ const confirmBooking = async () => {
       recordId: Number(recordId),
       seat: selectedSeats.value.join(',')
     });
-    if (res.code === '200' && res.data) {
+    if (isSuccess(res) && res.data) {
       currentOrder.value = res.data;
       paymentDialogVisible.value = true;
     } else {

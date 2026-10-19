@@ -87,10 +87,10 @@
 </template>
 
 <script setup>
+import { isSuccess, ACCOUNT_API } from '@/constants';
 import { computed, nextTick, onMounted, reactive, ref } from 'vue';
 import { ElMessage } from 'element-plus';
 import request from '@/utils/request.js';
-import { ACCOUNT_API } from '@/constants';
 import PayPasswordInput from '@/components/PayPasswordInput.vue';
 
 const submitting = ref(false);
@@ -151,7 +151,7 @@ const backToVerify = () => {
 const loadState = async () => {
   try {
     const res = await request.get(ACCOUNT_API.SUMMARY);
-    const known = res.code === '200';
+    const known = isSuccess(res);
     if (known) {
       hasPayPassword.value = Boolean(res.data?.hasPayPassword);
     }
@@ -184,7 +184,7 @@ const verifyIdentity = async () => {
         ? await request.post(ACCOUNT_API.VERIFY_OLD_PASSWORD, { oldPassword: form.oldPassword })
         : await request.post(ACCOUNT_API.VERIFY_LOGIN_PASSWORD, { loginPassword: form.loginPassword });
 
-    if (res.code === '200') {
+    if (isSuccess(res)) {
       // 聚焦交给过渡的 after-enter 钩子（此刻新面板还没入 DOM）
       step.value = 2;
       return;
@@ -229,7 +229,7 @@ const submit = async () => {
           payPassword: form.payPassword,
         });
 
-    if (res.code === '200') {
+    if (isSuccess(res)) {
       ElMessage.success(isChange.value ? '支付密码已修改' : '支付密码已设置');
       hasPayPassword.value = true;
       mode.value = 'change';

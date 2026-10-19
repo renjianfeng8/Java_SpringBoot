@@ -208,12 +208,12 @@
 </template>
 
 <script setup>
+import { isSuccess, API_PATHS, FILM_API } from '@/constants';
 import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import { Refresh } from '@element-plus/icons-vue';
 import request from "@/utils/request.js";
-import { API_PATHS, FILM_API } from '@/constants';
 import { formatBoxOffice, formatYuan, formatScore, formatFilmTypes } from '@/utils/format.js';
 import 'element-plus/theme-chalk/el-skeleton.css';
 import 'element-plus/theme-chalk/el-button.css';
@@ -402,7 +402,7 @@ const loadTodayBoxOffice = () => {
   };
 
   request.get(FILM_API.BOX_OFFICE_TODAY).then(res => {
-    if (res.code === '200') {
+    if (isSuccess(res)) {
       const payload = res.data;
       commit(() => {
         const changed = todayBoxOffice.total !== payload.total;
@@ -424,7 +424,7 @@ const loadFilmBoxOfficeTop = () => {
   request.get(FILM_API.BOX_OFFICE_TOP, {
     params: { topNum: 10 }
   }).then(res => {
-    if (res.code === '200') {
+    if (isSuccess(res)) {
       boxOfficeTop10.length = 0;
       boxOfficeTop10.push(...(res.data || []).slice(0, 10));
     } else {
@@ -443,7 +443,7 @@ const loadFilmMarkTop = () => {
   request.get(FILM_API.MARK_TOP, {
     params: { topNum: 10 }
   }).then(res => {
-    if (res.code === '200') {
+    if (isSuccess(res)) {
       ratingTop5.length = 0;
       ratingTop5.push(...(res.data || []).slice(0, 5));
     } else {
@@ -459,7 +459,7 @@ const loadFilmMarkTop = () => {
 
 const load = () => {
   request.get(API_PATHS.FILMS).then(res => {
-    if (res.code === '200') {
+    if (isSuccess(res)) {
       data.data1 = res.data.filter(v => v.status === '已上映');
       data.data2 = res.data.filter(v => v.status === '待上映');
       // 最多展示 8 条，避免页面过长

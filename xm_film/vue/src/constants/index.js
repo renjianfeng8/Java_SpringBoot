@@ -34,6 +34,33 @@ export const API_PATHS = {
  */
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/'
 
+/**
+ * 后端 `Result.code` 的成功值。
+ *
+ * <p><b>为什么要有这个常量</b>：后端把业务结果放进响应体的 `code` 字段，成功是字符串
+ * `'200'`（`ErrorCode.SUCCESS`），而不是 HTTP 状态码。全站曾有 100 多处直接写
+ * `res.code === '200'` 字面量 —— 一旦后端把成功码改成数字 `200`、或引入别的成功变体，
+ * 就得全仓搜一遍，漏一处就是"操作成功了但界面提示失败"。
+ *
+ * <p><b>为什么必须严格相等</b>：`'200'` 与 `200` 类型不同。若用宽松比较，
+ * `''`、`0` 之类的值也可能被判成成功；因此 `isSuccess` 用 `===`，且不做 `Number()` 转换。
+ *
+ * <p>注意与 HTTP 状态码无关：`utils/request.js` 里 `status === 401` 那些是 HTTP 层，
+ * 那条分支处理的是拦截器直写的非 200 响应，不要混用本常量。
+ *
+ * <p><b>与 null 的关系（2026-10-19 实测）</b>：`BaseController.getById` 对不存在的 id
+ * 返回的是 **200 + `data:null`**（实测 `GET /api/v1/films/99999999`）。因此
+ * `isSuccess(res)` 只回答"请求成功了没有"，**不回答"有没有拿到东西"**。
+ * 需要数据的调用方必须自己判 `res.data`，不能写成 `if (isSuccess(res)) { res.data.x }`。
+ * 这是后端契约的既有问题（见 `audit/backend-backlog.md`），不是本常量能解决的。
+ */
+export const SUCCESS_CODE = '200'
+
+/** 响应体是否表示业务成功（严格比较，不做类型转换） */
+export function isSuccess(response) {
+  return response?.code === SUCCESS_CODE
+}
+
 /** 文件上传端点（el-upload 的 action）：同源走相对路径，跨域开发走绝对地址 */
 export const FILE_UPLOAD_URL = API_BASE_URL === '/'
   ? API_PATHS.FILES

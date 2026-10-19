@@ -37,10 +37,10 @@
 </template>
 
 <script setup>
+import { isSuccess, API_PATHS, FILE_UPLOAD_URL } from '@/constants';
 import { reactive, ref, onMounted } from "vue";
 import request from "@/utils/request.js";
 import { ElMessage } from "element-plus";
-import { API_PATHS, FILE_UPLOAD_URL } from '@/constants';
 import { uploadHeaders, handleUploadError } from "@/utils/upload";
 import { useAuth } from "@/composables/useAuth";
 
@@ -80,7 +80,7 @@ const updateUser = () => {
     if (valid) {
       submitting.value = true;
       request.put(API_PATHS.USERS, formData).then((res) => {
-        if (res.code === "200") {
+        if (isSuccess(res)) {
           ElMessage.success("更新成功");
           // 登录态只能经 useAuth 变更：只写 storage 副本不更新内存里的
           // user ref，顶栏的头像与用户名要等整页刷新才变。
@@ -96,7 +96,7 @@ const updateUser = () => {
 };
 
 function handleFileUpload(res) {
-  if (res.code === '200') saveAvatar(res.data)
+  if (isSuccess(res)) saveAvatar(res.data)
   else ElMessage.error(res.msg || '头像上传失败')
 }
 
@@ -110,7 +110,7 @@ function handleFileUpload(res) {
 function saveAvatar(url) {
   formData.avatar = url
   request.put(API_PATHS.USERS, { id: formData.id, avatar: url }).then((res) => {
-    if (res.code === '200') {
+    if (isSuccess(res)) {
       // 登录态只经 useAuth 变更，顶栏头像才会立刻跟着变
       setUser({ ...user.value, avatar: url })
       ElMessage.success('头像已更新')

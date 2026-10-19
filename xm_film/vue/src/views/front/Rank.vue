@@ -104,10 +104,10 @@
 </template>
 
 <script setup>
+import { isSuccess, FILM_API } from '@/constants';
 import { reactive } from 'vue';
 import request from "@/utils/request.js";
 import { ElMessage } from 'element-plus';
-import { FILM_API } from '@/constants';
 import { formatBoxOffice, formatScore, formatFilmTypes } from '@/utils/format.js';
 import 'element-plus/theme-chalk/el-skeleton.css';
 import 'element-plus/theme-chalk/el-image.css';
@@ -139,7 +139,7 @@ const loadFilmBoxOfficeTop = () => {
   error.boxOffice = false;
   request.get(FILM_API.BOX_OFFICE_TOP, { params: { topNum: 10 } })
       .then(res => {
-        if (res.code === '200') {
+        if (isSuccess(res)) {
           data.boxOfficeData = (res.data || []).slice(0, 10);
         } else {
           // 业务码非 200 不经过响应拦截器（它只管网络/超时/HTTP 状态），所以这里补一次提示；
@@ -163,7 +163,7 @@ const loadFilmMarkTop = () => {
   error.mark = false;
   request.get(FILM_API.MARK_TOP, { params: { topNum: 10 } })
       .then(res => {
-        if (res.code === '200') {
+        if (isSuccess(res)) {
           data.markData = (res.data || []).slice(0, 10);
         } else {
           ElMessage.error(`评分数据加载失败：${res.msg || '未知错误'}`);

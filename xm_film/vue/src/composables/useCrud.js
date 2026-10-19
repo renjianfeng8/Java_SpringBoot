@@ -1,7 +1,7 @@
 import { ref, reactive } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import request from '@/utils/request'
-import { apiPage, apiById, apiBatch } from '@/constants'
+import { apiPage, apiById, apiBatch, isSuccess } from '@/constants'
 
 export function useCrud(apiBase) {
   const dataList = ref([])
@@ -32,7 +32,7 @@ export function useCrud(apiBase) {
       const params = { pageNum: pageNum.value, pageSize: pageSize.value, ...searchForm }
       const res = await request.get(apiPage(apiBase), { params })
       if (seq !== loadSeq) return
-      if (res.code === '200') {
+      if (isSuccess(res)) {
         dataList.value = res.data.list || []
         total.value = res.data.total || 0
         // 删空当前页后回退到第 1 页：PageHelper 未开 reasonable，越界页只是返回空列表
@@ -56,7 +56,7 @@ export function useCrud(apiBase) {
   async function add(row) {
     try {
       const res = await request.post(apiBase, row)
-      if (res.code === '200') {
+      if (isSuccess(res)) {
         ElMessage.success('新增成功')
         await load()
         return true
@@ -71,7 +71,7 @@ export function useCrud(apiBase) {
   async function update(row) {
     try {
       const res = await request.put(apiBase, row)
-      if (res.code === '200') {
+      if (isSuccess(res)) {
         ElMessage.success('更新成功')
         await load()
         return true
@@ -86,7 +86,7 @@ export function useCrud(apiBase) {
   async function del(id) {
     try {
       const res = await request.delete(apiById(apiBase, id))
-      if (res.code === '200') {
+      if (isSuccess(res)) {
         ElMessage.success('删除成功')
         await load()
         return true
@@ -105,7 +105,7 @@ export function useCrud(apiBase) {
     }
     try {
       const res = await request.delete(apiBatch(apiBase), { data: ids })
-      if (res.code === '200') {
+      if (isSuccess(res)) {
         ElMessage.success('批量删除成功')
         await load()
         return true

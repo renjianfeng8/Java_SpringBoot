@@ -31,11 +31,11 @@
 </template>
 
 <script setup>
+import { isSuccess, API_PATHS, apiById } from '@/constants';
 
 import { reactive, ref } from "vue";
 import request from "@/utils/request.js";
 import { ElMessage } from "element-plus";
-import { API_PATHS, apiById } from "@/constants";
 import { getStoredUser } from "@/utils/authStorage";
 import { useAuth } from "@/composables/useAuth";
 
@@ -72,7 +72,7 @@ if (data.user.role === 'USER') {
 const updateUser = () => {
   const endpoint = { USER: API_PATHS.USERS, CINEMA: API_PATHS.CINEMAS }[data.user.role] ?? API_PATHS.ADMINS
   request.put(endpoint, data.form).then(res => {
-    if (res.code === '200') {
+    if (isSuccess(res)) {
       ElMessage.success('更新成功')
       // 登录态只能经 useAuth 变更：只写 storage 副本不会更新内存里的 user，
       // 顶栏的用户名与头像要等整页刷新才变。

@@ -107,10 +107,10 @@
 </template>
 
 <script setup>
+import { isSuccess, API_PATHS, apiPage, FILM_STATUS_OPTIONS, getFilmStatusType as getStatusType } from '@/constants';
 import { reactive } from "vue";
 import request from "@/utils/request.js";
 import { ElMessage } from "element-plus";
-import { API_PATHS, apiPage, FILM_STATUS_OPTIONS, getFilmStatusType as getStatusType } from '@/constants';
 
 const data = reactive({
   typeFlag: null,
@@ -140,7 +140,7 @@ const load = () => {
       status: data.statusFlag
     }
   }).then(res => {
-    if (res.code === '200') {
+    if (isSuccess(res)) {
       data.filmData = res.data.list
       data.total = res.data.total
       data.error = false
@@ -164,7 +164,7 @@ const load = () => {
 
 const loadType = () => {
   request.get(API_PATHS.TYPES).then(res => {
-    if (res.code === '200') {
+    if (isSuccess(res)) {
       data.typeData = res.data
     } else {
       ElMessage.error(res.msg)
@@ -174,7 +174,7 @@ const loadType = () => {
 
 const loadArea = () => {
   request.get(API_PATHS.AREAS).then(res => {
-    if (res.code === '200') {
+    if (isSuccess(res)) {
       data.areaData = res.data
     } else {
       ElMessage.error(res.msg)
@@ -184,7 +184,7 @@ const loadArea = () => {
 
 const loadYear = () => {
   request.get(API_PATHS.YEARS).then(res => {
-    if (res.code === '200') {
+    if (isSuccess(res)) {
       data.yearData = res.data
     } else {
       ElMessage.error(res.msg)

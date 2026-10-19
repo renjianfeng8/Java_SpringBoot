@@ -83,11 +83,11 @@
 </template>
 
 <script setup>
+import { isSuccess, CINEMA_DIRECTORY_API, CINEMA_API, DIRECTORY_IMPORT_CITIES } from '@/constants'
 import { reactive, computed, ref } from 'vue'
 import { Upload } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import request from '@/utils/request'
-import { CINEMA_DIRECTORY_API, CINEMA_API, DIRECTORY_IMPORT_CITIES } from '@/constants'
 
 const query = reactive({ city: null, brand: null, linked: null, pageNum: 1, pageSize: 10 })
 const filterData = reactive({ cities: [], brands: [] })
@@ -112,7 +112,7 @@ const confirmImport = () => {
   ).then(async () => {
     try {
       const res = await request.post(CINEMA_API.FROM_DIRECTORY, { directoryIds: selectedIds.value })
-      if (res.code === '200') {
+      if (isSuccess(res)) {
         ElMessage.success(`新增 ${res.data} 条影院`)
         tableRef.value?.clearSelection()
         load()
@@ -130,7 +130,7 @@ const importDialog = reactive({
 })
 
 const loadFilters = () => request.get(CINEMA_DIRECTORY_API.FILTERS).then(res => {
-  if (res.code === '200') { filterData.cities = res.data.cities; filterData.brands = res.data.brands }
+  if (isSuccess(res)) { filterData.cities = res.data.cities; filterData.brands = res.data.brands }
 }).catch(() => {})
 
 const load = () => {
@@ -142,7 +142,7 @@ const load = () => {
               linked: query.linked ?? undefined,
               pageNum: query.pageNum, pageSize: query.pageSize }
   }).then(res => {
-    if (res.code === '200') { data.list = res.data.list; data.total = res.data.total }
+    if (isSuccess(res)) { data.list = res.data.list; data.total = res.data.total }
     else { data.error = true }
   }).catch(() => { data.error = true })
     .finally(() => { data.loading = false })
@@ -166,7 +166,7 @@ const doPreview = () => {
   importDialog.previewing = true
   request.post(CINEMA_DIRECTORY_API.IMPORT_PREVIEW, { cities: importDialog.cities })
     .then(res => {
-      if (res.code === '200') importDialog.preview = res.data
+      if (isSuccess(res)) importDialog.preview = res.data
       else ElMessage.error(res.msg)
     })
     .catch(() => {}) // 网络异常的错误提示由 request.js 拦截器统一弹出
@@ -177,7 +177,7 @@ const doImport = () => {
   importDialog.importing = true
   request.post(CINEMA_DIRECTORY_API.IMPORT, { cities: importDialog.cities })
     .then(res => {
-      if (res.code === '200') {
+      if (isSuccess(res)) {
         ElMessage.success(`本次新增 ${res.data} 条`)
         importDialog.visible = false
         importDialog.preview = null

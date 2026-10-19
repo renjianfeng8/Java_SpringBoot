@@ -111,11 +111,11 @@
 </template>
 
 <script setup lang="ts">
+import { isSuccess, API_PATHS, ORDER_API, ORDER_STATUS_OPTIONS, getOrderStatusType as getStatusType, apiBatch, apiById, apiPage, isOrderDeletable } from '@/constants';
 import { reactive } from "vue";
 import { Delete, Search } from "@element-plus/icons-vue";
 import request from "@/utils/request.js";
 import { ElMessage, ElMessageBox } from "element-plus";
-import { API_PATHS, ORDER_API, ORDER_STATUS_OPTIONS, getOrderStatusType as getStatusType, apiBatch, apiById, apiPage, isOrderDeletable } from "@/constants";
 
 interface Ordered {
   id?: number;
@@ -170,7 +170,7 @@ const load = () => {
 const del = (id: number) => {
   ElMessageBox.confirm('删除数据后无法恢复,您确认删除吗?', '删除确认', { type: 'warning' }).then(() => {
     request.delete(apiById(API_PATHS.ORDERS, id)).then(res => {
-      if (res.code === '200') {
+      if (isSuccess(res)) {
         ElMessage.success('操作成功')
         load()
       } else {
@@ -187,7 +187,7 @@ const delBatch = () => {
   }
   ElMessageBox.confirm('删除数据后无法恢复,您确认删除吗?', '删除确认', { type: 'warning' }).then(() => {
     request.delete(apiBatch(API_PATHS.ORDERS), { data: data.ids }).then(res => {
-      if (res.code === '200') {
+      if (isSuccess(res)) {
         ElMessage.success('操作成功')
         load()
       } else {
@@ -201,7 +201,7 @@ const delBatch = () => {
 const pickupOrder = async (order: Ordered) => {
   try {
     const res = await request.put(ORDER_API.PICKUP(order.id));
-    if (res.code === '200') {
+    if (isSuccess(res)) {
       ElMessage.success('取票成功');
       load();
     } else {

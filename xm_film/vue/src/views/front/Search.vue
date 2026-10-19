@@ -43,10 +43,10 @@
 </template>
 
 <script setup>
+import { isSuccess, FILM_API } from '@/constants';
 import { ref, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import request from "@/utils/request.js";
-import { FILM_API } from '@/constants';
 import { formatScoreBadge } from '@/utils/format.js';
 
 const route = useRoute()
@@ -79,7 +79,7 @@ const fetchSearchResults = async () => {
   error.value = false
   try {
     const response = await request.get(FILM_API.SEARCH, { params: { title } })
-    if (response.code === '200') {
+    if (isSuccess(response)) {
       filmList.value = response.data || []
     } else {
       // 业务码非 200 走的是 HTTP 200，不经响应拦截器，必须自己落错误态 ——

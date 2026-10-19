@@ -205,11 +205,11 @@
 </template>
 
 <script setup>
+import { isSuccess, ACCOUNT_API, FUND_FLOW_API, RECHARGE_API, getRechargeStatusType } from '@/constants';
 import { computed, onMounted, reactive, ref } from 'vue';
 import { ElMessage } from 'element-plus';
 import { CircleCheck, CircleClose } from '@element-plus/icons-vue';
 import request from '@/utils/request.js';
-import { ACCOUNT_API, FUND_FLOW_API, RECHARGE_API, getRechargeStatusType } from '@/constants';
 
 /** 快捷档位；与自由输入并存，二者都受后端金额校验约束 */
 const TIERS = [20, 30, 50, 100];
@@ -256,7 +256,7 @@ const money = (value) => Number(value ?? 0).toFixed(2);
 const loadSummary = async () => {
   try {
     const res = await request.get(ACCOUNT_API.SUMMARY);
-    if (res.code === '200') {
+    if (isSuccess(res)) {
       balance.value = res.data?.balance ?? 0;
     } else {
       // 与非 200 的业务码同样补一次提示，否则余额会静默停在旧值上
@@ -276,7 +276,7 @@ const loadRecharges = async () => {
       params: { pageNum: rechargePage.pageNum, pageSize: rechargePage.pageSize },
     });
     if (seq !== rechargeSeq) return;
-    if (res.code === '200') {
+    if (isSuccess(res)) {
       recharges.value = res.data?.list || [];
       rechargePage.total = res.data?.total ?? 0;
     } else {
@@ -307,7 +307,7 @@ const loadFlows = async () => {
       params: { pageNum: flowPage.pageNum, pageSize: flowPage.pageSize },
     });
     if (seq !== flowSeq) return;
-    if (res.code === '200') {
+    if (isSuccess(res)) {
       flows.value = res.data?.list || [];
       flowPage.total = res.data?.total ?? 0;
     } else {
@@ -334,7 +334,7 @@ const loadTrend = async () => {
     });
     if (seq !== trendSeq) return;
     // 后端按 id DESC 返回（新的在前），折线要从旧画到新
-    trends.value = res.code === '200' ? (res.data?.list || []).reverse() : [];
+    trends.value = isSuccess(res) ? (res.data?.list || []).reverse() : [];
   } catch (error) {
     if (seq !== trendSeq) return;
     // 走势图是补充信息，取不到就不出这一块；同一批流水在下方流水表里仍会报失败态
@@ -407,7 +407,7 @@ const submitRecharge = async () => {
   submitting.value = true;
   try {
     const res = await request.post(RECHARGE_API.CREATE, { amount: value });
-    if (res.code === '200') {
+    if (isSuccess(res)) {
       ElMessage.success('充值申请已提交，等待支付回调入账');
       await reloadFromFirstPage();
     } else {
@@ -431,7 +431,7 @@ const triggerCallback = async (order, success) => {
       success,
       remark: success ? '' : '模拟支付回调失败',
     });
-    if (res.code === '200') {
+    if (isSuccess(res)) {
       ElMessage.success(success ? '回调成功，充值已入账' : '回调失败，单据已置为已失败');
       await reloadFromFirstPage();
     } else {
