@@ -127,6 +127,8 @@ python dump-schema.py --target xm_film_test   # 用来初始化测试库
 | **并发冲突（死锁/等锁超时）必须映射为 409 可重试**，不得落到 500；用父类型 `PessimisticLockingFailureException` 一并覆盖 | `backend-backlog.md` §并发 BL-47 |
 | **业务上"只能有一份"的规则必须只有一个实现**：口令比对、票价解析、单号生成、时间格式、座位解析分别在 `common/` 下各一处 | `backend-backlog.md` §重复代码 (2026-10-20) |
 | **错误码传枚举，不传 `code()`**：`throw new CustomException(ErrorCode.X, msg)` / `Result.error(ErrorCode.X, msg)` | 同上 |
+| **SQL 里不写状态中文字面量**，一律 `#{s.xxx}` 由 `OrderStatusCriteria` 传入；新增例外必须配守卫测试 | `backend-backlog.md` §数据库设计 BL-31 |
+| **金额字段一律 `BigDecimal`**，不用 `Double`；库列用 `decimal(10,2)` | `backend-backlog.md` §数据库设计 BL-24 |
 | **并发测试必须用两条物理连接**，且连接在"执行它的那个线程"上创建；只断言 SQL 文本含 `FOR UPDATE` 不算数 | `backend-backlog.md` §并发 BL-48 |
 | 状态是中文字面量，改动须跨 Java/XML/JS 同步 | `domain.md` §1 |
 

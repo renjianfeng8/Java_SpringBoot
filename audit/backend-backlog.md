@@ -231,6 +231,29 @@
 | --- | --- | --- | --- |
 | BL-17 | service/RecordService/RoomService 的 requireAdminOrCinema、applyCinemaScope；OrderedService/RecordService/RoomService 的 ensureXxxAccess | ADMIN 放行、CINEMA 归属 的守卫与 scope 谓词按实体各写一份。 | 在 AuthContext 旁抽统一的角色守卫。**未做**：与 BL-13 不同，这几处的差异是真实的实体语义（谁的 id、查哪张表），强行合并会引入参数化歧义，收益低于风险。 |
 
+## 数据库设计（2026-10-20 专项）
+
+**背景**：DB 维度 82 分的三条扣分是「`seat` 是逗号串」「状态是自由字符串」「金额用 Double」。核实时先纠正了一处事实：**库列本来就是 `decimal(10,2)`**，Double 只存在于 Java 实体/DTO —— 所以第三条的实质与描述不同，见 BL-24。
+
+| 编号 | 问题 | 实测/复核 | 处置 |
+| --- | --- | --- | --- |
+| **BL-31** | 状态值有**三份副本**：库列（无约束）、Java `*Status` 常量、mapper XML 里的中文字面量 | 状态列是 `varchar(20)`，库层不拒绝任何字符串。改了常量名或取值，编译器和数据库都不报错，SQL 只是从此匹配 0 行 —— 表现为「核销没反应」「超时单清不掉」，日志里一切正常 | **已修复**：新增 `common/OrderStatusCriteria`，mapper 通过 `@Param("s")` 取值，`OrderedMapper.xml` 里的状态字面量全部消除。唯一例外是 `paidOrderStatuses`（被 `FilmMapper` 跨 namespace 静态引用，那里 8 个方法都没有参数入口），由 `StatusLiteralGuardTest` 钉住 |
+| **BL-30** | `ordered.seat` 是逗号分隔串，占用检查用 `FIND_IN_SET` | 这不是单纯的设计口味：查重逐字节比对，`1排01座` 与 `1排1座` 在库里是两个不同的串 | **只加固、不改表**：规范化收敛到 `common/SeatParser`（上一轮），并有故障注入测试。拆成 `order_seat` 子表属"改表"量级（建表 + 迁移存量串 + 改写占用检查 + 十余处展示契约），留待与 BL-18/19/20 同轮 |
+| **BL-24** | 订单 `total/payAmount/refundAmount` 用 `Double` | **纠正原描述**：库列早已是 `decimal(10,2)`，Double 只在 Java 侧。实测 `BigDecimal → double → BigDecimal.valueOf` 在 decimal(10,2) 范围内**往返无损**（8 组样本 0 损失），但这个结论依赖 `valueOf` 走 `Double.toString`，是巧合不是保证；累加才会失真，而代码里金额聚合都在 SQL 里 | **已修复**：4 个类的 3 个金额字段全部改 `BigDecimal`，`OrderedService` 里两处 `doubleValue()`/`valueOf()` 转换随之消失。JSON 形态实测仍为数字（`45.5`），前端 `Number(...)` 与插值行为不变。**`Film.boxOffice` 未改**：该列已废弃（恒 0，票房实时聚合），一并改会牵动 FilmMapper 的 `COALESCE(rev.revenue, 0)` 与前端榜单 |
+
+**本轮刻意未做（写明理由，避免被当成遗漏）**：
+
+| 事项 | 未做的原因 |
+| --- | --- |
+| 给状态列加库级 `CHECK` | MySQL 8 的 CHECK 能拦非法写入，但需要先校验存量数据、并同步测试库与演示数据脚本；本轮改动已能保证**读路径**不吃到非法值（取值来自常量），写入路径由 Service 归一化。加约束属下一轮的迁移工作 |
+| `seat` 拆子表 | 见 BL-30，改表 + 迁移 + 十余处契约，风险量级不同 |
+| `Film.boxOffice` 改 BigDecimal | 列已废弃、恒为 0；改它只增加 diff 不增加正确性 |
+| 重新生成 schema 快照 | 本轮**没有改任何列类型**，快照仍然准确。重跑 `dump-schema.py` 只会产生 AUTO_INCREMENT 漂移与编码转义噪音 |
+
+**故障注入反证**：在 `OrderedMapper.xml` 里把一个参数化的状态改回裸字面量 `'待取票'` → `StatusLiteralGuardTest` 立刻红，报「出现了裸状态字面量，应改为 #{s.xxx}」（已确认还原）。
+
+**HTTP 实测（0 条真实不符预期）**：订单金额在 JSON 里是数字；占座后换写法再占 409；已超时单支付 → 409「支付超时」且库里状态变「已取消」；凭码核销 → 200 且状态变「已取票」，再核销 → 409；今日票房与大盘概览正常。
+
 ## 实体层遗留（承接 S10）
 
 | 编号 | 位置 | 问题 | 处置建议 |
@@ -240,7 +263,7 @@
 | BL-20 | entity/Admin 与 entity/User | 两实体字段完全一致；avatar/phone 在 Admin/User/Cinema 三处重复声明。 | 上提至 Account 或抽 Profile 基类（与 BL-19 同轮）。 |
 | BL-22 | entity/CinemaDirectory.createTime | 全仓唯一非 String 时间字段（LocalDateTime），序列化为 ISO 带 T 串，与其余 String 时间字段口径不一；前端未读取。 | 统一为 String，或全仓统一改 LocalDateTime（需联动 mapper/DTO/前端）。 |
 | BL-23 | entity/Room.title | 存的是所属影院名（RoomService 由 cinema.getName() 派生），而 name 才是影厅自身名。命名与语义不符，是未标注的冗余快照。 | 改名或去除（需联动 mapper/Service/前端）。 |
-| BL-24 | entity/Ordered 的 total/payAmount/refundAmount、entity/Film.boxOffice | 金额用 Double，而同实体 unitPrice、RechargeOrder.amount、FundFlow 各额均 BigDecimal。当前经 BigDecimal.valueOf(double) 往返未见精度损失，但与"金额用 BigDecimal"的既定口径不一致。 | 统一为 BigDecimal（需改库列类型与 mapper/DTO）。 |
+| BL-24 | entity/Ordered 的 total/payAmount/refundAmount、entity/Film.boxOffice | 金额用 Double，而同实体 unitPrice、RechargeOrder.amount、FundFlow 各额均 BigDecimal。 | **订单三字段已改为 BigDecimal（2026-10-20）**，详见上文 §数据库设计。`Film.boxOffice` 未改（列已废弃、恒为 0）。 |
 | BL-41 | 库表 actor 的关联列（`film.actor_id` 与 `actor.film_id`）；views/front/FilmDetail.vue 的四分组 | 演职人员与影片的关联存在两套机制：`film.actor_id` 单值外键（1:1，在用，FilmMapper 多处 JOIN）与 `actor.film_id`（库中已建且带非唯一索引，但全仓无任何读写、`film_id IS NOT NULL` 实测 0 行）。前端按 `grade` 分导演/主演/编剧/二级演员四组，但库中 actor 65 行 `grade` 全为「主演」、film 又只关联单行，故非主演三组无数据可显。 | 要支持多角色展示须先定唯一关联口径（保留 `film.actor_id` 还是改走 `actor.film_id`，二者不可并存），再落 1:N 写路径 + 数据导入；当前无数据、无写路径，属新特性而非缺陷，另立一轮。FE-48 的「读错键名」缺陷已在前端就地修复（见前端审计报告）。 |
 
 ## 规范建议遗留（承接 S4/S6/S15）
