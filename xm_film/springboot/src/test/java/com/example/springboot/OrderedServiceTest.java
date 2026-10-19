@@ -336,12 +336,18 @@ class OrderedServiceTest {
      * 超时分支必须"取消落库 + 返回超时结果"。
      * 若实现改为抛异常，@Transactional(rollbackFor = Exception.class) 会把取消一并回滚，
      * 订单又回到待支付，本用例即失败。
+     *
+     * <p>BL-05 之后「是否超时」由数据库判定（{@code countExpiredById}，与清理任务共用
+     * {@code pendingExpiredCondition}），所以这里给的是<b>库的答案</b>而不是
+     * 一个 JVM 时间字符串。刻意**不**给排片行打桩：超时分支必须在复核场次之前返回，
+     * 若实现顺序反了，本用例会因「场次已不存在」而失败。
      */
     @Test
     void payOrderAfterTimeoutCancelsOrderInsteadOfThrowing() {
         Ordered ordered = pendingPaymentOrder();
         ordered.setPendingTimeoutAt(minutesFromNow(-1));
         when(orderedMapper.selectByIdForUpdate(1)).thenReturn(ordered);
+        when(orderedMapper.countExpiredById(1)).thenReturn(1);
 
         PayResult result = orderedService.payOrder(1, RoleEnum.USER.name(), 100, PAY_PASSWORD);
 
@@ -349,6 +355,7 @@ class OrderedServiceTest {
         verify(orderedMapper).updateById(argThat(u ->
                 1 == u.getId() && "已取消".equals(u.getStatus())
         ));
+        verifyNoInteractions(walletService);
     }
 
     @Test

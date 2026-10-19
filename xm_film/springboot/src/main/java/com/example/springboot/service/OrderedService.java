@@ -62,6 +62,15 @@ public class OrderedService extends BaseService<Ordered> {
     /** 退票截止：放映前 60 分钟（与前台词：未取票用户在放映前60分钟可退票） */
     private static final int REFUND_DEADLINE_MINUTES = 60;
 
+    /**
+     * 锁座窗口：待支付订单的存活分钟数（BL-05）。
+     *
+     * <p>实际写入由 SQL 完成（{@code OrderedMapper.insert} 的 {@code NOW() + INTERVAL 5 MINUTE}），
+     * 因为超时只在数据库时钟下比较。本常量与 mapper 中的数值必须一致，
+     * 由 {@code PendingTimeoutClockTest} 断言校验，改一处漏一处会立即红。
+     */
+    public static final int PENDING_TIMEOUT_MINUTES = 5;
+
     /** 取票码随机段长度（分组显示，不含分隔符） */
     private static final int PICKUP_CODE_LENGTH = 8;
 
@@ -182,7 +191,9 @@ public class OrderedService extends BaseService<Ordered> {
         ordered.setStatus(OrderStatus.PENDING_PAYMENT);
         ordered.setSeat(String.join(",", seats));
         ordered.setCreateTime(LocalDateTime.now(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern(DATE_TIME_PATTERN)));
-        ordered.setPendingTimeoutAt(LocalDateTime.now(ZoneId.systemDefault()).plusMinutes(5).format(DateTimeFormatter.ofPattern(DATE_TIME_PATTERN)));
+        // 超时点交给数据库算（BL-05）：这一列只在 SQL 里与 NOW() 比较，
+        // 用 JVM 时钟写会让两边时区不一致时差出整小时。哨兵的说明见 Ordered.pendingTimeoutFromDb。
+        ordered.setPendingTimeoutFromDb(true);
         if (film != null) {
             ordered.setImg(film.getImg());
         }
@@ -296,8 +307,14 @@ public class OrderedService extends BaseService<Ordered> {
     }
 
     private boolean isPendingTimedOut(Ordered ordered) {
-        LocalDateTime timeout = RecordService.readStart(ordered.getPendingTimeoutAt());
-        return timeout != null && LocalDateTime.now(ZoneId.systemDefault()).isAfter(timeout);
+        // BL-05：pending_timeout_at 由数据库时钟写入（NOW() + INTERVAL），因此判定也必须用
+        // 同一个时钟。用 JVM 时钟比较会在两者时区不一致时给出相反结论：
+        // 清理任务（纯 SQL，用 DB NOW()）认为没过期，而支付路径认为已过期 ——
+        // 用户付不了款，座位却仍占着，直到清理任务按自己的判断放出来。
+        //
+        // 这里改成与清理任务同一条 SQL 谓词判定的代价最直接：
+        // 直接问库「这一行是否已超时」，JVM 时钟彻底不参与。
+        return orderedMapper.countExpiredById(ordered.getId()) > 0;
     }
 
     private String now() {

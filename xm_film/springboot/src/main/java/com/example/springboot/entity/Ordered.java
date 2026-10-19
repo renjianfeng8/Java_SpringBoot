@@ -58,6 +58,22 @@ public class Ordered implements Serializable, Identifiable {
      */
     private Boolean clearPendingTimeout;
 
+    /**
+     * 写入哨兵（非数据库列）：置真时 insert 用<b>数据库时钟</b>写
+     * {@code pending_timeout_at = NOW() + INTERVAL 5 MINUTE}，忽略
+     * {@link #pendingTimeoutAt} 里的 JVM 时间（BL-05）。
+     *
+     * <p>为什么必须由库算：这一列只在 SQL 里与 {@code NOW()} 比较
+     * （{@code seatActiveCondition} 的占座判定、{@code selectExpiredPendingOrders} 的清理）。
+     * 若写入用 JVM 时钟，JVM 与 MySQL 时区不一致时（典型：容器默认 UTC、
+     * 连接串写死 Asia/Shanghai），两者相差整整 8 小时 —— 清理任务要么永不命中
+     * （废单永久占座），要么提前 8 小时把有效订单取消。
+     *
+     * <p>超时分钟数写死在 SQL 里（5 分钟），与服务层常量 {@code PENDING_TIMEOUT_MINUTES}
+     * 必须一致；改动时两处同改。
+     */
+    private Boolean pendingTimeoutFromDb;
+
     private String userName;
     private String filmName;
     private String cinemaName;

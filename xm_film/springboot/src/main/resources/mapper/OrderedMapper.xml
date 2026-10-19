@@ -102,10 +102,23 @@
     <select id="selectExpiredPendingOrders" resultType="com.example.springboot.entity.Ordered">
         SELECT id, record_id, seat
         FROM ordered
-        WHERE status = '待支付'
+        WHERE <include refid="pendingExpiredCondition"/>
+    </select>
+
+    <!-- BL-05：单笔判断「是否已过支付期限」。与清理任务共用 pendingExpiredCondition，
+         因此支付路径与后台清理不会得出相反结论 —— 两者都只看数据库时钟。 -->
+    <select id="countExpiredById" resultType="int">
+        SELECT COUNT(*) FROM ordered
+        WHERE id = #{id} AND <include refid="pendingExpiredCondition"/>
+    </select>
+
+    <!-- 「待支付且已超时」的唯一谓词定义。凡是判断超时的地方都必须 include 本片段：
+         分叉会让支付路径与清理任务对同一张订单给出相反答案。 -->
+    <sql id="pendingExpiredCondition">
+        status = '待支付'
           AND pending_timeout_at IS NOT NULL
           AND pending_timeout_at &lt; NOW()
-    </select>
+    </sql>
 
     <update id="batchCancelExpiredOrders">
         UPDATE ordered
@@ -225,7 +238,10 @@
             <if test="start != null">start,</if>
             <if test="seat != null">seat,</if>
             <if test="createTime != null">create_time,</if>
-            <if test="pendingTimeoutAt != null">pending_timeout_at,</if>
+            <!-- BL-05：哨兵置真时用库时钟算超时点，见 Ordered.pendingTimeoutFromDb 的注释。
+                 INTERVAL 5 MINUTE 必须与 OrderedService.PENDING_TIMEOUT_MINUTES 一致。 -->
+            <if test="pendingTimeoutFromDb != null and pendingTimeoutFromDb">pending_timeout_at,</if>
+            <if test="(pendingTimeoutFromDb == null or !pendingTimeoutFromDb) and pendingTimeoutAt != null">pending_timeout_at,</if>
             <if test="payTime != null">pay_time,</if>
             <if test="payAmount != null">pay_amount,</if>
             <if test="refundTime != null">refund_time,</if>
@@ -249,7 +265,8 @@
             <if test="start != null">#{start},</if>
             <if test="seat != null">#{seat},</if>
             <if test="createTime != null">#{createTime},</if>
-            <if test="pendingTimeoutAt != null">#{pendingTimeoutAt},</if>
+            <if test="pendingTimeoutFromDb != null and pendingTimeoutFromDb">NOW() + INTERVAL 5 MINUTE,</if>
+            <if test="(pendingTimeoutFromDb == null or !pendingTimeoutFromDb) and pendingTimeoutAt != null">#{pendingTimeoutAt},</if>
             <if test="payTime != null">#{payTime},</if>
             <if test="payAmount != null">#{payAmount},</if>
             <if test="refundTime != null">#{refundTime},</if>

@@ -61,6 +61,12 @@ public interface OrderedMapper extends BaseMapper<Ordered> {
 
     List<Ordered> selectExpiredPendingOrders();
 
+    /**
+     * 单笔订单是否已过支付期限（BL-05）。与 {@link #selectExpiredPendingOrders} 共用
+     * {@code pendingExpiredCondition} 片段，只看数据库时钟。
+     */
+    int countExpiredById(@Param("id") Integer id);
+
     int batchCancelExpiredOrders(List<Integer> ids);
 
     /* 删除守卫引用计数：被订单引用的影片/影院/影厅/场次/用户不允许物理删除 */
