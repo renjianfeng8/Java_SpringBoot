@@ -55,6 +55,31 @@
 
 **守卫测试的写法**：Mockito 让 mapper 直接抛 `DuplicateKeyException`，模拟"窗口被撞上"。这是唯一能稳定测到该分支的方式 —— 走 HTTP 永远撞不到。
 
+### 2.4 名录导入并发（BL-04，2026-10-19 修复）
+
+**工单描述的偏差**：原写「并发导入同一名录 id，各读 linked=false 双插同名影院；命中唯一键则整批回滚报 500」。实测有两处不同：
+
+1. **报的不是唯一键冲突，而是死锁**。`DeadlockLoserDataAccessException` —— 两个事务各插不同名录行，却争同一把 `username` 索引锁。
+2. **库端原本没有防重复的约束**。`cinema` 表只有 `username` 唯一索引，`directory_id` **没有任何唯一索引**，因此"同一名录关联两家影院"在串行下也能直接插进去（实测用不同 username 插入同一 `directory_id`，成功）。
+
+**实测复现（修复前）**：两个线程同时导入同一批 3 条未关联名录，一个 `created=3`，另一个 **500「系统错误」**。
+
+**修复三件事**：
+
+| 层 | 改动 | 理由 |
+| --- | --- | --- |
+| 库 | `ALTER TABLE cinema ADD UNIQUE KEY uk_cinema_directory_id (directory_id)` | 根本防线。`directory_id` 可为 NULL，MySQL 唯一索引允许多行 NULL，**不关联名录的影院不受影响** |
+| 代码 | `importFromDirectory` 逐行 `catch (DuplicateKeyException)` → 跳过、不计入 `created` | 并发败者的正常结局是「别人已导入」，属幂等语义，不该报错 |
+| 代码 | `catch (DeadlockLoserDataAccessException)` → 409「有其他人正在导入同一批名录，请稍后重试」 | 死锁是「可重试」，不是用户操作错误，不能变 500 |
+
+**为什么不做 `INSERT IGNORE`**：需要区分「名录已关联」（跳过）与「username 撞了别的影院」（真冲突）。整批降级成 IGNORE 会把后者也吞掉。
+
+**修复后**：2 线程并发 × 7 轮，全部「一人建 3 家、另一人 0 家或 409」，**零 500、零重复行**。两种分支都实际出现（`created=0` 是撞唯一键，`409` 是撞死锁），说明两条路径都覆盖到了。
+
+**顺带纠正一处错误注释**：`insertCinema` 原写「名录导入生成的 amap_+poiId 也走这里」，实际 `importFromDirectory` 直接调 `cinemaMapper.insert`、**不经过** `insertCinema`。正是这句注释掩盖了「导入路径没有 DuplicateKey 处理」这个事实。
+
+**库结构与快照同步**：新增索引已写入 `src/test/resources/db/schema.sql` 与 `inventory.tsv`，并在 `xm_film_test` 上实际添加。
+
 ## 3 订单状态机
 
 > **2026-10-18 端到端实测**：在演示数据（`demo-data.sql`）上用真实 HTTP 接口走通了

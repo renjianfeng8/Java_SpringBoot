@@ -84,8 +84,9 @@
 
 | 编号 | 位置 | 问题 | 处置建议 |
 | --- | --- | --- | --- |
-| BL-04 | service/CinemaService.importFromDirectory | 名录导入的"已收录"判定为无锁读，生成用户名 amap_+poiId 也无唯一兜底。两个管理员并发导入同一名录 id，各读 linked=false 双插同名影院；命中唯一键则整批 @Transactional 回滚报 500。~~UNCERTAIN：名录行 poi_id 是否可能为空。~~ **2026-10-18 复核**：`cinema_directory.poi_id` 为 `NOT NULL` 且 `UNIQUE`，该 UNCERTAIN **不成立**，无需补非空校验。 | 导入路径加锁或捕获唯一键冲突（`cinema.username` 已有唯一索引）。 |
 | BL-05 | service/OrderedService.insertOrder（写 pending_timeout_at 处） | pending_timeout_at 用 JVM 时钟写入，却在 SQL 里与 DB 的 NOW() 比较（OrderedMapper.seatActiveCondition、selectExpiredPendingOrders）。JVM 与 DB 时区不一致时清理任务永不命中（废单永久占座），或提前取消有效订单（前端倒计时仍在走）。 | 超时值与判定统一由 DB 时钟产生（INSERT ... NOW() + INTERVAL 或存时间戳），另立一轮。 |
+
+本节原登记 **BL-04（名录导入并发）**，2026-10-19 已修复并移出。实测**推翻了两处工单描述**：报的是死锁（非唯一键冲突）；库端 `cinema.directory_id` 原本**没有**唯一索引，同一名录可串行关联两次。修复三层：加 `uk_cinema_directory_id`、逐行捕获 `DuplicateKeyException` 按幂等跳过、`DeadlockLoserDataAccessException` 转 409 提示重试。2 线程 × 7 轮零 500、零重复。详见 `docs/domain.md` §2.4。
 
 ## 状态机与契约
 
