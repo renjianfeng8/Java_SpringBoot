@@ -6,9 +6,30 @@
 
 维护口径：一处事实一处归属；每条给出 `文件` 与符号，行号随改动可能漂移、以符号为准。状态分三档：待办、有意不整改（与既定政策一致，非债务）、已核验非缺陷；修复完成的条目从表中移出，在该节以「本轮修复并移出本表」一句登记。
 
-更新日期：2026-10-15（2026-10-18 复核增补）。基线：master `bfdd1c07`（清单）、`a2144fc4`（纯清理起点）；复核基线 `3112f8b7`。
+更新日期：2026-10-19（2026-10-18 复核增补）。基线：master `bfdd1c07`（清单）、`a2144fc4`（纯清理起点）；复核基线 `3112f8b7`。
 
-**复核时的实测基线**：`mvn -o test` = **309/309** 通过（2026-10-18 收尾；此前长期 6 红，见 §测试隔离）。开发库 `xm-film` 已由 `springboot/demo-data.sql` 补入演示影厅、排片与账号，购票主链已实测跑通。
+**复核时的实测基线**：`mvn -o test` = **309/309** 通过（2026-10-18 收尾；此前长期 6 红，见 §测试隔离）。开发库 `xm-film` 已由 `springboot/demo-data.sql` 补入演示影厅、排片与账号，购票主链已实测跑通。**2026-10-19 更新为 335/335**。
+
+## 安全（2026-10-19 独立审计，三条已实测触发）
+
+**背景**：并发与异常两条线修完之后，另做了一轮独立的安全核查（不看代码注释、只认实测）。三条**均已用真实 HTTP 复现**，优先级高于本文件其余全部条目 —— 它们不是"技术债"，是可用两条请求打穿的功能缺陷。
+
+| 编号 | 位置 | 问题 | 实测证据 | 处置建议 |
+| --- | --- | --- | --- | --- |
+| **SEC-01** | controller/RechargeController.callback；service/RechargeService.handleCallback（归属判定分支） | **任意 USER 可无限给自己充值**。归属校验允许 USER 操作*自己的*单据，而 `success` 完全取自请求体，没有任何验签。 | `POST /recharges {amount:50000}` → `POST /recharges/{id}/callback {success:true}` → **余额 500 → 50500**。纯 HTTP，无需任何伪造。 | 回调加服务端密钥/签名校验；或干脆下线 USER 可达的 callback，改为 ADMIN 审核入账。**演示环境与生产必须分开**，不能靠"注释里说是演示"约束。 |
+| **SEC-02** | resources/application.yml `jwt.signing-key` | **JWT 密钥硬编码在源码，可自签 ADMIN 令牌**。51 字节够长，但密钥本身随仓库公开，长度不构成保护。 | 用 `REDACTED_JWT_SECRET-2024-…` 自签 `{"sub":"1","role":"ADMIN"}`：无令牌 `DELETE /areas/999999` → **401**；同一请求带伪造令牌 → **200 成功**。伪造 USER 令牌读 `/admins/page` → 403（**角色校验本身正确**）。 | 密钥移入环境变量并在启动时校验强度；**当前密钥必须视为已泄露并更换**；考虑加 `jti` 黑名单以支持吊销。 |
+| **SEC-03** | service/UserService.login:95-96；AdminService:78-80；CinemaService:201-203；PayPasswordService:136 | **明文回退让哈希可当密码用**。`!matches(pwd, stored) && !pwd.equals(stored)` —— 当 `stored` 是 BCrypt 串时，把该串原样当密码提交即可通过。 | 用库中 `password` 列原文登录 `u1`、`999` 均 **code=200 成功**。叠加 mapper DEBUG 日志（`logback-spring.xml:7` 会打印绑定参数），**日志即凭证**。 | 删除回退分支；存量明文账号一次性迁移为 BCrypt 后删除该分支。演示数据 `demo-data.sql` 不应依赖明文回退。 |
+
+**连带发现（中危，未逐条实测）**：
+
+- `FileUploadController` 对**任意登录角色**开放、无配额（`application.yml` 单文件 50MB）—— 可反复上传填满磁盘。
+- `FileUtil` 只信客户端 `Content-Type`，不嗅探文件头 —— 可上传伪装成 png 的任意内容（**不构成 XSS**：扩展名由服务端白名单决定，且不含 svg）。
+- `CinemaService.importFromDirectory` 批量影院共用默认密码 `cinema123` 且直接 `APPROVED`，用户名规则 `amap_+poiId` 可推导。
+- 登录**无失败锁定**（只有支付密码有 5 次/15 分钟锁定），可暴力撞库。
+- 无令牌吊销：删号/改密后旧令牌 24h 内仍有效。
+- 匿名核销端点 `POST /tickets/redeem` **无速率限制**（码空间 31⁸ 不可猜，但可被刷接口）。
+
+**这一节的由来**：修完 BL-01…06 之后的自评是 93，但那一轮只验证了"数据库层会不会出问题"，没有验证"**谁能调这些接口**"。SEC-01 从归属校验看完全"正确"（USER 只能动自己的单），从资金流看却是灾难 —— **归属正确不等于授权正确**。
 
 ## 异常处理与入参（2026-10-18 专项梳理）
 
@@ -84,6 +105,29 @@
 
 - **BL-04（名录导入并发）**：实测**推翻两处工单描述** —— 报的是死锁（非唯一键冲突）；库端 `cinema.directory_id` 原本**没有**唯一索引，同一名录可串行关联两次。修复三层：加 `uk_cinema_directory_id`、逐行捕获 `DuplicateKeyException` 按幂等跳过、`DeadlockLoserDataAccessException` 转 409 提示重试。2 线程 × 7 轮零 500、零重复。详见 `docs/domain.md` §2.4。
 - **BL-05（JVM/DB 时钟混用）**：`pending_timeout_at` 改为 SQL `NOW() + INTERVAL 5 MINUTE` 写入（哨兵 `pendingTimeoutFromDb`），支付路径的超时判定改为 `countExpiredById` 并与清理任务共用 `pendingExpiredCondition` 片段。实测两会话 `NOW()` 相差 8 小时；修复后建单超时点距 DB `NOW()` 恰为 300 秒。守卫 `PendingTimeoutClockTest`（4 条，做过反证）。详见 `docs/domain.md` §3.4。
+
+**⚠️ 并发结论的可回归性缺口（2026-10-19 审计）**：上面的并发结论**全部来自 CI 之外的手工实测**，`mvn test` 拦不住回归。实测 grep：test 目录里 `Thread` / `ExecutorService` / `CountDownLatch` / `CompletableFuture` **0 次命中** —— 全仓没有一条真实并发测试。
+
+| 测试类 | 实际证明的 | **不能**证明的 |
+| --- | --- | --- |
+| `RecordDeleteGuardTest` | 删除路径调的是 `selectByIdForUpdate`（方法名） | 锁真的与 `insertOrder` 争同一把锁；并发下不再 500；(且 `deleteBatchScoped` 未断言 `deleteBatch` 被调用) |
+| `PayOrderPurchasableGuardTest` | 拒绝分支没调钱包/密码服务 | **"先复核后扣款"的顺序** —— 注释写着"用 InOrder"，代码里根本没有 `InOrder` |
+| `DuplicateUsernameGuardTest` | `catch (DuplicateKeyException)` 存在 | 唯一索引真的存在；两个线程真的会撞键 |
+| `RecordOverlapLockTest` | SQL 文本含 `FOR UPDATE`、语句可执行 | 双连接竞争下是否真的串行 |
+| `CinemaServiceTest#import…SkipsConcurrentDuplicate` | 逐行 try/catch 存在 | 并发下真的撞键（桩是单线程 `thenThrow→thenReturn`） |
+
+**处置建议**：需要至少两条**双连接**测试（各自开事务、先 `SELECT … FOR UPDATE`、断言第二个阻塞或返回 1）：一条排片重叠（BL-01），一条下单 vs 删排片（BL-02）。没有它们，这一节的所有"已修复"都是**手工证据**，不是**可回归证据**。
+
+## 测试覆盖缺口（2026-10-19 审计）
+
+| 项 | 现状 | 说明 |
+| --- | --- | --- |
+| Controller | **22 个中 20 个零直接测试** | 仅 `HealthController`、`AuthController#login` 有覆盖。`MarkController.requireUser`、`UserController/CinemaController.requireAdmin` 等**方法级鉴权第二层**全无覆盖。 |
+| Service | **8 个零测试** | `RoomService`、`RecordService`（仅被锁测试间接触及）、`AuthService`、`CinemaDirectoryService`、`AreaService`、`ActorService`、`TypeService`、`VideoService`、`NoticeService`。`RoomService.validateSeatLayout`、`RecordService.validateSchedule` 未测。 |
+| 定时任务 | **零覆盖** | `OrderCleanupTask` 及 `OrderedService.cancelExpiredPendingOrders` 无直接测试。 |
+| 异常处理器 | 2 个分支未覆盖 | `DataIntegrityViolationException`（BL-02 修复引入的 409 路径）、`RestClientException`。 |
+| 空表恒真断言 | 多处 | `CinemaDirectoryMapperLoadTest`、`StatisticsMapperLoadTest` 在空库上 `allSatisfy` / `>= 0` 恒真，只证明 SQL 语法合法。 |
+| 前端 | **零测试** | `package.json` 无 test 脚本。 |
 
 ## 状态机与契约
 

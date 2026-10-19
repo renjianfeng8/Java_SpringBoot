@@ -121,6 +121,7 @@ python dump-schema.py --target xm_film_test   # 用来初始化测试库
 | 新增 `@SpringBootTest` 必带 `@ActiveProfiles("ci")`，写库再加 `@Transactional` | §1.3 |
 | 调用方引起的错误不得落到兜底 500；在 `GlobalExceptionHandler` 加具名处理器 | `architecture.md` §4 |
 | 时间比较只能用 DB `NOW()`；超时判断必须 `include` `pendingExpiredCondition`，不得另写谓词 | `domain.md` §3.4 |
+| **回调/入账类端点必须有服务端可验证的凭证**；「归属校验通过」不等于「授权通过」 | `backend-backlog.md` §安全 SEC-01 |
 | 状态是中文字面量，改动须跨 Java/XML/JS 同步 | `domain.md` §1 |
 
 ### 4.2 前端
