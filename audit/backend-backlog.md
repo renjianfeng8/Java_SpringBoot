@@ -80,13 +80,10 @@
 
 **遗留**：`updateScoped`（改期）同样经 `validateSchedule`，自动获得同一保护；但「改期」与「另一场新建」的并发仍靠同一把影厅行锁串行，属预期行为。库端仍无区间约束（MySQL 建不了"任意时段不重叠"的列级约束），故行锁是唯一防线，**不要移除**。
 
----
+**本节已全部关闭（2026-10-19）**：
 
-| 编号 | 位置 | 问题 | 处置建议 |
-| --- | --- | --- | --- |
-| BL-05 | service/OrderedService.insertOrder（写 pending_timeout_at 处） | pending_timeout_at 用 JVM 时钟写入，却在 SQL 里与 DB 的 NOW() 比较（OrderedMapper.seatActiveCondition、selectExpiredPendingOrders）。JVM 与 DB 时区不一致时清理任务永不命中（废单永久占座），或提前取消有效订单（前端倒计时仍在走）。 | 超时值与判定统一由 DB 时钟产生（INSERT ... NOW() + INTERVAL 或存时间戳），另立一轮。 |
-
-本节原登记 **BL-04（名录导入并发）**，2026-10-19 已修复并移出。实测**推翻了两处工单描述**：报的是死锁（非唯一键冲突）；库端 `cinema.directory_id` 原本**没有**唯一索引，同一名录可串行关联两次。修复三层：加 `uk_cinema_directory_id`、逐行捕获 `DuplicateKeyException` 按幂等跳过、`DeadlockLoserDataAccessException` 转 409 提示重试。2 线程 × 7 轮零 500、零重复。详见 `docs/domain.md` §2.4。
+- **BL-04（名录导入并发）**：实测**推翻两处工单描述** —— 报的是死锁（非唯一键冲突）；库端 `cinema.directory_id` 原本**没有**唯一索引，同一名录可串行关联两次。修复三层：加 `uk_cinema_directory_id`、逐行捕获 `DuplicateKeyException` 按幂等跳过、`DeadlockLoserDataAccessException` 转 409 提示重试。2 线程 × 7 轮零 500、零重复。详见 `docs/domain.md` §2.4。
+- **BL-05（JVM/DB 时钟混用）**：`pending_timeout_at` 改为 SQL `NOW() + INTERVAL 5 MINUTE` 写入（哨兵 `pendingTimeoutFromDb`），支付路径的超时判定改为 `countExpiredById` 并与清理任务共用 `pendingExpiredCondition` 片段。实测两会话 `NOW()` 相差 8 小时；修复后建单超时点距 DB `NOW()` 恰为 300 秒。守卫 `PendingTimeoutClockTest`（4 条，做过反证）。详见 `docs/domain.md` §3.4。
 
 ## 状态机与契约
 

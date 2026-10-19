@@ -159,11 +159,43 @@ if (!RecordService.isPurchasable(recordItem)) → 409「该场次已开场或已
 
 **顺带发现（未修，登记备查）**：`record.status` 是**自由字符串**（`"正常"` / `"停售"`），库端无约束。第一版验证脚本误写成 `"已停售"`，`UPDATE` 不报错，`isPurchasable` 也认不出来 —— 于是「停售场次仍可支付」被误判为通过。生产上若有人手工改库或导入写错值，会静默变成「永远可售」。建议加 `CHECK` 约束或改为枚举列。
 
-### 3.4 待支付超时
+### 3.4 待支付超时（BL-05，2026-10-19 修复）
 
-- 建单时写 `pending_timeout_at = JVM now + 5min`（**JVM 时钟**）。
-- 判定用 **DB `NOW()`**（SQL 谓词与清理任务）。
-- 两者不一致时：清理永不命中（废单永久占座）或提前取消。见 BL-05。
+**修复前的缺陷**：写入用 JVM 时钟、判定用 DB `NOW()`，两个时钟混用。
+
+```
+建单：pending_timeout_at = LocalDateTime.now(JVM) + 5min
+判定：pending_timeout_at < NOW()        ← DB 时钟（占座判定、清理任务）
+      LocalDateTime.now().isAfter(...)  ← JVM 时钟（payOrder 的 isPendingTimedOut）
+```
+
+**实测时区错位有多大**：同一时刻，`SET time_zone='+00:00'` 与 `'+08:00'` 两个 MySQL 会话的 `NOW()` 相差 **8 小时**。典型触发场景是部署到 UTC 容器、连接串又写死 `serverTimezone=Asia/Shanghai`。后果分两种：
+
+| 偏移方向 | 后果 |
+| --- | --- |
+| JVM 比 DB 快 | 清理任务永不命中 → **废单永久占座** |
+| JVM 比 DB 慢 | 有效订单被提前取消（前端倒计时还在走） |
+
+**当前配置是一致的**（`serverTimezone=Asia/Shanghai`、MySQL `time_zone=SYSTEM`、系统为北京时间），所以这不是一个已经发生的故障，而是**部署即触发**的隐患。
+
+**修复原则：让写入与比较落在同一个时钟上。**
+
+| 位置 | 修复前 | 修复后 |
+| --- | --- | --- |
+| 写入 | JVM `now() + 5min` | SQL `NOW() + INTERVAL 5 MINUTE`（哨兵 `pendingTimeoutFromDb`） |
+| 支付路径判超时 | JVM 时钟解析字符串 | `countExpiredById`，与清理任务**共用** `pendingExpiredCondition` |
+| 占座判定 / 清理任务 | DB `NOW()` | 不变 |
+
+**为什么用哨兵字段而不是直接改 SQL**：`pending_timeout_at` 在 `insert` 里是"可选列"（`<if>` 包裹），直接写死 `NOW()` 会破坏其他写入路径。哨兵与已有的 `clearPendingTimeout` 对称：只表达"这次写入用库时钟"，不改列的可选性。超时分钟数由 `OrderedService.PENDING_TIMEOUT_MINUTES` 与 mapper 中的 INTERVAL 共同表达，**测试断言两者一致**。
+
+**验证**：
+- 建单后 `TIMESTAMPDIFF(SECOND, NOW(), pending_timeout_at)` = **300 秒**（由库算）
+- 手工把超时点改成 `NOW() - 1 SECOND` → 支付返回「支付超时，订单已自动取消」并落库为已取消，**不是**「场次已开场」
+- 支付路径取消后，「已超时待支付」行数 = 0，与清理任务结论一致
+- 守卫 `PendingTimeoutClockTest`（4 条，读 mapper XML 原文）。**做过反证**：把 `NOW() + INTERVAL` 改回 `#{pendingTimeoutAt}`，测试立即红
+
+**约束**：`pendingExpiredCondition` 是全仓唯一的超时谓词片段，`selectExpiredPendingOrders`（清理）与 `countExpiredById`（支付）都 `include` 它。新加任何超时判断都必须引用本片段 —— 测试会数"出现几处 `pending_timeout_at < NOW()`"，多写一处即红。
+
 - `updateById` 对这一列用 `<choose>`：只有「显式清空（`clearPendingTimeout=true`）」或「写新值」两种写法，其余更新一律不碰 —— 否则任何部分更新都会顺手清掉倒计时。
 
 ### 3.5 金额

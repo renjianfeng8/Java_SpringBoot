@@ -30,7 +30,7 @@ npm run build      # 产物到 dist/
 
 ```bash
 cd xm_film/springboot
-mvn -o test                                   # 331 个用例
+mvn -o test                                   # 335 个用例
 mvn -o test -Dtest=OrderedServiceTest         # 单类
 mvn -o clean test -Dtest=XxxTest              # 改了 mapper XML / 改了 main 代码后，用这个
 ```
@@ -120,6 +120,7 @@ python dump-schema.py --target xm_film_test   # 用来初始化测试库
 | `GROUP BY` 表达式与 `SELECT` 逐字相同 | `only_full_group_by` |
 | 新增 `@SpringBootTest` 必带 `@ActiveProfiles("ci")`，写库再加 `@Transactional` | §1.3 |
 | 调用方引起的错误不得落到兜底 500；在 `GlobalExceptionHandler` 加具名处理器 | `architecture.md` §4 |
+| 时间比较只能用 DB `NOW()`；超时判断必须 `include` `pendingExpiredCondition`，不得另写谓词 | `domain.md` §3.4 |
 | 状态是中文字面量，改动须跨 Java/XML/JS 同步 | `domain.md` §1 |
 
 ### 4.2 前端
