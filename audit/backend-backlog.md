@@ -206,15 +206,30 @@
 | BL-11 | service/TmdbBackfillService.backfillVideos | 用 selectAll(new Film())（含票房聚合与 area/actor JOIN）取全表再在 Java 里过滤 video 为空的行。 | 改投影查询 SELECT id,title,... WHERE video IS NULL OR video=''，避开聚合。 |
 | BL-12 | service/TmdbService.resolveTypes | 逐类型 selectByTitleExact 并按需 insert（≤4 次）。 | 批量 selectByTitleExact(IN ...) 一次取回。管理员低频，优先级低。 |
 
-## 重复代码与可维护性
+## 重复代码与可维护性（2026-10-20 专项：BL-13/14/15/16 已修复）
+
+| 编号 | 位置 | 问题 | 状态 |
+| --- | --- | --- | --- |
+| BL-13 | service/UserService、AdminService、CinemaService、PayPasswordService | 凭证比对被抄 4 处（"BCrypt.matches 或明文 equals"），4 个类各 new 一个 BCryptPasswordEncoder | **已修复** → `common/PasswordMatcher`。空值由 NPE 改为不匹配。**明文回退刻意保留**（SEC-03，只收敛不改行为）。测试 `SharedComponentTest` 明确标注 `plaintextFallbackStillPassesForLegacyRows` 记录的是缺陷现状，修 SEC-03 时应改为 false 并会变红 |
+| BL-14 | service/OrderedService.parsePrice、RecordService.parsePrice | 逐字重复，仅 ErrorCode 与文案不同 | **已修复** → `common/PriceParser`。抽的过程中发现真实口径分裂：录入侧 400、下单侧 500。另补捕 `ArithmeticException`（`1e999999999` 构造成功但 setScale 溢出，原先漏成 500）。**可达性如实记录**：`record.price` 是 `decimal(10,2)`，库层拒绝非法字符串（实测 SQL 直接报错），下单侧不可达；这是口径统一 + 未来防线，不是正在发生的 500 |
+| BL-15 | 时间格式串 4 处 + now() 2 处 | 同上 | **已修复** → `common/DateTimeFormats`（格式）+ `common/SystemClock`（当前时间）。刻意不叫 `Clock`：那会让人以为可替代数据库时钟，而超时判定必须用 DB 时钟（BL-05 根因） |
+| BL-16 | generateOrderNo / generateRechargeNo | 日期 + UUID 前 8 位大写，仅前缀不同 | **已修复** → `common/OrderNumber`。订单号无前缀、充值单号 `R` |
+| （本轮追加） | service/OrderedService.normalizeSeats | 座位解析（格式/范围/规范化/去重）埋在订单状态机里；规范化是防双卖的唯一防线（库里座位是逗号串，占用检查走 `FIND_IN_SET` 逐字节比对） | **已修复** → `common/SeatParser`。`OrderedService` 622 → 587 行，少一类职责 |
+| （本轮追加） | `ErrorCode.X.code()` 16 处 | 每个调用点都把错误码翻成字符串再传给 `Result.error` | **已修复** → `Result.error(ErrorCode, msg)` 重载 + `common/SuccessCode`。服务端 `"200"` 字面量收敛到一处 |
+
+**本轮追加的两条实测边界（既有行为，非本次引入）**：
+
+1. `SeatParser` 的格式正则限定 1–2 位数字，所以 `"01排001座"` 会被判为格式错误而不是归一 ——
+   前导零只可能出现在"单数字前补一个零"（`1排01座`），该形态能正确归一。已在测试里钉住这两面。
+2. `PasswordMatcher.matches(encoder, "", "")` 返回 **true**：明文回退那一半让空口令通过空密码行。
+   这是 SEC-03 同源的既有行为，本轮未改，测试里写了注释。
+
+**反证记录**：`PriceParser` 错误码改回 `SYSTEM_ERROR` → 对应用例红；
+`SeatParser` 去掉规范化（改回存 `raw`）→ 防双卖用例红。两次均确认已精确还原。
 
 | 编号 | 位置 | 问题 | 处置建议 |
 | --- | --- | --- | --- |
-| BL-13 | service/UserService、AdminService、CinemaService 的 login/updatePassword | 三者登录与改密体逐字重复；"BCrypt.matches 或明文 equals"的凭证比对谓词在三类 + PayPasswordService 共 7 处，属安全相关规则。改密策略或明文回退规则变更需同步 4 个类。 | 抽 AbstractAccountService<A extends Account> 或 PasswordSupport.verify(raw, stored)，login/updatePassword 共用。 |
-| BL-14 | service/OrderedService.parsePrice、service/RecordService.parsePrice | 逐字重复，仅 ErrorCode 与文案不同。 | 上提到 common（如与 FileUtil 同层）。 |
-| BL-15 | service/OrderedService、RecordService、RechargeService、PayPasswordService | 时间格式串 "yyyy-MM-dd HH:mm:ss" 在 4 处各自定义；now() 在 OrderedService 与 RechargeService 各写一份。 | 抽 DateTimeUtil 统一格式与 now()。 |
-| BL-16 | service/OrderedService.generateOrderNo、service/RechargeService.generateRechargeNo | 日期 + UUID 前 8 位大写的后缀生成重复，仅前缀不同。 | 抽公共生成器。 |
-| BL-17 | service/RecordService/RoomService 的 requireAdminOrCinema、applyCinemaScope；OrderedService/RecordService/RoomService 的 ensureXxxAccess | ADMIN 放行、CINEMA 归属 的守卫与 scope 谓词按实体各写一份。 | 在 AuthContext 旁抽统一的角色守卫。 |
+| BL-17 | service/RecordService/RoomService 的 requireAdminOrCinema、applyCinemaScope；OrderedService/RecordService/RoomService 的 ensureXxxAccess | ADMIN 放行、CINEMA 归属 的守卫与 scope 谓词按实体各写一份。 | 在 AuthContext 旁抽统一的角色守卫。**未做**：与 BL-13 不同，这几处的差异是真实的实体语义（谁的 id、查哪张表），强行合并会引入参数化歧义，收益低于风险。 |
 
 ## 实体层遗留（承接 S10）
 
