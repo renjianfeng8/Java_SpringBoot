@@ -124,6 +124,8 @@ python dump-schema.py --target xm_film_test   # 用来初始化测试库
 | **回调/入账类端点必须有服务端可验证的凭证**；「归属校验通过」不等于「授权通过」 | `backend-backlog.md` §安全 SEC-01 |
 | **删除守卫必须在 Service 且在同一事务内**：先锁父行 → 再数子表 → 再删；批量按 id 升序加锁 | `backend-backlog.md` §架构分层 BL-44 |
 | **外部 HTTP/文件 IO 不得出现在 `@Transactional` 方法体内**；用 `TransactionTemplate` 只包写库段 | `backend-backlog.md` §架构分层 BL-45 |
+| **并发冲突（死锁/等锁超时）必须映射为 409 可重试**，不得落到 500；用父类型 `PessimisticLockingFailureException` 一并覆盖 | `backend-backlog.md` §并发 BL-47 |
+| **并发测试必须用两条物理连接**，且连接在"执行它的那个线程"上创建；只断言 SQL 文本含 `FOR UPDATE` 不算数 | `backend-backlog.md` §并发 BL-48 |
 | 状态是中文字面量，改动须跨 Java/XML/JS 同步 | `domain.md` §1 |
 
 ### 4.2 前端

@@ -24,6 +24,28 @@
 
 **这一节的教训**：`information_schema.INNODB_TRX` 在**本机恒为 0**（手动开事务后仍查不到），一度让我把「查不到事务」误当成「没有事务」。事务边界的判定改用 `TransactionSynchronizationManager.isActualTransactionActive()` 与「另开连接能否加锁」这类不依赖该表的信号。
 
+## 并发（2026-10-19 专项，补自动化回归 + 修一条映射缺陷）
+
+**背景**：并发维度此前 88 分，但结论**全部来自手工实测**，测试树里 0 条用两条连接验证锁的用例。本轮把最关键的几条变成可回归的测试，并在反证过程中挖出一条真实缺陷。
+
+| 编号 | 问题 | 实测 | 处置 |
+| --- | --- | --- | --- |
+| **BL-47** | **并发冲突（死锁/等锁超时）漏成 500「系统错误」**。`GlobalExceptionHandler` 没有 `PessimisticLockingFailureException` 分支，全仓只有 `CinemaService.importFromDirectory` 自己 catch 了死锁。 | **反证 BL-01 时意外撞出**：临时去掉 `RecordService.validateSchedule` 的影厅行锁，两个并发建重叠排片的请求撞出 `DeadlockLoserDataAccessException`，原先一路落到兜底分支变成 500。 | 新增 `@ExceptionHandler(PessimisticLockingFailureException.class)` → **409「操作与他人发生冲突，请稍后重试」**。用父类型而非只捕死锁：等锁超时是 `CannotAcquireLockException`，只捕前者会让超时那半漏成 500。守卫 `ExceptionMappingTest` 新增 2 条。 |
+| **BL-48** | 并发的**结论不可回归**：`RecordOverlapLockTest` 只断言 SQL 文本含 `FOR UPDATE`，不证明锁真的互斥。 | — | 新增两类测试，见下。 |
+
+**新增的并发测试（均做过反证）**：
+
+| 测试 | 证明什么 | 反证 |
+| --- | --- | --- |
+| `RowLockMutualExclusionTest`（4 条） | 双物理连接：A 持 `FOR UPDATE` 时 B **300 ms 内拿不到**；A 提交后 B 立刻放行。覆盖 `cinema`/`film`/`room`/`record` 四张表，先用 `performance_schema.data_locks` 确认 A 真的拿到 `RECORD X` 锁。 | 去掉 `FOR UPDATE` → 4 条全红（第一道断言「应出现排他记录锁」即拦截） |
+| `RecordConcurrentOverlapTest`（6 轮） | 两个线程各自开事务、调真实 `RecordService.addScoped` 建**重叠时段** → 每轮**只落 1 场**，另一个必须以「已有排片」失败。 | 把锁换成 `selectById` → 立刻红 |
+
+**踩过的坑（值得记）**：`RowLockMutualExclusionTest` 最初在主线程建好 A/B 两条连接、再把 B 的操作丢给线程池执行 —— B 拿到的连接被 Spring 测试上下文按线程绑定，实测**立即返回、锁完全没生效**（日志里 A 确实持有 `RECORD X`，但 B 等锁耗时 0 ms）。修复：**连接在哪个线程执行就在哪个线程创建**。这类"测试假绿"比缺陷本身更危险。
+
+**HTTP 层实测**：4 并发建同一影厅重叠排片 → `HTTP=200 ×4`，业务码 `200 / 409 / 409 / 409`，消息均为「该影厅在此时间段已有排片」。另用独立连接持锁 6 秒，期间提交排片接口挂起至锁释放后返回 200 —— 证明"等锁"在真实链路里会发生。
+
+**未覆盖（诚实记录）**：死锁在 HTTP 层**未能稳定复现**（去掉锁后压 4 并发，4 个请求恰好串行，未撞出死锁）。因此"死锁 → 409"的结论靠单测钉住映射 + SQL 层证明死锁确实会产生，**不是**端到端复现。
+
 ## 安全（2026-10-19 独立审计，三条已实测触发）
 
 **背景**：并发与异常两条线修完之后，另做了一轮独立的安全核查（不看代码注释、只认实测）。三条**均已用真实 HTTP 复现**，优先级高于本文件其余全部条目 —— 它们不是"技术债"，是可用两条请求打穿的功能缺陷。
