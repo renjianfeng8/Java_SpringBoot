@@ -5,6 +5,7 @@ import com.example.springboot.common.enums.ErrorCode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.PessimisticLockingFailureException;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
@@ -161,6 +162,29 @@ public class GlobalExceptionHandler {
         logger.warn("不支持的 Content-Type: {}", e.getContentType());
         return Result.error(ErrorCode.FILE_INVALID.code(),
                 "不支持的请求格式，请使用 " + e.getSupportedMediaTypes());
+    }
+
+    /**
+     * 并发冲突：死锁牺牲者、锁等待超时。
+     *
+     * <p>这类异常<b>不是</b>调用方传错了参数，也<b>不是</b>服务端坏了 —— 是两个写请求
+     * 真的在同一批行上撞了，其中一方被数据库回滚。正确语义是「可重试」（HTTP 409），
+     * 不是 500「系统错误」：前端拿 500 只会让用户以为系统坏了，而实际重试一次就能成功。
+     *
+     * <p>为什么用父类型 {@link PessimisticLockingFailureException} 而不是只捕
+     * {@code DeadlockLoserDataAccessException}：同一类业务冲突在 MySQL 上可能以两种形态出现 ——
+     * 死锁（`Deadlock found`）与等锁超时（`Lock wait timeout exceeded`），
+     * 后者是 {@code CannotAcquireLockException}。只捕前者会让超时那半漏成 500。
+     *
+     * <p>实测来源：把 BL-01 的影厅行锁临时去掉，两个并发建排片请求撞出
+     * `DeadlockLoserDataAccessException`，最终落到兜底分支变成 500。
+     */
+    @ExceptionHandler(PessimisticLockingFailureException.class)
+    @ResponseBody
+    public Result<Void> concurrentConflict(PessimisticLockingFailureException e) {
+        logger.warn("并发冲突（可重试）: type={}, message={}", e.getClass().getSimpleName(), e.getMessage());
+        return Result.error(ErrorCode.BUSINESS_CONFLICT.code(),
+                "操作与他人发生冲突，请稍后重试");
     }
 
     /**

@@ -4,6 +4,7 @@ import com.example.springboot.common.Result;
 import com.example.springboot.exception.CustomException;
 import com.example.springboot.exception.GlobalExceptionHandler;
 import org.junit.jupiter.api.Test;
+import org.springframework.dao.PessimisticLockingFailureException;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
@@ -104,6 +105,33 @@ class ExceptionMappingTest {
 
         assertThat(r.getCode()).isEqualTo("500");
         assertThat(r.getMsg()).isEqualTo("系统错误");
+    }
+
+    /**
+     * 死锁牺牲者 → 409「可重试」，不是 500。
+     *
+     * <p>实测来源：把 BL-01 的影厅行锁临时去掉，两个并发建排片请求撞出
+     * {@code DeadlockLoserDataAccessException}，原先一路落到兜底变成「系统错误」。
+     */
+    @Test
+    void deadlockBecomesRetryableConflict() {
+        Result<Void> r = handler.concurrentConflict(
+                new org.springframework.dao.DeadlockLoserDataAccessException(
+                        "Deadlock found when trying to get lock", new RuntimeException()));
+
+        assertThat(r.getCode()).isEqualTo("409");
+        assertThat(r.getMsg()).contains("稍后重试");
+    }
+
+    /** 等锁超时与死锁同一档处理：它同样是 {@link PessimisticLockingFailureException} 的子类 */
+    @Test
+    void lockWaitTimeoutBecomesRetryableConflict() {
+        Result<Void> r = handler.concurrentConflict(
+                new org.springframework.dao.CannotAcquireLockException(
+                        "Lock wait timeout exceeded", new RuntimeException()));
+
+        assertThat(r.getCode()).isEqualTo("409");
+        assertThat(r.getMsg()).contains("重试");
     }
 
     /** 业务异常仍原样透传自己的 code/msg */
