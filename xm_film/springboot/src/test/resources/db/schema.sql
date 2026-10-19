@@ -75,7 +75,8 @@ CREATE TABLE `cinema` (
   `description` text COLLATE utf8mb4_unicode_ci COMMENT '影院简介',
   `directory_id` int DEFAULT NULL,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `username` (`username`)
+  UNIQUE KEY `username` (`username`),
+  UNIQUE KEY `uk_cinema_directory_id` (`directory_id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=1036 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='影院表';
 
 DROP TABLE IF EXISTS `cinema_directory`;

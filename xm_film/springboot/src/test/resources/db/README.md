@@ -35,6 +35,8 @@ python dump-schema.py          # MYSQL_EXE 可用环境变量覆盖 mysql 客户
 - `user` / `admin` / `cinema` 三表均已有 `username` 唯一索引 —— BL-03 的「唯一索引兜底」
   这一半在库里已具备，缺的是 Java 侧对 `DuplicateKeyException` 的转换。
 - `cinema_directory.poi_id` 为 `NOT NULL` 且唯一，BL-04 里「poiId 可能为空」的 UNCERTAIN 不成立。
+- `cinema.directory_id` 于 2026-10-19 补了 `uk_cinema_directory_id`（BL-04）。此前**没有任何唯一约束**，
+  同一名录可关联多家影院。该列为 `NULL` 时不受唯一索引限制，未关联名录的影院可有任意多条。
 - `film.box_office` 列注释明确写着「已废弃…此列恒为 0」，与 `FilmMapper.filmRevenueJoin` 的
   实时聚合口径一致（实测 64 行全为 0）。
 - `ordered.seat` 为 `varchar(200)`，座位串以逗号分隔存于单列，故占用判定只能走

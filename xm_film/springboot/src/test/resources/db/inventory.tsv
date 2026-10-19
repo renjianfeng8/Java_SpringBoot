@@ -145,6 +145,7 @@ IDX	admin	username	non_unique=0	username	1
 IDX	area	PRIMARY	non_unique=0	id	1		
 IDX	cinema	PRIMARY	non_unique=0	id	1		
 IDX	cinema	username	non_unique=0	username	1		
+IDX	cinema	uk_cinema_directory_id	non_unique=0	directory_id	1		
 IDX	cinema_directory	idx_cinema_directory_brand	non_unique=1	brand	1		
 IDX	cinema_directory	idx_cinema_directory_city	non_unique=1	city	1		
 IDX	cinema_directory	PRIMARY	non_unique=0	id	1		

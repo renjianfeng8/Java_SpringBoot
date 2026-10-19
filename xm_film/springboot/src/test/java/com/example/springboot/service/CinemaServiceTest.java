@@ -16,10 +16,13 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.DeadlockLoserDataAccessException;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
 import java.util.List;
 
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -30,6 +33,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -273,5 +277,54 @@ class CinemaServiceTest {
     void importFromDirectoryWithNullIdsShouldDoNothing() {
         assertEquals(0, cinemaService.importFromDirectory(null));
         verifyNoInteractions(cinemaMapper, directoryMapper);
+    }
+
+    /**
+     * BL-04：并发导入的败者在唯一索引上撞键，应<b>按幂等跳过</b>而不是抛 500。
+     *
+     * <p>实测（2026-10-19 修复前）：两个线程同时导入同一批 3 条名录，
+     * 一个创建 3 家、另一个返回 500「系统错误」。
+     */
+    @Test
+    void importFromDirectorySkipsConcurrentDuplicateInsteadOfFailing() {
+        CinemaDirectory row1 = new CinemaDirectory();
+        row1.setId(1); row1.setPoiId("p1"); row1.setName("A影院");
+        CinemaDirectory row2 = new CinemaDirectory();
+        row2.setId(2); row2.setPoiId("p2"); row2.setName("B影院");
+
+        // 预查时两条都「未收录」—— 这正是并发窗口：另一个事务刚刚插进去
+        when(cinemaMapper.selectLinkedDirectoryIds(List.of(1, 2))).thenReturn(List.of());
+        when(directoryMapper.selectByIds(List.of(1, 2))).thenReturn(List.of(row1, row2));
+        when(cinemaMapper.insert(any(Cinema.class)))
+                .thenThrow(new DuplicateKeyException("Duplicate entry '1' for key 'cinema.uk_cinema_directory_id'"))
+                .thenReturn(1);
+
+        int created = cinemaService.importFromDirectory(List.of(1, 2));
+
+        assertEquals(1, created, "撞键的那条跳过，另一条照常创建");
+        verify(cinemaMapper, times(2)).insert(any(Cinema.class));
+    }
+
+    /**
+     * BL-04 附带发现：并发导入实测报的是<b>死锁</b>（DeadlockLoserDataAccessException），
+     * 不是唯一键冲突 —— 两个事务以不同顺序插入、争同一把索引锁。
+     *
+     * <p>死锁是 MySQL 选一个事务回滚，属于「可重试」而非「用户操作错误」。
+     * 必须给出可操作提示，而不是 500「系统错误」。
+     */
+    @Test
+    void importFromDirectoryReportsDeadlockAsRetryableConflict() {
+        CinemaDirectory row1 = new CinemaDirectory();
+        row1.setId(1); row1.setPoiId("p1");
+
+        when(cinemaMapper.selectLinkedDirectoryIds(List.of(1))).thenReturn(List.of());
+        when(directoryMapper.selectByIds(List.of(1))).thenReturn(List.of(row1));
+        when(cinemaMapper.insert(any(Cinema.class)))
+                .thenThrow(new DeadlockLoserDataAccessException("Deadlock found when trying to get lock",
+                        new RuntimeException("1213")));
+
+        assertThatThrownBy(() -> cinemaService.importFromDirectory(List.of(1)))
+                .isInstanceOf(CustomException.class)
+                .hasMessageContaining("正在导入同一批名录", "请稍后重试");
     }
 }

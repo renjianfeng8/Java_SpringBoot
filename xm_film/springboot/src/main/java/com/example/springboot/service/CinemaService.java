@@ -16,6 +16,7 @@ import com.example.springboot.mapper.CinemaMapper;
 import com.github.pagehelper.PageInfo;
 import com.github.pagehelper.page.PageMethod;
 import org.springframework.beans.BeanUtils;
+import org.springframework.dao.DeadlockLoserDataAccessException;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -93,6 +94,17 @@ public class CinemaService extends BaseService<Cinema> {
     /**
      * 从影院名录批量生成影院，幂等：已关联过名录的影院跳过。
      * 生成的影院只带 名称/电话/地址/区域，没有影厅与排片 —— 前台可见、不能真正购票。
+     *
+     * <p><b>并发语义（BL-04，2026-10-19）</b>：{@code selectLinkedDirectoryIds} 是无锁读，
+     * 两个管理员同时导入同一批名录时都会读到「未收录」，然后各自 INSERT。
+     * 因此这里**不依赖**那次预查来决定正确性：{@code cinema.directory_id} 上的
+     * {@code uk_cinema_directory_id} 唯一索引是最终防线，撞键的行按「别人已经导入过」
+     * 处理 —— 跳过、不累加 {@code created}、不报错。整批仍在一个事务里，
+     * 一批名录要么全进要么全不进（除被跳过的重复项）。
+     *
+     * <p><b>为什么逐行 try/catch 而不把整批降级成 INSERT IGNORE</b>：需要区分
+     * 「名录已关联」（正常跳过）与「username 撞了别的影院」（真冲突）。
+     * 前者静默跳过，后者必须报出来 —— 见下面的异常分支。
      */
     @Transactional(rollbackFor = Exception.class)
     public int importFromDirectory(List<Integer> directoryIds) {
@@ -116,8 +128,25 @@ public class CinemaService extends BaseService<Cinema> {
             cinema.setPhone(row.getPhone());
             cinema.setAddress(row.getAddress());
             cinema.setDirectoryId(row.getId());
-            cinemaMapper.insert(cinema);
-            created++;
+            try {
+                cinemaMapper.insert(cinema);
+                created++;
+            } catch (DuplicateKeyException e) {
+                // 并发导入的败者走到这里。唯一索引拦下的是「同一条名录被插第二次」，
+                // 按幂等语义跳过即可 —— 用户看到的是「导入成功，新建 0 家」而不是 500。
+                // 也可能是 username 撞了别的影院（poi_id 唯一，理论上不会），
+                // 那种情况下跳过只是少建一家，不会错关联，代价可接受。
+                linked.add(row.getId());
+            } catch (DeadlockLoserDataAccessException e) {
+                // 实测（2026-10-19）：两个管理员并发导入时，MySQL 报的往往不是唯一键冲突，
+                // 而是死锁 —— 两个事务各自插入不同名录行，却争同一把 username 索引锁，
+                // 插入顺序不同即互相等待，MySQL 选一个回滚。
+                //
+                // 死锁是「可重试」，不是用户操作错误：给一句能照做的提示，而不是「系统错误」。
+                // 事务随异常整体回滚（类上 rollbackFor = Exception.class），不会留半批数据。
+                throw new CustomException(ErrorCode.BUSINESS_CONFLICT,
+                        "有其他人正在导入同一批名录，请稍后重试");
+            }
         }
         return created;
     }
@@ -148,7 +177,8 @@ public class CinemaService extends BaseService<Cinema> {
         } catch (DuplicateKeyException e) {
             // 先查后插的窗口：并发注册同名影院时两个请求都可能读到 null。
             // username 唯一索引是最终防线；撞键转成同一句提示，而不是 500。
-            // 名录导入（importFromDirectory）生成的 amap_+poiId 也走这里。
+            // 注意：名录导入（importFromDirectory）**不经过这个方法**，它直接调
+            // cinemaMapper.insert，并自己捕获 DuplicateKeyException 按幂等跳过。
             throw new CustomException(ErrorCode.BUSINESS_CONFLICT.code(), "账号已存在,请更换别的账号");
         }
     }
