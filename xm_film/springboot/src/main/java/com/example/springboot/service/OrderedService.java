@@ -217,6 +217,24 @@ public class OrderedService extends BaseService<Ordered> {
             return PayResult.TIMEOUT_CANCELLED;
         }
 
+        // 支付前复核场次是否仍可购（BL-06）。
+        //
+        // 建单时判过 isPurchasable，但建单到支付之间隔着最长 5 分钟的锁座窗口，
+        // 而**场次不需要有人退票就自己会开演**。不复议的话，开演前最后一秒锁下的座位
+        // 可以在开演后付款出票：票已作废（退票截止是映前 60 分钟，早已过去），
+        // 钱却真的扣了 —— 用户既看不了也退不了，只剩"作废"一条路。
+        //
+        // 锁排片行而不是普通读：与 addScoped / updateScoped（改时间、停售）和
+        // deleteScoped（锁排片行后数订单，见 BL-02）抢同一把锁，避免
+        // "刚判完可购、管理员同时把场次改到过去"的窗口。
+        Record recordItem = recordMapper.selectByIdForUpdate(ordered.getRecordId());
+        if (recordItem == null) {
+            throw new CustomException(ErrorCode.BUSINESS_CONFLICT, "放映场次已不存在，无法支付");
+        }
+        if (!RecordService.isPurchasable(recordItem)) {
+            throw new CustomException(ErrorCode.BUSINESS_CONFLICT, "该场次已开场或已停售，无法支付");
+        }
+
         // 支付密码是这一笔资金操作的授权凭证，位置固定在扣款之前：验不过就一分钱不动。
         // 校验方法刻意"返回异常而不是抛异常"：失败计数得先由它自己的事务提交，本事务
         // 随后的回滚才带不走它（见 PayPasswordService.checkForPayment 的注释）。

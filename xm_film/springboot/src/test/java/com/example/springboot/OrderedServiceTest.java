@@ -2,6 +2,7 @@ package com.example.springboot;
 
 import com.example.springboot.common.enums.ErrorCode;
 import com.example.springboot.common.enums.PayResult;
+import com.example.springboot.common.enums.RecordStatus;
 import com.example.springboot.common.enums.RoleEnum;
 import com.example.springboot.dto.response.SeatOccupancyView;
 import com.example.springboot.dto.response.TicketVoucherView;
@@ -318,6 +319,7 @@ class OrderedServiceTest {
     void payOrderRecordsPaymentCredential() {
         Ordered ordered = pendingPaymentOrder();
         when(orderedMapper.selectByIdForUpdate(1)).thenReturn(ordered);
+        when(recordMapper.selectByIdForUpdate(1)).thenReturn(purchasableRecord());
 
         PayResult result = orderedService.payOrder(1, RoleEnum.USER.name(), 100, PAY_PASSWORD);
 
@@ -515,6 +517,7 @@ class OrderedServiceTest {
     void payOrderDeductsBalanceWithOrderAmount() {
         Ordered ordered = pendingPaymentOrder();
         when(orderedMapper.selectByIdForUpdate(1)).thenReturn(ordered);
+        when(recordMapper.selectByIdForUpdate(1)).thenReturn(purchasableRecord());
 
         orderedService.payOrder(1, RoleEnum.USER.name(), 100, PAY_PASSWORD);
 
@@ -530,6 +533,7 @@ class OrderedServiceTest {
     void payOrderWhenBalanceInsufficientLeavesOrderPendingAndSeatLocked() {
         Ordered ordered = pendingPaymentOrder();
         when(orderedMapper.selectByIdForUpdate(1)).thenReturn(ordered);
+        when(recordMapper.selectByIdForUpdate(1)).thenReturn(purchasableRecord());
         doThrow(new CustomException(ErrorCode.BUSINESS_CONFLICT, "账户余额不足，请先充值"))
                 .when(walletService).debitPurchase(anyInt(), any(), anyInt());
 
@@ -549,6 +553,7 @@ class OrderedServiceTest {
     void payOrderStopsBeforeDebitWhenPaymentPasswordRejected() {
         Ordered ordered = pendingPaymentOrder();
         when(orderedMapper.selectByIdForUpdate(1)).thenReturn(ordered);
+        when(recordMapper.selectByIdForUpdate(1)).thenReturn(purchasableRecord());
         // 校验失败由「返回异常」表达（计数先由它自己的事务提交），这里还原成同样的形态
         when(payPasswordService.checkForPayment(anyInt(), any()))
                 .thenReturn(new CustomException(ErrorCode.UNAUTHORIZED, "支付密码错误，还可重试 4 次"));
@@ -570,6 +575,7 @@ class OrderedServiceTest {
         Ordered ordered = pendingPaymentOrder();
         ordered.setUserId(100);
         when(orderedMapper.selectByIdForUpdate(1)).thenReturn(ordered);
+        when(recordMapper.selectByIdForUpdate(1)).thenReturn(purchasableRecord());
 
         orderedService.payOrder(1, RoleEnum.ADMIN.name(), 999, PAY_PASSWORD);
 
@@ -737,6 +743,7 @@ class OrderedServiceTest {
     @Test
     void payOrderGeneratesPickupCode() {
         when(orderedMapper.selectByIdForUpdate(1)).thenReturn(pendingPaymentOrder());
+        when(recordMapper.selectByIdForUpdate(1)).thenReturn(purchasableRecord());
 
         orderedService.payOrder(1, RoleEnum.USER.name(), 100, PAY_PASSWORD);
 
@@ -936,9 +943,26 @@ class OrderedServiceTest {
         Ordered ordered = new Ordered();
         ordered.setId(1);
         ordered.setUserId(100);
+        // recordId 必须有值：payOrder 会锁排片行复核「场次是否仍可购」（BL-06），
+        // null 会被裁定为「场次已不存在」
+        ordered.setRecordId(1);
         ordered.setStatus("待支付");
         ordered.setTotal(90.0);
+        // 未超时：留 5 分钟窗口，默认走正常支付路径而不是超时取消
+        ordered.setPendingTimeoutAt(minutesFromNow(5));
         return ordered;
+    }
+
+    /**
+     * 支付路径的排片行桩：可购（未来场次、正常状态）。
+     *
+     * <p>payOrder 现在会锁排片行复核可购性（BL-06），不配桩就会拿到 null。
+     * 正常支付用例统一用它，把"可购"这个前提显式写出来。
+     */
+    private Record purchasableRecord() {
+        Record recordRow = futureRecord();
+        recordRow.setStatus(RecordStatus.NORMAL);
+        return recordRow;
     }
 
     private Ordered paidOrder() {
