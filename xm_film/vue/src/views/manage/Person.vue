@@ -30,7 +30,7 @@
 <script setup>
 import { isSuccess, API_PATHS } from '@/constants';
 
-import { reactive, ref } from "vue";
+import { reactive, ref, watch } from "vue";
 import request from "@/utils/request.js";
 import { ElMessage } from "element-plus";
 import { useAuth } from "@/composables/useAuth";
@@ -39,7 +39,15 @@ const { user, setUser } = useAuth()
 
 const formRef = ref()
 const data = reactive({
-  form: { ...user.value },
+  // 资料表单只取这几个可编辑字段：token 与角色属于会话，不能随 PUT 一起提交
+  form: {
+    id: user.value?.id ?? null,
+    username: user.value?.username || '',
+    name: user.value?.name || '',
+    phone: user.value?.phone || '',
+  },
+  // 已提交过的用户快照（JSON），用于判断「服务端权威资料回来后要不要覆盖表单」
+  base: '',
   rules: {
     username: [
       { required: true ,message: '请输入账号', trigger: 'blur'}
@@ -49,6 +57,27 @@ const data = reactive({
     ]
   }
 })
+
+function snapshot(form) {
+  return JSON.stringify({ id: form.id, username: form.username, name: form.name, phone: form.phone })
+}
+
+function fillForm(current) {
+  data.form.id = current?.id ?? null
+  data.form.username = current?.username || ''
+  data.form.name = current?.name || ''
+  data.form.phone = current?.phone || ''
+}
+
+// 冷加载时表单先按存储快照渲染，/me 的权威资料随后到达。
+// 只有「用户没动过表单」（当前值仍等于已提交快照）时才覆盖，避免冲掉用户刚输入的内容。
+watch(user, (current) => {
+  if (!current) return
+  if (snapshot(data.form) === data.base) {
+    fillForm(current)
+    data.base = snapshot(data.form)
+  }
+}, { immediate: true })
 
 /* /manage 的路由 meta.roles 只有 ADMIN（router/index.js），所以这里不存在原写法里
    那个 role === 'USER' 分支 —— 它永远不可达，且请求目标恒为 ADMINS。
@@ -66,6 +95,7 @@ const updateUser = async () => {
       // 登录态只能经 useAuth 变更：只写 storage 副本不会更新内存里的
       // user，顶栏的用户名与头像要等整页刷新才变。
       setUser({ ...user.value, ...data.form })
+      data.base = snapshot(data.form)
     } else {
       ElMessage.error(res.msg)
     }

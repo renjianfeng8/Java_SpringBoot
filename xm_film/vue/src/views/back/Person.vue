@@ -36,9 +36,7 @@ import { isSuccess, API_PATHS, apiById } from '@/constants';
 import { reactive, ref } from "vue";
 import request from "@/utils/request.js";
 import { ElMessage } from "element-plus";
-import { getStoredUser } from "@/utils/authStorage";
 import { useAuth } from "@/composables/useAuth";
-
 
 const { user, setUser } = useAuth()
 const formRef = ref()
@@ -46,7 +44,7 @@ const data = reactive({
   form: {
     sex: '男'
   },
-  user: getStoredUser() || {},
+  user: user.value || {},
   rules: {
     username: [
       { required: true, message: '请输入账号', trigger: 'blur' }

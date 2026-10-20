@@ -38,7 +38,7 @@
 
 <script setup>
 import { isSuccess, API_PATHS, FILE_UPLOAD_URL } from '@/constants';
-import { reactive, ref, onMounted } from "vue";
+import { reactive, ref, onMounted, watch } from "vue";
 import request from "@/utils/request.js";
 import { ElMessage } from "element-plus";
 import { uploadHeaders, handleUploadError } from "@/utils/upload";
@@ -63,15 +63,36 @@ const rules = {
   name: [{ required: true, message: "请输入名称", trigger: "blur" }],
 };
 
+// 表单当前值的快照，用于判断「/me 的权威资料回来后要不要覆盖用户正在编辑的内容」
+const snapshot = () => JSON.stringify({
+  id: formData.id,
+  username: formData.username,
+  name: formData.name,
+  phone: formData.phone,
+  avatar: formData.avatar,
+});
+
+let baseSnapshot = snapshot();
+
+function fillForm(current) {
+  formData.username = current.username;
+  formData.name = current.name || current.username;
+  formData.phone = current.phone || "";
+  formData.avatar = current.avatar || "";
+  formData.id = current.id || null;
+}
+
 onMounted(() => {
-  const current = user.value;
-  if (current) {
-    formData.username = current.username;
-    formData.name = current.name || current.username;
-    formData.phone = current.phone || "";
-    formData.avatar = current.avatar || "";
-    formData.id = current.id || null;
-  }
+  if (user.value) fillForm(user.value);
+  baseSnapshot = snapshot();
+});
+
+// 冷加载时 onMounted 拿到的可能只是存储快照，/me 回填的权威资料要能补进表单；
+// 但用户已经开始改的表单不能被异步结果冲掉（只在未改动时同步）。
+watch(user, (current) => {
+  if (!current || snapshot() !== baseSnapshot) return;
+  fillForm(current);
+  baseSnapshot = snapshot();
 });
 
 const updateUser = () => {
@@ -85,6 +106,7 @@ const updateUser = () => {
           // 登录态只能经 useAuth 变更：只写 storage 副本不更新内存里的
           // user ref，顶栏的头像与用户名要等整页刷新才变。
           setUser({ ...user.value, ...formData });
+          baseSnapshot = snapshot();
         } else {
           ElMessage.error(res.msg);
         }
