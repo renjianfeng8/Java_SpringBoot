@@ -88,11 +88,14 @@
                   <div class="cinema-card__name">{{ cinema.name || '未知影院' }}</div>
                 </div>
 
-                <!-- 影院服务标签：用功能色，白字压其上均达 AA -->
+                <!-- 影院服务标签：用功能色，白字压其上均达 AA；文案与底色取自 cinemaServices -->
                 <div class="cinema-card__tags">
-                  <div class="service-tag service-tag--refund">退票无忧</div>
-                  <div class="service-tag service-tag--promo">儿童优惠</div>
-                  <div class="service-tag service-tag--wifi">WiFi覆盖</div>
+                  <div
+                      v-for="service in CINEMA_SERVICES"
+                      :key="service.key"
+                      class="service-tag"
+                      :class="serviceToneClass(service)"
+                  >{{ service.label }}</div>
                 </div>
 
                 <!-- 影院详细信息 -->
@@ -147,6 +150,7 @@
 
 <script setup>
 import { isSuccess, API_PATHS, apiById, apiPage } from '@/constants';
+import { CINEMA_SERVICES, serviceToneClass } from '@/constants/cinemaServices';
 import {reactive, ref, onMounted} from 'vue';
 import {useRoute, useRouter} from 'vue-router';
 import {ElMessage} from 'element-plus';

@@ -47,30 +47,14 @@
               今日可购 {{ todaySessionCount }} 场
             </div>
 
-            <!-- 影院服务。底色走共享层的 .service-tag--*，与影院列表页同色 -->
+            <!-- 影院服务。文案/说明/底色取自 constants/cinemaServices.js，与列表页同源 -->
             <div class="cinema-hero__services">
-              <div class="service-item">
-                <div class="service-item__title service-tag--refund">
-                  <el-icon class="service-item__icon"><RefreshLeft /></el-icon>
-                  退票无忧
+              <div v-for="service in CINEMA_SERVICES" :key="service.key" class="service-item">
+                <div class="service-item__title" :class="serviceToneClass(service)">
+                  <el-icon class="service-item__icon"><component :is="service.icon" /></el-icon>
+                  {{ service.label }}
                 </div>
-                <div class="service-item__desc">未取票用户在放映前 60 分钟可退票</div>
-              </div>
-
-              <div class="service-item">
-                <div class="service-item__title service-tag--promo">
-                  <el-icon class="service-item__icon"><User /></el-icon>
-                  儿童优惠
-                </div>
-                <div class="service-item__desc">1 位成人可免费带 1 位不满 1.3 米儿童，免票无座</div>
-              </div>
-
-              <div class="service-item">
-                <div class="service-item__title service-tag--wifi">
-                  <el-icon class="service-item__icon"><Connection /></el-icon>
-                  WiFi覆盖
-                </div>
-                <div class="service-item__desc">全场免费高速 WiFi，观影期间也可顺畅连接</div>
+                <div class="service-item__desc">{{ service.desc }}</div>
               </div>
             </div>
           </div>
@@ -169,8 +153,9 @@ import { computed, nextTick, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import {
-  Clock, Connection, Location, Phone, RefreshLeft, StarFilled, User,
+  Clock, Location, Phone, StarFilled,
 } from '@element-plus/icons-vue';
+import { CINEMA_SERVICES, serviceToneClass } from '@/constants/cinemaServices';
 import request from "@/utils/request.js";
 import { formatScore } from '@/utils/format.js';
 import { avatarSrc, onAvatarError } from '@/utils/avatar';

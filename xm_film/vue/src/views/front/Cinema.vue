@@ -100,16 +100,15 @@
               </span>
             </div>
 
-            <!-- 影院服务标签：底色走共享层的 .service-tag--*（与影院详情页同色），白字压其上均达 AA -->
+            <!-- 影院服务标签：文案与底色取自 constants/cinemaServices.js，与详情页同源 -->
             <div class="cinema-card__tags">
-              <span class="service-tag service-tag--refund">
-                <el-icon><RefreshLeft /></el-icon>退票无忧
-              </span>
-              <span class="service-tag service-tag--promo">
-                <el-icon><User /></el-icon>儿童优惠
-              </span>
-              <span class="service-tag service-tag--wifi">
-                <el-icon><Connection /></el-icon>WiFi覆盖
+              <span
+                  v-for="service in CINEMA_SERVICES"
+                  :key="service.key"
+                  class="service-tag"
+                  :class="serviceToneClass(service)"
+              >
+                <el-icon><component :is="service.icon" /></el-icon>{{ service.label }}
               </span>
             </div>
 
@@ -159,7 +158,8 @@ import { isSuccess, API_PATHS, apiPage, CINEMA_API } from '@/constants';
 import { reactive, computed } from 'vue';
 import request from "@/utils/request.js";
 import { ElMessage } from 'element-plus';
-import { ArrowRight, Connection, Location, Phone, RefreshLeft, User } from '@element-plus/icons-vue';
+import { ArrowRight, Location, Phone } from '@element-plus/icons-vue';
+import { CINEMA_SERVICES, serviceToneClass } from '@/constants/cinemaServices';
 import { avatarSrc, onAvatarError } from '@/utils/avatar';
 
 // 骨架条数：一屏能看到的卡片量，多了白渲染
