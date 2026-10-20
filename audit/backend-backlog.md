@@ -8,7 +8,7 @@
 
 更新日期：2026-10-20（SonarQube 专项增补）。基线：master `bfdd1c07`（清单）、`a2144fc4`（纯清理起点）；复核基线 `3112f8b7`；Sonar 扫描基线 `0ff8331c`。
 
-**复核时的实测基线**：`mvn -o test` = **309/309** 通过（2026-10-18 收尾；此前长期 6 红，见 §测试隔离）。开发库 `xm-film` 已由 `springboot/demo-data.sql` 补入演示影厅、排片与账号，购票主链已实测跑通。**2026-10-19 更新为 343/343；2026-10-20 更新为 396/396**（新增 Sonar 守卫用例）。
+**复核时的实测基线**：`mvn -o test` = **309/309** 通过（2026-10-18 收尾；此前长期 6 红，见 §测试隔离）。开发库 `xm-film` 已由 `springboot/demo-data.sql` 补入演示影厅、排片与账号，购票主链已实测跑通。**2026-10-19 更新为 343/343；2026-10-20 更新为 398/398**（新增 Sonar 守卫用例）。
 
 ## 架构分层（2026-10-19 专项，三项均已修复）
 
@@ -90,13 +90,13 @@
 
 ## SonarQube 静态扫描（2026-10-20）
 
-**背景**：用 SonarQube 10.7（`Sonar way`）对 Java 主代码/测试 + Vue 全量扫描，基线 74 条问题。完整清单、逐条误报判定与复现命令见 `audit/sonarqube-report.md`；本节只登记需要跟踪的三条，其余为命名/字面量/ARIA/测试写法一类的清理项。
+**背景**：用 SonarQube 10.7（`Sonar way`）对 Java 主代码/测试 + Vue 全量扫描，基线 74 条问题，两轮修复后降到 **32 条**（漏洞 0、测试代码问题 0）。完整清单、逐条误报判定与复现命令见 `audit/sonarqube-report.md`；本节只登记需要跟踪的三条，其余为命名/字面量/ARIA/复杂度一类的清理项。
 
 | 编号 | 位置 | 问题 | 处置 |
 | --- | --- | --- | --- |
 | **BL-50** | service/PayPasswordService | 支付密码校验标注 `@Transactional(REQUIRES_NEW)`，却被本类 `changePayPassword` / `verifyOldPassword` 用 `this` 调用。同类自调用不经过代理，`REQUIRES_NEW` 被静默忽略；当前靠"入口没有外层事务"成立，一旦调用方进事务，失败计数与 15 分钟锁定会随回滚消失。 | **已修复**：改用 `TransactionTemplate` 显式 `REQUIRES_NEW`，不依赖 AOP 代理。守卫 `PayPasswordTransactionBoundaryTest` 用真实库证明"外层回滚后计数仍为 1"；`PayPasswordServiceTest#verifyOldPasswordRunsInRequiresNewTransaction` 钉住传播级别。反证：把传播级别改回 `REQUIRED` → 两条守卫都红（计数 0）。 |
 | **BL-51** | service/OrderedService.generatePickupCode | 取票码用 `ThreadLocalRandom`。它是匿名核销接口 `POST /tickets/redeem` 的唯一凭证，随机源可预测等于降低凭证强度；31⁸ 只说明枚举空间，不解决可预测性。 | **已修复**：新增 `common/SecureCodes`（`SecureRandom`），取票码与批量导入的初始口令共用。既有 `payOrderGeneratesPickupCode` 继续钉格式与字母表。 |
-| **BL-52** | service/CinemaService.importFromDirectory:181；test/ExceptionMappingTest、test/service/CinemaServiceTest | 仍 catch / 引用已弃用的 `DeadlockLoserDataAccessException`。BL-47 的结论是必须捕父类型 `PessimisticLockingFailureException`，否则等锁超时那一半仍会漏成 500。 | **待办**：主代码改父类型，测试同步。属口径一致性缺口，不与 P0 同轮。 |
+| **BL-52** | service/CinemaService.importFromDirectory；test/ExceptionMappingTest、test/service/CinemaServiceTest | 仍 catch / 引用已弃用的 `DeadlockLoserDataAccessException`。BL-47 的结论是必须捕父类型 `PessimisticLockingFailureException`，否则等锁超时那一半仍会漏成 500。另 1 条是 Spring 6.2 弃用的 `HttpMessageNotReadableException` 单参构造器。 | **已修复**：主代码改捕父类型，测试同步；新增 `importFromDirectoryReportsLockWaitTimeoutAsRetryableConflict` 用 `CannotAcquireLockException` 钉住超时那半。异常映射测试改用 `PessimisticLockingFailureException` 与带 `MockHttpInputMessage` 的两参构造器，4 条 `S1874` 清零。 |
 
 **同轮修复（原安全章节的连带发现）**：批量导入影院的硬编码口令 `cinema123` 已移除。每个新账号生成独立的 12 位随机口令，库中只存 BCrypt 哈希，明文只在 `POST /cinemas/from-directory` 的响应 `accounts[]` 里返回一次；`insertCinema` 对空口令返回 400，不再回退默认值。反证：改回共用 `cinema123` → 3 条用例红。
 
