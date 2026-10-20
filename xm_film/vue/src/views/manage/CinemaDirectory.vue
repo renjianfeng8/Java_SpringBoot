@@ -174,7 +174,10 @@ const loadFilters = () => request.get(CINEMA_DIRECTORY_API.FILTERS).then(res => 
   if (isSuccess(res)) { filterData.cities = res.data.cities; filterData.brands = res.data.brands }
 }).catch(() => {})
 
+let loadSeq = 0
+
 const load = () => {
+  const seq = ++loadSeq
   data.error = false
   data.loading = true
   request.get(CINEMA_DIRECTORY_API.PAGE, {
@@ -183,10 +186,11 @@ const load = () => {
               linked: query.linked ?? undefined,
               pageNum: query.pageNum, pageSize: query.pageSize }
   }).then(res => {
+    if (seq !== loadSeq) return
     if (isSuccess(res)) { data.list = res.data.list; data.total = res.data.total }
     else { data.error = true }
-  }).catch(() => { data.error = true })
-    .finally(() => { data.loading = false })
+  }).catch(() => { if (seq === loadSeq) data.error = true })
+    .finally(() => { if (seq === loadSeq) data.loading = false })
 }
 
 const reload = () => { query.pageNum = 1; load() }
