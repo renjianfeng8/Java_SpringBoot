@@ -3,12 +3,14 @@ package com.example.springboot.service;
 import com.example.springboot.common.BaseMapper;
 import com.example.springboot.common.BaseService;
 import com.example.springboot.common.PasswordMatcher;
+import com.example.springboot.common.SecureCodes;
 import com.example.springboot.entity.Account;
 import com.example.springboot.entity.Cinema;
 import com.example.springboot.entity.CinemaDirectory;
 import com.example.springboot.common.enums.CinemaStatus;
 import com.example.springboot.common.enums.ErrorCode;
 import com.example.springboot.common.enums.RoleEnum;
+import com.example.springboot.dto.response.CinemaAccountImportView;
 import com.example.springboot.dto.response.CinemaRegionItemView;
 import com.example.springboot.dto.response.CinemaRegionView;
 import com.example.springboot.exception.CustomException;
@@ -53,7 +55,15 @@ public class CinemaService extends BaseService<Cinema> {
 
     private OrderedMapper orderedMapper;
 
-    private static final String DEFAULT_PASSWORD = "cinema123";
+    /**
+     * 批量导入账号的初始口令字母表：剔除 I/L/O/0/1（人工抄写易混），
+     * 大小写 + 数字，配合 12 位长度约 70 bit 熵。
+     */
+    private static final String IMPORTED_ACCOUNT_ALPHABET =
+            "ABCDEFGHJKMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789";
+
+    /** 批量导入影院的初始口令长度：12 位、约 70 bit 熵，抵御离线猜测 */
+    private static final int INITIAL_PASSWORD_LENGTH = 12;
 
     private final PasswordEncoder passwordEncoder = PasswordMatcher.instance();
 
@@ -119,6 +129,11 @@ public class CinemaService extends BaseService<Cinema> {
      * 从影院名录批量生成影院，幂等：已关联过名录的影院跳过。
      * 生成的影院只带 名称/电话/地址/区域，没有影厅与排片 —— 前台可见、不能真正购票。
      *
+     * <p><b>初始口令（Sonar {@code java:S6437}，2026-10-20）</b>：每个影院生成独立的
+     * 12 位随机口令，库里只存 BCrypt 哈希；明文仅在本次响应里返回一次，供管理员分发。
+     * 旧实现让所有导入影院共用硬编码的 {@code cinema123}，叠加「用户名 = amap_+poiId 可推导、
+     * 登录无失败锁定」，等于公开凭证。
+     *
      * <p><b>并发语义（BL-04，2026-10-19）</b>：{@code selectLinkedDirectoryIds} 是无锁读，
      * 两个管理员同时导入同一批名录时都会读到「未收录」，然后各自 INSERT。
      * 因此这里**不依赖**那次预查来决定正确性：{@code cinema.directory_id} 上的
@@ -131,21 +146,22 @@ public class CinemaService extends BaseService<Cinema> {
      * 前者静默跳过，后者必须报出来 —— 见下面的异常分支。
      */
     @Transactional(rollbackFor = Exception.class)
-    public int importFromDirectory(List<Integer> directoryIds) {
+    public CinemaAccountImportView importFromDirectory(List<Integer> directoryIds) {
         if (directoryIds == null || directoryIds.isEmpty()) {
-            return 0;
+            return new CinemaAccountImportView(0, List.of());
         }
-        // 所有生成影院共用同一默认密码，故一次性算出哈希复用：安全性等价，且避免逐行 bcrypt 的昂贵开销
-        String defaultHash = passwordEncoder.encode(DEFAULT_PASSWORD);
         Set<Integer> linked = new HashSet<>(cinemaMapper.selectLinkedDirectoryIds(directoryIds));
         int created = 0;
+        List<CinemaAccountImportView.Account> accounts = new ArrayList<>();
         for (CinemaDirectory row : directoryMapper.selectByIds(directoryIds)) {
             if (linked.contains(row.getId())) {
                 continue;
             }
+            // 逐行生成口令，bcrypt 的成本必须按账号付：共用哈希等于共用口令
+            String initialPassword = SecureCodes.of(IMPORTED_ACCOUNT_ALPHABET, INITIAL_PASSWORD_LENGTH);
             Cinema cinema = new Cinema();
             cinema.setUsername("amap_" + row.getPoiId());
-            cinema.setPassword(defaultHash);
+            cinema.setPassword(passwordEncoder.encode(initialPassword));
             cinema.setRole(RoleEnum.CINEMA.name());
             cinema.setStatus(CinemaStatus.APPROVED);
             cinema.setName(row.getName());
@@ -155,6 +171,7 @@ public class CinemaService extends BaseService<Cinema> {
             try {
                 cinemaMapper.insert(cinema);
                 created++;
+                accounts.add(new CinemaAccountImportView.Account(cinema.getUsername(), initialPassword));
             } catch (DuplicateKeyException e) {
                 // 并发导入的败者走到这里。唯一索引拦下的是「同一条名录被插第二次」，
                 // 按幂等语义跳过即可 —— 用户看到的是「导入成功，新建 0 家」而不是 500。
@@ -172,7 +189,7 @@ public class CinemaService extends BaseService<Cinema> {
                         "有其他人正在导入同一批名录，请稍后重试");
             }
         }
-        return created;
+        return new CinemaAccountImportView(created, accounts);
     }
 
     @Override
@@ -187,8 +204,10 @@ public class CinemaService extends BaseService<Cinema> {
         if (dbCinema != null) {
             throw new CustomException(ErrorCode.BUSINESS_CONFLICT, "账号已存在,请更换别的账号");
         }
-        if (cinema.getPassword() == null) {
-            cinema.setPassword(DEFAULT_PASSWORD);
+        if (cinema.getPassword() == null || cinema.getPassword().isBlank()) {
+            // 不再回退到硬编码默认口令（Sonar java:S6437）：后台新增表单本就必填，
+            // 直接调接口不传口令的请求应当在入口被拒绝，而不是拿到一个公开可查的初始口令。
+            throw new CustomException(ErrorCode.PARAM_INVALID, "请设置影院的初始登录密码");
         }
         if (cinema.getName() == null) {
             cinema.setName(cinema.getUsername());

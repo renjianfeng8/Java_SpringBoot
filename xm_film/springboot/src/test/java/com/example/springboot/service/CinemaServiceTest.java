@@ -1,6 +1,7 @@
 package com.example.springboot.service;
 
 import com.example.springboot.common.enums.RoleEnum;
+import com.example.springboot.dto.response.CinemaAccountImportView;
 import com.example.springboot.dto.response.CinemaRegionItemView;
 import com.example.springboot.dto.response.CinemaRegionView;
 import com.example.springboot.entity.Account;
@@ -52,9 +53,10 @@ class CinemaServiceTest {
 
     private Cinema mockCinema;
 
+    private final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
+
     @BeforeEach
     void setUp() {
-        BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
         mockCinema = new Cinema();
         mockCinema.setId(1);
         mockCinema.setUsername("asks");
@@ -136,6 +138,20 @@ class CinemaServiceTest {
         assertNotNull(cinema.getPassword());
         assertNotEquals("pwd123", cinema.getPassword());
         verify(cinemaMapper).insert(cinema);
+    }
+
+    @Test
+    void addWithoutPasswordShouldBeRejected() {
+        Cinema cinema = new Cinema();
+        cinema.setUsername("no-password");
+        cinema.setName("未设口令影院");
+
+        when(cinemaMapper.selectByUsername("no-password")).thenReturn(null);
+
+        assertThatThrownBy(() -> cinemaService.add(cinema))
+                .isInstanceOf(CustomException.class)
+                .hasMessageContaining("请设置影院的初始登录密码");
+        verify(cinemaMapper, never()).insert(any(Cinema.class));
     }
 
     @Test
@@ -239,9 +255,9 @@ class CinemaServiceTest {
         when(cinemaMapper.selectLinkedDirectoryIds(List.of(1, 2))).thenReturn(List.of(1));
         when(directoryMapper.selectByIds(List.of(1, 2))).thenReturn(List.of(row1, row2));
 
-        int created = cinemaService.importFromDirectory(List.of(1, 2));
+        CinemaAccountImportView result = cinemaService.importFromDirectory(List.of(1, 2));
 
-        assertEquals(1, created);
+        assertEquals(1, result.getCreated());
         ArgumentCaptor<Cinema> captor = ArgumentCaptor.forClass(Cinema.class);
         verify(cinemaMapper).insert(captor.capture());
         Cinema c = captor.getValue();
@@ -254,11 +270,40 @@ class CinemaServiceTest {
         assertEquals(Integer.valueOf(2), c.getDirectoryId());
         assertNotNull(c.getPassword());
         assertNotEquals("cinema123", c.getPassword());
+
+        // 初始口令只在响应里出现一次：必须与落库哈希匹配，且不是旧的公共口令
+        assertEquals(1, result.getAccounts().size());
+        CinemaAccountImportView.Account account = result.getAccounts().get(0);
+        assertEquals("amap_p2", account.getUsername());
+        assertNotEquals("cinema123", account.getInitialPassword());
+        assertEquals(12, account.getInitialPassword().length());
+        assertTrue(encoder.matches(account.getInitialPassword(), c.getPassword()),
+                "返回的明文口令必须能匹配落库的 BCrypt 哈希");
+    }
+
+    /** 每个影院的初始口令必须不同：共用口令等于没有口令 */
+    @Test
+    void importFromDirectoryGeneratesDistinctPasswordPerCinema() {
+        CinemaDirectory row1 = new CinemaDirectory();
+        row1.setId(1); row1.setPoiId("p1"); row1.setName("A影院");
+        CinemaDirectory row2 = new CinemaDirectory();
+        row2.setId(2); row2.setPoiId("p2"); row2.setName("B影院");
+
+        when(cinemaMapper.selectLinkedDirectoryIds(List.of(1, 2))).thenReturn(List.of());
+        when(directoryMapper.selectByIds(List.of(1, 2))).thenReturn(List.of(row1, row2));
+
+        CinemaAccountImportView result = cinemaService.importFromDirectory(List.of(1, 2));
+
+        assertEquals(2, result.getCreated());
+        assertEquals(2, result.getAccounts().size());
+        assertNotEquals(result.getAccounts().get(0).getInitialPassword(),
+                result.getAccounts().get(1).getInitialPassword(),
+                "不同影院不得共享初始口令");
     }
 
     @Test
     void importFromDirectoryWithEmptyIdsShouldDoNothing() {
-        assertEquals(0, cinemaService.importFromDirectory(List.of()));
+        assertEquals(0, cinemaService.importFromDirectory(List.of()).getCreated());
         verifyNoInteractions(cinemaMapper, directoryMapper);
     }
 
@@ -269,13 +314,13 @@ class CinemaServiceTest {
         row1.setId(1); row1.setPoiId("p1");
         when(directoryMapper.selectByIds(List.of(1, 2))).thenReturn(List.of(row1));
 
-        assertEquals(0, cinemaService.importFromDirectory(List.of(1, 2)));
+        assertEquals(0, cinemaService.importFromDirectory(List.of(1, 2)).getCreated());
         verify(cinemaMapper, never()).insert(any(Cinema.class));
     }
 
     @Test
     void importFromDirectoryWithNullIdsShouldDoNothing() {
-        assertEquals(0, cinemaService.importFromDirectory(null));
+        assertEquals(0, cinemaService.importFromDirectory(null).getCreated());
         verifyNoInteractions(cinemaMapper, directoryMapper);
     }
 
@@ -299,9 +344,11 @@ class CinemaServiceTest {
                 .thenThrow(new DuplicateKeyException("Duplicate entry '1' for key 'cinema.uk_cinema_directory_id'"))
                 .thenReturn(1);
 
-        int created = cinemaService.importFromDirectory(List.of(1, 2));
+        CinemaAccountImportView result = cinemaService.importFromDirectory(List.of(1, 2));
 
-        assertEquals(1, created, "撞键的那条跳过，另一条照常创建");
+        assertEquals(1, result.getCreated(), "撞键的那条跳过，另一条照常创建");
+        assertEquals(1, result.getAccounts().size(), "跳过的账号不得返回（它没有新建口令）");
+        assertEquals("amap_p2", result.getAccounts().get(0).getUsername());
         verify(cinemaMapper, times(2)).insert(any(Cinema.class));
     }
 

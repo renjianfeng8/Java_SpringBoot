@@ -4,17 +4,22 @@ import com.example.springboot.dto.response.PayPasswordStateView;
 import com.example.springboot.entity.User;
 import com.example.springboot.exception.CustomException;
 import com.example.springboot.mapper.UserMapper;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.support.AbstractPlatformTransactionManager;
+import org.springframework.transaction.support.DefaultTransactionStatus;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -38,10 +43,17 @@ class PayPasswordServiceTest {
     @Mock
     private UserMapper userMapper;
 
-    @InjectMocks
+    private RecordingTransactionManager transactionManager;
+
     private PayPasswordService payPasswordService;
 
     private final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
+
+    @BeforeEach
+    void setUp() {
+        transactionManager = new RecordingTransactionManager();
+        payPasswordService = new PayPasswordService(userMapper, new TransactionTemplate(transactionManager));
+    }
 
     private PayPasswordStateView stateWith(String rawPayPassword) {
         PayPasswordStateView state = new PayPasswordStateView();
@@ -145,5 +157,51 @@ class PayPasswordServiceTest {
                 .doesNotThrowAnyException();
 
         verify(userMapper).updatePayPassword(eq(USER_ID), anyString());
+    }
+
+    /**
+     * Sonar {@code java:S2229} 的守卫：改密/只验不写这两条入口必须真的新开事务。
+     *
+     * <p>旧实现是 {@code @Transactional(REQUIRES_NEW)} + 同类自调用，代理被绕过，
+     * 失败计数会跟着调用方的事务一起回滚（限次形同虚设）。这里断言实际传入
+     * 事务管理器的传播级别是 REQUIRES_NEW，防止有人把实现改回自调用。
+     */
+    @Test
+    void verifyOldPasswordRunsInRequiresNewTransaction() {
+        when(userMapper.selectPayPasswordState(USER_ID)).thenReturn(stateWith("123456"));
+        when(userMapper.selectPayPasswordErrorCount(USER_ID)).thenReturn(1);
+
+        assertThatThrownBy(() -> payPasswordService.verifyOldPassword(USER_ID, "000000"))
+                .isInstanceOf(CustomException.class);
+
+        assertThat(transactionManager.startedWith).isNotNull();
+        assertThat(transactionManager.startedWith.getPropagationBehavior())
+                .isEqualTo(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+    }
+
+    /** 记录「开事务时拿到的定义」，并让回调在不碰真实数据库的情况下执行 */
+    private static final class RecordingTransactionManager extends AbstractPlatformTransactionManager {
+
+        private TransactionDefinition startedWith;
+
+        @Override
+        protected Object doGetTransaction() {
+            return new Object();
+        }
+
+        @Override
+        protected void doBegin(Object transaction, TransactionDefinition definition) {
+            this.startedWith = definition;
+        }
+
+        @Override
+        protected void doCommit(DefaultTransactionStatus status) {
+            // 测试用假事务：没有真实资源，提交是空操作
+        }
+
+        @Override
+        protected void doRollback(DefaultTransactionStatus status) {
+            // 测试用假事务：没有真实资源，回滚是空操作
+        }
     }
 }

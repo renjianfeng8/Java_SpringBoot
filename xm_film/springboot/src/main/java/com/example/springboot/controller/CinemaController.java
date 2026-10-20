@@ -8,6 +8,7 @@ import com.example.springboot.common.enums.ErrorCode;
 import com.example.springboot.common.enums.RoleEnum;
 import com.example.springboot.dto.request.CinemaFromDirectoryRequest;
 import com.example.springboot.dto.request.CinemaRequest;
+import com.example.springboot.dto.response.CinemaAccountImportView;
 import com.example.springboot.dto.response.CinemaRegionView;
 import com.example.springboot.dto.response.CinemaView;
 import com.example.springboot.entity.Cinema;
@@ -106,7 +107,7 @@ public class CinemaController extends BaseController<Cinema, CinemaRequest, Cine
 
     /** 从名录批量生成影院（幂等）。仅管理员 —— 写角色门禁在方法内 */
     @PostMapping("/from-directory")
-    public Result<Integer> importFromDirectory(@RequestBody CinemaFromDirectoryRequest request) {
+    public Result<CinemaAccountImportView> importFromDirectory(@RequestBody CinemaFromDirectoryRequest request) {
         requireAdmin();
         List<Integer> ids = request == null ? null : request.getDirectoryIds();
         return Result.success(cinemaService.importFromDirectory(ids));

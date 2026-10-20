@@ -9,13 +9,16 @@ import com.example.springboot.exception.CustomException;
 import com.example.springboot.mapper.UserMapper;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.Objects;
+import java.util.function.Supplier;
 
 /**
  * 支付密码的唯一读写出处，也是它的限次闸门。
@@ -28,6 +31,12 @@ import java.time.format.DateTimeFormatter;
  *
  * 两个 check 方法**返回异常而不抛异常**，调用方拿到非 null 自行抛出 —— 原因见方法注释，
  * 一句话：失败计数必须先提交，不能被随后的回滚带走。
+ *
+ * <p><b>事务边界用 {@link TransactionTemplate} 而不是 {@code @Transactional}</b>：
+ * 这两个方法会被本类的 {@link #changePayPassword} / {@link #verifyOldPassword} 调用，
+ * 同类自调用不经过 Spring 代理，{@code REQUIRES_NEW} 会被<b>静默忽略</b>
+ * （Sonar {@code java:S2229} 报的就是这条）。TransactionTemplate 不依赖代理，
+ * 无论入口是外部 bean 还是本类方法，都一定新开一个事务。
  */
 @Service
 public class PayPasswordService {
@@ -44,8 +53,15 @@ public class PayPasswordService {
 
     private final PasswordEncoder passwordEncoder = PasswordMatcher.instance();
 
-    public PayPasswordService(UserMapper userMapper) {
+    /** 复制一份并改成 REQUIRES_NEW：不能改注入的共享实例，它别处按默认传播级别使用 */
+    private final TransactionTemplate requiresNewTransaction;
+
+    public PayPasswordService(UserMapper userMapper, TransactionTemplate transactionTemplate) {
         this.userMapper = userMapper;
+        PlatformTransactionManager transactionManager = Objects.requireNonNull(
+                transactionTemplate.getTransactionManager(), "支付密码校验必须配置事务管理器");
+        this.requiresNewTransaction = new TransactionTemplate(transactionManager);
+        this.requiresNewTransaction.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
     }
 
     /** 是否已设置支付密码；前端据此决定「引导去设置」还是「就地输密码」 */
@@ -64,9 +80,8 @@ public class PayPasswordService {
      *
      * @return {@code null} 表示校验通过；否则是调用方应当抛出的异常（错误码与提示都在里面）
      */
-    @Transactional(propagation = Propagation.REQUIRES_NEW, rollbackFor = Exception.class)
     public CustomException checkForPayment(Integer userId, String rawPassword) {
-        return check(userId, rawPassword, "支付密码");
+        return checkInNewTransaction(() -> check(userId, rawPassword, "支付密码"));
     }
 
     /**
@@ -74,9 +89,8 @@ public class PayPasswordService {
      * 与支付校验共用同一个方法、同一套计数与锁定 —— 否则"改密码"就是一条不限次的
      * 试错通道，限次可以绕过去。
      */
-    @Transactional(propagation = Propagation.REQUIRES_NEW, rollbackFor = Exception.class)
     public CustomException checkOldPassword(Integer userId, String rawOldPassword) {
-        return check(userId, rawOldPassword, "原支付密码");
+        return checkInNewTransaction(() -> check(userId, rawOldPassword, "原支付密码"));
     }
 
     /** 修改支付密码：验原码（含限次）后写入新码 */
@@ -95,9 +109,9 @@ public class PayPasswordService {
      * 这条只验不写的路径不能变成一条不限次的试错通道。**它绝不写 pay_password**：
      * 第一步的通过只是 UI 闸门，真正的写仍由 {@link #changePayPassword} 在原码复验后完成。
      *
-     * 注意本方法与 {@code checkOldPassword} 是同一个 bean 内的自调用，`REQUIRES_NEW` 会被
-     * 代理绕过。这里能成立是因为入口 {@code AccountController} 没有外层事务、
-     * 计数靠自动提交落库 —— 不要把本方法挪进任何事务方法里调用。
+     * <p>本方法可以在任何事务里被调用：{@link #checkOldPassword} 用 TransactionTemplate
+     * 显式要求新事务，失败计数不会随调用方回滚。这一点由
+     * {@code PayPasswordTransactionBoundaryTest} 用真实库钉住。
      */
     public void verifyOldPassword(Integer userId, String rawOldPassword) {
         CustomException failure = checkOldPassword(userId, rawOldPassword);
@@ -135,6 +149,14 @@ public class PayPasswordService {
         if (!PasswordMatcher.matches(passwordEncoder, rawLoginPassword, user.getPassword())) {
             throw new CustomException(ErrorCode.UNAUTHORIZED, "登录密码错误");
         }
+    }
+
+    /**
+     * 在独立的 REQUIRES_NEW 事务里执行校验：失败也要正常返回，才能让计数提交；
+     * 若在这里抛异常，计数会跟着回滚 —— 这正是两个 check 方法「返回异常」的原因。
+     */
+    private CustomException checkInNewTransaction(Supplier<CustomException> body) {
+        return requiresNewTransaction.execute(status -> body.get());
     }
 
     /** 校验本体。全程不抛异常：要么返回 null（通过），要么返回调用方该抛的那个异常 */

@@ -79,6 +79,25 @@
         </div>
       </template>
     </el-dialog>
+    <el-dialog v-model="credentialDialog.visible" title="影院账号与初始口令" width="560" destroy-on-close>
+      <el-alert type="warning" :closable="false" show-icon
+                title="初始口令只显示这一次，关闭后无法再次查看，请立即复制并分发。"/>
+      <el-table :data="credentialDialog.accounts" size="small" max-height="320" class="credential-table">
+        <el-table-column prop="username" label="登录账号" min-width="180"
+                         align="left" header-align="left"/>
+        <el-table-column prop="initialPassword" label="初始口令" min-width="180"
+                         align="left" header-align="left"/>
+        <template #empty>
+          <div class="empty-hint">本次没有新建影院账号</div>
+        </template>
+      </el-table>
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button @click="credentialDialog.visible = false">关闭</el-button>
+          <el-button type="primary" @click="copyCredentials">复制全部</el-button>
+        </div>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -100,6 +119,22 @@ const error = computed(() => data.error)
 const selectedIds = ref([])
 const onSelectionChange = (rows) => { selectedIds.value = rows.map(r => r.id) }
 
+// 初始口令只在导入响应里出现一次，关掉对话框就再也取不到，因此单独弹窗展示
+const credentialDialog = reactive({ visible: false, accounts: [] })
+
+const copyCredentials = () => {
+  const text = credentialDialog.accounts
+    .map(a => `${a.username}\t${a.initialPassword}`)
+    .join('\n')
+  if (!navigator.clipboard) {
+    ElMessage.warning('当前浏览器不支持自动复制，请手动选择文本')
+    return
+  }
+  navigator.clipboard.writeText(text)
+    .then(() => ElMessage.success('已复制到剪贴板'))
+    .catch(() => ElMessage.warning('复制失败，请手动选择文本'))
+}
+
 const tableRef = ref(null)
 // 已收录（linked）的行在后端会被幂等跳过，勾选它只会得到「新增 0 条」的困惑，故直接禁选
 const canSelectRow = (row) => !row.linked
@@ -113,7 +148,13 @@ const confirmImport = () => {
     try {
       const res = await request.post(CINEMA_API.FROM_DIRECTORY, { directoryIds: selectedIds.value })
       if (isSuccess(res)) {
-        ElMessage.success(`新增 ${res.data} 条影院`)
+        const created = res.data?.created ?? 0
+        const accounts = res.data?.accounts ?? []
+        ElMessage.success(`新增 ${created} 条影院`)
+        if (accounts.length) {
+          credentialDialog.accounts = accounts
+          credentialDialog.visible = true
+        }
         tableRef.value?.clearSelection()
         load()
       } else {
@@ -199,4 +240,5 @@ load()
 .import-preview { margin-top: var(--space-16); line-height: 1.8; }
 .import-preview__sample { color: var(--el-text-color-secondary); font-size: var(--fs-xs); }
 .import-preview__warn { color: var(--el-color-warning); }
+.credential-table { margin-top: var(--space-16); }
 </style>

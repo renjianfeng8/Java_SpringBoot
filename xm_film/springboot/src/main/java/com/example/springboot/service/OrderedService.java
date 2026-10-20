@@ -5,6 +5,7 @@ import com.example.springboot.common.OrderNumber;
 import com.example.springboot.common.OrderStatusCriteria;
 import com.example.springboot.common.PriceParser;
 import com.example.springboot.common.SeatParser;
+import com.example.springboot.common.SecureCodes;
 import com.example.springboot.common.SystemClock;
 import com.example.springboot.dto.response.TodayRevenueView;
 import com.example.springboot.common.BaseService;
@@ -35,7 +36,6 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * 订单状态机与座位占用的唯一出处：选座建单（锁座、超时废单）、支付、取消、退票、
@@ -627,17 +627,16 @@ public class OrderedService extends BaseService<Ordered> {
      * 空间 31^8 ≈ 8.5e11，不做碰撞重试：payOrder 里扣款与出票同一事务，
      * 唯一键冲突会让事务进入 rollback-only，同一事务内根本无法重试；
      * 真要重试就得把扣款拆成独立事务，风险远大于收益。pickup_code 上的唯一索引是兜底。
+     *
+     * <p><b>随机源必须是 {@link SecureCodes}</b>（{@link java.security.SecureRandom}）：
+     * 取票码是匿名核销接口的唯一凭证，{@code ThreadLocalRandom} 可预测，
+     * 「空间够大」不等于「猜不到」。这条不是风格问题，是凭证强度问题。
      */
     private String generatePickupCode() {
-        StringBuilder sb = new StringBuilder(PICKUP_CODE_LENGTH + 1);
-        for (int i = 0; i < PICKUP_CODE_LENGTH; i++) {
-            if (i == PICKUP_CODE_LENGTH / 2) {
-                sb.append(PICKUP_CODE_GROUP_SEPARATOR);
-            }
-            sb.append(PICKUP_CODE_ALPHABET.charAt(
-                    ThreadLocalRandom.current().nextInt(PICKUP_CODE_ALPHABET.length())));
-        }
-        return sb.toString();
+        String body = SecureCodes.of(PICKUP_CODE_ALPHABET, PICKUP_CODE_LENGTH);
+        return body.substring(0, PICKUP_CODE_LENGTH / 2)
+                + PICKUP_CODE_GROUP_SEPARATOR
+                + body.substring(PICKUP_CODE_LENGTH / 2);
     }
 
     /**
