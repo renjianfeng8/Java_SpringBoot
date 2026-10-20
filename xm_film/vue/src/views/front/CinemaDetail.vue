@@ -17,7 +17,7 @@
         <img v-if="cinema.avatar" :src="cinema.avatar" alt="" aria-hidden="true" class="cinema-hero__backdrop">
         <div class="cinema-hero__scrim" aria-hidden="true"></div>
 
-        <div class="cinema-hero__inner">
+        <div class="cinema-hero__inner measure">
           <div class="cinema-hero__poster">
             <img
                 :src="avatarSrc(cinema.avatar)"
@@ -79,7 +79,7 @@
 
       <!-- 3.2 日期条 + 上映影片场次 -->
       <div class="films-section">
-        <div class="films-inner">
+        <div class="films-inner measure">
           <!-- 日期条：7 天固定窗口，选中项由三通道（颜色 + 字重 + 下划线）表达，
                视觉之外另挂 aria-pressed（禁止仅靠颜色传递状态） -->
           <div v-if="!filmsError && films.length" class="date-bar" role="group" aria-label="选择放映日期">

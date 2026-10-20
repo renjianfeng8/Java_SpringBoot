@@ -5,18 +5,45 @@
  * 挂在 Front.vue 的 .front-content 下，作用域限定在前台内容区。
  * 由 main.js 引入一次。 */
 
+/* 内容测度的唯一出处（1200px 上限）。
+ * 页头内层与各页内容区都从这里取：此前 `.page-narrow`（55%）/ `.page-wide`（85%）
+ * 之外还有 9 处手写 `width: 60% + max-width: 1200px`，改一次要动多个文件。
+ *
+ * 为什么做成类而不是 mixin：组件里的 <style scoped> 是独立编译单元，看不到本文件的
+ * mixin 定义；而类名是全局样式，只要元素在 .front-content 下就能命中。
+ * 组件的 scoped 样式不要再给同一元素声明 width / max-width —— SFC 样式在
+ * main.js 引入的 SCSS 之后加载，声明会覆盖这里的测度。 */
 .front-content {
-  /* 内容容器：详情 / 列表页统一 1200px 上限 */
+  /* 列表 / 筛选页容器（55% 窄版） */
   .page-narrow {
     width: 55%;
     max-width: 1200px;
     margin: var(--space-20) auto;
   }
 
+  /* 列表 / 筛选页容器（85% 宽版） */
   .page-wide {
     width: 85%;
     max-width: 1200px;
     margin: var(--space-20) auto;
+  }
+
+  /* 与内容区同一测度、但没有纵向外边距：用于页头内层与内容面板。
+     55% 与 85% 两档之外还有一处 60% —— 详情/影评/选影院三页一直用 60%，保留原值。 */
+  .measure-inline,
+  .measure {
+    width: 60%;
+    max-width: 1200px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  /* 宽版（对应 .page-wide 的 85%），页头内层用 */
+  .measure-inline--wide {
+    width: 85%;
+    max-width: 1200px;
+    margin-left: auto;
+    margin-right: auto;
   }
 
   /* 成叠的卡片 */

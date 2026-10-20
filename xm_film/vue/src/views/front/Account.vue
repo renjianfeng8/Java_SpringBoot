@@ -15,7 +15,7 @@
     <!-- 余额是这一页的主角，放在页头右侧的大字槽位，不再单独占一张卡 ——
          那样同一个数会在页面上出现两次。 -->
     <header class="account-masthead">
-      <div class="account-masthead__inner">
+      <div class="account-masthead__inner measure-inline--wide">
         <h1 class="account-masthead__title">我的账户</h1>
 
         <span class="account-masthead__amount">
@@ -457,17 +457,14 @@ onMounted(loadAll);
 }
 
 /* ---------- 页头 ---------- */
-/* 与 .page-wide 同口径（85% / 1200px）：页头文字要与下方各分区左右对齐。
-   不直接复用 .page-wide —— 它自带 var(--space-20) 的纵向外边距，页头里不需要。 */
+/* 页头内层与下方分区同一测度：测度在 front-pages.scss 的 .measure-inline--wide，
+   这里只补布局与内边距（.page-wide 自带纵向 margin，页头里不能用）。 */
 .account-masthead__inner {
   position: relative;
   display: flex;
   align-items: baseline;
   justify-content: space-between;
   gap: var(--space-24);
-  width: 85%;
-  max-width: 1200px;
-  margin: 0 auto;
   padding: var(--space-32) var(--page-inset) var(--space-20);
 }
 

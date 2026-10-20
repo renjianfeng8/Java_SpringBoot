@@ -15,7 +15,7 @@
     <div v-else>
       <!-- 3.1 影片头部（深色横幅，与影片/影院详情页同款） -->
       <div class="marks-hero">
-        <div class="marks-hero__inner">
+        <div class="marks-hero__inner measure">
           <img :src="film.img" :alt="`${film.title}的海报`" class="marks-hero__img">
           <div class="marks-hero__info">
             <div class="marks-hero__title">{{ film.title }}</div>
@@ -25,7 +25,7 @@
       </div>
 
       <!-- 3.2 评价区 -->
-      <section class="marks-section">
+      <section class="marks-section measure">
         <div class="marks-toolbar">
           <h3 class="marks-title">
             全部评价

@@ -3,7 +3,7 @@
     <!-- 页头：深色横幅。名录页原本直接从两个下拉开始，没有「这是什么页面」的身份；
          这里补一条与三个详情页 hero 同族的深色表面，全宽出血，内容层与下方列表同宽 -->
     <header class="cinema-masthead">
-      <div class="cinema-masthead__inner">
+      <div class="cinema-masthead__inner measure-inline">
         <div class="cinema-masthead__text">
           <h1 class="cinema-masthead__title">影院</h1>
           <p class="cinema-masthead__desc">按城市与区域筛选，查看影院信息与当日排片</p>
@@ -278,16 +278,13 @@ load()
   background-color: var(--dark-bg-hero);
 }
 
-/* 与 .page-narrow 同口径（55% / 1200px）：页头文字要与下方筛选、列表左右对齐。
-   不直接复用 .page-narrow —— 它自带 var(--space-20) 的纵向外边距，页头里不需要。 */
+/* 页头内层与下方筛选/列表同一测度：测度本身在 front-pages.scss 的 .measure-inline，
+   这里只补布局与内边距（.page-narrow 自带纵向 margin，页头里不能用）。 */
 .cinema-masthead__inner {
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
   gap: var(--space-24);
-  width: 55%;
-  max-width: 1200px;
-  margin: 0 auto;
   padding: var(--space-32) 0 var(--space-24);
 }
 

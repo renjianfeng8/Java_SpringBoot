@@ -16,7 +16,7 @@
         <img v-if="film.img" :src="film.img" alt="" aria-hidden="true" class="film-hero__backdrop">
         <div class="film-hero__scrim" aria-hidden="true"></div>
 
-        <div class="film-hero__inner">
+        <div class="film-hero__inner measure">
           <!-- 电影海报 -->
           <div class="film-hero__poster">
             <img :src="film.img" :alt="`《${film.title || '影片'}》海报`" class="film-hero__img">
@@ -59,7 +59,7 @@
 
       <!-- 3.2 核心：当前电影上映影院列表（与后端筛选逻辑对齐） -->
       <div class="cinemas-section">
-        <div class="cinemas-panel">
+        <div class="cinemas-panel measure">
           <!-- 影院列表标题（明确关联当前电影） -->
           <h3 class="cinemas-panel__title">
             【{{ film.title || '当前电影' }}】上映影院列表

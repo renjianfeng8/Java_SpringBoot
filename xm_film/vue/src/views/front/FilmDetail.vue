@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="film-detail">
     <!-- 1. 加载骨架：与头图同形，避免数据到位时页面跳高 -->
     <DetailSkeleton v-if="loading" />
@@ -19,7 +19,7 @@
              因此按 DOM 顺序绘制，不需要为了层次自定义 z-index -->
         <div class="film-hero__scrim" aria-hidden="true"></div>
 
-        <div class="film-hero__inner">
+        <div class="film-hero__inner measure">
           <img :src="film.img" :alt="`《${film.title}》海报`" class="film-hero__img">
 
           <!-- 电影基本信息 -->
@@ -61,7 +61,7 @@
 
       <!-- 3.2 电影详细信息区域 -->
       <div class="detail-section">
-        <div class="detail-panel">
+        <div class="detail-panel measure">
           <!-- 左侧信息区 -->
           <div class="detail-panel__main">
             <h3 class="section-title">剧情简介</h3>
@@ -176,7 +176,7 @@
       </div>
 
       <!-- 3.3 用户热评：与影评页同一条「赞数降序」查询，这里只取前 3 条，不是第二条排序 -->
-      <div class="marks-section">
+      <div class="marks-section measure">
         <h3 class="section-title">
           用户热评
           <span class="section-title__count">（{{ marksTotal }} 条）</span>
@@ -659,8 +659,6 @@ onMounted(() => {
 /* 条目样式（.marks-list / .marks-hint / .mark-item*）已收进 front-pages.scss：
  * 热评与影评页共用一份，不再两处各写一套。这里只留本页专有的区块布局。 */
 .marks-section {
-  width: 60%;
-  max-width: 1200px;
   margin: var(--space-32) auto 0;
 }
 
