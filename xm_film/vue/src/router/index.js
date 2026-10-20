@@ -49,19 +49,19 @@ const router = createRouter({
       path: '/front',
       component: () => import('../views/Front.vue'),
       children: [
-        { path: 'home', meta: { guest: true, name: '首页', title: '电影购票网站' }, component: () => import('../views/front/Home.vue') },
-        { path: 'orders', meta: { requiresAuth: true, roles: ['USER'], name: '购票记录' }, component: () => import('../views/front/Orders.vue') },
-        { path: 'account', meta: { requiresAuth: true, roles: ['USER'], name: '我的账户' }, component: () => import('../views/front/Account.vue') },
+        { path: 'home', meta: { guest: true, name: '首页', title: '电影购票网站', nav: { label: '首页' } }, component: () => import('../views/front/Home.vue') },
+        { path: 'orders', meta: { requiresAuth: true, roles: ['USER'], name: '购票记录', nav: { label: '购票记录' } }, component: () => import('../views/front/Orders.vue') },
+        { path: 'account', meta: { requiresAuth: true, roles: ['USER'], name: '我的账户', nav: { label: '我的账户' } }, component: () => import('../views/front/Account.vue') },
         { path: 'buyTicket', meta: { requiresAuth: true, roles: ['USER'], name: '购票' }, component: () => import('../views/front/BuyTicket.vue') },
         { path: 'person', meta: { requiresAuth: true, roles: ['USER'], name: '个人中心' }, component: () => import('../views/front/Person.vue') },
         { path: 'password', meta: { requiresAuth: true, roles: ['USER'], name: '修改密码' }, component: () => import('../views/front/Password.vue') },
         // 支付密码：设置 / 修改 / 忘记重设三态同页，余额支付的前置条件
         { path: 'payPassword', meta: { requiresAuth: true, roles: ['USER'], name: '支付密码' }, component: () => import('../views/front/PayPassword.vue') },
-        { path: 'movie', meta: { guest: true, name: '电影列表' }, component: () => import('../views/front/Movie.vue') },
-        { path: 'cinema', meta: { guest: true, name: '影院列表' }, component: () => import('../views/front/Cinema.vue') },
-        { path: 'rank', meta: { guest: true, name: '排行榜' }, component: () => import('../views/front/Rank.vue') },
+        { path: 'movie', meta: { guest: true, name: '电影列表', nav: { label: '电影', sections: ['/front/movie', '/front/search', '/front/filmDetail', '/front/filmCinema', '/front/filmMarks'] } }, component: () => import('../views/front/Movie.vue') },
+        { path: 'cinema', meta: { guest: true, name: '影院列表', nav: { label: '影院', sections: ['/front/cinema', '/front/cinemaDetail'] } }, component: () => import('../views/front/Cinema.vue') },
+        { path: 'rank', meta: { guest: true, name: '排行榜', nav: { label: '排行榜' } }, component: () => import('../views/front/Rank.vue') },
         // 取票大厅是自助机口径：免登录，凭取票码核销（见后端 TicketController）
-        { path: 'pickup', meta: { guest: true, name: '取票大厅' }, component: () => import('../views/front/Pickup.vue') },
+        { path: 'pickup', meta: { guest: true, name: '取票大厅', nav: { label: '取票大厅' } }, component: () => import('../views/front/Pickup.vue') },
         { path: 'filmDetail/:id', meta: { guest: true, name: '电影详情' }, component: () => import('../views/front/FilmDetail.vue') },
         // 影评页：只从影片详情页与购票记录两处进入，不进顶部导航（guest 可读，游客也能看别人的评价）
         { path: 'filmMarks/:id', meta: { guest: true, name: '影评' }, component: () => import('../views/front/FilmMarks.vue') },

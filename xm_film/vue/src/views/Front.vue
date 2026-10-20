@@ -16,8 +16,8 @@
               :key="item.path"
               :to="item.path"
               class="nav-item"
-              :class="{ 'active': isNavActive(item) }"
-              :aria-current="isNavActive(item) ? 'page' : undefined"
+              :class="{ 'active': isNavActive(item, route.path) }"
+              :aria-current="isNavActive(item, route.path) ? 'page' : undefined"
           >
             {{ item.label }}
           </router-link>
@@ -135,6 +135,7 @@ import { ElMessage } from 'element-plus'
 import { CaretBottom } from '@element-plus/icons-vue'
 import { useAuth } from '@/composables/useAuth'
 import { useLogout } from '@/composables/useLogout'
+import { navItemsOf, isNavActive } from '@/constants/nav'
 import { avatarSrc, onAvatarError } from '@/utils/avatar'
 
 const router = useRouter()
@@ -144,34 +145,13 @@ const { confirmLogout } = useLogout()
 
 const searchKeyword = ref('')
 
-// 导航项，`sections` 是这一项归属的路由前缀（高亮判据）。
-// 按用户心智分：影片详情 / 选择影院 / 影评都属于「电影」这条线，影院详情属于「影院」。
-// 不属于任何一项的页面（个人中心、修改密码 —— 它们只在头像下拉里）保持无高亮，
-// 而不是把「首页」点亮。
-// 取票大厅刻意不带 requiresUser：它是自助机口径，游客也必须能进；
-// 「购票记录 / 我的账户」对应的路由 meta.roles 只认 USER，故仅对 USER 与游客渲染。
-const NAV_ITEMS = [
-  { path: '/front/home', label: '首页', sections: ['/front/home'] },
-  {
-    path: '/front/movie',
-    label: '电影',
-    sections: ['/front/movie', '/front/search', '/front/filmDetail', '/front/filmCinema', '/front/filmMarks'],
-  },
-  { path: '/front/cinema', label: '影院', sections: ['/front/cinema', '/front/cinemaDetail'] },
-  { path: '/front/rank', label: '排行榜', sections: ['/front/rank'] },
-  { path: '/front/pickup', label: '取票大厅', sections: ['/front/pickup'] },
-  { path: '/front/orders', label: '购票记录', sections: ['/front/orders'], requiresUser: true },
-  { path: '/front/account', label: '我的账户', sections: ['/front/account'], requiresUser: true },
-]
+// 导航项由路由表的 meta.nav 派生（constants/nav.js）：路由表是唯一出处，
+// 不再维护第二份手工清单。高亮按 sections 的路径边界匹配，见 isNavActive。
+const navItems = navItemsOf(router)
 
 const visibleNavItems = computed(() =>
-    NAV_ITEMS.filter(item => !item.requiresUser || showUserEntries.value)
+    navItems.filter(item => !item.requiresUser || showUserEntries.value)
 )
-
-// 匹配用「相等或 prefix + '/'」而非裸 startsWith：避免前缀相同的两个导航项同时点亮
-const isNavActive = (item) =>
-    item.sections.some(prefix =>
-        route.path === prefix || route.path.startsWith(prefix + '/'))
 
 const goAdmin = () => {
   if (isAdmin.value) {
