@@ -8,6 +8,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.client.ClientHttpRequest;
 import org.springframework.test.web.client.ExpectedCount;
 import org.springframework.test.web.client.MockRestServiceServer;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
 import java.net.URLDecoder;
@@ -15,6 +16,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
@@ -134,6 +136,21 @@ class TmdbClientTest {
         assertThat(hits.get(0).posterUrl()).isNull();
     }
 
+    /**
+     * HTTP 200 + 空 body（Sonar java:S2259）。正常 TMDB 不会发生，但一旦发生，
+     * 旧实现的 {@code getBody()} 返回 null，调用方 {@code root.path(...)} 会 NPE 成 500。
+     * 现在统一转成 {@link RestClientException}，与「连不上」走同一条可读出口。
+     */
+    @Test
+    void emptyBodyThrowsRestClientExceptionInsteadOfNullPointer() {
+        server.expect(ExpectedCount.once(), request -> { })
+                .andRespond(withSuccess("", MediaType.APPLICATION_JSON));
+
+        assertThatThrownBy(() -> client.search("Fight Club"))
+                .isInstanceOf(RestClientException.class)
+                .hasMessageContaining("空响应");
+    }
+
     // ========== 详情 ==========
 
     @Test
@@ -251,8 +268,8 @@ class TmdbClientTest {
     @Test
     void downloadImageReturnsBytes() {
         byte[] bytes = {1, 2, 3};
-        server.expect(ExpectedCount.once(), request -> assertThat(request.getURI().toString())
-                        .isEqualTo("https://image.tmdb.org/t/p/w500/qkrH7rjYKU4KOwwIl6wF6H3ISvm.jpg"))
+        server.expect(ExpectedCount.once(), request -> assertThat(request.getURI())
+                        .hasToString("https://image.tmdb.org/t/p/w500/qkrH7rjYKU4KOwwIl6wF6H3ISvm.jpg"))
                 .andRespond(withSuccess(bytes, MediaType.IMAGE_JPEG));
 
         Optional<byte[]> result = client.downloadImage("w500", "/qkrH7rjYKU4KOwwIl6wF6H3ISvm.jpg");
@@ -265,8 +282,8 @@ class TmdbClientTest {
     /** 图片缺失是常态（TMDB 不少条目没有头像），必须降级成 empty 而不是抛异常打断整个导入 */
     @Test
     void downloadImageReturnsEmptyOn404() {
-        server.expect(ExpectedCount.once(), request -> assertThat(request.getURI().toString())
-                        .isEqualTo("https://image.tmdb.org/t/p/w185/missing.jpg"))
+        server.expect(ExpectedCount.once(), request -> assertThat(request.getURI())
+                        .hasToString("https://image.tmdb.org/t/p/w185/missing.jpg"))
                 .andRespond(withStatus(HttpStatus.NOT_FOUND));
 
         assertThat(client.downloadImage("w185", "/missing.jpg")).isEmpty();

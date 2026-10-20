@@ -81,7 +81,7 @@ class CinemaDirectoryImportTxBoundaryTest {
 
         assertThat(activeAtFetch.get())
                 .as("抓取外部 HTTP 时不得有活跃数据库事务（否则慢请求长期持有连接与锁）")
-                .isEqualTo(0);
+                .isZero();
 
         jdbcTemplate.update("DELETE FROM cinema_directory WHERE poi_id = ?", POI);
     }

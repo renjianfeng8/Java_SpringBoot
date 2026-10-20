@@ -124,7 +124,7 @@ class OrderedControllerTest {
     @Test
     void seatOccupancyForUserPassesViewerId() throws Exception {
         loginAs(11, RoleEnum.USER);
-        when(orderedService.selectSeatOccupancy(eq(42), eq(11))).thenReturn(List.of());
+        when(orderedService.selectSeatOccupancy(42, 11)).thenReturn(List.of());
 
         mockMvc.perform(auth(get("/api/v1/orders/seats")).param("recordId", "42"))
                 .andExpect(status().isOk());

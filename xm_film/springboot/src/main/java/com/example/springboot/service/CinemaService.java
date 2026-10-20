@@ -23,8 +23,8 @@ import com.github.pagehelper.PageInfo;
 import com.github.pagehelper.page.PageMethod;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.dao.DeadlockLoserDataAccessException;
 import org.springframework.dao.DuplicateKeyException;
+import org.springframework.dao.PessimisticLockingFailureException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -178,10 +178,13 @@ public class CinemaService extends BaseService<Cinema> {
                 // 也可能是 username 撞了别的影院（poi_id 唯一，理论上不会），
                 // 那种情况下跳过只是少建一家，不会错关联，代价可接受。
                 linked.add(row.getId());
-            } catch (DeadlockLoserDataAccessException e) {
+            } catch (PessimisticLockingFailureException e) {
                 // 实测（2026-10-19）：两个管理员并发导入时，MySQL 报的往往不是唯一键冲突，
                 // 而是死锁 —— 两个事务各自插入不同名录行，却争同一把 username 索引锁，
                 // 插入顺序不同即互相等待，MySQL 选一个回滚。
+                //
+                // 捕父类型而不是 DeadlockLoserDataAccessException：同一冲突的另一半形态是
+                // 等锁超时（CannotAcquireLockException），只捕死锁会让超时漏成 500（BL-47/BL-52）。
                 //
                 // 死锁是「可重试」，不是用户操作错误：给一句能照做的提示，而不是「系统错误」。
                 // 事务随异常整体回滚（类上 rollbackFor = Exception.class），不会留半批数据。

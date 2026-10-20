@@ -232,6 +232,13 @@ const formatTime = (dateTimeStr) => {
   return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
 };
 
+// 今天/明天用文字，其余用星期；写成函数而不是嵌套三元（Sonar S3358），也更好读
+const weekLabelOf = (offset, day) => {
+  if (offset === 0) return '今天';
+  if (offset === 1) return '明天';
+  return WEEK_LABELS[day.getDay()];
+};
+
 // 6. 日期条：今天起 7 天
 // 用 new Date() 现算，故跨零点不会自动翻页 —— 与场次可购性的判定方式一致（渲染时取当前时刻）
 const dateTabs = computed(() => {
@@ -243,7 +250,7 @@ const dateTabs = computed(() => {
     const key = dateKeyOf(day);
     return {
       key,
-      week: offset === 0 ? '今天' : offset === 1 ? '明天' : WEEK_LABELS[day.getDay()],
+      week: weekLabelOf(offset, day),
       date: key.slice(5),
     };
   });

@@ -17,8 +17,9 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.dao.DeadlockLoserDataAccessException;
+import org.springframework.dao.CannotAcquireLockException;
 import org.springframework.dao.DuplicateKeyException;
+import org.springframework.dao.PessimisticLockingFailureException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
 import java.util.List;
@@ -353,8 +354,8 @@ class CinemaServiceTest {
     }
 
     /**
-     * BL-04 附带发现：并发导入实测报的是<b>死锁</b>（DeadlockLoserDataAccessException），
-     * 不是唯一键冲突 —— 两个事务以不同顺序插入、争同一把索引锁。
+     * BL-04 附带发现：并发导入实测报的是<b>死锁</b>（{@link PessimisticLockingFailureException}
+     * 的一种），不是唯一键冲突 —— 两个事务以不同顺序插入、争同一把索引锁。
      *
      * <p>死锁是 MySQL 选一个事务回滚，属于「可重试」而非「用户操作错误」。
      * 必须给出可操作提示，而不是 500「系统错误」。
@@ -367,8 +368,28 @@ class CinemaServiceTest {
         when(cinemaMapper.selectLinkedDirectoryIds(List.of(1))).thenReturn(List.of());
         when(directoryMapper.selectByIds(List.of(1))).thenReturn(List.of(row1));
         when(cinemaMapper.insert(any(Cinema.class)))
-                .thenThrow(new DeadlockLoserDataAccessException("Deadlock found when trying to get lock",
+                .thenThrow(new PessimisticLockingFailureException("Deadlock found when trying to get lock",
                         new RuntimeException("1213")));
+
+        assertThatThrownBy(() -> cinemaService.importFromDirectory(List.of(1)))
+                .isInstanceOf(CustomException.class)
+                .hasMessageContaining("正在导入同一批名录", "请稍后重试");
+    }
+
+    /**
+     * BL-52：同一冲突的另一半形态是<b>等锁超时</b>（{@link CannotAcquireLockException}）。
+     * 只捕死锁子类会让这条漏成 500，故实现必须捕父类型 {@link PessimisticLockingFailureException}。
+     */
+    @Test
+    void importFromDirectoryReportsLockWaitTimeoutAsRetryableConflict() {
+        CinemaDirectory row1 = new CinemaDirectory();
+        row1.setId(1); row1.setPoiId("p1");
+
+        when(cinemaMapper.selectLinkedDirectoryIds(List.of(1))).thenReturn(List.of());
+        when(directoryMapper.selectByIds(List.of(1))).thenReturn(List.of(row1));
+        when(cinemaMapper.insert(any(Cinema.class)))
+                .thenThrow(new CannotAcquireLockException("Lock wait timeout exceeded",
+                        new RuntimeException("1205")));
 
         assertThatThrownBy(() -> cinemaService.importFromDirectory(List.of(1)))
                 .isInstanceOf(CustomException.class)

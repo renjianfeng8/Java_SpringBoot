@@ -138,8 +138,8 @@ class RechargeControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value("200"));
 
-        verify(rechargeService).handleCallback(eq(7), eq(true), eq("ok"),
-                eq(RoleEnum.USER.name()), eq(11));
+        verify(rechargeService).handleCallback(7, true, "ok",
+                RoleEnum.USER.name(), 11);
     }
 
     /** 未登录不能建单（不是公开端点） */

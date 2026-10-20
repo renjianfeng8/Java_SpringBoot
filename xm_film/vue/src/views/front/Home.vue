@@ -32,7 +32,7 @@
                 :class="{ 'hero__slide--active': index === heroIndex }"
                 :aria-hidden="index !== heroIndex"
             >
-              <!-- 首屏大图不用 loading="lazy"：轨道里靠后的几张横向排在视口外，
+              <!-- 首屏大图不使用浏览器懒加载：轨道里靠后的几张横向排在视口外，
                    懒加载会一直不触发，滑过去是一片空白 -->
               <img class="hero__img" :src="film.img" :alt="`《${film.title}》剧照`">
               <div class="hero__scrim" aria-hidden="true"></div>
@@ -325,7 +325,8 @@ const onTrackTransitionEnd = (event) => {
   heroSnapping.value = true;
   heroIndex.value = 0;
   nextTick(() => {
-    if (trackRef.value) void trackRef.value.offsetWidth;
+    // 读一次布局，把"无过渡 + 位移 0"压进样式系统；此处不需要返回值
+    trackRef.value?.getBoundingClientRect();
     heroSnapping.value = false;
   });
 };

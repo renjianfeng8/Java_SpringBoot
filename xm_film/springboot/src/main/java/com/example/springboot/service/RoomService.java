@@ -25,6 +25,9 @@ public class RoomService extends BaseService<Room> {
     private static final int MIN_SEAT_DIMENSION = 1;
     private static final int MAX_SEAT_DIMENSION = 50;
 
+    /** 影院不存在时的统一提示：新增/编辑/删除三条路径同一句话，只留一处 */
+    private static final String CINEMA_NOT_FOUND_MESSAGE = "所属影院不存在，无法确定影厅归属";
+
     private final RoomMapper roomMapper;
 
     private final RecordService recordService;
@@ -80,12 +83,12 @@ public class RoomService extends BaseService<Room> {
         // 库里随即出现指向不存在影院的影厅行。锁住影院行后，并发的删除要么先完成
         // （这里随之查不到影院、拒绝新增），要么被这里挡住直到新增提交。
         if (cinemaService.selectByIdForUpdate(room.getCinemaId()) == null) {
-            throw new CustomException(ErrorCode.BUSINESS_CONFLICT, "所属影院不存在，无法确定影厅归属");
+            throw new CustomException(ErrorCode.BUSINESS_CONFLICT, CINEMA_NOT_FOUND_MESSAGE);
         }
         // 影院名称由影院记录派生，不接受前端手填
         String title = cinemaTitleOf(room.getCinemaId());
         if (title == null) {
-            throw new CustomException(ErrorCode.BUSINESS_CONFLICT, "所属影院不存在，无法确定影厅归属");
+            throw new CustomException(ErrorCode.BUSINESS_CONFLICT, CINEMA_NOT_FOUND_MESSAGE);
         }
         room.setTitle(title);
         add(room);
@@ -106,7 +109,7 @@ public class RoomService extends BaseService<Room> {
             // 并沿用旧影院名（后者会让影厅在列表里挂在一个查不到的影院下）。
             String title = cinemaTitleOf(cinemaId);
             if (title == null) {
-                throw new CustomException(ErrorCode.BUSINESS_CONFLICT, "所属影院不存在，无法确定影厅归属");
+                throw new CustomException(ErrorCode.BUSINESS_CONFLICT, CINEMA_NOT_FOUND_MESSAGE);
             }
             room.setTitle(title);
         }

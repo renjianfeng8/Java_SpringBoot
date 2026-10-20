@@ -58,7 +58,7 @@ class RecordDeleteGuardTest {
         recordService = new RecordService(recordMapper, filmMapper, roomMapper, orderedService);
     }
 
-    private Record record(int id) {
+    private Record recordOf(int id) {
         Record r = new Record();
         r.setId(id);
         r.setCinemaId(1);
@@ -69,7 +69,7 @@ class RecordDeleteGuardTest {
     /** 删除路径必须执行锁定读，且不得退回到非锁定的 selectById */
     @Test
     void deleteScopedLocksRecordRow() {
-        when(recordMapper.selectByIdForUpdate(7)).thenReturn(record(7));
+        when(recordMapper.selectByIdForUpdate(7)).thenReturn(recordOf(7));
         when(orderedService.countByRecordId(7)).thenReturn(0);
 
         recordService.deleteScoped(7, "ADMIN", null);
@@ -82,8 +82,8 @@ class RecordDeleteGuardTest {
     /** 批量删除同样逐条加锁 */
     @Test
     void deleteBatchScopedLocksEachRow() {
-        when(recordMapper.selectByIdForUpdate(7)).thenReturn(record(7));
-        when(recordMapper.selectByIdForUpdate(8)).thenReturn(record(8));
+        when(recordMapper.selectByIdForUpdate(7)).thenReturn(recordOf(7));
+        when(recordMapper.selectByIdForUpdate(8)).thenReturn(recordOf(8));
         when(orderedService.countByRecordId(any())).thenReturn(0);
 
         recordService.deleteBatchScoped(List.of(7, 8), "ADMIN", null);
@@ -96,7 +96,7 @@ class RecordDeleteGuardTest {
     /** 已有订单的排片：抛业务异常，且绝不执行删除 */
     @Test
     void recordWithOrdersIsRejected() {
-        when(recordMapper.selectByIdForUpdate(7)).thenReturn(record(7));
+        when(recordMapper.selectByIdForUpdate(7)).thenReturn(recordOf(7));
         when(orderedService.countByRecordId(7)).thenReturn(3);
 
         assertThatThrownBy(() -> recordService.deleteScoped(7, "ADMIN", null))

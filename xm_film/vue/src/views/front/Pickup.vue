@@ -36,8 +36,8 @@
                     placeholder="例如 8F3A-2C71"
                     @keyup.enter="submit" />
         </el-form-item>
-        <!-- native-type="button"：避免 el-button 在 el-form 内触发原生提交，
-             与 @keyup.enter 叠加成两次请求（明确禁止一次回车发两次） -->
+        <!-- 按钮显式声明为普通按钮：避免在表单内触发原生提交，
+             与回车键处理叠加成两次请求（明确禁止一次回车发两次） -->
         <el-button type="primary"
                    size="large"
                    native-type="button"

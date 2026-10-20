@@ -329,6 +329,21 @@ onMounted(() => {
   }
 });
 
+/**
+ * 把「3排5座」写进座位矩阵。越界或格式不符的标签直接忽略 ——
+ * 后端已保证格式，这里只做防御，不让一条脏标签中断整张座位图。
+ */
+const markSeatInMatrix = (matrix, rawSeat, rows, cols, value) => {
+  const seat = rawSeat.trim();
+  const rowMatch = seat.match(/(\d+)排/);
+  const colMatch = seat.match(/排(\d+)座/);
+  if (!rowMatch || !colMatch) return;
+  const row = parseInt(rowMatch[1]);
+  const col = parseInt(colMatch[1]);
+  if (row < 1 || row > rows || col < 1 || col > cols) return;
+  matrix[row - 1][col - 1] = value;
+};
+
 // 初始化座位状态：0=可选 1=他人占用 2=已选 3=本人未支付锁座
 const initSeats = () => {
   return new Promise((resolve) => {
@@ -368,17 +383,10 @@ const initSeats = () => {
           });
         }
         // 已被前一张订单标记的座位不覆盖，避免多订单重叠时着色抖动
-        (order.seat || '').split(',').forEach(rawSeat => {
-          const seat = rawSeat.trim();
-          const rowMatch = seat.match(/(\d+)排/);
-          const colMatch = seat.match(/排(\d+)座/);
-          if (!rowMatch || !colMatch) return;
-          const row = parseInt(rowMatch[1]);
-          const col = parseInt(colMatch[1]);
-          if (row < 1 || row > rows || col < 1 || col > cols) return;
-          // 本人未支付锁座单独着色，其余一律按已占用处理
-          seatMatrix[row - 1][col - 1] = myPending ? 3 : 1;
-        });
+        // 本人未支付锁座单独着色，其余一律按已占用处理
+        for (const rawSeat of (order.seat || '').split(',')) {
+          markSeatInMatrix(seatMatrix, rawSeat, rows, cols, myPending ? 3 : 1);
+        }
       });
 
       seats.value = seatMatrix;

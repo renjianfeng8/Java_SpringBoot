@@ -621,7 +621,7 @@ class OrderedServiceTest {
 
         orderedService.payOrder(1, RoleEnum.ADMIN.name(), 999, PAY_PASSWORD);
 
-        verify(payPasswordService).checkForPayment(eq(100), eq(PAY_PASSWORD));
+        verify(payPasswordService).checkForPayment(100, PAY_PASSWORD);
     }
 
     @Test

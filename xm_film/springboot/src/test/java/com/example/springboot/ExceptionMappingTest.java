@@ -6,6 +6,7 @@ import com.example.springboot.exception.GlobalExceptionHandler;
 import org.junit.jupiter.api.Test;
 import org.springframework.dao.PessimisticLockingFailureException;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.mock.http.MockHttpInputMessage;
 import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
@@ -65,9 +66,11 @@ class ExceptionMappingTest {
     /** 请求体缺失或 JSON 语法错 → 400，且不回显解析器的内部消息 */
     @Test
     void unreadableBodyBecomesParamInvalid() {
+        // 单参构造器在 Spring 6.2 已弃用（Sonar java:S1874）；处理器只读 message，给一个空输入即可
         HttpMessageNotReadableException e =
                 new HttpMessageNotReadableException("Required request body is missing: "
-                        + "public com.example.springboot.common.Result<java.lang.Void> com.example.springboot.common.BaseController.add(R)");
+                        + "public com.example.springboot.common.Result<java.lang.Void> com.example.springboot.common.BaseController.add(R)",
+                        new MockHttpInputMessage(new byte[0]));
 
         Result<Void> r = handler.unreadableBody(e);
 
@@ -110,13 +113,15 @@ class ExceptionMappingTest {
     /**
      * 死锁牺牲者 → 409「可重试」，不是 500。
      *
-     * <p>实测来源：把 BL-01 的影厅行锁临时去掉，两个并发建排片请求撞出
-     * {@code DeadlockLoserDataAccessException}，原先一路落到兜底变成「系统错误」。
+     * <p>实测来源：把 BL-01 的影厅行锁临时去掉，两个并发建排片请求撞出死锁，
+     * 原先一路落到兜底变成「系统错误」。这里用父类型
+     * {@link PessimisticLockingFailureException} 构造，避免引用已弃用的
+     * {@code DeadlockLoserDataAccessException}（BL-52）。
      */
     @Test
     void deadlockBecomesRetryableConflict() {
         Result<Void> r = handler.concurrentConflict(
-                new org.springframework.dao.DeadlockLoserDataAccessException(
+                new PessimisticLockingFailureException(
                         "Deadlock found when trying to get lock", new RuntimeException()));
 
         assertThat(r.getCode()).isEqualTo("409");

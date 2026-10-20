@@ -23,7 +23,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -255,7 +254,7 @@ class TmdbServiceTest {
     @Test
     void previewLeavesImgNullAndWarnsWhenPosterDownloadFails() {
         stubHappyPath(List.of());
-        when(client.downloadImage(eq(TmdbClient.POSTER_SIZE), eq(POSTER_PATH))).thenReturn(Optional.empty());
+        when(client.downloadImage(TmdbClient.POSTER_SIZE, POSTER_PATH)).thenReturn(Optional.empty());
 
         TmdbImportView preview = service.preview(550);
 
@@ -287,7 +286,7 @@ class TmdbServiceTest {
     @Test
     void previewKeepsActorButLeavesPictureNullWhenAvatarDownloadFails() {
         stubHappyPath(List.of());
-        when(client.downloadImage(eq(TmdbClient.PROFILE_SIZE), eq(AVATAR_PATH))).thenReturn(Optional.empty());
+        when(client.downloadImage(TmdbClient.PROFILE_SIZE, AVATAR_PATH)).thenReturn(Optional.empty());
 
         TmdbImportView preview = service.preview(550);
 

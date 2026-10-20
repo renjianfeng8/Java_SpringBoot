@@ -33,6 +33,8 @@ public class TmdbClient {
     private static final String API_BASE = "https://api.themoviedb.org/3";
     private static final String IMAGE_BASE = "https://image.tmdb.org/t/p";
     private static final String LANGUAGE = "zh-CN";
+    /** 查询参数名（TMDB 契约），与值 {@link #LANGUAGE} 分开，避免把参数名也写成中文常量 */
+    private static final String PARAM_LANGUAGE = "language";
 
     /** TMDB 的预告片只给 YouTube 视频 id，播放要走 iframe 嵌入，故存成嵌入地址而非文件地址 */
     private static final String YOUTUBE_EMBED_BASE = "https://www.youtube.com/embed/";
@@ -77,7 +79,7 @@ public class TmdbClient {
     public List<SearchHit> search(String query) {
         URI uri = UriComponentsBuilder.fromHttpUrl(API_BASE + "/search/movie")
                 .queryParam("query", "{q}")
-                .queryParam("language", LANGUAGE)
+                .queryParam(PARAM_LANGUAGE, LANGUAGE)
                 .queryParam("include_adult", "false")
                 .buildAndExpand(query)
                 .encode()
@@ -103,7 +105,7 @@ public class TmdbClient {
      */
     public MovieDetail detail(int tmdbId) {
         URI uri = UriComponentsBuilder.fromHttpUrl(API_BASE + "/movie/" + tmdbId)
-                .queryParam("language", LANGUAGE)
+                .queryParam(PARAM_LANGUAGE, LANGUAGE)
                 .queryParam("append_to_response", "credits,videos")
                 .build()
                 .encode()
@@ -139,7 +141,7 @@ public class TmdbClient {
         }
         try {
             URI uri = UriComponentsBuilder.fromHttpUrl(API_BASE + "/configuration/countries")
-                    .queryParam("language", LANGUAGE)
+                    .queryParam(PARAM_LANGUAGE, LANGUAGE)
                     .build()
                     .encode()
                     .toUri();
@@ -189,7 +191,14 @@ public class TmdbClient {
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(token);
         headers.setAccept(List.of(MediaType.APPLICATION_JSON));
-        return restTemplate.exchange(uri, HttpMethod.GET, new HttpEntity<>(headers), JsonNode.class).getBody();
+        JsonNode body = restTemplate.exchange(uri, HttpMethod.GET, new HttpEntity<>(headers), JsonNode.class).getBody();
+        if (body == null) {
+            // HTTP 200 + 空 body：正常 TMDB 不会发生，但一旦发生，调用方的 root.path(...) 会 NPE 成 500。
+            // 抛 RestClientException 与「连不上」走同一条出口：全局处理器给可操作提示，
+            // countryNames() 也会按既有策略降级为空表。
+            throw new RestClientException("TMDB 返回空响应: " + uri.getPath());
+        }
+        return body;
     }
 
     /** 区分「字段不存在」与「字段是 null」：两者都返回 null，不让 asText() 把 null 写成字符串 "null" */

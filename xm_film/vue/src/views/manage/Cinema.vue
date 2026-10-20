@@ -109,9 +109,9 @@
         <el-form-item label="账号" prop="username">
           <el-input v-model="form.username" autocomplete="off" placeholder="请输入账号" @keyup.enter="submit"/>
         </el-form-item>
-        <!-- 只在新增态渲染。不要用 `v-if="form.id"` 门控：useFormDialog.openAdd 是
-             Object.assign 合默认值，不会删掉上次编辑残留的 id，那个键会一直为真，
-             密码框就永远不出现，必填规则也不会注册 -->
+        <!-- 只在新增态渲染。不要用表单里的 id 字段做门控：新增动作只是合并默认值，
+             不会清掉上次编辑残留的 id，那个键会一直为真，密码框就永远不出现，
+             必填规则也不会注册 -->
         <el-form-item v-if="!isEdit" label="密码" prop="password">
           <el-input v-model="form.password" show-password autocomplete="off" placeholder="请输入初始密码" @keyup.enter="submit"/>
         </el-form-item>

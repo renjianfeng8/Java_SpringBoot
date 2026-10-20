@@ -164,7 +164,7 @@ class PayOrderPurchasableGuardTest {
         assertThatThrownBy(() -> orderedService.payOrder(100, "USER", 9, "123456"))
                 .isInstanceOf(CustomException.class);
 
-        verify(recordMapper).selectByIdForUpdate(eq(7));
+        verify(recordMapper).selectByIdForUpdate(7);
         verify(recordMapper, never()).selectById(anyInt());
     }
 

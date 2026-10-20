@@ -33,37 +33,37 @@ public class RecordController extends BaseController<Record, RecordRequest, Reco
 
     @Override
     protected Record toEntity(RecordRequest request) {
-        Record record = new Record();
-        record.setId(request.getId());
-        record.setCinemaId(request.getCinemaId());
-        record.setRoomId(request.getRoomId());
-        record.setFilmId(request.getFilmId());
-        record.setTitle(request.getTitle());
-        record.setStart(request.getStart());
-        record.setPrice(request.getPrice());
-        record.setStatus(request.getStatus());
-        record.setCinemaName(request.getCinemaName());
-        record.setRoomName(request.getRoomName());
-        record.setRoomSeatRows(request.getRoomSeatRows());
-        record.setRoomSeatCols(request.getRoomSeatCols());
-        return record;
+        Record recordItem = new Record();
+        recordItem.setId(request.getId());
+        recordItem.setCinemaId(request.getCinemaId());
+        recordItem.setRoomId(request.getRoomId());
+        recordItem.setFilmId(request.getFilmId());
+        recordItem.setTitle(request.getTitle());
+        recordItem.setStart(request.getStart());
+        recordItem.setPrice(request.getPrice());
+        recordItem.setStatus(request.getStatus());
+        recordItem.setCinemaName(request.getCinemaName());
+        recordItem.setRoomName(request.getRoomName());
+        recordItem.setRoomSeatRows(request.getRoomSeatRows());
+        recordItem.setRoomSeatCols(request.getRoomSeatCols());
+        return recordItem;
     }
 
     @Override
-    protected RecordView toView(Record record) {
+    protected RecordView toView(Record recordItem) {
         RecordView view = new RecordView();
-        view.setId(record.getId());
-        view.setCinemaId(record.getCinemaId());
-        view.setRoomId(record.getRoomId());
-        view.setFilmId(record.getFilmId());
-        view.setTitle(record.getTitle());
-        view.setStart(record.getStart());
-        view.setPrice(record.getPrice());
-        view.setStatus(record.getStatus());
-        view.setCinemaName(record.getCinemaName());
-        view.setRoomName(record.getRoomName());
-        view.setRoomSeatRows(record.getRoomSeatRows());
-        view.setRoomSeatCols(record.getRoomSeatCols());
+        view.setId(recordItem.getId());
+        view.setCinemaId(recordItem.getCinemaId());
+        view.setRoomId(recordItem.getRoomId());
+        view.setFilmId(recordItem.getFilmId());
+        view.setTitle(recordItem.getTitle());
+        view.setStart(recordItem.getStart());
+        view.setPrice(recordItem.getPrice());
+        view.setStatus(recordItem.getStatus());
+        view.setCinemaName(recordItem.getCinemaName());
+        view.setRoomName(recordItem.getRoomName());
+        view.setRoomSeatRows(recordItem.getRoomSeatRows());
+        view.setRoomSeatCols(recordItem.getRoomSeatCols());
         return view;
     }
 

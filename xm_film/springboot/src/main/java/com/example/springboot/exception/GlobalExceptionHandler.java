@@ -112,9 +112,11 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     @ResponseBody
     public Result<Void> typeMismatch(MethodArgumentTypeMismatchException e) {
+        // 先取局部变量：同一表达式调两次 getRequiredType()，静态分析无法确认返回值一致
+        Class<?> requiredType = e.getRequiredType();
         logger.warn("参数类型不匹配: name={}, value={}, requiredType={}",
                 e.getName(), e.getValue(),
-                e.getRequiredType() == null ? "?" : e.getRequiredType().getSimpleName());
+                requiredType == null ? "?" : requiredType.getSimpleName());
         return Result.error(ErrorCode.PARAM_INVALID,
                 "参数「" + e.getName() + "」格式不正确");
     }

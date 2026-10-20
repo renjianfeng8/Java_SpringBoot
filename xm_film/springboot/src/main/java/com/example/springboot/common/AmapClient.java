@@ -33,6 +33,10 @@ public class AmapClient {
     private static final int QPS_RETRIES = 3;
     private static final long QPS_RETRY_BASE_MS = 200;
 
+    /** district 响应字段名：同一文件出现 3 次以上，抽常量避免一处写错只在运行时表现为「抓到 0 条」 */
+    private static final String FIELD_DISTRICTS = "districts";
+    private static final String FIELD_LEVEL = "level";
+
     private final RestTemplate restTemplate;
     private final String key;
 
@@ -101,14 +105,14 @@ public class AmapClient {
 
         JsonNode root = get(uri);
         List<District> result = new ArrayList<>();
-        JsonNode districts = root.path("districts");
+        JsonNode districts = root.path(FIELD_DISTRICTS);
         if (!districts.isArray() || districts.isEmpty()) {
             return result;
         }
         JsonNode city = districts.get(0);
-        boolean municipality = "province".equals(text(city, "level"));
+        boolean municipality = "province".equals(text(city, FIELD_LEVEL));
         for (JsonNode d : districts) {
-            if ("city".equals(text(d, "level"))) {
+            if ("city".equals(text(d, FIELD_LEVEL))) {
                 city = d;
                 municipality = false;
                 break;
@@ -117,13 +121,13 @@ public class AmapClient {
         // 直辖市实测只返回一个省级节点，且其下只有「北京城区」这一个 level=city 节点、无区县；
         // 区县再挂在 city 的下一层，因此必须多要一层（2026-10-19 实测：subdistrict=1 时
         // 北京只返回 1 个「北京城区」，导入因此永远抓到 0 条）。
-        for (JsonNode d : city.path("districts")) {
-            if (municipality && "city".equals(text(d, "level"))) {
+        for (JsonNode d : city.path(FIELD_DISTRICTS)) {
+            if (municipality && "city".equals(text(d, FIELD_LEVEL))) {
                 city = d;
                 break;
             }
         }
-        for (JsonNode d : city.path("districts")) {
+        for (JsonNode d : city.path(FIELD_DISTRICTS)) {
             String adcode = text(d, "adcode");
             String name = text(d, "name");
             if (adcode != null && name != null) {

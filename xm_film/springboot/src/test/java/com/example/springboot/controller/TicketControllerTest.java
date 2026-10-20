@@ -14,7 +14,6 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -64,7 +63,7 @@ class TicketControllerTest {
     /** 原子自助机：不带任何 token 也必须能核销 */
     @Test
     void anonymousPostIsAllowed() throws Exception {
-        when(orderedService.redeemByCode(eq("ABCD1234"))).thenReturn(voucher());
+        when(orderedService.redeemByCode("ABCD1234")).thenReturn(voucher());
 
         mockMvc.perform(post("/api/v1/tickets/redeem")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -114,7 +113,7 @@ class TicketControllerTest {
     /** 请求体里即便多塞 orderId，控制器也只读 code —— 不存在"持 id 核销他人单"的入口 */
     @Test
     void extraOrderIdInBodyIsIgnored() throws Exception {
-        when(orderedService.redeemByCode(eq("WG7K2M9P"))).thenReturn(voucher());
+        when(orderedService.redeemByCode("WG7K2M9P")).thenReturn(voucher());
 
         mockMvc.perform(post("/api/v1/tickets/redeem")
                         .contentType(MediaType.APPLICATION_JSON)

@@ -33,7 +33,7 @@ class StatisticsMapperLoadTest {
 
     @Test
     void mapperLoadsCountTodayPaidOrdersStatement() {
-        assertThat(orderedMapper.countTodayPaidOrders()).isGreaterThanOrEqualTo(0);
+        assertThat(orderedMapper.countTodayPaidOrders()).isNotNegative();
     }
 
     @Test
@@ -45,7 +45,7 @@ class StatisticsMapperLoadTest {
 
     @Test
     void mapperLoadsCountByStatusStatement() {
-        assertThat(orderedMapper.countByStatus("待取票")).isGreaterThanOrEqualTo(0);
+        assertThat(orderedMapper.countByStatus("待取票")).isNotNegative();
     }
 
     @Test
@@ -61,6 +61,6 @@ class StatisticsMapperLoadTest {
 
     @Test
     void mapperLoadsUserCountAllStatement() {
-        assertThat(userMapper.countAll()).isGreaterThanOrEqualTo(0);
+        assertThat(userMapper.countAll()).isNotNegative();
     }
 }

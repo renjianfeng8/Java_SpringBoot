@@ -4,7 +4,6 @@ import com.example.springboot.common.enums.CinemaStatus;
 import com.example.springboot.common.enums.OrderStatus;
 import com.example.springboot.common.enums.RechargeStatus;
 import com.example.springboot.common.enums.RecordStatus;
-import org.apache.ibatis.annotations.Param;
 
 /**
  * Mapper 里"状态取值"的唯一来源：把状态常量带进 SQL，而不是在 XML 里写中文字面量。
