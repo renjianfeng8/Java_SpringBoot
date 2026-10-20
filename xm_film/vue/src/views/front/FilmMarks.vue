@@ -121,14 +121,16 @@
 import { isSuccess, API_PATHS, MARK_API, apiById } from '@/constants';
 import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { ElMessage, ElMessageBox } from 'element-plus';
+import { ElMessage } from 'element-plus';
 import request from '@/utils/request.js';
 import { formatScore } from '@/utils/format.js';
 import { useAuth } from '@/composables/useAuth';
+import { useLoginPrompt } from '@/composables/useLoginPrompt';
 import { avatarSrc, DEFAULT_AVATAR } from '@/utils/avatar';
 
 const route = useRoute();
 const router = useRouter();
+const { promptLogin } = useLoginPrompt();
 const { user, isAdmin, isCinema } = useAuth();
 
 // 路由参数（影片ID）。用 let 而非 const：同一路由记录只换 :id 时组件会被复用，
@@ -224,17 +226,7 @@ const handleSizeChange = (pageSize) => {
   refetchMarks();
 };
 
-// 游客引导登录：与路由守卫同一套确认框 + 回跳（redirect 用当前完整路径）
-const promptLogin = () => {
-  ElMessageBox.confirm('请先登录后再进行此操作', '提示', {
-    confirmButtonText: '去登录',
-    cancelButtonText: '取消',
-    type: 'warning',
-  }).then(() => {
-    router.push(`/login?redirect=${encodeURIComponent(route.fullPath)}`);
-  }).catch(() => {});
-};
-
+// 游客引导登录：与路由守卫同一套确认框 + 回跳（useLoginPrompt）
 // 点赞：liked 是显式意图（不是本地取反后直接改数字），成功后把响应里的权威状态写回该行
 const togglingId = ref(null);
 

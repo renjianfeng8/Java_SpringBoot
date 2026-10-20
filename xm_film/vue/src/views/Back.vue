@@ -35,7 +35,7 @@
                 <el-icon><Lock /></el-icon>
                 <span>修改密码</span>
               </el-dropdown-item>
-              <el-dropdown-item divided @click="logout">
+              <el-dropdown-item divided @click="confirmLogout">
                 <el-icon><Logout /></el-icon>
                 <span>退出登录</span>
               </el-dropdown-item>
@@ -116,7 +116,6 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   Avatar,
   Calendar,
@@ -131,10 +130,12 @@ import {
   VideoCamera,
 } from '@element-plus/icons-vue'
 import { useAuth } from '@/composables/useAuth'
+import { useLogout } from '@/composables/useLogout'
 import { avatarSrc, onAvatarError } from '@/utils/avatar'
 
 const router = useRouter()
-const { user, logout: authLogout } = useAuth()
+const { user } = useAuth()
+const { confirmLogout } = useLogout()
 
 const userName = computed(() => user.value?.username || '')
 
@@ -146,18 +147,6 @@ const openedMenuKeys = ref(['1', '2'])
 
 const navigateTo = (path) => {
   router.push(path)
-}
-
-const logout = () => {
-  ElMessageBox.confirm('确定要退出登录吗？', '提示', {
-    confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning'
-  }).then(() => {
-    authLogout()
-    router.push('/login')
-    ElMessage.success('退出成功')
-  }).catch(() => {
-    ElMessage.info('已取消退出')
-  })
 }
 </script>
 

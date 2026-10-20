@@ -49,17 +49,11 @@ import { useRoute, useRouter } from 'vue-router'
 import { User, Lock } from '@element-plus/icons-vue'
 import { useAuth } from "@/composables/useAuth"
 import { ElMessageBox } from "element-plus"
+import { isInternalPath, pathForRole } from '@/utils/navigation'
 
 const route = useRoute()
 const router = useRouter()
 const { login: authLogin } = useAuth()
-
-function getDefaultPath(role) {
-  if (role === 'USER') return '/front/home'
-  if (role === 'CINEMA') return '/back/home'
-  if (role === 'ADMIN') return '/manage/home'
-  return '/front/home'
-}
 
 const data = reactive({
   form: {
@@ -85,10 +79,8 @@ const login = () => {
       // 此前直接用 window.location.href 赋它就会跳到外站（开放重定向）。
       // 改走 router.push：它只解析站内路径，同时也不再把应用整页重载一遍。
       const redirectParam = route.query.redirect
-      const isSafePath = typeof redirectParam === 'string'
-        && redirectParam.startsWith('/')
-        && !redirectParam.startsWith('//')
-      router.push(isSafePath ? redirectParam : getDefaultPath(user.role))
+      const isSafePath = isInternalPath(redirectParam)
+      router.push(isSafePath ? redirectParam : pathForRole(user.role))
     } catch (e) {
       // 传输类失败是 axios 错误，request.js 的响应拦截器已经弹过一次并给了中文提示；
       // 接着再把它的英文 message（如 'Network Error'）塞进弹框就是二次提示 + 未翻译文案。

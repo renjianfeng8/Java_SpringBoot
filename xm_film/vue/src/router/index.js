@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory, START_LOCATION } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { clearStoredUser, getStoredUser } from '@/utils/authStorage'
+import { LOGIN_PROMPT_MESSAGE, SITE_NAME, loginPath, pathForRole } from '@/utils/navigation'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -77,7 +78,10 @@ const router = createRouter({
 })
 
 router.beforeEach((to, from, next) => {
-  document.title = to.meta.title || '电影购票网站'
+  const pageTitle = to.meta.title || SITE_NAME
+  if (document.title !== pageTitle) {
+    document.title = pageTitle
+  }
 
   // 鉴权判定必须先于 guest，且 roles 本身即蕴含"需登录"：
   // Vue Router 会把父路由的 meta 合并进子路由，任何"只看其中一个标记"的写法都会在标记共存时 fail-open
@@ -87,14 +91,14 @@ router.beforeEach((to, from, next) => {
     const user = getStoredUser()
     if (!user?.token || !user?.role) {
       clearStoredUser()
-      ElMessageBox.confirm('请先登录后再进行此操作', '提示', {
+      ElMessageBox.confirm(LOGIN_PROMPT_MESSAGE, '提示', {
         confirmButtonText: '去登录',
         cancelButtonText: '取消',
         type: 'warning'
       }).then(() => {
         // 必须带上 query 并编码：购票页的场次由 cinemaId/filmId/recordId/roomId 四个参数决定，
         // 只回跳 to.path 会让登录后落在一个没有参数的 /front/buyTicket 上（页面只能报"参数无效"）
-        next(`/login?redirect=${encodeURIComponent(to.fullPath)}`)
+        next(loginPath(to.fullPath))
       }).catch(() => {
         // 首次导航（地址栏直入 / 刷新 / 书签）没有上一页可回退：此时 next(false) 会中止唯一一次导航，
         // RouterView 匹配为空 → 白屏。改为落到前台首页，让用户仍留在应用内；
@@ -108,10 +112,12 @@ router.beforeEach((to, from, next) => {
       return
     }
 
-    // 角色校验
+    // 角色不符：回到该角色自己的主页，而不是登录页。
+    // 已登录用户被踢到登录页既丢来路，又会在登录页看到一个「已登录」的会话。
     if (to.meta.roles && !to.meta.roles.includes(user.role)) {
       ElMessage.error('无权访问该页面')
-      return next('/login')
+      const home = pathForRole(user.role)
+      return to.path === home ? next(false) : next(home)
     }
   }
 

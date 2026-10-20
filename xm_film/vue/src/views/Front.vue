@@ -60,7 +60,7 @@
                   <el-dropdown-item @click="router.push('/front/password')">修改密码</el-dropdown-item>
                   <el-dropdown-item @click="router.push('/front/payPassword')">支付密码</el-dropdown-item>
                 </template>
-                <el-dropdown-item @click="logout">退出登录</el-dropdown-item>
+                <el-dropdown-item @click="confirmLogout">退出登录</el-dropdown-item>
               </el-dropdown-menu>
             </template>
           </el-dropdown>
@@ -131,14 +131,16 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessage } from 'element-plus'
 import { CaretBottom } from '@element-plus/icons-vue'
 import { useAuth } from '@/composables/useAuth'
+import { useLogout } from '@/composables/useLogout'
 import { avatarSrc, onAvatarError } from '@/utils/avatar'
 
 const router = useRouter()
 const route = useRoute()
-const { user, logout: authLogout, isLoggedIn, isAdmin, isCinema } = useAuth()
+const { user, isLoggedIn, isAdmin, isCinema } = useAuth()
+const { confirmLogout } = useLogout()
 
 const searchKeyword = ref('')
 
@@ -190,18 +192,6 @@ const showUserEntries = computed(() => !isAdmin.value && !isCinema.value)
 const userAvatar = computed(() => {
   return avatarSrc(user.value?.avatar)
 })
-
-const logout = () => {
-  ElMessageBox.confirm('确定要退出登录吗？', '提示', {
-    confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning'
-  }).then(() => {
-    authLogout()
-    router.push('/login')
-    ElMessage.success('退出成功')
-  }).catch(() => {
-    ElMessage.info('已取消退出')
-  })
-}
 
 const handleSearch = () => {
   const keyword = searchKeyword.value.trim()

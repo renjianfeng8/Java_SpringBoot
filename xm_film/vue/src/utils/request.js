@@ -2,6 +2,7 @@ import axios from 'axios'
 import { ElMessage } from 'element-plus'
 import { getStoredUser, clearStoredUser } from '@/utils/authStorage'
 import { API_BASE_URL } from '@/constants'
+import { isPathWithin, loginPath } from '@/utils/navigation'
 
 const request = axios.create({
   baseURL: API_BASE_URL,
@@ -19,9 +20,9 @@ let redirectingToLogin = false
 function redirectToLogin() {
   if (redirectingToLogin) return
   const { pathname, search } = window.location
-  if (pathname.startsWith('/login')) return
+  if (isPathWithin(pathname, '/login')) return
   redirectingToLogin = true
-  window.location.href = `/login?redirect=${encodeURIComponent(pathname + search)}`
+  window.location.href = loginPath(pathname + search)
 }
 
 request.interceptors.request.use(

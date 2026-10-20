@@ -2,19 +2,39 @@ import { ref, computed } from 'vue'
 import { isSuccess, AUTH_API } from '@/constants'
 import { ElMessage } from 'element-plus'
 import request from '@/utils/request'
-import { getStoredUser, setStoredUser, clearStoredUser } from '@/utils/authStorage'
+import {
+  AUTH_CHANGE_EVENT,
+  USER_KEY,
+  getStoredUser,
+  setStoredUser,
+  clearStoredUser,
+} from '@/utils/authStorage'
 
 const globalUser = ref(null)
-const globalVerifying = ref(true)
 // 模块级单例：/auth/me 整个应用生命周期只验一次。init 仍每次同步 storage，
 // 但不再让每个调用 useAuth() 的组件各自发一轮 GET /auth/me。
 let verified = false
+
+// storage 是持久化来源；request.js 的 401 处理与跨标签页改动都会走这里，
+// 保证守卫/页面看到的是同一份会话，而不是「storage 已清、globalUser 还在」。
+if (typeof window !== 'undefined') {
+  window.addEventListener(AUTH_CHANGE_EVENT, (event) => {
+    globalUser.value = event.detail ?? null
+  })
+  window.addEventListener('storage', (event) => {
+    if (event.key === USER_KEY || event.key === null) {
+      globalUser.value = getStoredUser()
+    }
+  })
+}
 
 export function useAuth() {
   const user = globalUser
 
   const token = computed(() => user.value?.token || '')
-  const isLoggedIn = computed(() => !globalVerifying.value && !!token.value)
+  // 登录态只看 storage 里的令牌：冷加载时先按已登录渲染，/me 失败再退出。
+  // 此前还要求 !globalVerifying，导致首屏先闪一次「登录/注册」。
+  const isLoggedIn = computed(() => !!token.value)
   const isAdmin = computed(() => user.value?.role === 'ADMIN')
   const isCinema = computed(() => user.value?.role === 'CINEMA')
   const isUser = computed(() => user.value?.role === 'USER')
@@ -34,7 +54,6 @@ export function useAuth() {
     // 解析时再从 storage 读会让「验签期间被登出」的响应把 token 写成 undefined。
     const currentToken = user.value?.token
     if (!currentToken) {
-      globalVerifying.value = false
       return
     }
     try {
@@ -51,8 +70,6 @@ export function useAuth() {
       if (e.response?.status === 401 || e.response?.status === 403) {
         logout()
       }
-    } finally {
-      globalVerifying.value = false
     }
   }
 

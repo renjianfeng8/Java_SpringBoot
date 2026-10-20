@@ -175,6 +175,7 @@
 import { isSuccess, API_PATHS, ORDER_API, apiById } from '@/constants';
 import { computed, ref, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { loginPath } from '@/utils/navigation';
 import { CircleCloseFilled, Loading } from '@element-plus/icons-vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import request from "@/utils/request.js";
@@ -474,7 +475,7 @@ const selectSeat = (row, col) => {
   // 未登录时禁止选座
   if (!isLogin.value) {
     ElMessage.warning('请先登录后选择座位');
-    router.push('/login');
+    router.push(loginPath(route.fullPath));
     return;
   }
   if (!isSeatAvailable(row, col)) return;

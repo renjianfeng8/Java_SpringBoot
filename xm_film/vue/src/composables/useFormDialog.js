@@ -21,22 +21,26 @@ export function useFormDialog(crud, options = {}) {
   const formRef = ref(null)
   const form = reactive(cloneDefaults(defaultForm))
 
+  function replaceForm(values) {
+    Object.keys(form).forEach((key) => { delete form[key] })
+    Object.assign(form, cloneDefaults(values))
+  }
+
   function openAdd() {
     isEdit.value = false
     // 先清掉上一次 openEdit 留下的残留键：openEdit 把整行拷进 form，而这里只合默认值，
     // Object.assign 不删键。不清的话 form.id 会带着上一行的 id 一起提交，而
     // admin / area / type / notice / video 五张表的 insert 显式写 id，
     // 「编辑 → 关闭 → 新增」就会撞主键冲突。
-    Object.keys(form).forEach((key) => {
-      if (!(key in defaultForm)) delete form[key]
-    })
-    Object.assign(form, cloneDefaults(defaultForm))
+    replaceForm(defaultForm)
     dialogVisible.value = true
   }
 
   function openEdit(row) {
     isEdit.value = true
-    Object.assign(form, row)
+    // 默认值补齐 row 缺失的键（如 Admin 的 password），
+    // 深拷贝避免 form 与 el-table 行按下标共享对象字段。
+    replaceForm({ ...cloneDefaults(defaultForm), ...cloneDefaults(row) })
     dialogVisible.value = true
   }
 

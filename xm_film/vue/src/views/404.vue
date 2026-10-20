@@ -13,25 +13,16 @@
 
 <script setup>
 import { useRouter } from 'vue-router';
-import { getStoredUser } from '@/utils/authStorage';
+import { useAuth } from '@/composables/useAuth';
+import { pathForRole } from '@/utils/navigation';
 
 // 获取路由实例
 const router = useRouter();
+const { user } = useAuth();
 
 // 跳转到对应角色的主页
 const goHome = () => {
-  const userRole = getStoredUser()?.role || 'USER';
-
-  // 根据用户角色跳转到对应的主页
-  if (userRole === 'USER') {
-    router.push('/front/home');
-  }
-  if (userRole === 'CINEMA') {
-    router.push('/back/home'); // 影院后台首页路由
-  }
-  if (userRole === 'ADMIN') {
-    router.push('/manage/home'); // 管理员首页路由
-  }
+  router.push(pathForRole(user.value?.role || 'USER'));
 };
 </script>
 

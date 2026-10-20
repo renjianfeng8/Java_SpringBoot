@@ -24,6 +24,12 @@ export function useCrud(apiBase) {
   // 递增序号：只让最后一次 load 的结果落地，避免慢响应覆盖新结果、提前收起 loading
   let loadSeq = 0
 
+  // 写入成功后 dataList 会被整体替换，旧选中行已不存在；
+  // 不能只依赖 el-table 的 selection-change（没有 row-key 时可能不触发）。
+  function clearSelection() {
+    selectedIds.value = []
+  }
+
   async function load() {
     const seq = ++loadSeq
     loading.value = true
@@ -59,6 +65,7 @@ export function useCrud(apiBase) {
       if (isSuccess(res)) {
         ElMessage.success('新增成功')
         await load()
+        clearSelection()
         return true
       }
       ElMessage.error(res.msg || '新增失败')
@@ -74,6 +81,7 @@ export function useCrud(apiBase) {
       if (isSuccess(res)) {
         ElMessage.success('更新成功')
         await load()
+        clearSelection()
         return true
       }
       ElMessage.error(res.msg || '更新失败')
@@ -89,6 +97,7 @@ export function useCrud(apiBase) {
       if (isSuccess(res)) {
         ElMessage.success('删除成功')
         await load()
+        clearSelection()
         return true
       }
       ElMessage.error(res.msg || '删除失败')
@@ -108,6 +117,7 @@ export function useCrud(apiBase) {
       if (isSuccess(res)) {
         ElMessage.success('批量删除成功')
         await load()
+        clearSelection()
         return true
       }
       ElMessage.error(res.msg || '批量删除失败')

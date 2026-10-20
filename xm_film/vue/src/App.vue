@@ -12,6 +12,7 @@ import { useRoute } from 'vue-router'
 import { ElConfigProvider } from 'element-plus'
 import zhCn from 'element-plus/es/locale/lang/zh-cn'
 import ErrorBoundary from '@/components/ErrorBoundary.vue'
+import { isPathWithin } from '@/utils/navigation'
 
 const route = useRoute()
 
@@ -21,7 +22,7 @@ const route = useRoute()
 watch(
   () => route.path,
   (path) => {
-    document.documentElement.classList.toggle('theme-front', path.startsWith('/front'))
+    document.documentElement.classList.toggle('theme-front', isPathWithin(path, '/front'))
   },
   { immediate: true },
 )
