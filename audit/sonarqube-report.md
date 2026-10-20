@@ -3,6 +3,7 @@
 > 环境：SonarQube 10.7.0.96327（Community，Docker）· 规则集 `Sonar way`（默认）
 > 分析器：Java 8.2 · JavaScript/TypeScript/CSS 10.16 · XML 2.10
 > 基线：`master` @ `0ff8331c`（工作区干净）
+> 结果代码：`12730a75`（第二轮清理；之后的提交仅改文档）
 > 范围：`xm_film/springboot/src/main/java`、`src/test/java`、`xm_film/vue/src`；排除 `node_modules/`、`dist/`
 > **状态**：基线 **74** 条 → P0 修复后 **69** 条 → 本轮清理后 **32** 条（漏洞 0，安全评级 A）。
 
@@ -24,13 +25,13 @@
 | 类型分布 | BUG 8 · 漏洞 1 · 坏味 65 | BUG 6 · 漏洞 0 · 坏味 63 | BUG 3 · **漏洞 0** · 坏味 29 |
 | 安全热点 | 4 | 2 | 2（均为已判定为安全的正则） |
 
-**一句话结论**：三条 P0（支付密码事务边界、硬编码默认口令、取票码随机源）与本轮 11 类清理项都已修复，测试代码问题清零；安全评级 A、漏洞 0。剩余 32 条里，24 条是“自调用但传播行为正确”的 `S6809` 与 ARIA 语义建议，2 条是前端复杂度；可靠性 E 只因 3 条 BUG，其中 3 条全部是**已核验的误报/有意为之**（`Thread.sleep` 限流、volatile 不可变快照、Vue 键盘指令不被识别）。
+**一句话结论**：三条 P0（支付密码事务边界、硬编码默认口令、取票码随机源）与本轮 12 类清理项（含 BL-52）均已修复，测试代码问题清零；安全评级 A、漏洞 0。剩余 32 条里，22 条是“自调用但传播行为正确”的 `S6809`（14 条）与 ARIA 语义建议（8 条），2 条是前端复杂度，其余 8 条为单点低风险项或已核验误报；可靠性 E 只因 3 条 BUG，且这 3 条全部是**已核验的误报/有意为之**（`Thread.sleep` 限流、volatile 不可变快照、Vue 键盘指令不被识别）。
 
 > ⚠️ 质量门禁显示 `OK` **不代表没有问题**：该门禁只配置了「新代码违规数 = 0」，本次是基线扫描（无 Previous Version 可比），所以整体问题数不影响门禁结果。判定请看上面的级别分布。
 
 ---
 
-## 0.1 P0 修复记录（2026-10-20）
+## 0.1 P0 与 BL-52 修复记录（2026-10-20）
 
 | 条目 | 改动 | 守卫测试 | 反证结果 |
 | --- | --- | --- | --- |
@@ -53,7 +54,7 @@
 | `java:S1128` | 1 | 删除 `OrderStatusCriteria` 多余的 `@Param` import | 编译 |
 | `java:S6213` | 3 | `RecordController` 的局部变量/参数 `record` → `recordItem`；测试方法 `record()` → `recordOf()` | 全量测试 |
 | `typescript:S3863` | 2 | `back/Room.vue` 两处 `@/constants` import 合并 | 前端构建 |
-| `Web:AvoidCommentedOutCode` | 3 | 三处其实是**解释性注释**（不是死代码），改写措辞去掉代码形态（`loading="lazy"`、`v-if="form.id"`、`native-type="button"`） | 复扫为 0 |
+| `Web:AvoidCommentedOutCodeCheck` | 3 | 三处其实是**解释性注释**（不是死代码），改写措辞去掉代码形态（`loading="lazy"`、`v-if="form.id"`、`native-type="button"`） | 复扫为 0 |
 | `javascript:S3358` | 1 | `CinemaDetail.vue` 的嵌套三元抽成 `weekLabelOf()` | 前端构建 |
 | `javascript:S3735` | 1 | `Home.vue` 的 `void offsetWidth` 改为 `getBoundingClientRect()` 调用 | 前端构建 |
 | `javascript:S2004` | 1 | `BuyTicket.vue` 抽 `markSeatInMatrix()`，内层 `forEach` 改 `for...of` | 复扫为 0 |
@@ -67,7 +68,7 @@
 ## 1 扫描口径（影响结论的三个细节）
 
 1. **Java 必须带 Maven 依赖类路径**。用根 POM 直接扫时 `sonar.java.libraries` 为空，Lombok/Spring 类型解析不到，会凭空多出 **548 条 `java:S1068`（未使用私有字段）**。本报告的结果是把 `mvn dependency:build-classpath` 的 87 个依赖注入 `sonar.java.libraries` 后得到的；同理，测试源码只有注入 `sonar.java.test.libraries` 才能正确识别 `assertThrows` 语义。
-2. **测试源码单独识别**（`sonar.tests`，42 个文件）。测试里的 `S5778`（一次 lambda 多个可能抛异常的调用）在类路径完整后全部消失，说明它们此前是**类型未解析造成的误报**，不是真问题。
+2. **测试源码单独识别**（`sonar.tests`，43 个文件；基线 42 个，P0 新增 `PayPasswordTransactionBoundaryTest` 后为 43）。测试里的 `S5778`（一次 lambda 多个可能抛异常的调用）在类路径完整后全部消失，说明它们此前是**类型未解析造成的误报**，不是真问题。
 3. **没有覆盖率数据**。仓库未接 JaCoCo，本次覆盖率不参与评级；「测试覆盖缺口」仍以 `audit/backend-backlog.md` 的手工结论为准。
 
 ---
@@ -85,12 +86,12 @@
 | `java:S135` | MINOR | 1 | 循环内多个 `continue` |
 | `java:S3077` | MINOR | 1 | `volatile Map`（不可变快照，正确写法） |
 | `javascript:S1481` | MINOR | 1 | 解构排除字段 `_token`（有意保留） |
-| `Web:MouseEventWithoutKeyboardEquivalent` | MINOR | 1 | Vue `@keyup.enter` 不被识别（误报） |
+| `Web:MouseEventWithoutKeyboardEquivalentCheck` | MINOR | 1 | Vue `@keyup.enter` 不被识别（误报） |
 | `java:S6548` | INFO | 1 | 无状态共享单例（误报） |
 
 ---
 
-## 3 已修复的 P0（保留诊断，便于复查时理解“为什么这么改”）
+## 3 P0 与阻塞项诊断（保留“为什么这么改”，便于复查）
 
 ### 3.1 `java:S2229`（BLOCKER ×2）—— 支付密码限次曾被外层事务回滚
 
@@ -133,7 +134,7 @@
 
 ### 4.1 `java:S6809`（14 条）—— 自调用，但传播行为相同
 
-抓的全是 `@Transactional` 的 `xxxScoped(...)` 内部调用继承自 `BaseService` 的 `add/update/delete/deleteBatch`。
+抓的全是带 `@Transactional` 的业务方法（`*Scoped` / `deleteGuarded`）内部调用继承自 `BaseService` 的 `add/update/delete/deleteBatch`。
 这些基类方法都是 `REQUIRED`，外层事务已存在，**行为正确**；与 §3.1 那个 `REQUIRES_NEW` 不是一回事（那两处已随 BL-50 消失，`PayPasswordService` 的 2 条也已清零）。
 **建议**：不必逐条改（收益低、翻动面大）；若要消警，在基类方法上注明「允许自调用，传播行为与调用方一致」，或统一改为直接调 mapper。
 
@@ -157,8 +158,8 @@
 | `Web:S6819` | 8 | `role="group"/"button"/"img"/"status"`；Element Plus 场景下多为可接受，至少 `manage/Film.vue:205` 的 `div role="button"` 建议换 `<button>`（需产品/样式确认） |
 | `javascript:S3776` | 2 | `views/front/FilmDetail.vue:291`（23）、`views/manage/Film.vue:369`（18）。可拆函数，非缺陷 |
 | `javascript:S1481` | 1 | `back/Person.vue:68` `_token` 解构排除字段 —— **误报**（有意保留，注释已说明） |
-| `Web:MouseEventWithoutKeyboardEquivalent` | 1 | `manage/Film.vue:205` —— **误报**：模板已有 `@keyup.enter`，Sonar 不识别 Vue 指令 |
-| `javascript:S5852` | 2（热点） | `BuyTicket.vue:373/488` 的 `/(\d+)排/`、`/排(\d+)座/`。输入是服务端生成的座位标签（长度 ≤ 十余字符），**无 DoS 面**；可不改 |
+| `Web:MouseEventWithoutKeyboardEquivalentCheck` | 1 | `manage/Film.vue:205` —— **误报**：模板已有 `@keyup.enter`，Sonar 不识别 Vue 指令 |
+| `javascript:S5852` | 2（热点） | `BuyTicket.vue:338–339`、`:496–497` 两处座位标签解析中的 `/(\d+)排/`、`/排(\d+)座/`。输入是服务端生成的座位标签（长度 ≤ 十余字符），**无 DoS 面**；可不改 |
 
 前端没有发现 `v-html`、`eval`、硬编码密钥一类的安全问题。
 
@@ -172,7 +173,7 @@
 | `S2229` 自调用使 `REQUIRES_NEW` 失效 | **BL-50** | **已修复**（TransactionTemplate） |
 | `S2245` 取票码非加密随机数 | **BL-51** | **已修复**（SecureCodes） |
 | `S1874` 弃用异常 | **BL-52** | **已修复**（父类型 + 两参构造器） |
-| `S2259` TMDB 空 body | 本报告 §4.1（原） | **已修复** + 守卫测试 |
+| `S2259` TMDB 空 body | 本报告 §0.2（第二轮清理） | **已修复** + 守卫测试 |
 | `S1192`/`S1128`/`S6213`/`S3863`/`S6068`/`S5838` | 清理项 | **已清零** |
 | 前端 12 条 | `audit/frontend-audit.md` | 建议登记 FE-67 起（复杂度/ARIA） |
 
@@ -184,7 +185,7 @@
 2. **`S3776`（2 条）**：`FilmDetail.vue` 的详情加载与 `manage/Film.vue` 的导入流程可拆成 2–3 个小函数；属可维护性，不是缺陷。
 3. **`S6809`（14 条）**：批量消警收益低，建议在 `BaseService` 一处注释说明，不做逐条改动。
 4. **`S1172`/`S3011`/`S135`**：保留现状并注明理由，或按上表替换为框架工具。
-5. **4 条误报**（`S2276`/`S3077`/`S6548`/MouseEvent）：在 Sonar 面板标记 `Won't Fix` 并写理由，避免下一轮重复审查。
+5. **5 条误报**（`S2276`/`S3077`/`S6548`/`S1481`/MouseEvent）：在 Sonar 面板标记 `Won't Fix` 并写理由，避免下一轮重复审查。
 6. **安全专项仍是主线**：SEC-01（充值回调无验签）、SEC-02（JWT 密钥硬编码）、SEC-03（明文回退）未修，优先级高于本报告剩余全部条目。
 
 ---
@@ -202,13 +203,14 @@ cd xm_film/springboot
 mvn -o -DskipTests test-compile
 mvn -o dependency:build-classpath -Dmdep.outputFile=cp.txt
 
-# 3) 在仓库根放一个扫描用 POM（仅本次，用完删除），关键属性：
+# 3) 回到仓库根，在根目录放一个扫描用 POM（仅本次，用完删除），关键属性：
 #    sonar.sources        = xm_film/springboot/src/main/java,xm_film/vue/src
 #    sonar.tests          = xm_film/springboot/src/test/java
 #    sonar.java.binaries  = xm_film/springboot/target/classes
 #    sonar.java.test.binaries = xm_film/springboot/target/test-classes
 #    sonar.java.libraries / sonar.java.test.libraries = cp.txt 内容（逗号分隔）
 #    sonar.exclusions     = **/node_modules/**,**/dist/**
+cd ../..
 mvn -f scan-pom.xml org.sonarsource.scanner.maven:sonar-maven-plugin:4.0.0.4121:sonar \
   -Dsonar.host.url=http://localhost:9000 -Dsonar.token=<local-token>
 
@@ -277,7 +279,7 @@ docker stop sonarqube && docker rm sonarqube
 - `common/OrderStatusCriteria.java:28`
 
 ### 安全热点（2 条，未计入问题数）
-- `javascript:S5852` `vue/views/front/BuyTicket.vue:373`
-- `javascript:S5852` `vue/views/front/BuyTicket.vue:488`
+- `javascript:S5852` `vue/views/front/BuyTicket.vue:338`
+- `javascript:S5852` `vue/views/front/BuyTicket.vue:496`
 
 > 两条均为无锚点正则的 O(n²) 理论风险；输入是服务端生成的座位标签，长度受控，无 DoS 面。已在人工复核中判定为安全。
