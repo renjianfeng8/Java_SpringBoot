@@ -202,16 +202,20 @@ const load = async () => {
   }
 };
 
-// 翻页只重取列表，影片头部不动
+// 翻页只重取列表，影片头部不动；连点页码时只让最后一次响应落地
+let listSeq = 0;
+
 const refetchMarks = async () => {
+  const seq = ++listSeq;
   listLoading.value = true;
   listError.value = false;
   try {
     await loadMarks();
   } catch (error) {
+    if (seq !== listSeq) return;
     listError.value = true;
   } finally {
-    listLoading.value = false;
+    if (seq === listSeq) listLoading.value = false;
   }
 };
 

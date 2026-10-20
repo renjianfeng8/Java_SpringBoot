@@ -251,6 +251,8 @@ const fetchFilmFullInfo = () => {
       });
 };
 
+let loadSeq = 0;
+
 // 6. 核心功能：加载“当前电影上映的影院”（与后端接口参数严格对齐）
 const loadCinemaList = () => {
   // 前置校验：电影ID无效不发起请求
@@ -260,6 +262,7 @@ const loadCinemaList = () => {
     return;
   }
 
+  const seq = ++loadSeq;
   loading.value = true;
   // 发起请求：携带 pageNum、pageSize、filmId 三个参数（与后端Controller参数对齐）
   request.get(apiPage(API_PATHS.CINEMAS), {
@@ -270,6 +273,7 @@ const loadCinemaList = () => {
     }
   })
       .then(res => {
+        if (seq !== loadSeq) return;
         if (isSuccess(res) && res.data) {
           // 后端返回PageInfo对象，提取list和total（与后端Service返回的PageInfo对齐）
           cinemaData.filmData = res.data.list || [];
@@ -282,13 +286,14 @@ const loadCinemaList = () => {
         }
       })
       .catch(err => {
+        if (seq !== loadSeq) return;
         const errMsg = `网络异常：${err.message || '无法加载影院列表'}`;
         ElMessage.error(errMsg);
         cinemaData.filmData = [];
         cinemaData.total = 0;
       })
       .finally(() => {
-        loading.value = false; // 无论成功失败，关闭加载状态
+        if (seq === loadSeq) loading.value = false; // 无论成功失败，关闭加载状态
       });
 };
 

@@ -75,15 +75,20 @@ const formatTime = (time: string | number | undefined) => {
   return `${year}-${month}-${day} ${hour}:${minute}`;
 };
 
+let loadSeq = 0;
+
 const load = () => {
+  const seq = ++loadSeq;
   request.get(apiPage(API_PATHS.NOTICES), {
     params: { pageNum: data.pageNum, pageSize: data.pageSize }
   }).then(res => {
+    if (seq !== loadSeq) return;
     if (res && res.data) {
       data.tableData = res.data.list || [];
       data.total = res.data.total || 0;
     }
   }).catch(error => {
+    if (seq !== loadSeq) return;
     console.error("加载公告失败:", error);
     ElMessage.error("公告加载失败，请稍后重试");
   });

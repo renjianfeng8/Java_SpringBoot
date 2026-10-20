@@ -128,7 +128,10 @@ const data = reactive({
   error: false
 })
 
+let loadSeq = 0;
+
 const load = () => {
+  const seq = ++loadSeq;
   data.loading = true;
   request.get(apiPage(API_PATHS.FILMS), {
     params: {
@@ -140,6 +143,7 @@ const load = () => {
       status: data.statusFlag
     }
   }).then(res => {
+    if (seq !== loadSeq) return;
     if (isSuccess(res)) {
       data.filmData = res.data.list
       data.total = res.data.total
@@ -152,13 +156,14 @@ const load = () => {
       data.total = 0
     }
   }).catch(err => {
+    if (seq !== loadSeq) return;
     // 网络异常的统一提示由 request.js 的响应拦截器给出，这里只落错误态
     console.error('电影列表接口请求异常：', err)
     data.error = true
     data.filmData = []
     data.total = 0
   }).finally(() => {
-    data.loading = false
+    if (seq === loadSeq) data.loading = false
   })
 }
 

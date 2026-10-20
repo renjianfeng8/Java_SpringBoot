@@ -148,7 +148,10 @@ const data = reactive({
   status: undefined
 });
 
+let loadSeq = 0;
+
 const load = () => {
+  const seq = ++loadSeq;
   return request.get(apiPage(API_PATHS.ORDERS), {
     params: {
       pageNum: data.pageNumber,
@@ -157,11 +160,13 @@ const load = () => {
       status: data.status
     }
   }).then(res => {
+    if (seq !== loadSeq) return;
     if (res && res.data) {
       data.tableData = res.data.list || [];
       data.total = res.data.total || 0;
     }
   }).catch(error => {
+    if (seq !== loadSeq) return;
     console.error('加载数据失败:', error);
     ElMessage.error('加载数据失败，请重试');
   });
