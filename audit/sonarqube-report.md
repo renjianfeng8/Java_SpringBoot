@@ -1,0 +1,350 @@
+# SonarQube 扫描报告（2026-10-20）
+
+> 环境：SonarQube 10.7.0.96327（Community，Docker）· 规则集 `Sonar way`（默认）
+> 分析器：Java 8.2 · JavaScript/TypeScript/CSS 10.16 · XML 2.10
+> 基线：`master` @ `0ff8331c`（工作区干净）
+> 范围：`xm_film/springboot/src/main/java`、`src/test/java`、`xm_film/vue/src`；排除 `node_modules/`、`dist/`
+> **状态**：第一轮基线 **74** 条；P0 三条修复后复扫 **69** 条（见 §0.1）。
+
+---
+
+## 0 一页纸
+
+| 指标 | 基线（修复前） | 复扫（修复后） |
+| --- | --- | --- |
+| 文件数 | 251 | 253 |
+| ncloc | 20,509 | 20,595 |
+| 复杂度 / 认知复杂度 | 2,442 / 1,495 | 2,459 / 1,500 |
+| 重复率 | 1.7%（22 块 / 457 行） | 1.7%（22 块 / 457 行） |
+| 注释率 | 9.6% | 9.7% |
+| 技术债 | 402 分钟 | **392 分钟**（约 6.5 小时） |
+| 评级 | 可靠性 **E** · 安全 **E** · 可维护性 **A** | 可靠性 **E** · 安全 **A** · 可维护性 **A** |
+| 问题总数 | 74（后端 54 / 前端 20） | **69**（后端 49 / 前端 20；主代码 51 / 测试 18） |
+| 级别分布 | BLOCKER 4 · CRITICAL 8 · MAJOR 36 · MINOR 25 · INFO 1 | BLOCKER 1 · CRITICAL 8 · MAJOR 34 · MINOR 25 · INFO 1 |
+| 类型分布 | BUG 8 · 漏洞 1 · 坏味 65 | BUG 6 · **漏洞 0** · 坏味 63 |
+| 安全热点 | 4 | **2**（均为已判定为安全的正则） |
+
+**一句话结论**：三条 P0（支付密码事务边界、硬编码默认口令、取票码随机源）已修复并补了守卫测试；安全评级由 E 回到 A。剩余 69 条里没有漏洞，可靠性 E 来自 6 条 BUG —— 其中 3 条是已核验的误报/有意为之，2 条是 TMDB 空 body 的低概率空指针，1 条是 Amap 限流里的 `Thread.sleep`（规则本身给出了错误改法）。
+
+> ⚠️ 质量门禁显示 `OK` **不代表没有问题**：该门禁只配置了「新代码违规数 = 0」，本次是基线扫描（无 Previous Version 可比），所以整体问题数不影响门禁结果。判定请看上面的级别分布。
+
+---
+
+## 0.1 本轮修复记录（2026-10-20）
+
+| 条目 | 改动 | 守卫测试 | 反证结果 |
+| --- | --- | --- | --- |
+| **BL-50 / Sonar `java:S2229`**<br>支付密码 `REQUIRES_NEW` 被自调用绕过 | `PayPasswordService` 不再用 `@Transactional`，改为复制一个 `TransactionTemplate` 并显式设 `REQUIRES_NEW`。不依赖 AOP 代理，`changePayPassword` / `verifyOldPassword` 怎么调都新开事务。 | ① `PayPasswordTransactionBoundaryTest`：真实库里开外层事务 → 输错一次 → 外层回滚 → 换连接读到计数 **1**；<br>② `PayPasswordServiceTest#verifyOldPasswordRunsInRequiresNewTransaction`：断言实际传播级别是 `REQUIRES_NEW`。 | 把传播级别改回 `REQUIRED` → 两条守卫都红（计数为 0），已确认还原。 |
+| **BL-51 / Sonar `java:S2245`**<br>取票码用 `ThreadLocalRandom` | 新增 `common/SecureCodes`（`SecureRandom`），`generatePickupCode` 改为从它取 8 位；同一工具也供导入口令使用。 | 既有 `OrderedServiceTest#payOrderGeneratesPickupCode` 继续钉 4-4 格式与字母表。 | 随机源质量无法用行为断言反证；以「唯一出处 + 代码评审」为准。 |
+| **Sonar `java:S6437`**<br>批量导入影院共用 `cinema123` | 每个账号生成独立的 12 位随机初始口令（约 70 bit 熵），库中只存 BCrypt 哈希；明文只在 `POST /cinemas/from-directory` 的 `accounts[]` 里返回一次。`insertCinema` 对空口令返回 400，不再回退默认值。后台名录页新增「账号与初始口令」弹窗 + 复制全部。 | `CinemaServiceTest` 新增/加强 3 条：明文能匹配落库哈希、不同账号口令不同、空口令被拒。 | 改回共用 `cinema123` → 3 条用例红（`expected: not equal but was: <cinema123>`），已确认还原。 |
+| **BL-52 / Sonar `java:S1874`**<br>弃用异常 | **未修**，登记待办：`DeadlockLoserDataAccessException` 应改父类型 `PessimisticLockingFailureException`。 | — | — |
+
+**回归**：`mvn -o clean test` = **396/396 通过**；`npm run build` 成功。复扫后 `java:S2229`、`java:S6437`、`java:S2245` 均为 0。
+
+---
+
+## 1 扫描口径（影响结论的三个细节）
+
+1. **Java 必须带 Maven 依赖类路径**。用根 POM 直接扫时 `sonar.java.libraries` 为空，Lombok/Spring 类型解析不到，会凭空多出 **548 条 `java:S1068`（未使用私有字段）**。本报告的结果是把 `mvn dependency:build-classpath` 的 87 个依赖注入 `sonar.java.libraries` 后得到的；同理，测试源码只有注入 `sonar.java.test.libraries` 才能正确识别 `assertThrows` 语义。
+2. **测试源码单独识别**（`sonar.tests`，42 个文件）。测试问题 18 条与主代码问题分开统计；测试里的 `S5778`（一次 lambda 多个可能抛异常的调用）在类路径完整后全部消失，说明它们此前是**类型未解析造成的误报**，不是真问题。
+3. **没有覆盖率数据**。仓库未接 JaCoCo，本次覆盖率不参与评级；「测试覆盖缺口」仍以 `audit/backend-backlog.md` 的手工结论为准。
+
+---
+
+## 2 规则维度总览（复扫）
+
+| 规则 | 级别 | 数量 | 说明 |
+| --- | --- | --- | --- |
+| `java:S6809` | MAJOR | 14 | 同类内 `this` 调用带 `@Transactional` 的方法（代理被绕过） |
+| `java:S6068` | MINOR | 8 | Mockito `eq(...)` 冗余（测试） |
+| `Web:S6819` | MAJOR | 8 | 用 ARIA `role` 代替语义标签 |
+| `java:S5838` | MINOR | 6 | AssertJ 链式断言可简化（测试） |
+| `java:S1192` | CRITICAL | 4 | 字符串字面量重复 3 次以上 |
+| `java:S1874` | MINOR | 4 | 使用已废弃 API（`DeadlockLoserDataAccessException`） |
+| `Web:AvoidCommentedOutCode` | MAJOR | 3 | Vue 模板中的注释掉代码 |
+| `java:S2259` | MAJOR | 3 | 可能的空指针解引用 |
+| `java:S6213` | MAJOR | 3 | 用受限标识符作变量/方法名（`record`） |
+| `javascript:S3776` | CRITICAL | 2 | 认知复杂度超阈值（23 / 18） |
+| `typescript:S3863` | MINOR | 2 | 同一模块重复 import |
+| 其余 12 条规则 | — | 12 | 见附录 |
+
+---
+
+## 3 已修复的 P0（保留诊断，便于复查时理解“为什么这么改”）
+
+### 3.1 `java:S2229`（BLOCKER ×2）—— 支付密码限次曾被外层事务回滚（已修复）
+
+**原位置**：`service/PayPasswordService.java:84`、`:103`
+
+`changePayPassword` 与 `verifyOldPassword` 通过 `this.checkOldPassword(...)` 调用一个标注了
+`@Transactional(propagation = REQUIRES_NEW)` 的方法。Spring 的事务代理不拦截自调用，`REQUIRES_NEW` **不会生效**。
+
+代码注释已经写明「代理会被绕过，靠入口没有外层事务、计数靠自动提交落库」，所以当时的演示路径是对的。但这是一个没有守卫的隐含前提：
+任何一天有人给调用链加上外层事务，失败次数与锁定就会随外层一起回滚，**5 次/15 分钟的支付密码锁定会静默失效**。
+
+**修复**：改用 `TransactionTemplate` 显式 `REQUIRES_NEW`，见 §0.1。现在 `checkOldPassword` 无论被谁调用都新开事务，失败计数一定提交。
+
+### 3.2 `java:S6437`（VULNERABILITY）—— 批量导入影院共用硬编码口令（已修复）
+
+**原位置**：`service/CinemaService.java:139`（常量在 `:56`，`DEFAULT_PASSWORD = "cinema123"`）
+
+名录导入创建的影院账号全部使用同一口令，用户名规则 `amap_+poiId` 可推导，且登录无失败锁定。Sonar 判为 VULNERABILITY 是准确的。
+
+**修复**：逐账号随机初始口令 + 一次性返回，见 §0.1。`insertCinema` 也不再回退默认口令（空口令 400）。
+
+### 3.3 `java:S2245`（安全热点）—— 取票码用 `ThreadLocalRandom`（已修复）
+
+**原位置**：`service/OrderedService.java:638`（`generatePickupCode`）
+
+取票码是匿名核销端点 `POST /tickets/redeem` 的**唯一凭证**。`ThreadLocalRandom` 不是密码学安全随机数，内部种子可预测；「31⁸ ≈ 8.5e11」只说明暴力枚举难，不说明不可预测。
+
+**修复**：统一走 `common/SecureCodes`（`SecureRandom`），见 §0.1。既有格式/字母表测试保持通过。
+
+### 3.4 `java:S2276`（BLOCKER）—— 结论：有意为之，不建议按规则改
+
+**位置**：`common/config/AmapConfig.java:60`
+
+规则要求「持锁时用 `wait()` 代替 `Thread.sleep()`」。这里的 `sleep` 在 `synchronized awaitSlot()` 里，**阻塞就是限流本身**：改成 `wait()` 会释放监视器，并发请求会一起通过，最小请求间隔失效。
+**判定**：误报（按意图）。可加一行说明或改 `Semaphore` 重写，但不必为规则牺牲语义。
+
+---
+
+## 4 后端其余问题
+
+### 4.1 真实但概率低：`java:S2259` ×2
+
+| 位置 | 说明 |
+| --- | --- |
+| `common/TmdbClient.java:88` | `get(uri)` 返回 `restTemplate...getBody()`，HTTP 200 + 空 body 时为 `null`，随后 `root.path(...)` 空指针 |
+| `common/TmdbClient.java:114` | 同上，`text(root, ...)` 直接解引用 |
+
+建议在 `get()` 里 `Objects.requireNonNull(body, "TMDB 返回空 body")` 并转成可读异常，或返回 `Optional`。概率低（正常 TMDB 不会空 body），但一行代码即可消除。
+
+`exception/GlobalExceptionHandler.java:117` 的第三条是**误报**：`e.getRequiredType() == null ? "?" : ...` 已做空值保护，Sonar 不跟踪「同一方法两次调用返回值一致」。改成先取局部变量即可消警，非缺陷。
+
+### 4.2 `java:S1874`（4 条，BL-52 待办）—— 弃用异常与 BL-47 的口径不一致
+
+`CinemaService.java:181` 仍 `catch DeadlockLoserDataAccessException`，测试里也有 3 处引用。Spring 6 已弃用该子类，且 BL-47 的结论是「必须捕父类型 `PessimisticLockingFailureException`，否则等锁超时那半会漏成 500」。
+**建议**：主代码改为父类型，测试同步；这是**一致性缺陷**，不是纯风格。
+
+### 4.3 `java:S6809`（14 条）—— 自调用，但传播行为相同
+
+抓的全是 `@Transactional` 的 `xxxScoped(...)` 内部调用继承自 `BaseService` 的 `add/update/delete/deleteBatch`。
+这些基类方法都是 `REQUIRED`，外层事务已存在，**行为正确**；与 §3.1 那个 `REQUIRES_NEW` 不是一回事（那两处已随 BL-50 消失）。
+**建议**：不必逐条改（收益低、翻动面大）；若要消警，在基类方法上注明「允许自调用，传播行为与调用方一致」，或统一改为直接调 mapper。
+
+### 4.4 低风险清理项
+
+| 规则 | 位置 | 建议 |
+| --- | --- | --- |
+| `java:S1192` | `AmapClient.java:104/109`（`"districts"`/`"level"`）、`TmdbClient.java:80`（`"language"`）、`RoomService.java:83`（提示语） | 抽常量 |
+| `java:S6213` | `RecordController.java:36/53` 变量名 `record` | 改 `recordItem`（与 Service 一致） |
+| `java:S6213` | `test/RecordDeleteGuardTest.java:61` 方法名含 `record` | 同上 |
+| `java:S1172` | `RecordService.selectByIdScoped` 的 `role/userId` 未用 | 注释已说明「只做存在性校验」；保留签名可接受，消警可加 `@SuppressWarnings` |
+| `java:S3011` | `BaseController.java:131` 反射 `setAccessible(true)` | 有意为之；可换 `ReflectionUtils.makeAccessible` 或 `BeanWrapper` |
+| `java:S135` | `TmdbBackfillService.java:45` 循环内多个 `continue` | 低优先 |
+| `java:S1128` | `OrderStatusCriteria.java:7` 多余 import | 一行删除 |
+| `java:S6548` | `OrderStatusCriteria.java:29` 单例告警 | 误报：无状态共享实例，注释已解释 |
+| `java:S3077` | `TmdbClient.java:52` `volatile Map` | 误报：`Map.copyOf` 不可变快照 + volatile 发布，是正确写法 |
+
+### 4.5 测试代码（18 条，均为风格）
+
+`S6068` 8 条（`eq(...)` 冗余）、`S5838` 6 条（`isNotNegative()/isZero()/hasToString()` 等）、`S1874` 3 条、`S6213` 1 条。建议在下一轮测试整理时顺手清掉，不建议单独开一轮。
+
+---
+
+## 5 前端（20 条）
+
+| 规则 | 数量 | 位置与判断 |
+| --- | --- | --- |
+| `javascript:S3776` | 2 | `views/front/FilmDetail.vue:291`（23）、`views/manage/Film.vue:369`（18）。可拆函数，非缺陷 |
+| `javascript:S2004` | 1 | `views/front/BuyTicket.vue:371` 嵌套 4 层，建议抽 `parseSeatLabel()` |
+| `Web:S6819` | 8 | `role="group"/"button"/"img"/"status"`；Element Plus 场景下多为可接受，至少 `manage/Film.vue:205` 的 `div role="button"` 建议换 `<button>` |
+| `Web:AvoidCommentedOutCode` | 3 | `manage/Cinema.vue:112`、`front/Home.vue:35`、`front/Pickup.vue:39`，删除或改成说明文字 |
+| `typescript:S3863` | 2 | `views/back/Room.vue:75/80` 两次 `import ... from '@/constants'`，合并即可（真实小问题） |
+| `javascript:S3358` | 1 | `CinemaDetail.vue:246` 嵌套三元 |
+| `javascript:S3735` | 1 | `front/Home.vue:328` `void` 运算符 |
+| `javascript:S1481` | 1 | `back/Person.vue:68` `_token` 解构排除字段 —— **误报**（有意保留，注释已说明） |
+| `javascript:S5852` | 2（热点） | `BuyTicket.vue:373/488` 的 `/(\d+)排/`、`/排(\d+)座/`。理论上是无锚点正则的最坏 O(n²)，但输入是服务端生成的座位标签（长度 ≤ 十余字符），**无 DoS 面**；可不改 |
+| `Web:MouseEventWithoutKeyboardEquivalent` | 1 | `manage/Film.vue:205` —— **误报**：模板已有 `@keyup.enter`，Sonar 不识别 Vue 指令 |
+
+前端没有发现 `v-html`、`eval`、硬编码密钥一类的安全问题。
+
+---
+
+## 6 与债务/安全清单的映射
+
+| 本次发现 | 对应条目 | 状态 |
+| --- | --- | --- |
+| `S6437` 硬编码默认口令 | 原安全章节「连带发现」第 3 条 | **已修复**（逐账号随机口令，一次性返回） |
+| `S2229` 自调用使 `REQUIRES_NEW` 失效 | **BL-50** | **已修复**（TransactionTemplate） |
+| `S2245` 取票码非加密随机数 | **BL-51** | **已修复**（SecureCodes） |
+| `S1874` 弃用异常 | **BL-52** | 待办 |
+| `S1192` 字面量重复 | BL-13/14/15/16（去重专项，已完成） | 列为同专项的残留 |
+| `S6809` 自调用 | BL-07（`super.update` 委派） | 不构成缺陷，作说明即可 |
+| 前端 20 条 | `audit/frontend-audit.md` | 建议登记 FE-67 起（复杂度/重复 import/ARIA） |
+
+---
+
+## 7 建议顺序（剩余）
+
+1. **下一轮**：`S2259`（TmdbClient 空 body）、`S1874`（弃用异常对齐 BL-47 / BL-52）。
+2. **顺手清理**：`S1128`、`S3863`、`S1192`、`S6213`、`RoomService` 提示语常量；前端注释代码与重复 import。
+3. **可选**：`S6809` 批量消警（收益低）、`S6819` 无障碍改造（需产品确认）。
+4. **安全专项仍是主线**：SEC-01（充值回调无验签）、SEC-02（JWT 密钥硬编码）、SEC-03（明文回退）未修，优先级高于本报告剩余全部条目。
+
+---
+
+## 8 如何复现
+
+```bash
+# 1) 启动（Docker Hub 不可达时用镜像站，首次约 817MB）
+docker run -d --name sonarqube -p 9000:9000 \
+  -e SONAR_ES_BOOTSTRAP_CHECKS_DISABLE=true \
+  docker.m.daocloud.io/library/sonarqube:10.7-community
+
+# 2) 后端编译 + 生成依赖类路径
+cd xm_film/springboot
+mvn -o -DskipTests test-compile
+mvn -o dependency:build-classpath -Dmdep.outputFile=cp.txt
+
+# 3) 在仓库根放一个扫描用 POM（仅本次，用完删除），关键属性：
+#    sonar.sources        = xm_film/springboot/src/main/java,xm_film/vue/src
+#    sonar.tests          = xm_film/springboot/src/test/java
+#    sonar.java.binaries  = xm_film/springboot/target/classes
+#    sonar.java.test.binaries = xm_film/springboot/target/test-classes
+#    sonar.java.libraries / sonar.java.test.libraries = cp.txt 内容（逗号分隔）
+#    sonar.exclusions     = **/node_modules/**,**/dist/**
+mvn -f scan-pom.xml org.sonarsource.scanner.maven:sonar-maven-plugin:4.0.0.4121:sonar \
+  -Dsonar.host.url=http://localhost:9000 -Dsonar.token=<local-token>
+
+# 4) 用完清理
+docker stop sonarqube && docker rm sonarqube
+```
+
+本次的 `scan-pom.xml` 与 `cp.txt` 是临时文件，已删除，未提交。
+
+---
+
+## 附录：全部问题清单（复扫 69 条，按规则分组）
+
+### `java:S2276`（BLOCKER / BUG，1 条）
+- `common/config/AmapConfig.java:60`
+
+### `javascript:S3776`（CRITICAL / CODE_SMELL，2 条）
+- `vue/views/front/FilmDetail.vue:291`
+- `vue/views/manage/Film.vue:369`
+
+### `java:S1192`（CRITICAL / CODE_SMELL，4 条）
+- `common/AmapClient.java:104`
+- `common/AmapClient.java:109`
+- `service/RoomService.java:83`
+- `common/TmdbClient.java:80`
+
+### `javascript:S2004`（CRITICAL / CODE_SMELL，1 条）
+- `vue/views/front/BuyTicket.vue:371`
+
+### `javascript:S3735`（CRITICAL / CODE_SMELL，1 条）
+- `vue/views/front/Home.vue:328`
+
+### `java:S6809`（MAJOR / CODE_SMELL，14 条）
+- `service/CinemaService.java:272`
+- `service/FilmService.java:134`
+- `service/RecordService.java:220`
+- `service/RecordService.java:249`
+- `service/RecordService.java:264`
+- `service/RecordService.java:279`
+- `service/RoomService.java:91`
+- `service/RoomService.java:113`
+- `service/RoomService.java:122`
+- `service/RoomService.java:135`
+- `service/UserService.java:162`
+- `service/UserService.java:167`
+- `service/UserService.java:178`
+- `service/UserService.java:191`
+
+### `java:S2259`（MAJOR / BUG，3 条）
+- `common/TmdbClient.java:88`
+- `common/TmdbClient.java:114`
+- `exception/GlobalExceptionHandler.java:117`
+
+### `Web:S6819`（MAJOR / CODE_SMELL，8 条）
+- `vue/views/front/BuyTicket.vue:57`
+- `vue/views/front/BuyTicket.vue:113`
+- `vue/views/front/Account.vue:36`
+- `vue/views/front/Account.vue:135`
+- `vue/views/front/Cinema.vue:29`
+- `vue/views/front/Cinema.vue:47`
+- `vue/views/front/CinemaDetail.vue:85`
+- `vue/views/manage/Film.vue:205`
+
+### `Web:AvoidCommentedOutCodeCheck`（MAJOR / CODE_SMELL，3 条）
+- `vue/views/manage/Cinema.vue:112`
+- `vue/views/front/Home.vue:35`
+- `vue/views/front/Pickup.vue:39`
+
+### `java:S6213`（MAJOR / CODE_SMELL，3 条）
+- `controller/RecordController.java:36`
+- `controller/RecordController.java:53`
+- `test/RecordDeleteGuardTest.java:61`
+
+### `java:S3011`（MAJOR / CODE_SMELL，1 条）
+- `common/BaseController.java:131`
+
+### `java:S1172`（MAJOR / CODE_SMELL，1 条）
+- `service/RecordService.java:195`
+
+### `javascript:S3358`（MAJOR / CODE_SMELL，1 条）
+- `vue/views/front/CinemaDetail.vue:246`
+
+### `java:S6068`（MINOR / CODE_SMELL，8 条）
+- `test/controller/OrderedControllerTest.java:127`
+- `test/controller/RechargeControllerTest.java:141`
+- `test/controller/TicketControllerTest.java:67`
+- `test/controller/TicketControllerTest.java:117`
+- `test/PayOrderPurchasableGuardTest.java:167`
+- `test/service/TmdbServiceTest.java:258`
+- `test/service/TmdbServiceTest.java:290`
+- `test/OrderedServiceTest.java:624`
+
+### `java:S5838`（MINOR / CODE_SMELL，6 条）
+- `test/service/CinemaDirectoryImportTxBoundaryTest.java:84`
+- `test/TmdbClientTest.java:255`
+- `test/TmdbClientTest.java:269`
+- `test/StatisticsMapperLoadTest.java:36`
+- `test/StatisticsMapperLoadTest.java:48`
+- `test/StatisticsMapperLoadTest.java:64`
+
+### `java:S1874`（MINOR / CODE_SMELL，4 条）
+- `service/CinemaService.java:181`
+- `test/ExceptionMappingTest.java:69`
+- `test/ExceptionMappingTest.java:119`
+- `test/service/CinemaServiceTest.java:370`
+
+### `typescript:S3863`（MINOR / CODE_SMELL，2 条）
+- `vue/views/back/Room.vue:75`
+- `vue/views/back/Room.vue:80`
+
+### `java:S1128`（MINOR / CODE_SMELL，1 条）
+- `common/OrderStatusCriteria.java:7`
+
+### `java:S135`（MINOR / CODE_SMELL，1 条）
+- `service/TmdbBackfillService.java:45`
+
+### `java:S3077`（MINOR / BUG，1 条）
+- `common/TmdbClient.java:52`
+
+### `javascript:S1481`（MINOR / CODE_SMELL，1 条）
+- `vue/views/back/Person.vue:68`
+
+### `Web:MouseEventWithoutKeyboardEquivalentCheck`（MINOR / BUG，1 条）
+- `vue/views/manage/Film.vue:205`
+
+### `java:S6548`（INFO / CODE_SMELL，1 条）
+- `common/OrderStatusCriteria.java:29`
+
+### 安全热点（2 条，未计入问题数）
+- `javascript:S5852` `vue/views/front/BuyTicket.vue:373`
+- `javascript:S5852` `vue/views/front/BuyTicket.vue:488`
+
+> 两条均为无锚点正则的 O(n²) 理论风险；输入是服务端生成的座位标签，长度受控，无 DoS 面。已在人工复核中判定为安全。

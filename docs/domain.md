@@ -78,6 +78,8 @@
 
 **顺带纠正一处错误注释**：`insertCinema` 原写「名录导入生成的 amap_+poiId 也走这里」，实际 `importFromDirectory` 直接调 `cinemaMapper.insert`、**不经过** `insertCinema`。正是这句注释掩盖了「导入路径没有 DuplicateKey 处理」这个事实。
 
+**初始口令（2026-10-20，Sonar `java:S6437`）**：不再让导入影院共用硬编码的 `cinema123`。每个新账号生成独立的 12 位随机口令（`SecureRandom`，剔除易混字符），库中只存 BCrypt 哈希；明文只在 `POST /api/v1/cinemas/from-directory` 的响应 `accounts[]` 中返回一次，后台名录页用弹窗展示并支持「复制全部」。`insertCinema` 对空口令返回 400，不再回退默认值。**这意味着导入后必须当场保存口令**：关掉弹窗后无法再次取回，只能走改密流程。
+
 **库结构与快照同步**：新增索引已写入 `src/test/resources/db/schema.sql` 与 `inventory.tsv`，并在 `xm_film_test` 上实际添加。
 
 ## 3 订单状态机

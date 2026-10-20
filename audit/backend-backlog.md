@@ -6,9 +6,9 @@
 
 维护口径：一处事实一处归属；每条给出 `文件` 与符号，行号随改动可能漂移、以符号为准。状态分三档：待办、有意不整改（与既定政策一致，非债务）、已核验非缺陷；修复完成的条目从表中移出，在该节以「本轮修复并移出本表」一句登记。
 
-更新日期：2026-10-19（2026-10-18 复核增补）。基线：master `bfdd1c07`（清单）、`a2144fc4`（纯清理起点）；复核基线 `3112f8b7`。
+更新日期：2026-10-20（SonarQube 专项增补）。基线：master `bfdd1c07`（清单）、`a2144fc4`（纯清理起点）；复核基线 `3112f8b7`；Sonar 扫描基线 `0ff8331c`。
 
-**复核时的实测基线**：`mvn -o test` = **309/309** 通过（2026-10-18 收尾；此前长期 6 红，见 §测试隔离）。开发库 `xm-film` 已由 `springboot/demo-data.sql` 补入演示影厅、排片与账号，购票主链已实测跑通。**2026-10-19 更新为 343/343**。
+**复核时的实测基线**：`mvn -o test` = **309/309** 通过（2026-10-18 收尾；此前长期 6 红，见 §测试隔离）。开发库 `xm-film` 已由 `springboot/demo-data.sql` 补入演示影厅、排片与账号，购票主链已实测跑通。**2026-10-19 更新为 343/343；2026-10-20 更新为 396/396**（新增 Sonar 守卫用例）。
 
 ## 架构分层（2026-10-19 专项，三项均已修复）
 
@@ -81,12 +81,24 @@
 
 - `FileUploadController` 对**任意登录角色**开放、无配额（`application.yml` 单文件 50MB）—— 可反复上传填满磁盘。
 - `FileUtil` 只信客户端 `Content-Type`，不嗅探文件头 —— 可上传伪装成 png 的任意内容（**不构成 XSS**：扩展名由服务端白名单决定，且不含 svg）。
-- `CinemaService.importFromDirectory` 批量影院共用默认密码 `cinema123` 且直接 `APPROVED`，用户名规则 `amap_+poiId` 可推导。
+- ~~`CinemaService.importFromDirectory` 批量影院共用默认密码 `cinema123` 且直接 `APPROVED`，用户名规则 `amap_+poiId` 可推导。~~ **2026-10-20 已修复**：每个账号独立随机初始口令（12 位，`SecureRandom`），明文只在导入响应中返回一次；`insertCinema` 不再回退默认口令。见 §SonarQube 静态扫描。
 - 登录**无失败锁定**（只有支付密码有 5 次/15 分钟锁定），可暴力撞库。
 - 无令牌吊销：删号/改密后旧令牌 24h 内仍有效。
 - 匿名核销端点 `POST /tickets/redeem` **无速率限制**（码空间 31⁸ 不可猜，但可被刷接口）。
 
 **这一节的由来**：修完 BL-01…06 之后的自评是 93，但那一轮只验证了"数据库层会不会出问题"，没有验证"**谁能调这些接口**"。SEC-01 从归属校验看完全"正确"（USER 只能动自己的单），从资金流看却是灾难 —— **归属正确不等于授权正确**。
+
+## SonarQube 静态扫描（2026-10-20）
+
+**背景**：用 SonarQube 10.7（`Sonar way`）对 Java 主代码/测试 + Vue 全量扫描，基线 74 条问题。完整清单、逐条误报判定与复现命令见 `audit/sonarqube-report.md`；本节只登记需要跟踪的三条，其余为命名/字面量/ARIA/测试写法一类的清理项。
+
+| 编号 | 位置 | 问题 | 处置 |
+| --- | --- | --- | --- |
+| **BL-50** | service/PayPasswordService | 支付密码校验标注 `@Transactional(REQUIRES_NEW)`，却被本类 `changePayPassword` / `verifyOldPassword` 用 `this` 调用。同类自调用不经过代理，`REQUIRES_NEW` 被静默忽略；当前靠"入口没有外层事务"成立，一旦调用方进事务，失败计数与 15 分钟锁定会随回滚消失。 | **已修复**：改用 `TransactionTemplate` 显式 `REQUIRES_NEW`，不依赖 AOP 代理。守卫 `PayPasswordTransactionBoundaryTest` 用真实库证明"外层回滚后计数仍为 1"；`PayPasswordServiceTest#verifyOldPasswordRunsInRequiresNewTransaction` 钉住传播级别。反证：把传播级别改回 `REQUIRED` → 两条守卫都红（计数 0）。 |
+| **BL-51** | service/OrderedService.generatePickupCode | 取票码用 `ThreadLocalRandom`。它是匿名核销接口 `POST /tickets/redeem` 的唯一凭证，随机源可预测等于降低凭证强度；31⁸ 只说明枚举空间，不解决可预测性。 | **已修复**：新增 `common/SecureCodes`（`SecureRandom`），取票码与批量导入的初始口令共用。既有 `payOrderGeneratesPickupCode` 继续钉格式与字母表。 |
+| **BL-52** | service/CinemaService.importFromDirectory:181；test/ExceptionMappingTest、test/service/CinemaServiceTest | 仍 catch / 引用已弃用的 `DeadlockLoserDataAccessException`。BL-47 的结论是必须捕父类型 `PessimisticLockingFailureException`，否则等锁超时那一半仍会漏成 500。 | **待办**：主代码改父类型，测试同步。属口径一致性缺口，不与 P0 同轮。 |
+
+**同轮修复（原安全章节的连带发现）**：批量导入影院的硬编码口令 `cinema123` 已移除。每个新账号生成独立的 12 位随机口令，库中只存 BCrypt 哈希，明文只在 `POST /cinemas/from-directory` 的响应 `accounts[]` 里返回一次；`insertCinema` 对空口令返回 400，不再回退默认值。反证：改回共用 `cinema123` → 3 条用例红。
 
 ## 异常处理与入参（2026-10-18 专项梳理）
 

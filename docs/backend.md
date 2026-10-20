@@ -8,7 +8,7 @@
 | `HealthController` | `/api/v1/health` | 公开 | |
 | `AdminController` | `/api/v1/admins` | ADMIN_ONLY | |
 | `UserController` | `/api/v1/users` | 读登录态 / 写 ADMIN | 管理端用户 CRUD |
-| `CinemaController` | `/api/v1/cinemas` | 读公开 / 写 ADMIN | 含 `regions`、`from-directory` |
+| `CinemaController` | `/api/v1/cinemas` | 读公开 / 写 ADMIN | 含 `regions`、`from-directory`（返回一次性初始口令） |
 | `CinemaDirectoryController` | `/api/v1/cinema-directory` | ADMIN_ONLY（不限方法） | |
 | `FilmController` | `/api/v1/films` | 读公开 / 写 ADMIN | 含 box-office、mark-top、search、by-cinema |
 | `ActorController` | `/api/v1/actors` | 读公开 / 写 ADMIN | |
