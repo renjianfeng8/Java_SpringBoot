@@ -8,11 +8,12 @@ const router = createRouter({
   routes: [
     { path: '/', redirect: '/front/home' },
     {
+      // 后台外壳的门禁标在父路由上：子路由只带 name（一处漏写不会让整组裸奔）
       path: '/manage',
       component: () => import('../views/Manage.vue'),
       meta: { requiresAuth: true, roles: ['ADMIN'] },
       children: [
-        { path: 'home', meta: { name: '管理首页', title: '电影购票网站' }, component: () => import('../views/manage/Home.vue') },
+        { path: 'home', meta: { name: '管理首页', title: SITE_NAME }, component: () => import('../views/manage/Home.vue') },
         { path: 'admin', meta: { name: '管理员信息' }, component: () => import('../views/manage/Admin.vue') },
         { path: 'user', meta: { name: '用户信息' }, component: () => import('../views/manage/User.vue') },
         { path: 'password', meta: { name: '修改密码' }, component: () => import('../views/manage/Password.vue') },
@@ -46,10 +47,12 @@ const router = createRouter({
       ],
     },
     {
+      // 前台统一用同一套范式：每个子路由自带 requiresAuth + roles（或 guest）。
+      // 父路由刻意不挂门禁 —— 前台有游客页与会员页混排，父级标记会把游客页一并拦下。
       path: '/front',
       component: () => import('../views/Front.vue'),
       children: [
-        { path: 'home', meta: { guest: true, name: '首页', title: '电影购票网站', nav: { label: '首页' } }, component: () => import('../views/front/Home.vue') },
+        { path: 'home', meta: { guest: true, name: '首页', title: SITE_NAME, nav: { label: '首页' } }, component: () => import('../views/front/Home.vue') },
         { path: 'orders', meta: { requiresAuth: true, roles: ['USER'], name: '购票记录', nav: { label: '购票记录' } }, component: () => import('../views/front/Orders.vue') },
         { path: 'account', meta: { requiresAuth: true, roles: ['USER'], name: '我的账户', nav: { label: '我的账户' } }, component: () => import('../views/front/Account.vue') },
         { path: 'buyTicket', meta: { requiresAuth: true, roles: ['USER'], name: '购票' }, component: () => import('../views/front/BuyTicket.vue') },
@@ -77,6 +80,10 @@ const router = createRouter({
   ],
 })
 
+// 登录引导确认框的「在途」标志：受保护页上双击链接会重入守卫，
+// 不拦的话会叠出两个框，先应答的那个把陈旧的 next 用掉（FE-08）。
+let promptingLogin = false
+
 router.beforeEach((to, from, next) => {
   const pageTitle = to.meta.title || SITE_NAME
   if (document.title !== pageTitle) {
@@ -91,6 +98,10 @@ router.beforeEach((to, from, next) => {
     const user = getStoredUser()
     if (!user?.token || !user?.role) {
       clearStoredUser()
+      if (promptingLogin) {
+        return next(false)
+      }
+      promptingLogin = true
       ElMessageBox.confirm(LOGIN_PROMPT_MESSAGE, '提示', {
         confirmButtonText: '去登录',
         cancelButtonText: '取消',
@@ -108,6 +119,8 @@ router.beforeEach((to, from, next) => {
         } else {
           next(false)
         }
+      }).finally(() => {
+        promptingLogin = false
       })
       return
     }
