@@ -1,4 +1,4 @@
-# 前端 Vue3 代码安全与质量审计（FE-01…FE-63）
+# 前端 Vue3 代码安全与质量审计（FE-01…FE-66）
 
 > 2026-10-18 全盘复核：本文件原为仓库根的 `前端 Vue3 代码安全与质量审计报告.md`，已移入 `audit/` 并改名，`git mv` 保留了历史。复核只改动了确有出入的描述（见下），条目编号与结论未动。索引见根目录 `项目索引.md`。
 >
@@ -8,7 +8,7 @@
 
 维护口径：一处事实一处归属；每条给出 `文件` 与符号，行号随改动可能漂移、以符号为准。状态分三档：已修复、本轮登记未做、已核验非缺陷。编号 FE-xx 与后端 BL-xx 区隔。
 
-更新日期：2026-10-15。基线：master `cf83e680`（第一轮）、`7e0dcc1a`（第二轮 composables 修复）、`02527cf4`（第三轮 views/ 起点）、`1f813fa5`（契约对齐起点）、`f8b10705`（影院列表页复查起点）。
+更新日期：2026-10-21。基线：master `cf83e680`（第一轮）、`7e0dcc1a`（第二轮 composables 修复）、`02527cf4`（第三轮 views/ 起点）、`1f813fa5`（契约对齐起点）、`f8b10705`（影院列表页复查起点）、`120df194`（2026-10-21 前端未修项攻坚收尾）。
 
 ## 已修复（2026-10-14）
 
@@ -128,8 +128,8 @@
 
 | 编号 | 位置 | 问题 | 处置 |
 | --- | --- | --- | --- |
-| FE-64 | views/Back.vue 与 views/Manage.vue | 两个后台外壳 **91% 行完全相同**（`Back.vue` 150 行非空行中有 137 行也出现在 `Manage.vue` 196 行里）：logout 块、header、用户下拉、面包屑、`el-menu` 结构逐字重复，差异只在菜单数据。与 FE-50 同族但范围更大——改一处 header 行为要动两个文件。 | 合并为一个外壳 + 菜单配置（两块 `el-menu` 的差异可收成 `menuGroups` 数据）。属结构变更，另起一轮。**未做（登记备查）**。 |
-| FE-65 | views/front/Cinema.vue、Orders.vue、Movie.vue；views/back/* | FE-49 已登记"两套分页口径并存"，但未量化：这 4 个页面的 `pageNum/pageSize/total/load/handlePage` 各自手写，**请求序号守卫只在 `useCrud` 与 FE-25/26 修过的那几处**，其余仍可能旧响应覆盖新结果。 | 收敛到 `useCrud`，或至少抽出带 `loadSeq` 的 `usePagedList`。与 FE-49 同一轮处理。**未做（登记备查）**，本条只是把基数补全。 |
+| FE-64 | views/Back.vue 与 views/Manage.vue | 两个后台外壳 **91% 行完全相同**（`Back.vue` 150 行非空行中有 137 行也出现在 `Manage.vue` 196 行里）：logout 块、header、用户下拉、面包屑、`el-menu` 结构逐字重复，差异只在菜单数据。与 FE-50 同族但范围更大——改一处 header 行为要动两个文件。 | **2026-10-21 已修复**：合并为 `views/AdminShell.vue`（布局与行为一份）+ `constants/adminMenu.js`（`ADMIN_MENU` / `CINEMA_MENU`），`Back.vue` / `Manage.vue` 只剩「传菜单数据」的薄壳。下拉里的个人资料/修改密码路径由首页路径派生，不再分别写死前缀。 |
+| FE-65 | views/front/Cinema.vue、Orders.vue、Movie.vue；views/back/* | FE-49 已登记"两套分页口径并存"，但未量化：这 4 个页面的 `pageNum/pageSize/total/load/handlePage` 各自手写，**请求序号守卫只在 `useCrud` 与 FE-25/26 修过的那几处**，其余仍可能旧响应覆盖新结果。 | **2026-10-21 已修复**：新增 `composables/usePagedList.js`（分页 + 请求序号 + 越界回退 + 失败清空），`front/Orders` 与 `front/Cinema` 改用它；`back/Film`、`back/Ordered`、`back/Room`、`back/Record`、`back/Home`、`front/Movie`、`front/FilmCinema`、`manage/CinemaDirectory`、`front/FilmMarks`(翻页) 补 `loadSeq`。详见下方修复记录。 |
 | FE-66 | 全站 `res.code === '200'` | FE-19 估的是"约 101 处 / 37 文件"。实测（2026-10-18，正则 `code\s*===?\s*['"]200['"]`，`.vue` + `.js`）为 **98 处 / 35 文件**：`views/` 87、`composables/` 7（其中 `useCrud.js` 5）、`components/` 4。最多的单文件各 6 处（`back/Record.vue`、`front/Account.vue`、`manage/Film.vue`）。 | **2026-10-19 已修复**（见下）。 |
 | FE-63 复核 | 全站 el-table 表头 | 2026-10-18 复核确认「全站未做」成立；**2026-10-19 已修复**，见上表。 | 已关闭。 |
 
@@ -158,6 +158,55 @@
 `BaseController.getById` 对不存在的 id 返回 **200 + `data:null`**（实测 `GET /api/v1/films/99999999`）。
 `isSuccess` 只回答"请求成功了没有"，不回答"有没有拿到东西"，需要数据的调用方必须自己判 `res.data`。
 这一点已写进 `SUCCESS_CODE` 的注释，后端侧的契约修正另登 BL-49。
+
+## 2026-10-21 本轮修复记录（FE-57/58/59/64/65 与会话类）
+
+本轮目标是把「本轮登记未做 / 2026-10-18 全盘复核新增」里能独立落地的项一次做完。
+每条都过了 `npm run build`，能起浏览器验证的额外跑了无头 Chrome。
+
+| 条目 | 做了什么 | 验证 |
+| --- | --- | --- |
+| FE-04 / FE-06 / FE-07 | 新增 `utils/navigation.js`：`pathForRole`（角色主页）、`loginPath`（只接受站内路径）、`isPathWithin`（路径段匹配）、`SITE_NAME`；`useLoginPrompt`（游客登录引导）与 `useLogout`（退出确认）成为唯一实现；404 / Login / request.js / App.vue / FilmMarks / Front / AdminShell 全部改引用 | build + 冒烟 |
+| FE-04（补充） | `authStorage` 写入/清理时派发事件，`useAuth` 订阅它和 `storage` 事件：request.js 的 401 清理不再让 `globalUser` 停在旧值；跨标签页登出也能同步 | build |
+| FE-22 | `isLoggedIn` 只看存储里的令牌（原来还要 `!globalVerifying`），冷加载不再先闪「登录/注册」 | 冒烟：带会话直接进 `/front/orders` 不弹登录框 |
+| FE-08 | 路由守卫的登录确认框加 `promptingLogin` 在途标志，并发导航不再叠框、也不再对陈旧 `next` 作答 | build |
+| FE-10 | 站名统一为 `SITE_NAME`；`document.title` 写入前判等 | build |
+| FE-20 | `useCrud` 写入成功后显式清空 `selectedIds`，不再依赖 el-table 的 `selection-change` | build |
+| FE-21 | `useFormDialog.openEdit` 深拷贝行数据，并用默认值补齐缺键（如 Admin 的 `password`） | build |
+| FE-50 | 退出确认收进 `useLogout`，前台外壳与后台外壳共用 | build + 冒烟 |
+| FE-51 | 三个资料页表单改为跟随 `useAuth` 的权威会话；用快照判断「用户是否已改过」，未改动时才覆盖。manage/Person 只映射可编辑字段，不再整份提交 token/角色 | build |
+| FE-57 | 新增 `constants/cinemaServices.js`（key / 文案 / 图标 / 说明 / 底色类），影院列表、影院详情、选影院三处改 `v-for`，各自保留原有形状 | 冒烟：两页渲染一致、无控制台异常 |
+| FE-58 | `front-pages.scss` 新增 `.measure` / `.measure-inline` / `.measure-inline--wide`；9 处手写 `width: 60% + max-width: 1200px` 与两个页头改为引用共享类 | 产物核对：dist CSS 含 `.measure` 系列 |
+| FE-59 | 新增 `constants/nav.js`：`navItemsOf(router)` 从路由 `meta.nav` 派生导航，`isNavActive(item, path)` 走路径边界匹配；删除 `Front.vue` 里的手工 `NAV_ITEMS` | 冒烟：6 个前台路由的导航项与高亮都正确 |
+| FE-64 | `AdminShell.vue` + `adminMenu.js`，两个外壳合并 | 冒烟：后台菜单与面包屑正常 |
+| FE-65 | 新增 `usePagedList.js`；`front/Orders`、`front/Cinema` 改用它，其余列表补 `loadSeq` | 见下 |
+
+### `usePagedList` 的语义验证
+
+实现只做四件事：**只让最后一次请求落地**、**失败清空并给出错误文案**、
+**越界页回退第 1 页**、**换筛选条件回到第 1 页**。四条都用真实源码（esbuild 打包 + 桩掉 vue/request）
+在 node 里跑过断言，全绿；页面侧用无头 Chrome 伪造 `/cinemas/page`、`/orders/page`，
+确认渲染行数、分页文案与请求参数三者一致。
+
+**踩到的两个坑（写在这里防止回归）**：
+
+1. **`el-pagination` 的页码不要用 `v-model` 再在回调里 `setPage`**：`v-model` 已把新页码写进状态，
+   回调里再按「旧页码」设一次会把组件刚写的值覆盖回去。正确写法是 `:current-page` 只读绑定 +
+   `@current-change` 里按回调参数取数（`front/Cinema` 现在是这种）。受控写法实测会让
+   `currentPage` 停在 1，`el-pager` 后续渲染也跟着偏。
+2. **前台只有往上一页可见、页码只剩当前页**：这是 `el-pagination` 内部宽度分配在
+   窄容器里被压缩；`.cinema-list__pagination :deep(.el-pagination) { flex-shrink: 0 }` 兜住。
+   另外 `front/Cinema` 原来的 `layout` 缺 `sizes`，`:page-sizes` 与 `@size-change` 是死配置（FE-49 末尾记的那条），
+   现在补上了 `sizes`。
+
+### 仍未做（本轮范围外）
+
+- **FE-03 残留**：角色不符已改成回本角色主页，但「已登录用户访问 `/login`」的落地策略仍未定。
+- **FE-05**：门禁范式已在前后台各自统一（后台标父路由、前台逐子路由），但还缺一条路由表断言来防未来漏写。
+- **FE-09**：`/front` 与 login/register/404 上无消费者的 `meta.name` 仍在（现在后台面包屑用 `route.meta.name`，
+  前台这些值仍然没有读取方）。
+- **FE-19**：`isSuccess` 只收敛了字面量，失败语义下沉到拦截器属行为变更，未动。
+- **Sonar 前端剩余**：8 条 ARIA（`Web:S6819`）与 2 条 `S3776` 复杂度未处理。
 
 ## 已核验为非缺陷（防二次误报）
 
