@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="page-wide">
     <div>
       <div class="card page-card">
@@ -12,7 +12,7 @@
       </div>
 
       <div class="card page-card">
-        <el-table stripe :data="data.tableData">
+        <el-table stripe :data="rows">
           <el-table-column type="expand" min-width="60">
             <template #default="props">
               <el-descriptions title="订单信息" :column="4" border>
@@ -117,12 +117,12 @@
         <el-pagination
             @size-change="load"
             @current-change="load"
-            v-model:current-page="data.pageNumber"
-            v-model:page-size="data.pageSize"
+            v-model:current-page="state.pageNum"
+            v-model:page-size="state.pageSize"
             :page-sizes="[5, 10, 15, 20]"
             background
             layout="total, sizes, prev, pager, next, jumper"
-            :total="data.total"
+            :total="state.total"
         />
       </div>
     </div>
@@ -141,6 +141,7 @@ import request from "@/utils/request.js";
 import { ElMessage, ElMessageBox } from "element-plus";
 import OrderPayDialog from '@/components/OrderPayDialog.vue';
 import { useAuth } from '@/composables/useAuth';
+import { usePagedList } from '@/composables/usePagedList';
 
 interface MarkRow {
   id?: number;
@@ -178,11 +179,14 @@ interface Ordered {
   roomName?: string;
 }
 
-const data = reactive({
-  tableData: [] as Ordered[],
-  pageNumber: 1,
+// 取数、分页、请求序号、越界回退统一由 usePagedList 负责（与 manage/* 的 useCrud 同一口径）
+const pagination = usePagedList({
   pageSize: 10,
-  total: 0,
+  fetch: (params) => request.get(apiPage(API_PATHS.ORDERS), { params }),
+});
+const rows = pagination.items;
+const state = pagination.state;
+const data = reactive({
   orders: null,
   status: undefined
 });
@@ -194,37 +198,8 @@ const goPickupHall = () => {
   router.push('/front/pickup');
 };
 
-// 请求序号：慢的旧响应后到时不得覆盖新结果（与 useCrud.load 同一口径）
-let loadSeq = 0
-
-const load = () => {
-  const seq = ++loadSeq
-  request.get(apiPage(API_PATHS.ORDERS), {
-    params: {
-      pageNum: data.pageNumber,
-      pageSize: data.pageSize,
-      orders: data.orders,
-      status: data.status
-    }
-  }).then(res => {
-    if (seq !== loadSeq) return
-    if (res && res.data) {
-      data.tableData = res.data.list || [];
-      data.total = res.data.total || 0;
-    }
-  }).catch(error => {
-    if (seq !== loadSeq) return
-    console.error('加载数据失败:', error);
-    ElMessage.error('加载数据失败，请重试');
-  });
-}
-
-// 查询/重置都要回到第 1 页：否则在第 3 页发起筛选，过滤后 total 变小、该页为空，
-// 明明存在的订单会显示「暂无数据」
-const search = () => {
-  data.pageNumber = 1;
-  load();
-}
+const load = () => pagination.load()
+const search = () => pagination.reload({ orders: data.orders ?? undefined, status: data.status ?? undefined })
 
 const del = (id: number) => {
   ElMessageBox.confirm('删除数据后无法恢复,您确认删除吗?', '删除确认', { type: 'warning' }).then(() => {
@@ -256,7 +231,7 @@ const cancelOrder = async (id: number) => {
 const reset = () => {
   data.orders = null;
   data.status = undefined;
-  data.pageNumber = 1;
+  state.pageNum = 1;
   load();
 }
 

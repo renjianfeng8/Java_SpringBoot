@@ -140,12 +140,12 @@
         <el-pagination
             @size-change="handleSizeChange"
             @current-change="handleCurrentChange"
-            v-model:current-page="data.pageNum"
-            v-model:page-size="data.pageSize"
+            :current-page="data.pageNum"
+            :page-size="data.pageSize"
             :page-sizes="[5, 10, 15]"
             background
-            layout="total, prev, pager, next"
-            :total="data.total"
+            layout="total, sizes, prev, pager, next"
+            :total="data.total || 0"
             :disabled="data.loading"
         />
       </div>
@@ -160,19 +160,28 @@ import request from "@/utils/request.js";
 import { ElMessage } from 'element-plus';
 import { ArrowRight, Location, Phone } from '@element-plus/icons-vue';
 import { CINEMA_SERVICES, serviceToneClass } from '@/constants/cinemaServices';
+import { usePagedList } from '@/composables/usePagedList';
 import { avatarSrc, onAvatarError } from '@/utils/avatar';
 
 // 骨架条数：一屏能看到的卡片量，多了白渲染
 const SKELETON_ROWS = 4;
 
+// 只有筛选状态留在本页；分页数据交给 usePagedList（FE-49 / FE-65）。
+// `null` 表示尚未取到结果（页头显示「—」），而 usePagedList 的 total 语义是「已取到的条数」，
+// 两者必须分开，否则失败态会被渲染成「确实 0 家」。
+const list = usePagedList({
+  pageSize: 12,
+  fetch: (params) => request.get(apiPage(API_PATHS.CINEMAS), { params }),
+});
+
 const data = reactive({
   pageNum: 1,
   pageSize: 12,
-  total: null,   // null = 尚未取到结果（页头显示「—」），与「确实 0 家」区分
-  filmData: [], // 影院数据
+  total: null,
+  filmData: [],
   loading: false,
   error: false
-})
+});
 
 const query = reactive({ city: null, district: null })
 // 城市列表不再单独存一份：它就是 districtsByCity 的键。
@@ -214,59 +223,36 @@ const clearFilters = () => {
   reload()
 }
 
-const reload = () => { data.pageNum = 1; load() }
+// 换筛选条件并回到第 1 页（reload 已把页码置 1，这里只需按结果刷新模板状态）
+const reload = () => list.reload({
+  city: query.city || undefined,
+  district: query.district || undefined,
+}).then(syncState);
 
-// 请求序号：慢的旧响应后到不得覆盖新结果
-let loadSeq = 0
-
-const load = () => {
-  const seq = ++loadSeq
-  data.error = false
-  data.loading = true
-  request.get(apiPage(API_PATHS.CINEMAS), {
-    params: {
-      pageNum: data.pageNum,
-      pageSize: data.pageSize,
-      city: query.city || undefined,
-      district: query.district || undefined,
-    }
-  }).then(res => {
-    if (seq !== loadSeq) return
-    if (isSuccess(res)) {
-      data.filmData = res.data.list
-      data.total = res.data.total
-    } else {
-      // 业务码非 200 不经过响应拦截器（它只管网络/超时/HTTP 状态），故这里补一次提示
-      ElMessage.error(res.msg)
-      data.error = true
-      data.filmData = []
-      data.total = null
-    }
-  }).catch(err => {
-    if (seq !== loadSeq) return
-    // 网络与 5xx 那类失败的提示由 request.js 的响应拦截器给出，这里只落错误态，
-    // 否则同一次失败会弹两次
-    console.error(err)
-    data.error = true
-    // 清掉上一次的结果，否则错误提示下面还挂着旧筛选的影院卡片
-    data.filmData = []
-    data.total = null
-  }).finally(() => {
-    // 同样要过序号：被顶掉的旧请求结束时，不能把新请求的 loading 关掉
-    if (seq === loadSeq) data.loading = false
-  })
+// 把 usePagedList 的状态同步到模板用的 data：
+// 成功即覆盖；失败清空并把总数置回 null（未取到结果），避免被渲染成「确实 0 家」
+function syncState() {
+  data.pageNum = list.state.pageNum;
+  data.pageSize = list.state.pageSize;
+  data.loading = list.state.loading;
+  if (list.state.error) {
+    // 业务码非 200 不经过响应拦截器（它只管网络/超时/HTTP 状态），故这里补一次提示
+    ElMessage.error(list.state.error);
+    data.error = true;
+    data.filmData = [];
+    data.total = null;
+    return;
+  }
+  data.error = false;
+  data.filmData = [...list.items.value];
+  data.total = list.state.total;
 }
 
-const handleSizeChange = (newSize) => {
-  data.pageSize = newSize;
-  data.pageNum = 1; // 重置为第一页
-  load();
-}
+const load = () => list.load().then(syncState);
 
-const handleCurrentChange = (newPage) => {
-  data.pageNum = newPage;
-  load();
-};
+// v-model 已把页码/条数写进 list.state，这里只需按新值取数
+const handleSizeChange = () => list.load().then(syncState);
+const handleCurrentChange = () => list.load().then(syncState);
 
 loadRegions()
 load()
@@ -516,5 +502,11 @@ load()
   display: flex;
   justify-content: center;
   margin-top: var(--space-24);
+  max-width: 100%;
+}
+
+/* 分页器不参与 flex 压缩：页数多时内部宽度分配会被挤到只显示当前页 */
+.cinema-list__pagination :deep(.el-pagination) {
+  flex-shrink: 0;
 }
 </style>
