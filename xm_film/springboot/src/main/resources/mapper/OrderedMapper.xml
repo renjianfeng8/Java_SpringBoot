@@ -77,7 +77,7 @@
         SELECT COUNT(*) FROM ordered
         WHERE user_id = #{userId}
           AND film_id = #{filmId}
-          AND status = #{pickedUp}
+          AND status = #{s.pickedUp}
     </select>
 
     <!-- 座位占用的唯一判定：已取消/已退票都不再锁座；待支付仅在未超时时锁座。

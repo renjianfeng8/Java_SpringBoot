@@ -12,6 +12,7 @@ import com.example.springboot.service.AuthService;
 import com.example.springboot.service.CinemaService;
 import com.example.springboot.service.UserService;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.jsonwebtoken.Claims;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -22,8 +23,11 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -49,8 +53,46 @@ class GlobalExceptionHandlerTest {
     @MockBean
     JwtUtils jwtUtils;
 
-    // ========== 参数校验测试 ==========
+    /** 让真实拦截器放行，同时把登录态交给控制器；中间件本身由 AuthInterceptorAccessTest 覆盖 */
+    private void authenticateAs(String role) {
+        Claims claims = mock(Claims.class);
+        when(claims.get("role", String.class)).thenReturn(role);
+        when(claims.getSubject()).thenReturn("1");
+        when(jwtUtils.parseToken("test-token")).thenReturn(claims);
+    }
 
+    @Test
+    void passwordResetRejectsNonAdmin() throws Exception {
+        authenticateAs(RoleEnum.USER.name());
+        String body = """
+                {"id":7,"role":"USER","newPassword":"123456"}
+                """;
+
+        mockMvc.perform(put("/api/v1/auth/password/reset")
+                        .header("Authorization", "Bearer test-token")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("403"));
+    }
+
+    @Test
+    void passwordResetRoutesTargetRoleForAdmin() throws Exception {
+        authenticateAs(RoleEnum.ADMIN.name());
+        String body = """
+                {"id":7,"role":"USER","newPassword":"123456"}
+                """;
+
+        mockMvc.perform(put("/api/v1/auth/password/reset")
+                        .header("Authorization", "Bearer test-token")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("200"));
+        verify(userService).resetPassword(7, "123456");
+    }
+
+    // ========== 参数校验测试 ==========
     @Test
     void loginRejectsBlankUsernameWithParamInvalidCode() throws Exception {
         String body = """

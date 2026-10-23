@@ -61,7 +61,7 @@ class TmdbBackfillServiceTest {
 
     @Test
     void backfillsTrailerForFilmWithBlankVideo() {
-        when(filmMapper.selectAll(any()))
+        when(filmMapper.selectMissingVideo())
                 .thenReturn(List.of(film(2, "肖申克的救赎", "The Shawshank Redemption", "1994-09-23")));
         when(client.search("The Shawshank Redemption"))
                 .thenReturn(List.of(hit("肖申克的救赎", "The Shawshank Redemption", "1994")));
@@ -86,7 +86,7 @@ class TmdbBackfillServiceTest {
     void skipsFilmThatAlreadyHasVideo() {
         Film existing = film(38, "熊出没·年年有熊", "熊出没·年年有熊", "2026-02-17");
         existing.setVideo("https://www.youtube.com/embed/er2f1HxbIyg");
-        when(filmMapper.selectAll(any())).thenReturn(List.of(existing));
+        when(filmMapper.selectMissingVideo()).thenReturn(List.of(existing));
 
         TmdbBackfillView result = service.backfillVideos();
 
@@ -99,7 +99,7 @@ class TmdbBackfillServiceTest {
 
     @Test
     void reportsNoMatchWhenTmdbHasNoExactTitleAndYear() {
-        when(filmMapper.selectAll(any()))
+        when(filmMapper.selectMissingVideo())
                 .thenReturn(List.of(film(2, "肖申克的救赎", "The Shawshank Redemption", "1994-09-23")));
         when(client.search(anyString())).thenReturn(List.of(hit("别的电影", "Some Other Movie", "1994")));
 
@@ -115,7 +115,7 @@ class TmdbBackfillServiceTest {
 
     @Test
     void reportsNoTrailerWhenMatchedFilmHasNoYouTubeTrailer() {
-        when(filmMapper.selectAll(any()))
+        when(filmMapper.selectMissingVideo())
                 .thenReturn(List.of(film(2, "肖申克的救赎", "The Shawshank Redemption", "1994-09-23")));
         when(client.search(anyString()))
                 .thenReturn(List.of(hit("肖申克的救赎", "The Shawshank Redemption", "1994")));
@@ -132,7 +132,7 @@ class TmdbBackfillServiceTest {
     /** 片名相同但年份对不上视为不匹配 —— 否则会给 1994 版配到翻拍版的预告片 */
     @Test
     void doesNotMatchWhenYearDiffers() {
-        when(filmMapper.selectAll(any()))
+        when(filmMapper.selectMissingVideo())
                 .thenReturn(List.of(film(2, "肖申克的救赎", "The Shawshank Redemption", "1994-09-23")));
         when(client.search(anyString())).thenReturn(List.of(hit("翻拍版", "The Shawshank Redemption", "2020")));
 
@@ -145,7 +145,7 @@ class TmdbBackfillServiceTest {
     /** 一部片请求失败不该拖垮整批：失败的记一笔，其余继续补 */
     @Test
     void oneFailureDoesNotAbortTheRest() {
-        when(filmMapper.selectAll(any())).thenReturn(List.of(
+        when(filmMapper.selectMissingVideo()).thenReturn(List.of(
                 film(2, "肖申克的救赎", "The Shawshank Redemption", "1994-09-23"),
                 film(3, "千与千寻", "千と千尋の神隠し", "2001-07-20")));
         when(client.search("The Shawshank Redemption")).thenThrow(new RestClientException("boom"));

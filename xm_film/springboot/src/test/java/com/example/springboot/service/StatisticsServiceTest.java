@@ -54,7 +54,7 @@ class StatisticsServiceTest {
         when(orderedMapper.selectTodayPaidRevenue())
                 .thenReturn(today(new BigDecimal("12840.00"), "2026-10-07 14:32:10"));
         when(orderedMapper.countTodayPaidOrders()).thenReturn(96);
-        when(orderedMapper.countByStatus("待取票")).thenReturn(12);
+        when(orderedMapper.countGroupByStatus()).thenReturn(List.of(grouped("待取票", 12L)));
         when(orderedMapper.selectPaidRevenueByDay(any(), any())).thenReturn(List.of());
         when(userMapper.countAll()).thenReturn(1024);
 
@@ -66,7 +66,7 @@ class StatisticsServiceTest {
         assertEquals(3L, summary.get("pendingCinemas"));
         assertEquals(1024, summary.get("totalUsers"));
         assertEquals(96, summary.get("todayOrders"));
-        assertEquals(12, summary.get("pendingPickupOrders"));
+        assertEquals(12L, summary.get("pendingPickupOrders"));
         assertEquals(new BigDecimal("12840.00"), summary.get("todayRevenue"));
         // 统计时刻与今日票房同源：页面上不会出现两个「今天」
         assertEquals("2026-10-07 14:32:10", result.get("updatedAt"));
@@ -83,7 +83,6 @@ class StatisticsServiceTest {
         when(filmMapper.countGroupByType()).thenReturn(List.of());
         when(orderedMapper.selectTodayPaidRevenue()).thenReturn(today(BigDecimal.ZERO, "2026-10-07 14:32:10"));
         when(orderedMapper.countTodayPaidOrders()).thenReturn(0);
-        when(orderedMapper.countByStatus("待取票")).thenReturn(0);
         when(orderedMapper.selectPaidRevenueByDay(any(), any())).thenReturn(List.of());
         when(userMapper.countAll()).thenReturn(0);
         when(orderedMapper.countGroupByStatus()).thenReturn(List.of(
@@ -142,7 +141,6 @@ class StatisticsServiceTest {
         when(filmMapper.countGroupByType()).thenReturn(List.of());
         when(orderedMapper.selectTodayPaidRevenue()).thenReturn(today(BigDecimal.ZERO, "2026-10-07 14:32:10"));
         when(orderedMapper.countTodayPaidOrders()).thenReturn(0);
-        when(orderedMapper.countByStatus("待取票")).thenReturn(0);
         when(orderedMapper.selectPaidRevenueByDay(any(), any())).thenReturn(List.of());
         when(userMapper.countAll()).thenReturn(0);
 

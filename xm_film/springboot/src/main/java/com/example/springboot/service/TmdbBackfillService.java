@@ -37,7 +37,7 @@ public class TmdbBackfillService {
     }
 
     public TmdbBackfillView backfillVideos() {
-        List<Film> films = filmMapper.selectAll(new Film());
+        List<Film> films = filmMapper.selectMissingVideo();
         List<TmdbBackfillView.Miss> missed = new ArrayList<>();
         int scanned = 0;
         int updated = 0;

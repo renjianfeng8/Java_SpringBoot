@@ -2,6 +2,7 @@ package com.example.springboot.service;
 
 import com.example.springboot.common.BaseMapper;
 import com.example.springboot.common.BaseService;
+import com.example.springboot.common.OrderStatusCriteria;
 import com.example.springboot.common.enums.ErrorCode;
 import com.example.springboot.common.enums.RoleEnum;
 import com.example.springboot.dto.response.FilmMarksView;
@@ -73,7 +74,8 @@ public class MarkService extends BaseService<Mark> {
         // 直接 POST /api/v1/marks 能给任何没买过票的影片打分。此处补上服务端门禁。
         // 已取票是终态（退票与删除都进不来），因此这个资格一旦成立不会被推翻，
         // 修改评价时无需重复校验。
-        if (orderedMapper.countPickedUpByUserAndFilm(mark.getUserId(), mark.getFilmId()) == 0) {
+        if (orderedMapper.countPickedUpByUserAndFilm(mark.getUserId(), mark.getFilmId(),
+                OrderStatusCriteria.INSTANCE) == 0) {
             throw new CustomException(ErrorCode.BUSINESS_CONFLICT,
                     "请先取票后再评价：只能评价自己已取票场次对应的影片");
         }
@@ -182,7 +184,8 @@ public class MarkService extends BaseService<Mark> {
         long total = new PageInfo<>(list).getTotal();
         MarkView my = isUser ? markMapper.selectFilmMarkOfUser(filmId, viewer) : null;
         // reviewable 只表示"够格发表"（已取票）；是否已评过由 my != null 回答
-        boolean reviewable = isUser && orderedMapper.countPickedUpByUserAndFilm(viewerId, filmId) > 0;
+        boolean reviewable = isUser && orderedMapper.countPickedUpByUserAndFilm(viewerId, filmId,
+                OrderStatusCriteria.INSTANCE) > 0;
         return new FilmMarksView(total, reviewable, my, list);
     }
 

@@ -62,26 +62,28 @@ public class StatisticsService {
         result.put("filmType", filmMapper.countGroupByType());
         // 三组分布同构：都是「维度值 → 计数」的原样分组，后端不派生、不排序、
         // 不补零，给什么维度值就是什么，由前端按自己的枚举补全并着色。
-        result.put("orderStatus", orderedMapper.countGroupByStatus());
+        List<NameValueView> orderStatus = orderedMapper.countGroupByStatus();
+        result.put("orderStatus", orderStatus);
         // 统计时刻取自今日票房那次查询：同一次观测，页面上只有一个「今天」
         result.put("updatedAt", today.getUpdatedAt());
-        result.put("summary", summary(today, cinemaStatus));
+        result.put("summary", summary(today, cinemaStatus, orderStatus));
         result.put("revenueTrend", revenueTrend(TREND_DAYS));
         return result;
     }
 
     /**
-     * 影院总数与待审核数由 cinemaStatus 派生 —— 同一份响应里已有的分组结果，
-     * 不再发第二次 COUNT。重复取数会在两次数之间产生窗口，让两个数字对不上。
+     * 影院与订单的汇总数都从本轮已取回的分组结果派生 —— 不再对同一张表发第二次 COUNT。
+     * 重复取数会在两次数之间产生窗口，让同一屏的 KPI 与图表对不上。
      */
-    private Map<String, Object> summary(TodayRevenueView today, List<NameValueView> cinemaStatus) {
+    private Map<String, Object> summary(TodayRevenueView today, List<NameValueView> cinemaStatus,
+                                        List<NameValueView> orderStatus) {
         Map<String, Object> summary = new LinkedHashMap<>();
         summary.put("todayRevenue", today.getTotal());
         summary.put("todayOrders", orderedMapper.countTodayPaidOrders());
         summary.put("totalUsers", userMapper.countAll());
         summary.put("totalCinemas", sumValues(cinemaStatus));
         summary.put("pendingCinemas", countOf(cinemaStatus, UNAUDITED));
-        summary.put("pendingPickupOrders", orderedMapper.countByStatus(PENDING_PICKUP));
+        summary.put("pendingPickupOrders", countOf(orderStatus, PENDING_PICKUP));
         return summary;
     }
 

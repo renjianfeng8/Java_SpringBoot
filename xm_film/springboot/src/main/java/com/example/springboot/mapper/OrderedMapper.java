@@ -64,7 +64,8 @@ public interface OrderedMapper extends BaseMapper<Ordered> {
                            @Param("pending") String pending);
 
     /** 评价门禁：该用户对该影片是否有已取票订单（已取票是终态，一旦成立不会被推翻） */
-    int countPickedUpByUserAndFilm(@Param("userId") Integer userId, @Param("filmId") Integer filmId);
+    int countPickedUpByUserAndFilm(@Param("userId") Integer userId, @Param("filmId") Integer filmId,
+                                   @Param("s") OrderStatusCriteria criteria);
 
     List<Ordered> selectExpiredPendingOrders(@Param("s") OrderStatusCriteria criteria);
 

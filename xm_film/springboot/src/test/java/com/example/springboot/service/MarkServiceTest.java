@@ -1,5 +1,6 @@
 package com.example.springboot.service;
 
+import com.example.springboot.common.OrderStatusCriteria;
 import com.example.springboot.common.enums.ErrorCode;
 import com.example.springboot.common.enums.RoleEnum;
 import com.example.springboot.dto.response.FilmMarksView;
@@ -55,7 +56,7 @@ class MarkServiceTest {
 
     /** 评价门禁的前置条件：该用户对该影片有已取票订单 */
     private void givenPickedUpTicket(Integer userId, Integer filmId) {
-        when(orderedMapper.countPickedUpByUserAndFilm(userId, filmId)).thenReturn(1);
+        when(orderedMapper.countPickedUpByUserAndFilm(userId, filmId, OrderStatusCriteria.INSTANCE)).thenReturn(1);
     }
 
     private Mark request(Integer userId, Integer filmId, Double score) {
@@ -153,7 +154,7 @@ class MarkServiceTest {
     @Test
     void addWithoutPickedUpTicketShouldThrow() {
         Mark mark = request(6, 10, 9.5);
-        when(orderedMapper.countPickedUpByUserAndFilm(6, 10)).thenReturn(0);
+        when(orderedMapper.countPickedUpByUserAndFilm(6, 10, OrderStatusCriteria.INSTANCE)).thenReturn(0);
 
         assertThrows(CustomException.class, () -> markService.add(mark));
         verify(markMapper, never()).insert(any());
@@ -164,7 +165,7 @@ class MarkServiceTest {
     @Test
     void addWithPickedUpTicketForAnotherFilmShouldThrow() {
         Mark mark = request(6, 11, 9.5);
-        when(orderedMapper.countPickedUpByUserAndFilm(6, 11)).thenReturn(0);
+        when(orderedMapper.countPickedUpByUserAndFilm(6, 11, OrderStatusCriteria.INSTANCE)).thenReturn(0);
 
         assertThrows(CustomException.class, () -> markService.add(mark));
         verify(markMapper, never()).insert(any());
@@ -371,7 +372,7 @@ class MarkServiceTest {
         when(filmMapper.selectById(10)).thenReturn(storedFilm(10));
         when(markMapper.selectFilmMarks(10, 6)).thenReturn(List.of());
         when(markMapper.selectFilmMarkOfUser(10, 6)).thenReturn(null);
-        when(orderedMapper.countPickedUpByUserAndFilm(6, 10)).thenReturn(0);
+        when(orderedMapper.countPickedUpByUserAndFilm(6, 10, OrderStatusCriteria.INSTANCE)).thenReturn(0);
 
         FilmMarksView view = markService.listByFilm(10, 6, RoleEnum.USER.name(), 1, 10);
 
@@ -387,7 +388,7 @@ class MarkServiceTest {
         mine.setId(5);
         when(markMapper.selectFilmMarks(10, 6)).thenReturn(List.of(mine));
         when(markMapper.selectFilmMarkOfUser(10, 6)).thenReturn(mine);
-        when(orderedMapper.countPickedUpByUserAndFilm(6, 10)).thenReturn(1);
+        when(orderedMapper.countPickedUpByUserAndFilm(6, 10, OrderStatusCriteria.INSTANCE)).thenReturn(1);
 
         FilmMarksView view = markService.listByFilm(10, 6, RoleEnum.USER.name(), 1, 10);
 

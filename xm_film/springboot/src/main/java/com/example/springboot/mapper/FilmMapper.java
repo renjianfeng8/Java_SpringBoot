@@ -15,6 +15,9 @@ public interface FilmMapper extends BaseMapper<Film> {
 
     List<Film> selectByTitle(String title);
 
+    /** 补预告片用：只取 video 为空的行，避开 selectAll 的票房聚合与 JOIN */
+    List<Film> selectMissingVideo();
+
     List<Film> selectByCinema(@Param("cinemaId") Integer cinemaId, @Param("filmId") Integer filmId);
 
     List<Film> selectBoxOfficeTop(Integer topNum);
