@@ -152,6 +152,7 @@ export const AUTH_API = {
   LOGIN: `${API_PATHS.AUTH}/login`,
   REGISTER: `${API_PATHS.AUTH}/register`,
   PASSWORD: `${API_PATHS.AUTH}/password`,
+  RESET_PASSWORD: `${API_PATHS.AUTH}/password/reset`,
   ME: `${API_PATHS.AUTH}/me`,
 }
 
@@ -193,6 +194,12 @@ export const RECHARGE_STATUS_MAP = {
 export function getRechargeStatusType(status) {
   return RECHARGE_STATUS_MAP[status] || 'info'
 }
+
+/** 充值状态筛选下拉选项，与状态色共用同一份键序 */
+export const RECHARGE_STATUS_OPTIONS = Object.keys(RECHARGE_STATUS_MAP)
+
+/** 资金流水来源，与后端 FundSource 三个常量一致 */
+export const FUND_SOURCE_OPTIONS = ['充值', '购票', '退票']
 
 /**
  * 允许物理删除的订单状态，必须与后端 OrderedService.DELETABLE_STATUSES 保持一致。
@@ -254,6 +261,9 @@ export const ROLE_TAG_MAP = {
 export function getRoleType(role) {
   return ROLE_TAG_MAP[role] || 'success'
 }
+
+/** 角色筛选下拉选项，与标签取色共用同一份键序 */
+export const ROLE_OPTIONS = Object.keys(ROLE_TAG_MAP)
 
 /** 放映场次的售卖状态；未开始/放映中/已结束由 start 派生，不落库 */
 export const RECORD_STATUS_MAP = {

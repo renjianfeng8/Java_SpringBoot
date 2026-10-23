@@ -20,10 +20,10 @@
         <div class="cinema-hero__inner measure">
           <div class="cinema-hero__poster">
             <img
-                :src="avatarSrc(cinema.avatar)"
+                :src="cinemaCoverSrc(cinema.avatar)"
                 :alt="`${cinema.name || '影院'} 图片`"
                 class="cinema-hero__img"
-                @error="onAvatarError"
+                @error="onCinemaCoverError"
             >
           </div>
 
@@ -66,7 +66,7 @@
         <div class="films-inner measure">
           <!-- 日期条：7 天固定窗口，选中项由三通道（颜色 + 字重 + 下划线）表达，
                视觉之外另挂 aria-pressed（禁止仅靠颜色传递状态） -->
-          <div v-if="!filmsError && films.length" class="date-bar" role="group" aria-label="选择放映日期">
+          <fieldset v-if="!filmsError && films.length" class="date-bar" aria-label="选择放映日期">
             <button
                 v-for="tab in dateTabs"
                 :key="tab.key"
@@ -79,7 +79,7 @@
               <span class="date-tab__week">{{ tab.week }}</span>
               <span class="date-tab__date">{{ tab.date }}</span>
             </button>
-          </div>
+          </fieldset>
 
           <!-- 影片列表加载失败：与「暂无排片」是两回事，文案必须分开 -->
           <div v-if="filmsError" class="empty-hint">数据加载失败，请稍后重试</div>
@@ -158,7 +158,7 @@ import {
 import { CINEMA_SERVICES, serviceToneClass } from '@/constants/cinemaServices';
 import request from "@/utils/request.js";
 import { formatScore } from '@/utils/format.js';
-import { avatarSrc, onAvatarError } from '@/utils/avatar';
+import { cinemaCoverSrc, onCinemaCoverError } from '@/utils/avatar';
 
 // 1. 路由相关：参数提取与监听
 const route = useRoute();
@@ -305,8 +305,10 @@ const fetchCinemaInfo = async () => {
         address: res.data.address,
         phone: res.data.phone,
       });
+    } else if (isSuccess(res)) {
+      errorMsg.value = '影院不存在或已下架';
     } else {
-      errorMsg.value = `影院信息加载失败：${res.msg || '未找到该影院'}`;
+      errorMsg.value = res.msg || '影院信息加载失败，请稍后重试';
     }
   } catch {
     // 网络 / 超时 / 5xx 的提示由 request.js 的响应拦截器统一给出，
@@ -619,6 +621,11 @@ watch([() => route.params.id, () => route.query.filmId], ([newCinemaId, newFilmI
   top: 0;
   z-index: var(--el-index-normal);
   display: flex;
+  /* fieldset 默认样式清零，保留下面这条分隔线 */
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
   border-bottom: 1px solid var(--el-border-color-lighter);
   background-color: var(--el-bg-color);
 }

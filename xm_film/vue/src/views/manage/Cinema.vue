@@ -24,17 +24,17 @@
     </div>
 
     <div class="card table-card">
-      <el-table v-loading="loading" stripe size="small" :data="dataList" @selection-change="onSelectionChange">
-        <el-table-column type="selection" width="55"/>
+      <el-table ref="tableRef" row-key="id" v-loading="loading" stripe size="small" :data="dataList" @selection-change="onSelectionChange">
+        <el-table-column type="selection" width="55" reserve-selection/>
         <el-table-column type="expand">
           <template #default="props">
             <el-descriptions title="影院信息" :column="4" border>
               <el-descriptions-item label="账号">{{ props.row.username }}</el-descriptions-item>
               <el-descriptions-item label="角色">{{ props.row.role }}</el-descriptions-item>
               <el-descriptions-item label="头像">
-                <el-image class="cell-thumb" :src="avatarSrc(props.row.avatar)">
+                <el-image class="cell-thumb" :src="cinemaCoverSrc(props.row.avatar)">
                   <template #error>
-                    <img :src="DEFAULT_AVATAR" alt="" class="cell-fallback" aria-hidden="true">
+                    <img :src="DEFAULT_CINEMA_COVER" alt="" class="cell-fallback" aria-hidden="true">
                   </template>
                 </el-image>
               </el-descriptions-item>
@@ -54,10 +54,10 @@
         <el-table-column label="头像">
           <template #default="scope">
             <el-image class="cell-avatar"
-                      :src="avatarSrc(scope.row.avatar)"
+                      :src="cinemaCoverSrc(scope.row.avatar)"
                       :preview-src-list="scope.row.avatar ? [scope.row.avatar] : []" preview-teleported>
               <template #error>
-                <img :src="DEFAULT_AVATAR" alt="" class="cell-fallback" aria-hidden="true">
+                <img :src="DEFAULT_CINEMA_COVER" alt="" class="cell-fallback" aria-hidden="true">
               </template>
             </el-image>
           </template>
@@ -75,12 +75,13 @@
             <el-tag>{{scope.row.role}}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="160">
+        <el-table-column label="操作" width="200">
           <template #default="scope">
             <div class="row-actions">
               <el-button v-if="scope.row.status !== CINEMA_STATUS.APPROVED" link type="success"
                          @click="approve(scope.row)">审核通过</el-button>
               <el-button class="row-action" link :icon="Edit" aria-label="编辑" @click="openEdit(scope.row)" type="primary"></el-button>
+              <el-button class="row-action" link :icon="Key" aria-label="重置密码" @click="openReset(scope.row)" type="warning"></el-button>
               <el-button class="row-action" link :icon="Delete" aria-label="删除" @click="confirmDel(scope.row.id)" type="danger"></el-button>
             </div>
           </template>
@@ -95,7 +96,7 @@
             @current-change="onPageChange"
             v-model:current-page="pageNum"
             v-model:page-size="pageSize"
-            :page-sizes="[5, 10, 15, 20]"
+            :page-sizes="[5, 10, 15, 20, 50, 100]"
             background
             layout="total, sizes, prev, pager, next, jumper"
             :total="total"
@@ -156,26 +157,29 @@
         </div>
       </template>
     </el-dialog>
+
+    <ResetPasswordDialog v-model="resetVisible" role="CINEMA" :account="resetTarget" />
   </div>
 </template>
 
 <script setup>
 import { ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { Delete, Edit, Plus, Search } from '@element-plus/icons-vue'
+import { Delete, Edit, Key, Plus, Search } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useCrud } from '@/composables/useCrud'
 import { useFormDialog } from '@/composables/useFormDialog'
+import ResetPasswordDialog from '@/components/ResetPasswordDialog.vue'
 import request from '@/utils/request'
 import { uploadHeaders, handleUploadError } from '@/utils/upload'
-import { avatarSrc, DEFAULT_AVATAR } from '@/utils/avatar'
+import { cinemaCoverSrc, DEFAULT_CINEMA_COVER } from '@/utils/avatar'
 import {
   API_PATHS, CINEMA_DIRECTORY_API, CINEMA_STATUS, CINEMA_STATUS_OPTIONS, FILE_UPLOAD_URL,
   getCinemaStatusType as getStatusType, isSuccess
 } from '@/constants'
 
 const crud = useCrud(API_PATHS.CINEMAS)
-const { dataList, total, pageNum, pageSize, searchForm, selectedIds, loading, error,
+const { dataList, total, pageNum, pageSize, searchForm, selectedIds, tableRef, loading, error,
         confirmDel, confirmDelBatch, onSearch, onReset, onPageChange, onSizeChange, onSelectionChange } = crud
 const { dialogVisible, isEdit, formRef, form, rules, openAdd, openEdit, submit, close } = useFormDialog(crud, {
   defaultForm: { username: '', password: '', name: '', phone: '', address: '', avatar: '', status: CINEMA_STATUS.UNAUDITED, directoryId: null },
@@ -190,6 +194,13 @@ const { dialogVisible, isEdit, formRef, form, rules, openAdd, openEdit, submit, 
 
 const directoryOptions = ref([])
 const directoryLoading = ref(false)
+
+const resetVisible = ref(false)
+const resetTarget = ref(null)
+function openReset(row) {
+  resetTarget.value = row
+  resetVisible.value = true
+}
 
 // 远程搜索名录：未输入不请求；错误提示由 request.js 统一弹
 let dirSeq = 0

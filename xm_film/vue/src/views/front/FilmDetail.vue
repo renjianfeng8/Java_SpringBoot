@@ -316,8 +316,11 @@ const fetchFilmDetail = () => {
           } else {
             castError.value = '暂无演职人员关联信息';
           }
+        } else if (isSuccess(res)) {
+          // 业务码成功但没有数据：记录已删/下架。不能把后端的「操作成功」拼进失败提示
+          errorMsg.value = '电影不存在或已下架';
         } else {
-          errorMsg.value = `加载失败：${res.msg || '未找到该电影信息'}`;
+          errorMsg.value = res.msg || '电影信息加载失败，请稍后重试';
         }
       })
       .catch(err => {
@@ -366,8 +369,10 @@ const fetchCastBySingleId = (actorId) => {
           } else {
             castError.value = '演职人员信息不完整';
           }
+        } else if (isSuccess(res)) {
+          castError.value = '演职人员信息不存在或已删除';
         } else {
-          castError.value = `演职人员加载失败：${res.msg || '未找到该演员信息'}`;
+          castError.value = res.msg || '演职人员信息加载失败，请稍后重试';
         }
       })
       .catch(err => {

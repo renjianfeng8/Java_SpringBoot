@@ -259,8 +259,8 @@
 
   /* ===== TMDB 导入弹窗 =====
      搜索结果为一行一部片：海报缩略图 + 片名/年份 + 英文名 + 两行简介，整行可点选。
-     用带 role=button 的原生元素而不是 el-radio —— 这里要的是「选中整行」这一动作，
-     不是往表单里塞一个选项；键盘可达性由 tabindex + keyup.enter 保证。 */
+     用原生 <button> 而不是 role=button 的 div：键盘可达性由元素本身保证，
+     不需要 tabindex / keyup 补丁。按钮默认的边框、底色、字体与文字对齐在这里清掉。 */
   .import-results {
     max-height: 380px;
     margin-top: var(--space-16);
@@ -269,9 +269,14 @@
 
   .import-item {
     display: flex;
+    width: 100%;
     gap: var(--space-12);
     padding: var(--space-12);
     border: 1px solid var(--el-border-color-lighter);
+    background: none;
+    color: inherit;
+    font: inherit;
+    text-align: left;
     border-radius: var(--el-border-radius-base);
     cursor: pointer;
     transition: border-color 150ms ease-in-out, background-color 150ms ease-in-out;
@@ -312,11 +317,13 @@
 
   .import-item__body {
     /* 不设 min-width 会让子元素的省略号失效，长片名把行撑破 */
+    display: block;
     min-width: 0;
     flex: 1 1 auto;
   }
 
   .import-item__title {
+    display: block;
     font-size: var(--fs-base);
     font-weight: var(--fw-bold);
     color: var(--el-text-color-primary);
@@ -328,6 +335,7 @@
   }
 
   .import-item__original {
+    display: block;
     margin-top: var(--space-4);
     font-size: var(--fs-xs);
     color: var(--el-text-color-secondary);

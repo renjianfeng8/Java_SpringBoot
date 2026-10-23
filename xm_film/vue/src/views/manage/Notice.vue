@@ -21,8 +21,8 @@
     </div>
 
     <div class="card table-card">
-      <el-table v-loading="loading" stripe size="small" :data="dataList" @selection-change="onSelectionChange">
-        <el-table-column type="selection" width="55" />
+      <el-table ref="tableRef" row-key="id" v-loading="loading" stripe size="small" :data="dataList" @selection-change="onSelectionChange">
+        <el-table-column type="selection" width="55" reserve-selection />
         <el-table-column label="公告标题" prop="title" />
         <el-table-column label="公告内容" prop="content" show-overflow-tooltip />
         <el-table-column label="发布时间" prop="time" />
@@ -42,7 +42,7 @@
             @current-change="onPageChange"
             v-model:current-page="pageNum"
             v-model:page-size="pageSize"
-            :page-sizes="[5, 10, 15, 20]"
+            :page-sizes="[5, 10, 15, 20, 50, 100]"
             background
             layout="total, sizes, prev, pager, next, jumper"
             :total="total"
@@ -87,7 +87,7 @@ const nowLocal = () => {
 }
 
 const crud = useCrud(API_PATHS.NOTICES)
-const { dataList, total, pageNum, pageSize, searchForm, selectedIds, loading, error,
+const { dataList, total, pageNum, pageSize, searchForm, selectedIds, tableRef, loading, error,
         confirmDel, confirmDelBatch, onSearch, onReset, onPageChange, onSizeChange, onSelectionChange } = crud
 const { dialogVisible, formRef, form, rules, openAdd, openEdit, submit, close } = useFormDialog(crud, {
   defaultForm: { title: '', content: '', time: nowLocal() },

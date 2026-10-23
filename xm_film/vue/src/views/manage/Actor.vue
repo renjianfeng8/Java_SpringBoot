@@ -21,8 +21,8 @@
     </div>
 
     <div class="card table-card">
-      <el-table v-loading="loading" stripe size="small" :data="dataList" @selection-change="onSelectionChange">
-        <el-table-column type="selection" width="55" />
+      <el-table ref="tableRef" row-key="id" v-loading="loading" stripe size="small" :data="dataList" @selection-change="onSelectionChange">
+        <el-table-column type="selection" width="55" reserve-selection />
         <el-table-column label="电影名称" prop="title" />
         <el-table-column label="电影图片" prop="img">
           <template #default="scope">
@@ -61,7 +61,7 @@
             @current-change="onPageChange"
             v-model:current-page="pageNum"
             v-model:page-size="pageSize"
-            :page-sizes="[5, 10, 15, 20]"
+            :page-sizes="[5, 10, 15, 20, 50, 100]"
             background
             layout="total, sizes, prev, pager, next, jumper"
             :total="total"
@@ -126,7 +126,7 @@ import { useFormDialog } from '@/composables/useFormDialog'
 import { uploadHeaders, handleUploadError } from '@/utils/upload'
 
 const crud = useCrud(API_PATHS.ACTORS)
-const { dataList, total, pageNum, pageSize, searchForm, selectedIds, loading, error,
+const { dataList, total, pageNum, pageSize, searchForm, selectedIds, tableRef, loading, error,
         confirmDel, confirmDelBatch, onSearch, onReset, onPageChange, onSizeChange, onSelectionChange } = crud
 const { dialogVisible, formRef, form, rules, openAdd, openEdit, submit, close } = useFormDialog(crud, {
   defaultForm: { title: '', actorName: '', figure: '', picture: '', img: '', grade: '' },

@@ -54,7 +54,7 @@
           <!-- 座位矩阵：行列数取自所属影厅的 seat_rows / seat_cols 配置。
                每格是 <button> 而非 div —— 键盘用户才能 Tab 到可选座位并用回车选定；
                不可选的座位用 disabled，读屏软件据此报出状态。 -->
-          <div v-else class="seat-map" role="group" aria-label="座位图">
+          <fieldset v-else class="seat-map" aria-label="座位图">
             <div v-for="row in seatRows" :key="'row' + row" class="seat-map__row">
               <button v-for="col in seatCols" :key="`seat-${row}-${col}`"
                       type="button"
@@ -65,7 +65,7 @@
                       @click="selectSeat(row, col)"
               ></button>
             </div>
-          </div>
+          </fieldset>
 
           <!-- 本人未支付锁座：可直接继续支付或取消释放，不必重新选座 -->
           <div v-if="myPendingOrders.length > 0" class="pending-box">
@@ -110,9 +110,9 @@
             </button>
             <!-- 同场次的下单在服务端是以场次行锁串行的：并发抢座时后到者会等待前一笔事务提交，
                  这段等待可能持续到秒级。只说"提交中"会让人以为卡死，这里明确讲清在等什么。 -->
-            <p v-if="submitting" class="submit-row__hint" role="status">
+            <output v-if="submitting" class="submit-row__hint">
               正在校验座位，若有人同时选中请不要重复点击
-            </p>
+            </output>
           </div>
         </div>
 
@@ -408,16 +408,20 @@ const fetchBaseInfo = () => {
     request.get(apiById(API_PATHS.FILMS, Number(filmId))).then(res => {
       if (isSuccess(res) && res.data) {
         filmInfo.value = res.data;
+      } else if (isSuccess(res)) {
+        throw new Error('电影不存在或已下架');
       } else {
-        throw new Error(`电影信息加载失败：${res.msg || '未知错误'}`);
+        throw new Error(res.msg || '电影信息加载失败');
       }
     }),
     // 影院信息（与影院页接口一致）
     request.get(apiById(API_PATHS.CINEMAS, Number(cinemaId))).then(res => {
       if (isSuccess(res) && res.data) {
         cinemaInfo.value = res.data;
+      } else if (isSuccess(res)) {
+        throw new Error('影院不存在或已下架');
       } else {
-        throw new Error(`影院信息加载失败：${res.msg || '未知错误'}`);
+        throw new Error(res.msg || '影院信息加载失败');
       }
     }),
     // 场次信息（获取影厅、座位布局等关键字段）
@@ -433,8 +437,10 @@ const fetchBaseInfo = () => {
         // 座位图规模由所属影厅决定；后端未配置时退回 8×8
         seatRows.value = res.data.roomSeatRows > 0 ? res.data.roomSeatRows : 8;
         seatCols.value = res.data.roomSeatCols > 0 ? res.data.roomSeatCols : 8;
+      } else if (isSuccess(res)) {
+        throw new Error('场次不存在或已结束');
       } else {
-        throw new Error(`场次信息加载失败：${res.msg || '未知错误'}`);
+        throw new Error(res.msg || '场次信息加载失败');
       }
     })
   ]);
@@ -652,6 +658,11 @@ const confirmBooking = async () => {
   flex-direction: column;
   align-items: center;
   gap: var(--space-12);
+  /* fieldset 默认样式清零 */
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
 }
 
 .seat-map__row {
@@ -847,6 +858,7 @@ const confirmBooking = async () => {
 }
 
 .submit-row__hint {
+  display: block;
   margin-top: var(--space-8);
   color: var(--el-text-color-secondary);
   font-size: var(--fs-xs);

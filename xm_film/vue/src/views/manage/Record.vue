@@ -24,8 +24,8 @@
     </div>
 
     <div class="card table-card">
-      <el-table v-loading="loading" stripe size="small" :data="dataList" @selection-change="onSelectionChange">
-        <el-table-column type="selection" width="55"/>
+      <el-table ref="tableRef" row-key="id" v-loading="loading" stripe size="small" :data="dataList" @selection-change="onSelectionChange">
+        <el-table-column type="selection" width="55" reserve-selection/>
         <el-table-column label="影院名称" prop="cinemaName"/>
         <el-table-column label="影厅名称" prop="roomName"/>
         <el-table-column label="电影名称" prop="title"/>
@@ -53,7 +53,7 @@
             @current-change="onPageChange"
             v-model:current-page="pageNum"
             v-model:page-size="pageSize"
-            :page-sizes="[5, 10, 15, 20]"
+            :page-sizes="[5, 10, 15, 20, 50, 100]"
             background
             layout="total, sizes, prev, pager, next, jumper"
             :total="total"
@@ -70,7 +70,7 @@ import { API_PATHS, getRecordStatusType as getStatusType } from '@/constants'
 
 // 后端 selectAll 已 JOIN 出 cinemaName / roomName，前端不再自行拼接。
 // 本页没有弹窗表单，用不到 crud 对象本身，直接解构（与 Room / Mark 同形）。
-const { dataList, total, pageNum, pageSize, searchForm, selectedIds, loading, error,
+const { dataList, total, pageNum, pageSize, searchForm, selectedIds, tableRef, loading, error,
         confirmDel, confirmDelBatch, load, onSearch, onReset, onPageChange, onSizeChange, onSelectionChange } = useCrud(API_PATHS.RECORDS)
 
 load()

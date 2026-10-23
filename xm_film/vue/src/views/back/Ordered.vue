@@ -5,7 +5,7 @@
       <el-select v-model="data.status" placeholder="请选择订单状态" class="search-input">
         <el-option v-for="status in ORDER_STATUS_OPTIONS" :key="status" :label="status" :value="status" />
       </el-select>
-      <el-button type="primary" @click="load">查 询</el-button>
+      <el-button type="primary" @click="search">查 询</el-button>
       <el-button type="warning" @click="reset">重 置</el-button>
     </div>
 
@@ -14,9 +14,9 @@
     </div>
 
     <div class="card page-card">
-      <el-table stripe :data="data.tableData" @selection-change="handleSelectionChange">
+      <el-table ref="tableRef" row-key="id" stripe :data="data.tableData" @selection-change="handleSelectionChange">
         <!-- 不可删除的订单（待支付/待取票/已取票）连勾选都不允许，批量删除自然不会带上它们 -->
-        <el-table-column type="selection" width="55" :selectable="(row) => isOrderDeletable(row.status)"/>
+        <el-table-column type="selection" width="55" reserve-selection :selectable="(row) => isOrderDeletable(row.status)"/>
         <el-table-column type="expand">
           <template #default="props">
 
@@ -101,7 +101,7 @@
           @current-change="load"
           v-model:current-page="data.pageNumber"
           v-model:page-size="data.pageSize"
-          :page-sizes="[5, 10, 15, 20]"
+          :page-sizes="[5, 10, 15, 20, 50, 100]"
           background
           layout="total, sizes, prev, pager, next, jumper"
           :total="data.total"
@@ -112,7 +112,7 @@
 
 <script setup lang="ts">
 import { isSuccess, API_PATHS, ORDER_API, ORDER_STATUS_OPTIONS, getOrderStatusType as getStatusType, apiBatch, apiById, apiPage, isOrderDeletable } from '@/constants';
-import { reactive } from "vue";
+import { reactive, ref } from "vue";
 import { Delete, Search } from "@element-plus/icons-vue";
 import request from "@/utils/request.js";
 import { ElMessage, ElMessageBox } from "element-plus";
@@ -149,6 +149,8 @@ const data = reactive({
 });
 
 let loadSeq = 0;
+const tableRef = ref();
+const clearSelection = () => { tableRef.value?.clearSelection(); data.ids = []; };
 
 const load = () => {
   const seq = ++loadSeq;
@@ -178,6 +180,7 @@ const del = (id: number) => {
       if (isSuccess(res)) {
         ElMessage.success('操作成功')
         load()
+        clearSelection()
       } else {
         ElMessage.error(res.msg)
       }
@@ -195,6 +198,7 @@ const delBatch = () => {
       if (isSuccess(res)) {
         ElMessage.success('操作成功')
         load()
+        clearSelection()
       } else {
         ElMessage.error(res.msg)
       }
@@ -209,6 +213,7 @@ const pickupOrder = async (order: Ordered) => {
     if (isSuccess(res)) {
       ElMessage.success('取票成功');
       load();
+      clearSelection();
     } else {
       ElMessage.error(res.msg || '取票失败');
     }
@@ -224,6 +229,13 @@ const handleSelectionChange = (rows: Ordered[]) => {
 const reset = () => {
   data.orders = null;
   data.status = undefined;
+  clearSelection();
+  load();
+}
+
+const search = () => {
+  clearSelection();
+  data.pageNumber = 1;
   load();
 }
 

@@ -119,7 +119,7 @@
             @current-change="load"
             v-model:current-page="state.pageNum"
             v-model:page-size="state.pageSize"
-            :page-sizes="[5, 10, 15, 20]"
+            :page-sizes="[5, 10, 15, 20, 50, 100]"
             background
             layout="total, sizes, prev, pager, next, jumper"
             :total="state.total"

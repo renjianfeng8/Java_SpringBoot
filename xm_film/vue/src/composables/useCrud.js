@@ -12,6 +12,10 @@ export function useCrud(apiBase) {
   const total = ref(0)
   const searchForm = reactive({})
   const selectedIds = ref([])
+  // 绑定到页面 <el-table> 的 ref；reserve-selection 让勾选跨页保留，
+  // 但表格内部状态在写入/换筛选条件后必须显式清空，否则会带着已删除或
+  // 已隐藏的 id 去批量删除。
+  const tableRef = ref(null)
 
   // 网络/HTTP 错误由 request.js 统一弹提示，这里只负责清空数据兜底，
   // 避免 reject 逃逸成未处理的 Promise rejection，并让模板能显示空态。
@@ -24,9 +28,10 @@ export function useCrud(apiBase) {
   // 递增序号：只让最后一次 load 的结果落地，避免慢响应覆盖新结果、提前收起 loading
   let loadSeq = 0
 
-  // 写入成功后 dataList 会被整体替换，旧选中行已不存在；
-  // 不能只依赖 el-table 的 selection-change（没有 row-key 时可能不触发）。
+  // 写入成功后 dataList 会被整体替换，旧选中行已不存在；reserve-selection
+  // 又会把勾选保留在表格内部，因此这里同时清掉表格状态。
   function clearSelection() {
+    tableRef.value?.clearSelection()
     selectedIds.value = []
   }
 
@@ -149,13 +154,14 @@ export function useCrud(apiBase) {
       .catch(() => {})
   }
 
-  function onSearch() { pageNum.value = 1; load() }
-  function onReset() { Object.keys(searchForm).forEach(k => { searchForm[k] = undefined }); pageNum.value = 1; load() }
+  function onSearch() { clearSelection(); pageNum.value = 1; load() }
+  function onReset() { Object.keys(searchForm).forEach(k => { searchForm[k] = undefined }); clearSelection(); pageNum.value = 1; load() }
   function onPageChange(p) { pageNum.value = p; load() }
   function onSizeChange(s) { pageSize.value = s; pageNum.value = 1; load() }
   function onSelectionChange(rows) { selectedIds.value = rows.map(r => r.id) }
 
   return { dataList, loading, error, pageNum, pageSize, total, searchForm, selectedIds,
+           tableRef,
            load, add, update, del, delBatch, confirmDel, confirmDelBatch,
            onSearch, onReset, onPageChange, onSizeChange, onSelectionChange }
 }

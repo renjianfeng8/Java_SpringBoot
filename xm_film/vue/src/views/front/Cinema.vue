@@ -23,10 +23,10 @@
       <div class="filter-panel">
         <div class="filter-row">
           <div class="filter-label">城市 :</div>
-          <!-- role=group + aria-label：.filter-label 是并列的 <div>，与按钮没有
+          <!-- fieldset + aria-label：.filter-label 是并列的 <div>，与按钮没有
                for / aria-labelledby 关联，不加这一层的话读屏只会念「北京 按钮」，
                且两行的「全部」按钮无法区分（改按钮前这里是 el-select 的 aria-label） -->
-          <div class="filter-options" role="group" aria-label="按城市筛选">
+          <fieldset class="filter-options" aria-label="按城市筛选">
             <button
                 class="filter-chip"
                 :class="{ 'filter-chip--active': !query.city }"
@@ -39,12 +39,12 @@
                 :class="{ 'filter-chip--active': query.city === city }"
                 @click="selectCity(city)"
             >{{ city }}</button>
-          </div>
+          </fieldset>
         </div>
 
         <div class="filter-row filter-row--last">
           <div class="filter-label">区域 :</div>
-          <div class="filter-options" role="group" aria-label="按区域筛选">
+          <fieldset class="filter-options" aria-label="按区域筛选">
             <!-- 区域依赖城市，未选城市时给出说明而不是一排必然为空的选项 -->
             <span v-if="!query.city" class="filter-hint">请先选择城市</span>
             <template v-else>
@@ -61,7 +61,7 @@
                   @click="selectDistrict(district)"
               >{{ district }}</button>
             </template>
-          </div>
+          </fieldset>
         </div>
       </div>
 
@@ -87,7 +87,7 @@
             :to="`/front/cinemaDetail/${cinema.id}`"
         >
           <div class="cinema-card__poster">
-            <img :src="avatarSrc(cinema.avatar)" :alt="`${cinema.name || '影院'} 图片`" class="cinema-card__img" loading="lazy" @error="onAvatarError">
+            <img :src="cinemaCoverSrc(cinema.avatar)" :alt="`${cinema.name || '影院'} 图片`" class="cinema-card__img" loading="lazy" @error="onCinemaCoverError">
           </div>
 
           <div class="cinema-card__info">
@@ -161,7 +161,7 @@ import { ElMessage } from 'element-plus';
 import { ArrowRight, Location, Phone } from '@element-plus/icons-vue';
 import { CINEMA_SERVICES, serviceToneClass } from '@/constants/cinemaServices';
 import { usePagedList } from '@/composables/usePagedList';
-import { avatarSrc, onAvatarError } from '@/utils/avatar';
+import { cinemaCoverSrc, onCinemaCoverError } from '@/utils/avatar';
 
 // 骨架条数：一屏能看到的卡片量，多了白渲染
 const SKELETON_ROWS = 4;

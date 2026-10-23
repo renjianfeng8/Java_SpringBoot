@@ -33,7 +33,7 @@
         <!-- 快捷档位与自由输入并存，二者都受后端金额校验约束。
              复用「全部 / 城市 / 区域」那套 .filter-chip：选中态是填充 + 加粗，
              不只靠颜色传递状态；aria-pressed 让读屏也知道当前选中哪一档。 -->
-        <div class="filter-options tier-options" role="group" aria-label="快捷充值金额">
+        <fieldset class="filter-options tier-options" aria-label="快捷充值金额">
           <button
               v-for="tier in TIERS"
               :key="tier"
@@ -43,7 +43,7 @@
               :aria-pressed="Number(amount) === tier"
               @click="amount = tier"
           >{{ tier }} 元</button>
-        </div>
+        </fieldset>
 
         <div class="amount-row">
           <span class="amount-label">充值金额</span>
@@ -131,11 +131,11 @@
         </div>
 
         <div class="trend">
-          <!-- 折线对读屏用户不可达，故把结论写进可访问名 -->
+          <!-- 折线对读屏用户不可达；结论已由下方 caption 完整给出，
+               故图表本身是装饰，不再用 role="img" 重复朗读一遍 -->
           <svg class="trend__svg"
                :viewBox="`0 0 ${TREND_VIEW.w} ${TREND_VIEW.h}`"
-               role="img"
-               :aria-label="trend.label">
+               aria-hidden="true">
             <path class="trend__line" :d="trend.path" />
           </svg>
           <p class="trend__caption">{{ trend.caption }}</p>
@@ -380,9 +380,6 @@ const trend = computed(() => {
     path: points
         .map((point, index) => `${index === 0 ? 'M' : 'L'}${point.x.toFixed(2)} ${point.y.toFixed(2)}`)
         .join(' '),
-    label: `余额走势：最近 ${count} 笔流水（${from} 至 ${to}），`
-        + `余额自 ¥${money(values[0])} 变化至 ¥${money(values[values.length - 1])}，`
-        + `区间 ¥${money(min)} 至 ¥${money(max)}`,
     caption: `最近 ${count} 笔流水 · ${from} → ${to} · 区间 ¥${money(min)} – ¥${money(max)}`,
   };
 });

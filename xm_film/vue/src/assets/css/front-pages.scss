@@ -248,6 +248,14 @@
     gap: var(--space-8);
   }
 
+  /* fieldset 默认带边框、内边距和 min-width，会把整条筛选栏挤窄 */
+  fieldset.filter-options {
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+
   /* 筛选项是 <button> 而非 div —— 原生可 Tab 聚焦、可回车/Space 触发，
      不需要额外补 role / tabindex / keydown（所有交互支持键盘） */
   .filter-chip {

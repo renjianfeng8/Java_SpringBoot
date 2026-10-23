@@ -44,16 +44,16 @@
 </template>
 
 <script setup>
-import { reactive, ref } from "vue"
+import { onMounted, reactive, ref } from "vue"
 import { useRoute, useRouter } from 'vue-router'
 import { User, Lock } from '@element-plus/icons-vue'
 import { useAuth } from "@/composables/useAuth"
 import { ElMessageBox } from "element-plus"
-import { isInternalPath, pathForRole } from '@/utils/navigation'
+import { isInternalPath, isPathWithin, pathForRole } from '@/utils/navigation'
 
 const route = useRoute()
 const router = useRouter()
-const { login: authLogin } = useAuth()
+const { login: authLogin, user } = useAuth()
 
 const data = reactive({
   form: {
@@ -70,17 +70,33 @@ const data = reactive({
 
 const formRef = ref()
 
+// 已登录用户落在 /login：直接回目标页或角色主页。
+// 否则顶栏显示已登录、页面却是登录表单，再登一次会静默换号（FE-03 残留）。
+const landingPath = () => {
+  const redirectParam = route.query.redirect
+  const pathOnly = typeof redirectParam === 'string' ? redirectParam.split(/[?#]/)[0] : ''
+  const roles = isInternalPath(redirectParam) ? router.resolve(redirectParam).meta?.roles : undefined
+  // 目标页角色不符时不再带过去，否则守卫会先跳一次再弹「无权访问」
+  const roleAllowed = !roles || roles.includes(user.value?.role)
+  const isSafePath = isInternalPath(redirectParam)
+    && !isPathWithin(pathOnly, '/login')
+    && roleAllowed
+  return isSafePath ? redirectParam : pathForRole(user.value?.role)
+}
+
+onMounted(() => {
+  if (user.value?.token) router.replace(landingPath())
+})
+
 const login = () => {
   formRef.value.validate(async (valid) => {
     if (!valid) return
     try {
-      const user = await authLogin(data.form)
+      await authLogin(data.form)
       // 回跳目标只接受站内路径。必须排除 '//' —— 协议相对 URL（'//evil.com'）同样以 '/' 开头，
       // 此前直接用 window.location.href 赋它就会跳到外站（开放重定向）。
       // 改走 router.push：它只解析站内路径，同时也不再把应用整页重载一遍。
-      const redirectParam = route.query.redirect
-      const isSafePath = isInternalPath(redirectParam)
-      router.push(isSafePath ? redirectParam : pathForRole(user.role))
+      router.push(landingPath())
     } catch (e) {
       // 传输类失败是 axios 错误，request.js 的响应拦截器已经弹过一次并给了中文提示；
       // 接着再把它的英文 message（如 'Network Error'）塞进弹框就是二次提示 + 未翻译文案。

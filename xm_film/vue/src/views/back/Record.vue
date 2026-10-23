@@ -7,7 +7,7 @@
         <el-option label="正常" value="正常" />
         <el-option label="停售" value="停售" />
       </el-select>
-      <el-button type="primary" @click="load">查 询</el-button>
+      <el-button type="primary" @click="search">查 询</el-button>
       <el-button type="warning" @click="reset">重 置</el-button>
     </div>
 
@@ -17,8 +17,8 @@
     </div>
 
     <div class="card page-card">
-      <el-table stripe :data="data.tableData" @selection-change="handleSelectionChange">
-        <el-table-column type="selection" width="55"/>
+      <el-table ref="tableRef" row-key="id" stripe :data="data.tableData" @selection-change="handleSelectionChange">
+        <el-table-column type="selection" width="55" reserve-selection/>
         <el-table-column label="影院名称" prop="cinemaName"/>
         <el-table-column label="影厅名称" prop="roomName"/>
         <el-table-column label="电影名称" prop="title"/>
@@ -46,7 +46,7 @@
           @current-change="load"
           v-model:current-page="data.pageNumber"
           v-model:page-size="data.pageSize"
-          :page-sizes="[5, 10, 15, 20]"
+          :page-sizes="[5, 10, 15, 20, 50, 100]"
           background
           layout="total, sizes, prev, pager, next, jumper"
           :total="data.total"
@@ -167,6 +167,8 @@ const data = reactive({
 });
 
 let loadSeq = 0;
+const tableRef = ref();
+const clearSelection = () => { tableRef.value?.clearSelection(); data.ids = []; };
 
 const delBatch = () => {
   if (data.ids.length === 0) {
@@ -178,6 +180,7 @@ const delBatch = () => {
       if (isSuccess(res)) {
         ElMessage.success('操作成功')
         load()
+        clearSelection()
       } else {
         ElMessage.error(res.msg)
       }
@@ -193,6 +196,13 @@ const reset = () => {
   data.title = null;
   data.start = null;
   data.status = undefined;
+  clearSelection();
+  load();
+};
+
+const search = () => {
+  clearSelection();
+  data.pageNumber = 1;
   load();
 };
 
@@ -227,6 +237,7 @@ const del = (id: number) => {
         ElMessage.success('操作成功');
         load();
         data.formVisible = false;
+        clearSelection();
       } else {
         ElMessage.error(res.msg);
       }
@@ -240,6 +251,7 @@ const add = () => {
       ElMessage.success('添加成功');
       data.formVisible = false;
       load();
+      clearSelection();
     } else {
       ElMessage.error(res.msg || '添加失败，请重试');
     }
@@ -254,6 +266,7 @@ const update = () => {
       ElMessage.success('更新成功');
       data.formVisible = false;
       load();
+      clearSelection();
     } else {
       ElMessage.error(res.msg || '更新失败，请重试');
     }

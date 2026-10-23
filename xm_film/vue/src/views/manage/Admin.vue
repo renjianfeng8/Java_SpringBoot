@@ -21,8 +21,8 @@
     </div>
 
     <div class="card table-card">
-      <el-table v-loading="loading" stripe size="small" :data="dataList" @selection-change="onSelectionChange">
-        <el-table-column type="selection" width="55" />
+      <el-table ref="tableRef" row-key="id" v-loading="loading" stripe size="small" :data="dataList" @selection-change="onSelectionChange">
+        <el-table-column type="selection" width="55" reserve-selection />
         <el-table-column label="账号" prop="username" />
         <el-table-column label="头像" prop="avatar">
           <template #default="scope">
@@ -41,9 +41,10 @@
             <el-tag :type="getRoleType(scope.row.role)">{{ scope.row.role }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="110">
+        <el-table-column label="操作" width="150">
           <template #default="scope">
             <el-button class="row-action" link :icon="Edit" aria-label="编辑" @click="openEdit(scope.row)" type="primary" />
+            <el-button class="row-action" link :icon="Key" aria-label="重置密码" @click="openReset(scope.row)" type="warning" />
             <el-button class="row-action" link :icon="Delete" aria-label="删除" @click="confirmDel(scope.row.id)" type="danger" />
           </template>
         </el-table-column>
@@ -57,7 +58,7 @@
             @current-change="onPageChange"
             v-model:current-page="pageNum"
             v-model:page-size="pageSize"
-            :page-sizes="[5, 10, 15, 20]"
+            :page-sizes="[5, 10, 15, 20, 50, 100]"
             background
             layout="total, sizes, prev, pager, next, jumper"
             :total="total"
@@ -96,21 +97,24 @@
         </div>
       </template>
     </el-dialog>
+
+    <ResetPasswordDialog v-model="resetVisible" role="ADMIN" :account="resetTarget" />
   </div>
 </template>
 
 <script setup>
 import { isSuccess, API_PATHS, FILE_UPLOAD_URL, getRoleType } from '@/constants'
-import { computed } from 'vue'
-import { Delete, Edit, Plus, Search } from '@element-plus/icons-vue'
+import { computed, ref } from 'vue'
+import { Delete, Edit, Key, Plus, Search } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { useCrud } from '@/composables/useCrud'
 import { useFormDialog } from '@/composables/useFormDialog'
+import ResetPasswordDialog from '@/components/ResetPasswordDialog.vue'
 import { uploadHeaders, handleUploadError } from '@/utils/upload'
 import { avatarSrc, DEFAULT_AVATAR } from '@/utils/avatar'
 
 const crud = useCrud(API_PATHS.ADMINS)
-const { dataList, total, pageNum, pageSize, searchForm, selectedIds, loading, error,
+const { dataList, total, pageNum, pageSize, searchForm, selectedIds, tableRef, loading, error,
         confirmDel, confirmDelBatch, onSearch, onReset, onPageChange, onSizeChange, onSelectionChange } = crud
 const { dialogVisible, isEdit, formRef, form, rules, openAdd, openEdit, submit, close } = useFormDialog(crud, {
   defaultForm: { username: '', password: '', avatar: '', name: '', phone: '' },
@@ -123,6 +127,13 @@ const { dialogVisible, isEdit, formRef, form, rules, openAdd, openEdit, submit, 
 })
 
 crud.load()
+
+const resetVisible = ref(false)
+const resetTarget = ref(null)
+function openReset(row) {
+  resetTarget.value = row
+  resetVisible.value = true
+}
 
 // 编辑态回填已保存的头像：上传控件默认从空列表起步，不回填就看不清当前头像
 const avatarFileList = computed(() =>

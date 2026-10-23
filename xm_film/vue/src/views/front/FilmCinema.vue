@@ -78,7 +78,7 @@
             <div v-for="(cinema, index) in cinemaData.filmData" :key="index" class="cinema-card">
               <!-- 1. 图片容器 -->
               <div class="cinema-card__poster">
-                <img :src="avatarSrc(cinema.avatar)" :alt="`${cinema.name || '影院'} 图片`" class="cinema-card__img" @error="onAvatarError">
+                <img :src="cinemaCoverSrc(cinema.avatar)" :alt="`${cinema.name || '影院'} 图片`" class="cinema-card__img" @error="onCinemaCoverError">
               </div>
 
               <!-- 2. 信息容器 -->
@@ -158,7 +158,7 @@ import request from "@/utils/request.js";
 import 'element-plus/theme-chalk/el-pagination.css';
 import 'element-plus/theme-chalk/el-button.css';
 import { formatBoxOffice, formatScore, formatFilmTypes } from '@/utils/format.js';
-import { avatarSrc, onAvatarError } from '@/utils/avatar';
+import { cinemaCoverSrc, onCinemaCoverError } from '@/utils/avatar';
 
 // 1. 路由相关（获取电影ID + 路由跳转）
 const route = useRoute();
@@ -241,8 +241,13 @@ const fetchFilmFullInfo = () => {
             start: data.start || '未知'
           });
           return Promise.resolve(); // 加载成功，允许后续加载影院
+        } else if (isSuccess(res)) {
+          const errMsg = '电影不存在或已下架';
+          errorMsg.value = errMsg;
+          ElMessage.error(errMsg);
+          return Promise.reject(errMsg);
         } else {
-          const errMsg = `电影信息加载失败：${res.msg || '未找到该电影'}`;
+          const errMsg = res.msg || '电影信息加载失败，请稍后重试';
           errorMsg.value = errMsg;
           ElMessage.error(errMsg);
           return Promise.reject(errMsg);

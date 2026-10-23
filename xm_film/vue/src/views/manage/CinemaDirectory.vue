@@ -30,8 +30,8 @@
     </div>
 
     <div class="card table-card">
-      <el-table ref="tableRef" v-loading="loading" stripe size="small" :data="rows" @selection-change="onSelectionChange">
-        <el-table-column type="selection" width="55" :selectable="canSelectRow"/>
+      <el-table ref="tableRef" row-key="id" v-loading="loading" stripe size="small" :data="rows" @selection-change="onSelectionChange">
+        <el-table-column type="selection" width="55" reserve-selection :selectable="canSelectRow"/>
         <el-table-column prop="name" label="影院名称" min-width="220"/>
         <el-table-column prop="brand" label="院线" width="140"/>
         <el-table-column prop="province" label="省" width="110"/>
@@ -193,7 +193,7 @@ const load = () => {
     .finally(() => { if (seq === loadSeq) data.loading = false })
 }
 
-const reload = () => { query.pageNum = 1; load() }
+const reload = () => { query.pageNum = 1; tableRef.value?.clearSelection(); selectedIds.value = []; load() }
 const handlePage = (p) => { query.pageNum = p; load() }
 
 const requireCities = () => {
