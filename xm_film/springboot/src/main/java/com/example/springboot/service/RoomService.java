@@ -2,6 +2,7 @@ package com.example.springboot.service;
 
 import com.example.springboot.common.BaseMapper;
 import com.example.springboot.common.BaseService;
+import com.example.springboot.common.BatchDeleteGuard;
 import com.example.springboot.common.enums.ErrorCode;
 import com.example.springboot.common.enums.RoleEnum;
 import com.example.springboot.entity.Cinema;
@@ -11,6 +12,7 @@ import com.example.springboot.mapper.RoomMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -131,10 +133,20 @@ public class RoomService extends BaseService<Room> {
         if (ids == null || ids.isEmpty()) {
             throw new CustomException(ErrorCode.PARAM_INVALID, "请选择影厅");
         }
+        List<String> blocked = new ArrayList<>();
         for (Integer id : ids) {
-            ensureRoomAccess(selectById(id), role, userId);
-            ensureNoReferences(id);
+            Room room = selectById(id);
+            ensureRoomAccess(room, role, userId);
+            try {
+                ensureNoReferences(id);
+            } catch (CustomException e) {
+                if (!BatchDeleteGuard.isBlocked(e)) {
+                    throw e;
+                }
+                blocked.add("影厅 #" + id + "「" + room.getName() + "」：" + e.getMsg());
+            }
         }
+        BatchDeleteGuard.throwIfBlocked(blocked);
         deleteBatch(ids);
     }
 

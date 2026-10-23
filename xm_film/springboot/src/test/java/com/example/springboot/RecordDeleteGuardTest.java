@@ -106,6 +106,25 @@ class RecordDeleteGuardTest {
         verify(recordMapper, never()).deleteById(any());
     }
 
+    /** 批量删除时被引用的行必须点名，不能只说「存在订单」 */
+    @Test
+    void deleteBatchScopedReportsWhichRowsAreBlocked() {
+        Record blocked = recordOf(7);
+        blocked.setTitle("测试场次");
+        when(recordMapper.selectByIdForUpdate(7)).thenReturn(blocked);
+        when(recordMapper.selectByIdForUpdate(8)).thenReturn(recordOf(8));
+        when(orderedService.countByRecordId(7)).thenReturn(2);
+        when(orderedService.countByRecordId(8)).thenReturn(0);
+
+        assertThatThrownBy(() -> recordService.deleteBatchScoped(List.of(7, 8), "ADMIN", null))
+                .isInstanceOf(CustomException.class)
+                .hasMessageContaining("整批未删除")
+                .hasMessageContaining("排片 #7")
+                .hasMessageContaining("测试场次");
+
+        verify(recordMapper, never()).deleteBatch(any());
+    }
+
     /** 排片不存在时给 404，而不是空指针 */
     @Test
     void missingRecordIsNotFound() {

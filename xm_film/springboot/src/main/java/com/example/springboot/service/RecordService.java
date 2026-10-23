@@ -2,6 +2,7 @@ package com.example.springboot.service;
 
 import com.example.springboot.common.BaseMapper;
 import com.example.springboot.common.BaseService;
+import com.example.springboot.common.BatchDeleteGuard;
 import com.example.springboot.common.DateTimeFormats;
 import com.example.springboot.common.PriceParser;
 import com.example.springboot.common.enums.ErrorCode;
@@ -24,6 +25,7 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
 import java.time.format.DateTimeParseException;
 import java.time.temporal.ChronoField;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -270,12 +272,22 @@ public class RecordService extends BaseService<Record> {
         if (ids == null || ids.isEmpty()) {
             throw new CustomException(ErrorCode.PARAM_INVALID, "请选择排片");
         }
+        List<String> blocked = new ArrayList<>();
         for (Integer id : ids) {
             // 与 deleteScoped 同口径：先锁行再数订单（BL-02）。
             // 批量删除同样要防「数完订单后有人下单」，否则外键异常漏成 500。
-            ensureRecordAccess(recordMapper.selectByIdForUpdate(id), role, userId);
-            ensureNoOrders(id);
+            Record recordItem = recordMapper.selectByIdForUpdate(id);
+            ensureRecordAccess(recordItem, role, userId);
+            try {
+                ensureNoOrders(id);
+            } catch (CustomException e) {
+                if (!BatchDeleteGuard.isBlocked(e)) {
+                    throw e;
+                }
+                blocked.add("排片 #" + id + "「" + recordItem.getTitle() + "」：" + e.getMsg());
+            }
         }
+        BatchDeleteGuard.throwIfBlocked(blocked);
         deleteBatch(ids);
     }
 

@@ -2,6 +2,7 @@ package com.example.springboot.service;
 
 import com.example.springboot.common.BaseMapper;
 import com.example.springboot.common.BaseService;
+import com.example.springboot.common.BatchDeleteGuard;
 import com.example.springboot.common.PasswordMatcher;
 import com.example.springboot.entity.Account;
 import com.example.springboot.entity.User;
@@ -17,6 +18,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -112,6 +114,18 @@ public class UserService extends BaseService<User> {
         userMapper.updatePassword(user);
     }
 
+    /** 管理员重置登录密码：不校验原密码，权限由调用方限定为 ADMIN */
+    @Transactional(rollbackFor = Exception.class)
+    public void resetPassword(Integer id, String newPassword) {
+        if (selectById(id) == null) {
+            throw new CustomException(ErrorCode.NOT_FOUND, "用户不存在");
+        }
+        User patch = new User();
+        patch.setId(id);
+        patch.setPassword(passwordEncoder.encode(newPassword));
+        userMapper.updatePassword(patch);
+    }
+
     @Transactional(rollbackFor = Exception.class)
     public User register(Account account) {
         User user = new User();
@@ -185,9 +199,18 @@ public class UserService extends BaseService<User> {
             throw new CustomException(ErrorCode.PARAM_INVALID, "请选择用户");
         }
         requireAdmin(role);
+        List<String> blocked = new ArrayList<>();
         for (Integer id : ids) {
-            ensureNoOrders(id);
+            try {
+                ensureNoOrders(id);
+            } catch (CustomException e) {
+                if (!BatchDeleteGuard.isBlocked(e)) {
+                    throw e;
+                }
+                blocked.add("用户 #" + id + "：" + e.getMsg());
+            }
         }
+        BatchDeleteGuard.throwIfBlocked(blocked);
         deleteBatch(ids);
     }
 

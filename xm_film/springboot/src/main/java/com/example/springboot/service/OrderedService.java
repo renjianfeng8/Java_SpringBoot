@@ -1,6 +1,7 @@
 package com.example.springboot.service;
 
 import com.example.springboot.common.BaseMapper;
+import com.example.springboot.common.BatchDeleteGuard;
 import com.example.springboot.common.OrderNumber;
 import com.example.springboot.common.OrderStatusCriteria;
 import com.example.springboot.common.PriceParser;
@@ -34,6 +35,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
@@ -495,11 +497,20 @@ public class OrderedService extends BaseService<Ordered> {
         if (ids == null || ids.isEmpty()) {
             throw new CustomException(ErrorCode.PARAM_INVALID, "请选择订单");
         }
+        List<String> blocked = new ArrayList<>();
         for (Integer id : ids) {
             Ordered ordered = selectById(id);
             ensureOrderAccess(ordered, role, userId);
-            ensureDeletable(ordered);
+            try {
+                ensureDeletable(ordered);
+            } catch (CustomException e) {
+                if (!BatchDeleteGuard.isBlocked(e)) {
+                    throw e;
+                }
+                blocked.add("订单 #" + id + "「" + ordered.getOrders() + "」：" + e.getMsg());
+            }
         }
+        BatchDeleteGuard.throwIfBlocked(blocked);
         orderedMapper.deleteBatch(ids);
     }
 
