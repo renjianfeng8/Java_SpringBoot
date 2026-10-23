@@ -61,6 +61,7 @@ export const ADMIN_MENU = {
         { label: '影院名录', path: '/cinemaDirectory', icon: OfficeBuilding },
         { label: '放映记录', path: '/record', icon: Calendar },
         { label: '购票订单', path: '/ordered', icon: CreditCard },
+        { label: '充值流水', path: '/finance', icon: CreditCard },
         { label: '用户评价', path: '/mark', icon: Star },
         { label: '个人资料', path: '/person', icon: Avatar },
         { label: '修改密码', path: '/password', icon: Lock },

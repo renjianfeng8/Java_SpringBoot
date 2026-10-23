@@ -61,6 +61,7 @@ public class FundFlowController {
         FundFlowView view = new FundFlowView();
         view.setId(entity.getId());
         view.setUserId(entity.getUserId());
+        view.setUserName(entity.getUserName());
         view.setSource(entity.getSource());
         view.setChangeAmount(entity.getChangeAmount());
         view.setBalanceBefore(entity.getBalanceBefore());

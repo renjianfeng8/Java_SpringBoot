@@ -13,6 +13,7 @@ import java.math.BigDecimal;
 public class FundFlowView {
     private Integer id;
     private Integer userId;
+    private String userName;
     private String source;
     private BigDecimal changeAmount;
     private BigDecimal balanceBefore;

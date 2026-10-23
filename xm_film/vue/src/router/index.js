@@ -29,6 +29,7 @@ const router = createRouter({
         { path: 'cinemaDirectory', meta: { name: '影院名录' }, component: () => import('../views/manage/CinemaDirectory.vue') },
         { path: 'record', meta: { name: '放映记录' }, component: () => import('../views/manage/Record.vue') },
         { path: 'ordered', meta: { name: '购票订单' }, component: () => import('../views/manage/Ordered.vue') },
+        { path: 'finance', meta: { name: '充值流水' }, component: () => import('../views/manage/Finance.vue') },
         { path: 'mark', meta: { name: '用户评价' }, component: () => import('../views/manage/Mark.vue') },
       ],
     },

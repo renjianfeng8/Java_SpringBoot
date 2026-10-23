@@ -14,6 +14,7 @@ public class RechargeOrderView {
     private Integer id;
     private String rechargeNo;
     private Integer userId;
+    private String userName;
     private BigDecimal amount;
     private String status;
     private String createTime;

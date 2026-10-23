@@ -21,6 +21,8 @@ public class FundFlow implements Serializable {
 
     private Integer id;
     private Integer userId;
+    /** 管理员对账时展示用（LEFT JOIN user.name） */
+    private String userName;
     /** 业务来源，取值见 {@link com.example.springboot.common.enums.FundSource} */
     private String source;
     /** 变动金额：正为入账，负为出账 */

@@ -82,6 +82,7 @@ public class RechargeController {
         view.setId(entity.getId());
         view.setRechargeNo(entity.getRechargeNo());
         view.setUserId(entity.getUserId());
+        view.setUserName(entity.getUserName());
         view.setAmount(entity.getAmount());
         view.setStatus(entity.getStatus());
         view.setCreateTime(entity.getCreateTime());

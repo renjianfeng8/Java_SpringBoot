@@ -6,12 +6,14 @@
 <mapper namespace="com.example.springboot.mapper.FundFlowMapper">
 
     <select id="selectAll" resultType="com.example.springboot.entity.FundFlow">
-        SELECT * FROM fund_flow
+        SELECT f.*, u.name AS userName
+        FROM fund_flow f
+        LEFT JOIN user u ON f.user_id = u.id
         <where>
-            <if test="userId != null">AND user_id = #{userId}</if>
-            <if test="source != null and source != ''">AND source = #{source}</if>
+            <if test="userId != null">AND f.user_id = #{userId}</if>
+            <if test="source != null and source != ''">AND f.source = #{source}</if>
         </where>
-        ORDER BY id DESC
+        ORDER BY f.id DESC
     </select>
 
     <!-- 只增账本：无 update / delete 语句 -->

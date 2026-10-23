@@ -22,6 +22,8 @@ public class RechargeOrder implements Serializable {
     private Integer id;
     private String rechargeNo;
     private Integer userId;
+    /** 管理员对账时展示用（LEFT JOIN user.name） */
+    private String userName;
     /**
      * 必须用包装类型：与 ordered.total 同因同治，凡被
      * <if test="x != null"> 守卫的字段一律不用原始类型。
