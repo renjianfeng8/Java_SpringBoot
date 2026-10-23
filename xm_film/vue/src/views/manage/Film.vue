@@ -13,6 +13,17 @@
       <div class="list-toolbar__filters">
         <el-input v-model="searchForm.title" placeholder="请输入电影名称查询" aria-label="电影名称"
                   class="search-input" :prefix-icon="Search" @keyup.enter="onSearch"/>
+        <el-select v-model="searchForm.typeId" placeholder="电影类型" aria-label="电影类型" class="field-md" clearable>
+          <el-option v-for="item in typeData" :key="item.id" :label="item.title" :value="item.id"/>
+        </el-select>
+        <el-select v-model="searchForm.areaId" placeholder="制作地区" aria-label="制作地区" class="field-md" clearable>
+          <el-option v-for="item in areaData" :key="item.id" :label="item.title" :value="item.id"/>
+        </el-select>
+        <el-input v-model="searchForm.year" placeholder="上映年份" aria-label="上映年份"
+                  class="field-md" clearable @keyup.enter="onSearch"/>
+        <el-select v-model="searchForm.status" placeholder="电影状态" aria-label="电影状态" class="field-md" clearable>
+          <el-option v-for="status in FILM_STATUS_OPTIONS" :key="status" :label="status" :value="status"/>
+        </el-select>
         <el-button type="primary" @click="onSearch">查 询</el-button>
         <el-button type="warning" @click="onReset">重 置</el-button>
       </div>
@@ -23,8 +34,8 @@
     </div>
 
     <div class="card table-card">
-      <el-table v-loading="loading" stripe size="small" :data="dataList" @selection-change="onSelectionChange">
-        <el-table-column type="selection" width="55"/>
+      <el-table ref="tableRef" row-key="id" v-loading="loading" stripe size="small" :data="dataList" @selection-change="onSelectionChange">
+        <el-table-column type="selection" width="55" reserve-selection/>
         <el-table-column type="expand">
           <template #default="props">
             <el-descriptions title="电影信息" :column="4" border>
@@ -108,7 +119,7 @@
             @current-change="onPageChange"
             v-model:current-page="pageNum"
             v-model:page-size="pageSize"
-            :page-sizes="[5, 10, 15, 20]"
+            :page-sizes="[5, 10, 15, 20, 50, 100]"
             background
             layout="total, sizes, prev, pager, next, jumper"
             :total="total"
@@ -163,7 +174,14 @@
           <el-input type="textarea" :rows="4" v-model="form.content" autocomplete="off" placeholder="请输入电影简介"/>
         </el-form-item>
         <el-form-item label="预告视频" prop="video">
-          <el-input v-model="form.video" autocomplete="off" placeholder="YouTube 链接，从 TMDB 导入时自动填充"/>
+          <div class="video-field">
+            <el-input v-model="form.video" autocomplete="off" placeholder="YouTube 嵌入地址，从 TMDB 导入时自动填充"/>
+            <!-- 上传成功后把返回的本地地址写进 form.video，两种来源共用同一个字段，前台按地址形态选播放器 -->
+            <el-upload :action="FILE_UPLOAD_URL" :headers="uploadHeaders" accept="video/mp4,video/webm"
+                       :show-file-list="false" :on-success="handleVideoUpload" :on-error="handleUploadError">
+              <el-button :icon="VideoPlay">上传本地视频</el-button>
+            </el-upload>
+          </div>
         </el-form-item>
         <el-form-item label="制作公司" prop="employee">
           <el-input v-model="form.employee" autocomplete="off" placeholder="请输入制作公司" @keyup.enter="submit"/>
@@ -202,20 +220,20 @@
       <div v-loading="searching" class="import-results">
         <el-empty v-if="!searching && importResults.length === 0"
                   description="输入片名搜索 TMDB" :image-size="60"/>
-        <div v-for="item in importResults" :key="item.tmdbId"
-             class="import-item" :class="{ 'import-item--active': importSelectedId === item.tmdbId }"
-             role="button" tabindex="0" :aria-pressed="importSelectedId === item.tmdbId"
-             @click="importSelectedId = item.tmdbId" @keyup.enter="importSelectedId = item.tmdbId">
+        <button v-for="item in importResults" :key="item.tmdbId" type="button"
+                class="import-item" :class="{ 'import-item--active': importSelectedId === item.tmdbId }"
+                :aria-pressed="importSelectedId === item.tmdbId"
+                @click="importSelectedId = item.tmdbId">
           <img v-if="item.posterUrl" :src="item.posterUrl" alt="" class="import-item__poster" loading="lazy">
-          <div v-else class="import-item__poster import-item__poster--empty" aria-hidden="true"></div>
-          <div class="import-item__body">
-            <div class="import-item__title">
+          <span v-else class="import-item__poster import-item__poster--empty" aria-hidden="true"></span>
+          <span class="import-item__body">
+            <span class="import-item__title">
               {{ item.title }}<span v-if="item.year" class="import-item__year">（{{ item.year }}）</span>
-            </div>
-            <div class="import-item__original">{{ item.originalTitle }}</div>
-            <div class="import-item__overview">{{ item.overview || '暂无简介' }}</div>
-          </div>
-        </div>
+            </span>
+            <span class="import-item__original">{{ item.originalTitle }}</span>
+            <span class="import-item__overview">{{ item.overview || '暂无简介' }}</span>
+          </span>
+        </button>
       </div>
 
       <template #footer>
@@ -246,7 +264,7 @@
 </template>
 
 <script setup>
-import { isSuccess, API_PATHS, FILE_UPLOAD_URL, TMDB_API, getFilmStatusType as getStatusType } from '@/constants'
+import { isSuccess, API_PATHS, FILE_UPLOAD_URL, TMDB_API, FILM_STATUS_OPTIONS, getFilmStatusType as getStatusType } from '@/constants'
 import { ref, reactive } from 'vue'
 import { Delete, Download, Edit, Plus, Search, VideoPlay } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
@@ -256,7 +274,7 @@ import request from '@/utils/request'
 import { uploadHeaders, handleUploadError } from '@/utils/upload'
 
 const crud = useCrud(API_PATHS.FILMS)
-const { dataList, total, pageNum, pageSize, searchForm, selectedIds, loading, error,
+const { dataList, total, pageNum, pageSize, searchForm, selectedIds, tableRef, loading, error,
         confirmDel, confirmDelBatch, onSearch, onReset, onPageChange, onSizeChange, onSelectionChange } = crud
 const { dialogVisible, formRef, form, rules, openAdd, openEdit, submit, close } = useFormDialog(crud, {
   defaultForm: {
@@ -306,6 +324,11 @@ loadActor()
 function handleFileUpload(res) {
   if (isSuccess(res)) { form.img = res.data; ElMessage.success('电影封面上传成功') }
   else { ElMessage.error(res.msg || '电影封面上传失败') }
+}
+
+function handleVideoUpload(res) {
+  if (isSuccess(res)) { form.video = res.data; ElMessage.success('视频上传成功') }
+  else { ElMessage.error(res.msg || '视频上传失败') }
 }
 
 function handleTypeChange(val) {
@@ -435,3 +458,11 @@ async function runBackfill() {
   }
 }
 </script>
+
+<style scoped>
+.video-field {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+}
+</style>
