@@ -49,6 +49,9 @@ public class CinemaService extends BaseService<Cinema> {
 
     private final CinemaDirectoryMapper directoryMapper;
 
+    /** 导入影院时顺带问一次高德封面（只查 URL，不下载字节） */
+    private CinemaCoverService coverService;
+
     private RoomMapper roomMapper;
 
     private RecordMapper recordMapper;
@@ -83,6 +86,12 @@ public class CinemaService extends BaseService<Cinema> {
         this.roomMapper = roomMapper;
         this.recordMapper = recordMapper;
         this.orderedMapper = orderedMapper;
+    }
+
+    /** 补图服务用 setter 注入：构造器已被单测直接 new，扩参数会破坏既有用例 */
+    @Autowired
+    public void setCoverService(CinemaCoverService coverService) {
+        this.coverService = coverService;
     }
 
     @Override
@@ -168,6 +177,11 @@ public class CinemaService extends BaseService<Cinema> {
             cinema.setPhone(row.getPhone());
             cinema.setAddress(row.getAddress());
             cinema.setDirectoryId(row.getId());
+            // 封面：只查 URL 不下载（下载在事务外由 CinemaCoverService.fillOneCover 完成）。
+            // 查不到就留空，前端 avatarSrc 兜底成默认图，不影响导入。
+            if (coverService != null) {
+                cinema.setAvatar(coverService.lookupCoverUrl(row.getPoiId()));
+            }
             try {
                 cinemaMapper.insert(cinema);
                 created++;
@@ -327,6 +341,18 @@ public class CinemaService extends BaseService<Cinema> {
         }
         cinema.setPassword(passwordEncoder.encode(account.getNewPassword()));
         cinemaMapper.updatePassword(cinema);
+    }
+
+    /** 管理员重置登录密码：不校验原密码，权限由调用方限定为 ADMIN */
+    @Transactional(rollbackFor = Exception.class)
+    public void resetPassword(Integer id, String newPassword) {
+        if (selectById(id) == null) {
+            throw new CustomException(ErrorCode.NOT_FOUND, "影院账号不存在");
+        }
+        Cinema patch = new Cinema();
+        patch.setId(id);
+        patch.setPassword(passwordEncoder.encode(newPassword));
+        cinemaMapper.updatePassword(patch);
     }
 
     @Transactional(rollbackFor = Exception.class)

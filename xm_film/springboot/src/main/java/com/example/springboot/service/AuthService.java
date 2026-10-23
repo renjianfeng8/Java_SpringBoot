@@ -5,6 +5,8 @@ import com.example.springboot.common.enums.RoleEnum;
 import com.example.springboot.entity.Account;
 import com.example.springboot.entity.User;
 import com.example.springboot.exception.CustomException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 /**
@@ -13,6 +15,8 @@ import org.springframework.stereotype.Service;
  */
 @Service
 public class AuthService {
+
+    private static final Logger log = LoggerFactory.getLogger(AuthService.class);
 
     private final AdminService adminService;
 
@@ -81,6 +85,34 @@ public class AuthService {
             userService.updatePassword(account);
         } else {
             throw new CustomException(ErrorCode.SYSTEM_ERROR, "非法输入");
+        }
+    }
+
+    /**
+     * 管理员重置他人密码：按目标角色路由到对应账号表。
+     *
+     * <p>这是唯一不要求原密码的改密入口，权限已在控制器上限定为 ADMIN；
+     * 日志只记操作人与目标账号，绝不打印密码。
+     */
+    public void resetPassword(String role, Integer id, String newPassword, Integer operatorId) {
+        if (id == null) {
+            throw new CustomException(ErrorCode.PARAM_INVALID, "账号 ID 不能为空");
+        }
+        if (newPassword == null || newPassword.isBlank()) {
+            throw new CustomException(ErrorCode.PARAM_INVALID, "新密码不能为空");
+        }
+        if (newPassword.length() < 6 || newPassword.length() > 64) {
+            throw new CustomException(ErrorCode.PARAM_INVALID, "新密码长度需为 6-64 位");
+        }
+        log.info("管理员 {} 重置 {} #{} 的登录密码", operatorId, role, id);
+        if (RoleEnum.ADMIN.name().equals(role)) {
+            adminService.resetPassword(id, newPassword);
+        } else if (RoleEnum.CINEMA.name().equals(role)) {
+            cinemaService.resetPassword(id, newPassword);
+        } else if (RoleEnum.USER.name().equals(role)) {
+            userService.resetPassword(id, newPassword);
+        } else {
+            throw new CustomException(ErrorCode.PARAM_INVALID, "无效的角色类型");
         }
     }
 

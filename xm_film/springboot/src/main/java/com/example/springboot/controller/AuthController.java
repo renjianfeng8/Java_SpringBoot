@@ -1,13 +1,18 @@
 package com.example.springboot.controller;
 
+import com.example.springboot.common.AuthContext;
 import com.example.springboot.common.JwtUtils;
 import com.example.springboot.common.Result;
+import com.example.springboot.common.enums.ErrorCode;
+import com.example.springboot.common.enums.RoleEnum;
+import com.example.springboot.dto.request.AdminPasswordResetRequest;
 import com.example.springboot.dto.request.LoginRequest;
 import com.example.springboot.dto.request.PasswordChangeRequest;
 import com.example.springboot.dto.request.RegisterRequest;
 import com.example.springboot.dto.response.AccountView;
 import com.example.springboot.entity.Account;
 import com.example.springboot.entity.User;
+import com.example.springboot.exception.CustomException;
 import com.example.springboot.service.AuthService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -72,6 +77,18 @@ public class AuthController {
         }
         account.setRole(role);
         authService.updatePassword(account);
+        return Result.success();
+    }
+
+    @PutMapping("/password/reset")
+    public Result<Void> resetPassword(@Valid @RequestBody AdminPasswordResetRequest request) {
+        // /auth/** 不在拦截器的匿名白名单里，但角色仍由本方法兜底：
+        // 任何已登录角色都能到达控制器，不能只靠前端隐藏按钮。
+        if (!RoleEnum.ADMIN.name().equals(AuthContext.role())) {
+            throw new CustomException(ErrorCode.FORBIDDEN, "权限不足");
+        }
+        authService.resetPassword(request.getRole(), request.getId(), request.getNewPassword(),
+                AuthContext.userId());
         return Result.success();
     }
 

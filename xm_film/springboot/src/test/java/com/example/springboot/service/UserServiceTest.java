@@ -8,15 +8,18 @@ import com.example.springboot.mapper.UserMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -118,5 +121,26 @@ class UserServiceTest {
         assertNull(user.getPassword());
         assertNull(user.getRole());
         verify(userMapper).updateById(user);
+    }
+
+    @Test
+    void resetPasswordStoresBcryptHashWithoutOldPassword() {
+        when(userMapper.selectById(1)).thenReturn(mockUser);
+
+        userService.resetPassword(1, "new123");
+
+        ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
+        verify(userMapper).updatePassword(captor.capture());
+        String stored = captor.getValue().getPassword();
+        assertNotEquals("new123", stored);
+        assertTrue(new BCryptPasswordEncoder().matches("new123", stored));
+    }
+
+    @Test
+    void resetPasswordForMissingUserThrows() {
+        when(userMapper.selectById(99)).thenReturn(null);
+
+        assertThrows(CustomException.class, () -> userService.resetPassword(99, "new123"));
+        verify(userMapper, never()).updatePassword(any());
     }
 }

@@ -94,4 +94,16 @@ public class AdminService extends BaseService<Admin> {
         admin.setPassword(passwordEncoder.encode(account.getNewPassword()));
         adminMapper.updatePassword(admin);
     }
+
+    /** 管理员重置登录密码：不校验原密码，权限由调用方限定为 ADMIN */
+    @Transactional(rollbackFor = Exception.class)
+    public void resetPassword(Integer id, String newPassword) {
+        if (selectById(id) == null) {
+            throw new CustomException(ErrorCode.NOT_FOUND, "管理员不存在");
+        }
+        Admin patch = new Admin();
+        patch.setId(id);
+        patch.setPassword(passwordEncoder.encode(newPassword));
+        adminMapper.updatePassword(patch);
+    }
 }
