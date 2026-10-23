@@ -3,26 +3,26 @@
 ## 1 目录与规模
 
 ```
-src/                       70 文件 / 16,579 行（vue+js+scss）
-├── views/                 46 个 .vue / 13,399 行
-│   ├── Front.vue (532) Back.vue (166) Manage.vue (212) Login.vue (112) Register.vue (123) 404.vue (111)
-│   ├── front/  16 篇 / 7,622 行
-│   ├── back/    7 篇 / 1,272 行
-│   └── manage/ 17 篇 / 3,249 行
-├── components/  5 个 / 1,117 行
-├── composables/ 3 个 / 306 行
-├── utils/       5 个
+src/                       80 文件 / 17,433 行（vue+js+scss）
+├── views/                 48 个 .vue / 13,627 行
+│   ├── 根目录 7 篇：Front / Back / Manage / AdminShell / Login / Register / 404
+│   ├── front/  16 篇 / 7,660 行
+│   ├── back/    7 篇 / 1,336 行
+│   └── manage/ 18 篇 / 3,642 行
+├── components/  6 个 / 1,199 行
+├── composables/ 6 个（useAuth / useCrud / useFormDialog / usePagedList / useLoginPrompt / useLogout）
+├── utils/       6 个（含 navigation）
 └── assets/css/  tokens.scss + global.css + index.scss + 4 个布局 scss
 ```
 
-三个最大的单文件：`manage/Home.vue` 974、`front/Home.vue` 909、`front/BuyTicket.vue` 897 行。
+三个最大的单文件：`manage/Home.vue` 974、`front/BuyTicket.vue` 945、`front/Home.vue` 910 行。
 
-## 2 路由表（`router/index.js`，单文件 122 行）
+## 2 路由表（`router/index.js`，单文件 142 行）
 
 | 前缀 | 壳 | meta |
 | --- | --- | --- |
-| `/manage/*` | `Manage.vue` | 父级 `requiresAuth + roles:['ADMIN']`，子级只带 `name` |
-| `/back/*` | `Back.vue` | 父级 `requiresAuth + roles:['CINEMA']` |
+| `/manage/*` | `Manage.vue`（11 行，内部复用 `AdminShell.vue`） | 父级 `requiresAuth + roles:['ADMIN']`，子级只带 `name` |
+| `/back/*` | `Back.vue`（11 行，内部复用 `AdminShell.vue`） | 父级 `requiresAuth + roles:['CINEMA']` |
 | `/front/*` | `Front.vue` | 父级无 meta，**逐子标记** `guest` 或 `requiresAuth+roles:['USER']` |
 | `/login` `/register` `/404` | 无壳 | `guest: true` |
 
@@ -31,26 +31,29 @@ src/                       70 文件 / 16,579 行（vue+js+scss）
 1. `document.title = to.meta.title || '电影购票网站'`。
 2. `if (to.meta.requiresAuth || to.meta.roles)` —— **roles 本身蕴含需登录**，不再有 guest 早退（FE-02）。
 3. 无 token/role → 清存储 → 确认框 →「去登录」带 `redirect`；「取消」时若 `from === START_LOCATION` 落首页（否则白屏，FE-01），否则 `next(false)`。
-4. 角色不匹配 → 提示 + `next('/login')`（丢弃来路，FE-03）。
+4. 角色不匹配 → 提示 + 回**该角色自己的主页**（不再踢到 `/login`；FE-03 已修）。
 
 两种 meta 范式并存是已知债务（FE-05）：`/front` 下新增子路由漏写 meta 会**静默公开**。
 
-## 3 composables（三个复用件）
+## 3 composables（六个复用件）
 
 | 文件 | 导出 | 关键约定 |
 | --- | --- | --- |
 | `useAuth.js` | `user` / `isLoggedIn` / `isAdmin` / `isCinema` / `isUser` / `hasRole` / `login` / `logout` / `init` | 模块级单例 `globalUser`；`verified` 闸门保证 `/me` **全生命周期只验一次**（FE-14）；验签期间比对 token 防旧响应复活会话（FE-13） |
-| `useCrud.js` | `dataList/loading/error/pageNum/pageSize/total/searchForm/selectedIds` + `load/add/update/del/delBatch/onSearch/onReset/onPageChange/onSizeChange` | `load` 带**请求序号**（FE-11）与**删空末页回退第 1 页**（FE-12）；`searchForm` 起于空对象 `reactive({})` |
+| `useCrud.js` | `dataList/loading/error/pageNum/pageSize/total/searchForm/selectedIds/tableRef` + `load/add/update/del/delBatch/onSearch/onReset/onPageChange/onSizeChange/onSelectionChange` | `load` 带**请求序号**（FE-11）与**删空末页回退第 1 页**（FE-12）；写入/查询/重置后同时清表格内部选中与 `selectedIds`（B2） |
 | `useFormDialog.js` | `dialogVisible/isEdit/submitting/form/formRef/openAdd/openEdit/submit/close` | 默认值**深拷贝**（FE-16）；`submit` 在校验前取 in-flight 守卫（FE-15）；`openAdd` 删除 defaultForm 之外的键（防带上一行 id 撞主键） |
+| `usePagedList.js` | `items/state` + `load/reload/setPage/setPageSize` | 只读分页：末次请求落地、失败清空、越界回退第 1 页；`front/Orders`、`front/Cinema` 已采用 |
+| `useLoginPrompt.js` | 游客登录引导 | 与路由守卫共用同一确认框文案 |
+| `useLogout.js` | 退出登录 | 前台/后台外壳共用，带在途与取消处理 |
 
-**采用率不均**：`front/Cinema.vue`、`front/Orders.vue`、`front/Movie.vue`、`back/*` 仍手搓分页（FE-49）。
+**采用率**：`front/Orders`、`front/Cinema` 用 `usePagedList`；`front/Movie` 与 `back/*` 仍手写分页，但都已带 `loadSeq`（FE-11）。
 
 ## 4 请求与存储
 
 `utils/request.js`：
 
 - `axios.create({ baseURL: API_BASE_URL, timeout: 30000 })`，`API_BASE_URL` 来自 `constants/index.js`（唯一读取点）。
-- 响应拦截器**直接返回 `res.data`**；业务码 `code !== '200'` **不在这里处理**，由各页面自行 `ElMessage.error(res.msg)`（FE-19：`'200'` 字面量分散约 101 处 / 37 文件）。
+- 响应拦截器**直接返回 `res.data`**；业务码 `code !== '200'` **不在这里处理**，由各页面自行 `ElMessage.error(res.msg)`（FE-19 仍未改）。当前业务码判断已收敛到 `isSuccess()`：**117 处调用 / 39 个文件，业务码字面量 0 处**。
 - HTTP 401 → 清存储 + 跳登录（防重入）；网络/超时单独中文提示。
 
 `utils/authStorage.js`：localStorage 键 `xm-film-user`；解析失败自动清空。
@@ -59,7 +62,7 @@ src/                       70 文件 / 16,579 行（vue+js+scss）
 
 `constants/index.js`：
 
-- `API_PATHS`（21 条）+ 各组业务路径（`ORDER_API` / `FILM_API` / `MARK_API` / `ACCOUNT_API` / `RECHARGE_API` / `FUND_FLOW_API` / `STATISTICS_API` / `TMDB_API` / `CINEMA_DIRECTORY_API` / `CINEMA_API` / `AUTH_API` / `TICKET_API`）。
+- `API_PATHS`（23 条）+ 各组业务路径（`ORDER_API` / `FILM_API` / `MARK_API` / `ACCOUNT_API` / `RECHARGE_API` / `FUND_FLOW_API` / `STATISTICS_API` / `TMDB_API` / `CINEMA_DIRECTORY_API` / `CINEMA_API` / `AUTH_API` / `TICKET_API`）。
 - `apiById` / `apiPage` / `apiBatch` 三个路径助手。
 - 状态映射：`ORDER_STATUS_MAP`、`CINEMA_STATUS(_MAP)`、`FILM_STATUS_MAP`、`RECORD_STATUS_MAP`、`RECHARGE_STATUS_MAP`、`ROLE_TAG_MAP`、`ACTOR_ROLE_TYPE_MAP` + 各自的 `get*Type` 兜底。
 - `ORDER_DELETABLE_STATUSES` 与后端 `OrderedService.DELETABLE_STATUSES` 靠注释同步。
@@ -111,7 +114,7 @@ src/                       70 文件 / 16,579 行（vue+js+scss）
 
 **back/（7）**：`Home`（公告）、`Film`（只读）、`Room`、`Record`、`Ordered`（出票）、`Person`、`Password`。
 
-**manage/（17）**：`Home`（驾驶舱）、`Admin`、`User`、`Cinema`（含审核）、`CinemaDirectory`、`Film`（TMDB 导入）、`Video`、`Actor`、`Type`、`Area`、`Notice`、`Room`、`Record`、`Mark`、`Ordered`、`Person`、`Password`。
+**manage/（18）**：`Home`（驾驶舱）、`Admin`、`User`、`Cinema`（含审核）、`CinemaDirectory`、`Film`（TMDB 导入）、`Video`、`Actor`、`Type`、`Area`、`Notice`、`Room`、`Record`、`Mark`、`Ordered`（含取消/退票）、`Finance`（充值/资金流水）、`Person`、`Password`。
 
 ## 8 组件
 
@@ -121,12 +124,16 @@ src/                       70 文件 / 16,579 行（vue+js+scss）
 | `OrderPayDialog` | 三态支付弹窗（支付 → 6 位密码 → 取票凭证），含倒计时与超时 |
 | `PayPasswordInput` | 6 格密码输入（自动跳格、粘贴分发、退格） |
 | `DetailSkeleton` | 详情页首屏骨架（`wide` 切横版） |
+| `ResetPasswordDialog` | 管理员重置 user/admin/cinema 登录密码；6–64 位校验，成功后关闭 |
 | `ErrorBoundary` | `onErrorCaptured` 兜底，包住整个 App |
 
 ## 9 已知债务（详见 `audit/frontend-audit.md`）
 
-- `Back.vue` 与 `Manage.vue` **91% 行重复**（137/150 行完全相同）。
-- 退出登录确认块在 3 个壳里逐字重复（FE-50）。
-- `getDefaultPath(role)` 只在 `Login.vue` 有一份，404/壳里的跳转各写一遍（FE-07）。
-- 导航数组与路由表无机制关联（FE-59）。
-- 内容测度 `width:55%/60% + max-width:1200px` 手写约 10 处（FE-58）。
+- **FE-05**：后台父路由已统一门禁，前台仍逐子路由标 `guest` / `requiresAuth`，缺一条路由表断言防未来漏写。
+- **FE-09**：`/front` 与 login/register/404 上无消费者的 `meta.name` 仍在。
+- **FE-18**：网络类失败保持登录（fail-open）的口径未定，未改。
+- **FE-19**：`isSuccess()` 只收敛字面量，失败语义下沉到拦截器仍未做。
+- **FE-49**：`front/Orders`、`front/Cinema` 已用 `usePagedList`；`front/Movie`、`back/*` 仍手写分页（已补 `loadSeq`）。
+- **FE-60**：`App.vue` / `request.js` 的裸前缀匹配残余两处，当前路由不可达，未做。
+- **Sonar 前端**：2 条 `S3776` 复杂度（`front/FilmDetail.vue`、`manage/Film.vue`）未处理；8 条 `S6819` ARIA 已于 2026-10-22 修复。
+- 仍无前端自动化测试框架；验证靠 `npm run build` + 无头 Chrome 脚本。

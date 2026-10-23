@@ -7,6 +7,8 @@
 三个账号表各自独立、互不 JOIN：`admin`（角色 ADMIN）、`cinema`（CINEMA）、`user`（USER，有余额与支付密码）。
 `entity/Account` 是三者的父类（**无对应表**），`token` / `newPassword` 挂在它上面（BL-19）。
 
+管理员重置他人登录密码只走 `PUT /auth/password/reset`，只允许 ADMIN，不校验旧密码，新密码 6–64 位并一律 BCrypt 入库；重置不会主动吊销旧 JWT（token 吊销仍未做）。管理端订单的取消/退票复用同一状态机，管理员也不能绕过映前 60 分钟退款截止。
+
 关键：**影院的 `id` 同时也是它的「用户 id」**。`ordered.cinema_id` 与 token 里的 `userId` 在 CINEMA 语境下是同一 id 空间，所以 `ensureOrderAccess` 能直接比。
 
 ## 2 排片（record）
@@ -203,8 +205,7 @@ if (!RecordService.isPurchasable(recordItem)) → 409「该场次已开场或已
 ### 3.5 金额
 
 - 下单时 `unit_price` 取场次票价并**快照**（`updateById` 不含该列），`total = unitPrice × number`。
-- 支付/退票的资金额 = `BigDecimal.valueOf(ordered.total)`。
-- 订单总价为 `Double`（BL-24），当前经 `BigDecimal.valueOf(double)` 往返未见精度损失。
+- 订单金额 `total/payAmount/refundAmount` 均为 `BigDecimal`（BL-24 已完成）；支付/退票直接使用订单金额，不再经过 `double` 往返。
 
 ### 3.6 取票码
 
@@ -231,6 +232,7 @@ requirePositive → SELECT balance FOR UPDATE → 校验/变更
 
 - 流水**只增不改不删**；`balance_before` 与上一行 `balance_after` 恒等（账本连续性的可证明前提，见 `audit/frontend-audit.md` 关于删列的那段）。
 - 事务传播一律 `REQUIRED`：`payOrder` 的扣款、出码、状态更新是**同一事务**。
+- 管理端 `/manage/finance` 可看全部充值单与流水（含用户姓名），但页面是只读的；**没有人工入账/补单入口**，避免在 SEC-01 未修时再开一条资金写入面。
 
 ### 4.1 充值
 
@@ -241,7 +243,7 @@ createRecharge（仅 USER，>0 且 ≤50000，建「处理中」单据，不动�
         └ 失败：置「已失败」+ 备注，余额不变
 ```
 
-- 这是**模拟网关**：前端按钮直接回调。属既定演示设计，非缺陷（见 `audit/backend-backlog.md`「已核验非缺陷」）。
+- 这是**模拟网关**：前端按钮直接回调。当前 USER 可对自己的单据直接回调成功，属**已实测的 SEC-01 漏洞**，只是在演示环境暂缓修复；不能当成“已核验非缺陷”，生产不可开启此路径（见 `audit/backend-backlog.md` §安全）。
 - 幂等：`selectByIdForUpdate` + 状态判定，没有幂等键。
 
 ## 5 支付密码
@@ -250,7 +252,7 @@ createRecharge（仅 USER，>0 且 ≤50000，建「处理中」单据，不动�
 - 限次：连续错 5 次锁 15 分钟；**支付与改密共用同一计数**（否则改密成为不限次试错通道）。
 - **关键设计**：`checkForPayment` / `checkOldPassword` 标注 `REQUIRES_NEW` 且**返回异常而不是抛出**。原因：失败计数必须先由独立事务提交，若在同一事务内抛出，计数会随回滚一起消失，限次形同虚设。调用方拿到非 null 自行 throw。**改签名前先读这段注释。**
 - `verifyOldPassword`（只验不写）是同类**自调用**，`REQUIRES_NEW` 被代理绕过 —— 它只在"入口无外层事务"（`AccountController` 直接调用）时成立。**不要把它挪进事务方法里。**
-- 登录密码比对：先 BCrypt，再退到明文相等（兼容存量种子账号），共 7 处同口径（BL-13）。
+- 登录密码比对：先 BCrypt，再退到明文相等（兼容存量种子账号），四个服务类共用 `common/PasswordMatcher`（BL-13）；这个回退就是已知未修的 SEC-03，修完应删除并迁移演示账号。
 
 ## 6 评价（mark）
 

@@ -4,11 +4,11 @@
 
 | 控制器 | 基路径 | 鉴权档 | 备注 |
 | --- | --- | --- | --- |
-| `AuthController` | `/api/v1/auth` | 公开（login/register/years）+ 登录态（me/password） | |
+| `AuthController` | `/api/v1/auth` | 公开（login/register/years）+ 登录态（me/password）+ ADMIN（password/reset） | 重置他人登录密码只允许 ADMIN |
 | `HealthController` | `/api/v1/health` | 公开 | |
 | `AdminController` | `/api/v1/admins` | ADMIN_ONLY | |
 | `UserController` | `/api/v1/users` | 读登录态 / 写 ADMIN | 管理端用户 CRUD |
-| `CinemaController` | `/api/v1/cinemas` | 读公开 / 写 ADMIN | 含 `regions`、`from-directory`（返回一次性初始口令） |
+| `CinemaController` | `/api/v1/cinemas` | 读公开 / 写 ADMIN | 含 `regions`、`from-directory`、`covers/backfill`（返回一次性初始口令） |
 | `CinemaDirectoryController` | `/api/v1/cinema-directory` | ADMIN_ONLY（不限方法） | |
 | `FilmController` | `/api/v1/films` | 读公开 / 写 ADMIN | 含 box-office、mark-top、search、by-cinema |
 | `ActorController` | `/api/v1/actors` | 读公开 / 写 ADMIN | |
@@ -73,16 +73,17 @@ ANONYMOUS_WRITE_EXACT = { /api/v1/tickets/redeem }
 
 ## 6 测试
 
-27 个测试类 / 5,001 行，分两类：
+43 个测试类 / 7,789 行，共 403 条执行（2026-10-22），分三类：
 
 | 类型 | 数量 | 依赖数据库 | 说明 |
 | --- | --- | --- | --- |
 | Mockito 单测 | 大多数 | 否 | `@ExtendWith(MockitoExtension.class)` + `@InjectMocks` |
-| `@SpringBootTest` 绑定层守卫 | 5（`*LoadTest`、`OrderedSeatConflictTest`、`OrderedServiceTest`） | **是，走 `xm_film_test`** | 证明 mapper XML 能被 MyBatis 解析并执行 |
+| `@SpringBootTest` 绑定层守卫 | 12 个类（含 `*LoadTest`、`OrderedSeatConflictTest`、`OrderedServiceTest`、并发/事务边界测试） | **是，走 `xm_film_test`** | 证明 mapper XML 能被 MyBatis 解析并执行 |
+| `@WebMvcTest` 控制器切片 | 5 个类 | 否 | Ordered / Recharge / Ticket / Auth+GlobalExceptionHandler / Health |
 
 **硬规则**：任何新增 `@SpringBootTest` 必须同时加 `@ActiveProfiles("ci")`；会写库的再加 `@Transactional`。缺前者 = 写开发库，缺后者 = 失败即留脏行。
 
-`OrderedServiceTest` 是唯一一个 `@SpringBootTest(classes = OrderedService.class)`（只装一个 bean 的切片）的单测，55 个用例覆盖了状态机、权限、金额、取票码全路径（mock 掉全部 mapper）。
+`OrderedServiceTest` 是唯一一个 `@SpringBootTest(classes = OrderedService.class)`（只装一个 bean 的切片）的单测，51 个用例覆盖了状态机、权限、金额、取票码全路径（mock 掉全部 mapper）。
 
 ## 7 值得记住的三个"反直觉"实现
 

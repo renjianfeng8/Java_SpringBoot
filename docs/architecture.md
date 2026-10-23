@@ -40,7 +40,7 @@
 | `tmdb.*` | token + `127.0.0.1:7897` 代理 | 本机直连 TMDB 恒超时 |
 | `amap.key` / `request-interval-ms` | Key + 300ms | 个人 Key QPS ≈5 |
 
-明文口令/密钥属**有意不整改**（`audit/backend-backlog.md`「有意不整改」）。
+DB/TMDB/高德等本机配置直写属既定演示政策（`audit/backend-backlog.md`「有意不整改」）；但 **JWT 密钥硬编码（SEC-02）和登录密码明文回退（SEC-03）是已知未修漏洞，不是“非缺陷”**，当前只适用于本机演示，不能按生产安全口径部署。
 
 ## 3 后端分层
 
@@ -53,10 +53,10 @@ mapper/      (17)  ── BaseMapper<T> 六个语句；XML 在 resources/mapper/
    │
 entity/      (17)  ── 与表一一对应（Account 例外：三账号的父类，无表）
    │
-dto/request (31) dto/response (32) ── HTTP 边界只用 DTO，实体不出 controller
+dto/request (32) dto/response (33) ── HTTP 边界只用 DTO，实体不出 controller
 ```
 
-每层文件数（2026-10-18 实测）：controller 23 / 2,002 行，service 23 / 3,318 行，mapper 接口 17 / 414 行，mapper XML 17 / 1,762 行，entity 17 / 535 行，dto 63 / 1,387 行。
+每层文件数（2026-10-22 实测）：controller 23 / 1,974 行，service 23 / 3,714 行，mapper 接口 17 / 448 行，mapper XML 17 / 1,833 行，entity 17 / 564 行，dto 65 / 1,454 行。
 
 **核心基类**（`common/`）：
 
@@ -114,7 +114,7 @@ dto/request (31) dto/response (32) ── HTTP 边界只用 DTO，实体不出 c
 ## 6 数据边界
 
 - 实体与表一一对应，**join 派生字段**（`Film.areaName/typeList`、`Ordered.filmName` 等）直接挂在实体上（BL-18）。
-- 金额：`unitPrice` / `recharge_order.amount` / `fund_flow.*` 是 `BigDecimal`；`ordered.total/payAmount/refundAmount`、`film.box_office` 仍是 `Double`（BL-24）。
+- 金额：`unitPrice` / `ordered.total/payAmount/refundAmount` / `recharge_order.amount` / `fund_flow.*` 均为 `BigDecimal`；唯一例外是已废弃、恒为 0 的 `film.box_office`（BL-24 已完成）。
 - 时间：绝大多数是 `String`（`yyyy-MM-dd HH:mm:ss`），唯一例外 `CinemaDirectory.createTime` 是 `LocalDateTime`（BL-22）。
 - 状态：中文字面量字符串，无枚举、无库约束（`ordered.status` 可空 VARCHAR）。
 
@@ -125,10 +125,10 @@ src/
 ├── main.js            挂载 + 全局 errorHandler
 ├── App.vue            ElConfigProvider(zhCn) → ErrorBoundary → RouterView；按路由切 html.theme-front
 ├── router/index.js    路由表 + 唯一一个 beforeEach
-├── views/             3 个壳（Front/Back/Manage）+ front/ back/ manage/ 40 页 + Login/Register/404
-├── components/        5 个：FilmPosterCard / OrderPayDialog / PayPasswordInput / DetailSkeleton / ErrorBoundary
-├── composables/       3 个：useAuth / useCrud / useFormDialog
-├── utils/             request / authStorage / format / upload / avatar
+├── views/             Front/Back/Manage 三个入口 + 共享 AdminShell + front/ back/ manage/ 41 页 + Login/Register/404
+├── components/        6 个：FilmPosterCard / OrderPayDialog / PayPasswordInput / DetailSkeleton / ResetPasswordDialog / ErrorBoundary
+├── composables/       6 个：useAuth / useCrud / useFormDialog / usePagedList / useLoginPrompt / useLogout
+├── utils/             request / authStorage / format / upload / avatar / navigation
 ├── constants/         API 路径、状态映射、角色映射
 └── assets/css/        tokens.scss（唯一数值权威）+ global.css + 4 个布局/页面 scss
 ```

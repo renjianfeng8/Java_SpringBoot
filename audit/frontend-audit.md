@@ -2,13 +2,15 @@
 
 > 2026-10-18 全盘复核：本文件原为仓库根的 `前端 Vue3 代码安全与质量审计报告.md`，已移入 `audit/` 并改名，`git mv` 保留了历史。复核只改动了确有出入的描述（见下），条目编号与结论未动。索引见根目录 `项目索引.md`。
 >
-> 复核更正：原第 3 行写「47 个视图文件」，实测 `views/` 下共 **46 个 `.vue`**（另有 3 个壳 `Front.vue` / `Back.vue` / `Manage.vue` 与 `Login` / `Register` / `404` 也在此目录，均已计入）。原写「约 12.8k 行」，实测 13,399 行。
+> 复核更正：2026-10-18 时 `views/` 下共 **46 个 `.vue`**（另有 3 个壳 `Front.vue` / `Back.vue` / `Manage.vue` 与 `Login` / `Register` / `404` 也在此目录，均已计入），实测 13,399 行。2026-10-22 新增共享壳 `AdminShell.vue` 与 `manage/Finance.vue` 后为 **48 个 / 13,627 行**。
 
-本文件登记 2026-10-14 起前端代码安全与质量审查的结论。第一轮审查 `xm_film/vue/src/router/`（导航守卫与路由表，vue-router 4.5.1），并登记该轮牵连核实的跨文件前端问题（前端鉴权与跳转口径：`utils/request.js`、`composables/useAuth.js`、`views/Login.vue`、`views/404.vue`、`views/Front.vue`、`views/back/Back.vue`、`views/manage/Manage.vue`）。同日第二轮审查 `xm_film/vue/src/composables/` 三个复用件（`useAuth.js`、`useCrud.js`、`useFormDialog.js`）及其调用方（`views/manage/*`、`views/back/*`、`views/front/*`），结论见「已修复（composables 复用件）」一节。2026-10-15 第三轮审查 `xm_film/vue/src/views/` 全目录（**46 个视图文件，13,399 行**；原文误作 47 / 12.8k），结论见「已修复（views/ 目录）」及「本轮登记未做」新增条目；同日就 FE-48 做契约对齐（前端读错键名，非后端缺字段），见「已修复（契约对齐）」，多角色 1:N 需求转登 `audit/backend-backlog.md`。后端条目另见 `audit/backend-backlog.md`，本文件不重复。2026-10-15 另对重做后的前台影院列表页做了复查（并核到与 FE-34 同形的后端前缀匹配），结论见「已修复（影院列表页复查）」及「本轮登记未做」新增条目。
+> **当前状态（2026-10-22）**：`master` @ `2286861e` + 未提交的 A/B/C 项改动；`npm run build` 通过，无头 Chrome 冒烟 5/5（C1–C3）、8/8（UX）、5/5（管理端筛选）、5/5（跨页选择）。当前仍未做：FE-05、FE-09、FE-18、FE-19、FE-49（部分）、FE-60，以及 2 条 `S3776`；8 条 `Web:S6819` 已修。详细进度见 `audit/frontend-progress.md`。
+
+本文件登记 2026-10-14 起前端代码安全与质量审查的结论。第一轮审查 `xm_film/vue/src/router/`（导航守卫与路由表，vue-router 4.5.1），并登记该轮牵连核实的跨文件前端问题（前端鉴权与跳转口径：`utils/request.js`、`composables/useAuth.js`、`views/Login.vue`、`views/404.vue`、`views/Front.vue`、`views/back/Back.vue`、`views/manage/Manage.vue`）。同日第二轮审查 `xm_film/vue/src/composables/` 三个复用件（`useAuth.js`、`useCrud.js`、`useFormDialog.js`）及其调用方（`views/manage/*`、`views/back/*`、`views/front/*`），结论见「已修复（composables 复用件）」一节。2026-10-15 第三轮审查 `xm_film/vue/src/views/` 全目录（**当时 46 个视图文件，13,399 行**；原文误作 47 / 12.8k；2026-10-22 为 48 / 13,627），结论见「已修复（views/ 目录）」及「本轮登记未做」新增条目；同日就 FE-48 做契约对齐（前端读错键名，非后端缺字段），见「已修复（契约对齐）」，多角色 1:N 需求转登 `audit/backend-backlog.md`。后端条目另见 `audit/backend-backlog.md`，本文件不重复。2026-10-15 另对重做后的前台影院列表页做了复查（并核到与 FE-34 同形的后端前缀匹配），结论见「已修复（影院列表页复查）」及「本轮登记未做」新增条目。
 
 维护口径：一处事实一处归属；每条给出 `文件` 与符号，行号随改动可能漂移、以符号为准。状态分三档：已修复、本轮登记未做、已核验非缺陷。编号 FE-xx 与后端 BL-xx 区隔。
 
-更新日期：2026-10-21。基线：master `cf83e680`（第一轮）、`7e0dcc1a`（第二轮 composables 修复）、`02527cf4`（第三轮 views/ 起点）、`1f813fa5`（契约对齐起点）、`f8b10705`（影院列表页复查起点）、`120df194`（2026-10-21 前端未修项攻坚收尾）。
+更新日期：2026-10-22。当前基线：`master` @ `2286861e` + 未提交改动；历史基线：`cf83e680`（第一轮）、`7e0dcc1a`（第二轮 composables 修复）、`02527cf4`（第三轮 views/ 起点）、`1f813fa5`（契约对齐起点）、`f8b10705`（影院列表页复查起点）、`120df194`（2026-10-21 前端未修项攻坚收尾）。
 
 ## 已修复（2026-10-14）
 
@@ -97,11 +99,13 @@
 | FE-62 | views/front/Account.vue 两表空态 | 两表均无 `#empty`，复用 EP 默认「暂无数据」：请求失败与「确实没有充值记录 / 资金流水」同文案，把一次失败说成「没有资金凭证」。Cinema.vue 已确立「失败与空态文案必须区分」的口径，本页未跟上。 | 两表各补 `#empty`、各加一个 error 标志：失败显示「数据加载失败，请稍后重试」，确实为空显示「暂无充值记录 / 暂无资金流水」。失败时清空列表与 `total`，避免失败文案下挂着旧页数据；业务码非 200 补一次 `ElMessage.error`（不经过响应拦截器），网络类失败仍只落错误态以免弹两次。 |
 | FE-63 | 全站 el-table 表头（EP 默认；本页 views/front/Account.vue 已就地修） | EP 表头读两个变量，默认值两头都不合适：`--el-table-header-text-color` 取 `--el-text-color-secondary`（实测 #909399，白底 3.08:1，不达 AA——表头是 14px 常规字，需 4.5:1），`--el-table-header-bg-color` 取 `--el-fill-color-blank`（实测 #ffffff，故表头与表体之间只有一条 1px 线，无底色分界）；且 `.el-table thead th` 写死 `font-weight: 600`，与 tokens.scss「禁用 600」相悖（中文字体栈 Microsoft YaHei 只有 400 / 700，600 会触发伪粗体，渲染比 700 更脏）。项目此前对表头零覆盖，故这是全站每一张表格的现状。 | **2026-10-19 已修复并移出**：覆写提到 `assets/css/global.css` 一处生效全站，`Account.vue` 的局部覆写已删除（只留本页特有的表格间距）。关键坑：EP 自己的 `.el-table { --el-table-header-* }` 同为单类选择器，且 EP 样式**后加载** —— 只写 `.el-table` 会被原样覆盖回去（实测规则确在样式表里、计算值仍是 `#ffffff`）。改用 `.el-table.el-table` 提高特异性后生效。实测计算值：背景 `#f5f7fa`、文字 `#606266`（约 6.1:1，达 AA）、字重 `700`。已逐页截图核验 `/manage/film`、`/manage/ordered`、`/front/orders`、`/front/account`。 |
 
-## 本轮登记未做
+## 本轮登记未做（历史清单；状态以文末日志为准）
+
+> 下表是 2026-10-18 时的原始清单，**不是当前待办**。2026-10-21/22 已修复：FE-03、FE-04、FE-06、FE-07、FE-08、FE-10、FE-20、FE-21、FE-22、FE-50、FE-51、FE-57、FE-58、FE-59。当前仍未做：FE-05、FE-09、FE-18、FE-19、FE-49（仅部分收敛）、FE-60，外加 2 条 Sonar `S3776`。
 
 | 编号 | 位置 | 问题 | 处置建议 |
 | --- | --- | --- | --- |
-| FE-03 | router/index.js beforeEach 的角色不符分支；views/Login.vue `login` | 角色不符时 `ElMessage.error` 后 `next('/login')`：丢弃来路（无 redirect），将已登录用户留在登录页。Login.vue 无「已登录即转主页」逻辑，故不致死循环，但来路不可恢复，重登只能按角色主页落地。 | 与 FE-07 同轮：抽出共享 `getDefaultPath(role)`，该分支改为回本角色主页，或带 redirect 的登录页。属行为变更。 |
+| FE-03 | router/index.js beforeEach 的角色不符分支；views/Login.vue `login` | 角色不符时 `ElMessage.error` 后 `next('/login')`：丢弃来路（无 redirect），将已登录用户留在登录页。Login.vue 无「已登录即转主页」逻辑，故不致死循环，但来路不可恢复，重登只能按角色主页落地。 | 与 FE-07 同轮：抽出共享 `getDefaultPath(role)`，该分支改为回本角色主页，或带 redirect 的登录页。属行为变更。**2026-10-22 已修复**：角色不符回本角色主页；`Login.vue` 已登录时回 redirect/角色主页。 |
 | FE-04 | router/index.js beforeEach 的 `clearStoredUser()`；composables/useAuth.js `globalUser` | 守卫直读 / 直清 localStorage，绕过 useAuth 的模块级 globalUser。存储缺 token/role 时守卫清存储，但 globalUser 仍持旧值；同一 SPA 会话内头部 isLoggedIn 仍为真、显示已登录态，而守卫再判要求登录，UI 与守卫状态不一致，直到整页刷新。 | 守卫改走 useAuth 的会话口径；utils/request.js 的 401 处理同样只 `clearStoredUser()`、不动单例，需一并改。前置已解除：FE-14 已把 `init()` 的 `/me` 收敛为全生命周期一次，守卫改走 useAuth 不再每次判定多打一发。 |
 | FE-05 | router/index.js 路由表 | meta 两种放置范式并存且默认方向相反：/manage、/back 把 requiresAuth+roles 标在父路由（子路由只带 name），/front 父无 meta、逐子标 requiresAuth/roles。新增 /front 子路由漏写 meta → 合并为 `{}` → 落末尾 next() 静默公开（前台含资金类页面）；新增 /manage 子路由则静默变 ADMIN-only。无类型或测试可拦。 | 统一为一套范式（建议门禁标记落父路由，子路由只声明例外），或加路由表单测断言：受保护前缀下的每个子路由必须带门禁标记。 |
 | FE-06 | router/index.js beforeEach；views/front/FilmMarks.vue `promptLogin`；utils/request.js `redirectToLogin` | 登录引导确认框与 `?redirect=${encodeURIComponent(...)}` 拼接在三处重复（FilmMarks 注释自称「与路由守卫同一套」）。改文案、参数名或编码方式需同步三处，漏一处即静默漂移。 | 抽共享 `promptLogin(fullPath)` 与 `loginUrl(fromPath)`（置于 composables/useAuth.js 或 utils/），三处共用。 |
@@ -110,16 +114,16 @@
 | FE-09 | router/index.js 路由表 meta.name | meta.name 仅被 Manage.vue、Back.vue 的面包屑读取；/front 全树与 login/register/404 的 20 余处 name 渲染不到任何地方，属纯维护负担，且看起来仍权威。 | 删除 /front 树与独立路由上无消费者的 meta.name，或补上消费者。 |
 | FE-10 | router/index.js 路由表 meta.title 与 beforeEach 首行 `document.title` | 站名 `'电影购票网站'` 作为标题在 index.html、routes 的两处 title、守卫兜底 `to.meta.title \|\| '电影购票网站'` 共四处重复；且 document.title 在每次导航无条件写入，多数路由无 meta.title、写入的都是同一默认值。 | 站名收敛为一处常量；写入前判等（`if (t !== document.title)`）避免无谓的 document 写入。 |
 | FE-18 | composables/useAuth.js `verifyToken` 的 catch | 仅 401/403 触发登出；网络中断、500、超时被吞，用户保持「已登录」而令牌可能已失效，直到下一次真实请求 401 才清。刻意 fail-open（避免网络抖动误登出）与非刻意漏网在此实现里难分。 | 若判定为缺陷：对「非网络类失败」（如 5xx）复用 `logout`，仅在 `ERR_NETWORK`/`ECONNABORTED` 时保持登录。属行为变更，先定口径再动。 |
-| FE-19 | utils/request.js 响应拦截器；全仓 `res.code === '200'` | 拦截器已解包 `response.data`，却把业务码判断留给每个调用方，`'200'` 字面量分散约 101 处 / 37 文件、无单一出处；协议变更（码型、新增业务码）需全量手改，无编译期兜底。 | 在拦截器内归一（`code !== '200'` 直接 reject 并给统一提示），或至少收敛 `SUCCESS_CODE` 常量。跨文件重构，属独立一轮。 |
+| FE-19 | utils/request.js 响应拦截器；全仓 `res.code === '200'` | 拦截器已解包 `response.data`，却把业务码判断留给每个调用方；FE-66 已把字面量收敛为 `isSuccess()`（当前 117 处 / 39 文件），但仍无单一拦截器出口，协议变更仍要全量走调用方。 | 在拦截器内归一（`code !== '200'` 直接 reject 并给统一提示）。属行为变更，单列一轮。 |
 | FE-20 | composables/useCrud.js `selectedIds` | add/update/del/delBatch 经 `load()` 换掉 `dataList`，却不重置 `selectedIds`；重置完全依赖 el-table 在 `:data` 替换时发 `selection-change([])`。当前无 `row-key`/`reserve-selection`，通常自愈；一旦加 row-key 或 EP 行为变更，删除后工具条仍显示「已选 N 项」且批量删除可用，会重发已删 id。 | 写操作成功后由 composable 显式清 `selectedIds`，不再依赖组件契约。 |
 | FE-21 | composables/useFormDialog.js `openEdit` | openEdit 只 `Object.assign(form, row)`：既不清理 row 缺失的 defaultForm 独有键（如 Admin 的 `password`），也不隔离 row 的对象字段（form 与列表行按下标共享）。当前后端 update 显式置空 password，故不外显；契约「form 恰好等于当前记录」不成立。 | 若需修：openEdit 也按默认值重置缺键，并深拷贝 row 的对象字段（row 可能是 el-table 的响应式代理，需先 `toRaw` 再拷）。 |
 | FE-22 | composables/useAuth.js `isLoggedIn` 的 `!globalVerifying` 门 | isAdmin/isCinema/isUser 直取 `user`、不设门，`isLoggedIn` 却被 `!globalVerifying` 挡住。冷加载已登录页时 `globalVerifying` 初始为真，首次渲染 isLoggedIn 为假 —— 顶栏先渲染游客「登录/注册」再切已登录菜单（一次 `/me` 往返的闪烁，慢网/后端停顿时可见）。 | 若要消除：与路由守卫口径一致地信任 storage（isLoggedIn 只看 token），或让 role 标记同样受门（更差）。属行为变更，先定口径。 |
-| FE-49 | views/front/Cinema.vue；views/front/Orders.vue；views/front/Movie.vue；views/manage/CinemaDirectory.vue | 分页列表各自手搓（`pageNum`/`pageSize`/`total`/`load`/`handlePage`），未复用 `useCrud`，因而不带它已有的请求序号与越界回退。第三轮已就地补齐由此派生的具体缺陷（FE-25/FE-26/FE-30/FE-31），但两套口径并存本身仍在。 | 收敛到 `useCrud`（同端点 `manage/Cinema.vue` 已在用）；跨文件重构，属独立一轮。另：`front/Cinema.vue` 的 `:page-sizes`/`@size-change` 因 layout 无 `sizes` 仍为死配置。 |
+| FE-49 | views/front/Cinema.vue；views/front/Orders.vue；views/front/Movie.vue；views/manage/CinemaDirectory.vue | 分页列表各自手搓（`pageNum`/`pageSize`/`total`/`load`/`handlePage`），未复用 `useCrud`，因而不带它已有的请求序号与越界回退。第三轮已就地补齐由此派生的具体缺陷（FE-25/FE-26/FE-30/FE-31），但两套口径并存本身仍在。 | 收敛到 `useCrud`（同端点 `manage/Cinema.vue` 已在用）；跨文件重构，属独立一轮。另：`front/Cinema.vue` 的 `:page-sizes`/`@size-change` 因 layout 无 `sizes` 曾为死配置，2026-10-21 已补 `sizes`。**2026-10-21 部分修复**：`front/Orders`、`front/Cinema` 已改用 `usePagedList`；`front/Movie`、`back/*` 仍手写分页（已补 `loadSeq`，见 FE-65）。 |
 | FE-50 | views/Front.vue；views/back/Back.vue；views/manage/Manage.vue | 退出登录确认块（`ElMessageBox.confirm` → `logout()` → `push('/login')` → 成功/取消提示）在三处逐字重复，改文案或跳转目标需同步三处。 | 抽共享 `confirmLogout`（置于 `composables/useAuth.js` 或 `utils/`），三处共用。与 FE-06/FE-07 同族。 |
 | FE-51 | views/manage/Person.vue `form: { ...user.value }` | setup 时对 `user.value` 一次性浅拷贝快照，`verifyToken` 异步回填的 `/me` 权威资料不落进表单；存储与后端不一致时表单显示陈旧值，直接保存会用旧值覆盖。 | 需 dirty-check 设计（异步回填不得覆盖用户已改字段），属行为变更，先定口径。 |
-| FE-57 | views/front/Cinema.vue；views/front/CinemaDetail.vue；views/front/FilmCinema.vue | 影院服务三项（退票无忧 / 儿童优惠 / WiFi覆盖）的标签与图标在三处硬编码，只有底色 `.service-tag--*` 是共享的：改一个服务名要动三个模板，而底色共享、文案不共享，同一底色可以挂在两个不同名字下。 | 上提 `SERVICES` 数据常量到 constants/index.js（key 映射既有底色类），三处按各自形状 v-for。三处渲染形状不同（纯片 / 片+说明 / 无图标），共享单元应是常量而非组件。**本轮未做（登记备查）**：CinemaDetail.vue、FilmCinema.vue 不在本次 diff 内，属跨文件重构。 |
-| FE-58 | views/front/Cinema.vue 页头内层；views/front/CinemaDetail.vue、FilmDetail.vue、FilmCinema.vue、FilmMarks.vue 的 hero 与内容层 | 「1200px 居中内容测度」（`width: 55%`/`60%` + `max-width: 1200px`）手写在约 10 处，`.page-narrow`/`.page-wide` 只是其中两份：改一次内容宽度要动 10 个文件，新增页头一旦漂移就与其下方列表错位。 | 上提为共享 measure（front-pages.scss 的变量/mixin，或一个类加「无纵向外边距」变体），各页引用。**本轮未做（登记备查）**：系统性缺口，跨 5 个文件，另起一轮。2026-10-16 追加：Account.vue 重做时其内容区已改用 `.page-wide`（消掉一份手写），但同页页头内层仍按该口径手写一份（与 Cinema.vue 页头同形），故手写份数并未净减 —— 页头这一层正是该项最难收敛的部分。 |
-| FE-59 | views/Front.vue `NAV_ITEMS`；router/index.js 路由表 | 顶部导航由数组手工维护、与路由表并列，两者之间没有任何机制关联：删路由忘删导航项则会落 `/:pathMatch` 兜底 404，加路由忘加导航项则页面无入口。本次下线影院名录就需同时改两处，正是该漂移的实例。 | 导航改由路由 meta（如 `meta.nav`）派生，或加断言：/front 下需出现在导航的路由必须各有对应项。属结构变更。 |
+| FE-57 | views/front/Cinema.vue；views/front/CinemaDetail.vue；views/front/FilmCinema.vue | 影院服务三项（退票无忧 / 儿童优惠 / WiFi覆盖）的标签与图标在三处硬编码，只有底色 `.service-tag--*` 是共享的：改一个服务名要动三个模板，而底色共享、文案不共享，同一底色可以挂在两个不同名字下。 | 上提 `SERVICES` 数据常量到 constants/index.js（key 映射既有底色类），三处按各自形状 v-for。三处渲染形状不同（纯片 / 片+说明 / 无图标），共享单元应是常量而非组件。**2026-10-21 已修复**：新增 `constants/cinemaServices.js`，三处改为 v-for。 |
+| FE-58 | views/front/Cinema.vue 页头内层；views/front/CinemaDetail.vue、FilmDetail.vue、FilmCinema.vue、FilmMarks.vue 的 hero 与内容层 | 「1200px 居中内容测度」（`width: 55%`/`60%` + `max-width: 1200px`）手写在约 10 处，`.page-narrow`/`.page-wide` 只是其中两份：改一次内容宽度要动 10 个文件，新增页头一旦漂移就与其下方列表错位。 | 上提为共享 measure（front-pages.scss 的变量/mixin，或一个类加「无纵向外边距」变体），各页引用。**2026-10-21 已修复**：新增 `.measure` / `.measure-inline` / `.measure-inline--wide`，9 处手写与两个页头已替换。历史补充：2026-10-16 Account.vue 页头曾按同口径手写，属于本次替换范围。 |
+| FE-59 | views/Front.vue `NAV_ITEMS`；router/index.js 路由表 | 顶部导航由数组手工维护、与路由表并列，两者之间没有任何机制关联：删路由忘删导航项则会落 `/:pathMatch` 兜底 404，加路由忘加导航项则页面无入口。本次下线影院名录就需同时改两处，正是该漂移的实例。 | 导航改由路由 meta（如 `meta.nav`）派生，或加断言：/front 下需出现在导航的路由必须各有对应项。**2026-10-21 已修复**：新增 `constants/nav.js`，`Front.vue` 的 `NAV_ITEMS` 已删除。 |
 | FE-60 | App.vue `path.startsWith('/front')`；utils/request.js `pathname.startsWith('/login')` | 与 FE-34 同形的裸前缀匹配残余两处：只差字符前缀相邻的路径也会命中（`/frontx` 会被套上前台主题、`/loginx` 会走登录页的跳过分支）。当前路由表下均无可达碰撞，属同形未做点。 | 与 FE-34 同口径改为「相等或 `prefix + '/'`」。两条均非当前可达缺陷。 |
 
 ## 2026-10-18 全盘复核新增
@@ -201,17 +205,28 @@
 
 ### 仍未做（本轮范围外）
 
-- **FE-03 残留**：角色不符已改成回本角色主页，但「已登录用户访问 `/login`」的落地策略仍未定。
 - **FE-05**：门禁范式已在前后台各自统一（后台标父路由、前台逐子路由），但还缺一条路由表断言来防未来漏写。
 - **FE-09**：`/front` 与 login/register/404 上无消费者的 `meta.name` 仍在（现在后台面包屑用 `route.meta.name`，
   前台这些值仍然没有读取方）。
+- **FE-18**：`useAuth.verifyToken` 对网络类失败保持登录（fail-open）的口径未定，未改。
 - **FE-19**：`isSuccess` 只收敛了字面量，失败语义下沉到拦截器属行为变更，未动。
-- **Sonar 前端剩余**：8 条 ARIA（`Web:S6819`）与 2 条 `S3776` 复杂度未处理。
+- **FE-49**：`front/Orders`、`front/Cinema` 已改用 `usePagedList`；`front/Movie`、`back/*` 仍手写分页（已补 `loadSeq`）。
+- **FE-60**：`App.vue` 与 `request.js` 的裸前缀匹配残余两处，当前路由表下不可达，未做。
+- **Sonar 前端剩余**：2 条 `S3776` 复杂度未处理；8 条 ARIA（`Web:S6819`）已于 2026-10-22 处理（见 §七日志）。
+
+### 2026-10-22 追加（用户感知四项）
+
+- **FE-03 收尾**：`views/Login.vue` 挂载时若已有令牌，`router.replace` 回 `?redirect=`（仅站内、非 `/login`、角色允许）或角色主页；登录成功复用同一 `landingPath()`，不再重复拼 redirect。
+- **BL-49 前端兜底**：详情请求 `isSuccess(res) && !res.data` 时显示「电影/影院/场次不存在或已下架」，不再把后端 `msg="操作成功"` 拼进失败提示。覆盖 `FilmDetail`（影片 + 演员）、`CinemaDetail`、`FilmCinema`、`BuyTicket`；后端 200+null 契约未改。
+- **验证**：`npm run build` 通过；无头 Chrome + 拦截 `/api/v1` 8/8：游客留登录页、已登录回主页/目标页、`redirect=/login` 不循环、四个失效详情页都显示新文案。
+- **管理端效率（A 项）**：`manage/Film` 增加类型/地区/年份/状态筛选，`manage/User` 增加电话/角色，`manage/Ordered` 增加电影/影院；全部复用后端已有查询字段。当时 18 个列表页的每页条数上限由 20 提到 100；新增 `manage/Finance` 后当前为 23 个页面 / 24 处分页配置。
+- **A 项验证**：build + 无头 Chrome 5/5，断言三页筛选参数与 `pageSize=100` 均正确。
+- **管理端 C 项**：C1 管理员重置密码（仅 ADMIN、三账号表、BCrypt）、C2 取消/退票（复用状态机、映前 60 分钟截止）、C3 充值/资金流水只读页已补；C3 未做人工入账。详见 `audit/frontend-progress.md` §八。
 
 ## 已核验为非缺陷（防二次误报）
 
 - views/404.vue 的 `goHome`：`getStoredUser()?.role || 'USER'` 有兜底，未知 / 空角色落 USER 并跳 /front/home，非「无分支则静默不动」。
-- router/index.js beforeEach 的角色不符分支不会死循环：Login.vue 无「已登录即转主页」逻辑，且 redirect query 已在 `next('/login')` 时丢弃，重申登录按本角色主页落地。
+- router/index.js beforeEach 的角色不符分支不会死循环：**2026-10-22 更新**：`Login.vue` 已补「已登录即跳回 redirect/角色主页」，原「无此逻辑」前提作废；防循环由 `landingPath()` 排除 `/login` 保证，无头 Chrome 8/8 已验证。
 - views/Front.vue 的 `goAdmin`、views/404.vue、Manage.vue 与 Back.vue 的退出跳转：目标路由均存在且角色匹配，未发现失效调用点。
 - router/index.js 的 `/:pathMatch(.*)*` 兜底与 `/` 重定向：均落在 guest 路由，行为正确。
 - composables/useCrud.js 的 add/update/del/delBatch 失败后不清空 `dataList`：写失败时列表既有数据仍然有效，只有 `load`（读）需要清空兜底，非缺陷。

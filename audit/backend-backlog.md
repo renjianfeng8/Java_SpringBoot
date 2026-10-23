@@ -1,14 +1,18 @@
 # 待办技术债清单（backend-backlog）
 
-> 2026-10-18 全盘复核：本文件原为仓库根的 `audit-backlog.md`，已移入 `audit/` 并改名。标题保留 `BL-` 编号以维持历史引用。复核中修正了 BL-03 / BL-04 / BL-42 三处的过时描述（见各自「2026-10-18 复核」段），其余条目未改。索引见根目录 `项目索引.md`。
+> 2026-10-18 全盘复核：本文件原为仓库根的 `audit-backlog.md`，已移入 `audit/` 并改名。标题保留 `BL-` 编号以维持历史引用。复核中修正了 BL-03 / BL-04 / BL-42 三处的过时描述（见各自「2026-10-18 复核」段）。索引见根目录 `项目索引.md`。
+>
+> 2026-10-22 编号修正：原 BL-30（座位串拆表）改为 **BL-53**，原 BL-31（影院名录分页映射）改为 **BL-54**；BL-30 保留给文件上传，BL-31 保留给状态字面量。
 
 本文件是本仓唯一的技术债登记处，承接已删除的 `后端代码规范审查报告.md`（**该文件已不在仓内**，以下为历史引用）的全部"登记备查"项，并汇总 2026-10-13 两轮代码审查（`entity/`、`service/`）、2026-10-14 控制器层审查（`controller/`）、2026-10-14 mapper 层审查（`mapper/`）与 2026-10-14 DTO 层审查（`dto/`）中判定延后或建议的条目。已完成项不进本表；已判定非缺陷的条目集中在末节，避免二次误报。2026-10-15 承 FE-48 契约对齐复查演职人员数据模型，补登 BL-41；同日做纯清理四项（BL-28/33/34/38），另登记 BL-42（同形字符串筛选未做）、BL-43（UserController 读口径分歧）。
 
 维护口径：一处事实一处归属；每条给出 `文件` 与符号，行号随改动可能漂移、以符号为准。状态分三档：待办、有意不整改（与既定政策一致，非债务）、已核验非缺陷；修复完成的条目从表中移出，在该节以「本轮修复并移出本表」一句登记。
 
-更新日期：2026-10-20（SonarQube 专项增补）。基线：master `bfdd1c07`（清单）、`a2144fc4`（纯清理起点）；复核基线 `3112f8b7`；Sonar 扫描基线 `0ff8331c`。
+更新日期：2026-10-22（B/C 项收尾后）。当前代码基线：`master` @ `2286861e` + 2026-10-22 未提交改动；历史清单基线 `bfdd1c07`、`a2144fc4`，复核基线 `3112f8b7`，Sonar 扫描基线 `0ff8331c`。
 
-**复核时的实测基线**：`mvn -o test` = **309/309** 通过（2026-10-18 收尾；此前长期 6 红，见 §测试隔离）。开发库 `xm-film` 已由 `springboot/demo-data.sql` 补入演示影厅、排片与账号，购票主链已实测跑通。**2026-10-19 更新为 343/343；2026-10-20 更新为 398/398**（新增 Sonar 守卫用例）。
+**当前实测基线**：`mvn test` = **403/403 通过，43 个测试类**（2026-10-22）。历史记录：2026-10-18 309/309、2026-10-19 343/343、2026-10-20 398/398。开发库 `xm-film` 已由 `springboot/demo-data.sql` 补入演示影厅、排片与账号，购票主链已实测跑通。
+
+**状态口径**：本文件只把「已确认不是缺陷」放在末节；SEC-01/02/03 是**已知未修漏洞**，即使演示环境暂缓修复也不得标成非缺陷。
 
 ## 架构分层（2026-10-19 专项，三项均已修复）
 
@@ -50,10 +54,10 @@
 
 | 编号 | 位置 | 问题 | 影响 | 建议 |
 | --- | --- | --- | --- | --- |
-| **BL-49** | `common/BaseController.getById` | 对**不存在**的 id 返回 `HTTP 200 + code "200" + data null`，而不是 404。实测 `GET /api/v1/films/99999999` → `{"code":"200","msg":"操作成功","data":null}`。 | 前端调用方只要写成 `if (isSuccess(res)) { res.data.xxx }` 就会在"记录刚被删除"时抛错。当前 47 处 `isSuccess` 分支里大部分已判 `res.data` 或走列表接口，**未发现实际崩溃**，但这是一个易踩的坑。分页/列表接口不受影响。 | 覆写了 `getById` 的 5 个控制器：`Ordered`/`Record`/`Room`/`User` 走 `selectByIdScoped`，**不存在时抛 404**；`Cinema` 是**有意**返回 null（注释写明"未审核影院不对外展示"，返回 404 会泄露该 id 存在）。其余继承基类的 Film/Type/Area/Actor/Notice/Video 返回 200+null。不宜在基类统一改：改基类会让"有意返回 null"的 Cinema 也变 404，且所有实体的前端分支都要跟着改。建议逐实体判断后覆写。 |
+| **BL-49** | `common/BaseController.getById` | 对**不存在**的 id 返回 `HTTP 200 + code "200" + data null`，而不是 404。实测 `GET /api/v1/films/99999999` → `{"code":"200","msg":"操作成功","data":null}`。 | 前端调用方只要写成 `if (isSuccess(res)) { res.data.xxx }` 就会在"记录刚被删除"时抛错。当前 117 处 `isSuccess()` 调用里大部分已判 `res.data` 或走列表接口，**未发现实际崩溃**，但这是一个易踩的坑。分页/列表接口不受影响。 | 覆写了 `getById` 的 5 个控制器：`Ordered`/`Record`/`Room`/`User` 走 `selectByIdScoped`，**不存在时抛 404**；`Cinema` 是**有意**返回 null（注释写明"未审核影院不对外展示"，返回 404 会泄露该 id 存在）。其余继承基类的 Film/Type/Area/Actor/Notice/Video 返回 200+null。不宜在基类统一改：改基类会让"有意返回 null"的 Cinema 也变 404，且所有实体的前端分支都要跟着改。建议逐实体判断后覆写。 |
 
 ## 控制器层测试（2026-10-19 专项，为安全攻坚铺路）
-**背景**：测试维度原 62 分，扣分项之一是「22 个 Controller 里 20 个零覆盖」。安全三条（SEC-01/02/03）全在控制器/服务交界处，没有控制器测试就每次都得手工 curl 复现。本轮先覆盖**主链与安全面**三个代表，而不是把所有控制器机械铺一遍。
+**背景**：测试维度原 62 分，扣分项之一是「23 个 Controller 里 18 个零覆盖」。安全三条（SEC-01/02/03）全在控制器/服务交界处，没有控制器测试就每次都得手工 curl 复现。本轮先覆盖**主链与安全面**三个代表，而不是把所有控制器机械铺一遍。
 
 | 测试类 | 条数 | 钉住什么 |
 | --- | --- | --- |
@@ -90,7 +94,7 @@
 
 ## SonarQube 静态扫描（2026-10-20）
 
-**背景**：用 SonarQube 10.7（`Sonar way`）对 Java 主代码/测试 + Vue 全量扫描，基线 74 条问题，两轮修复后降到 **32 条**（漏洞 0、测试代码问题 0）。完整清单、逐条误报判定与复现命令见 `audit/sonarqube-report.md`；本节只登记三条需要跟踪的缺陷（均已修复），其余为命名/字面量/ARIA/复杂度一类的清理项。
+**背景**：用 SonarQube 10.7（`Sonar way`）对 Java 主代码/测试 + Vue 全量扫描，基线 74 条问题，两轮修复后当时降到 **32 条**（漏洞 0、测试代码问题 0；2026-10-22 又修了 8 条 ARIA，未复扫）。完整清单、逐条误报判定与复现命令见 `audit/sonarqube-report.md`；本节只登记三条需要跟踪的缺陷（均已修复），其余为命名/字面量/ARIA/复杂度一类的清理项。
 
 | 编号 | 位置 | 问题 | 处置 |
 | --- | --- | --- | --- |
@@ -187,15 +191,17 @@
 
 **处置建议**：需要至少两条**双连接**测试（各自开事务、先 `SELECT … FOR UPDATE`、断言第二个阻塞或返回 1）：一条排片重叠（BL-01），一条下单 vs 删排片（BL-02）。没有它们，这一节的所有"已修复"都是**手工证据**，不是**可回归证据**。
 
-## 测试覆盖缺口（2026-10-19 审计）
+## 测试覆盖缺口（2026-10-22 更新）
 
 | 项 | 现状 | 说明 |
 | --- | --- | --- |
-| Controller | **22 个中 20 个零直接测试** | 仅 `HealthController`、`AuthController#login` 有覆盖。`MarkController.requireUser`、`UserController/CinemaController.requireAdmin` 等**方法级鉴权第二层**全无覆盖。 |
+| Controller | **23 个中 18 个零直接测试** | 已覆盖 `Health`、`Auth`（login/reset）、`Ordered`、`Recharge`、`Ticket`；其余 18 个仍无控制器切片。`MarkController.requireUser`、`UserController/CinemaController.requireAdmin` 等**方法级鉴权第二层**仍无直接覆盖。 |
 | Service | **8 个零测试** | `RoomService`、`RecordService`（仅被锁测试间接触及）、`AuthService`、`CinemaDirectoryService`、`AreaService`、`ActorService`、`TypeService`、`VideoService`、`NoticeService`。`RoomService.validateSeatLayout`、`RecordService.validateSchedule` 未测。 |
 | 定时任务 | **零覆盖** | `OrderCleanupTask` 及 `OrderedService.cancelExpiredPendingOrders` 无直接测试。 |
 | 异常处理器 | 2 个分支未覆盖 | `DataIntegrityViolationException`（BL-02 修复引入的 409 路径）、`RestClientException`。 |
 | 空表恒真断言 | 多处 | `CinemaDirectoryMapperLoadTest`、`StatisticsMapperLoadTest` 在空库上 `allSatisfy` / `>= 0` 恒真，只证明 SQL 语法合法。 |
+| **mapper XML 参数名漂移** | **2026-10-23 已修并补守卫** | `OrderedMapper.countPickedUpByUserAndFilm` 的 XML 写 `#{pickedUp}`，方法签名只有 `userId/filmId` → 评论区与发评价在真库上恒抛 `BindingException`（500）。Mockito 单测不碰 XML，故 403 条测试全绿却漏掉。**修复**：改走 `@Param("s") OrderStatusCriteria`（与「状态取值唯一来源」同口径）+ `MarkEligibilityMapperLoadTest` 钉住，已做故障注入反证（改回 `#{pickedUp}` 该测试变红）。同类风险：其余「XML 引用了签名里没有的参数」暂无通用守卫，新增语句时请配一条真库执行测试。 |
+| **演示脚本重跑的余额漂移** | **2026-10-23 修复** | `demo-data.sql` 里既有账号 `111` 的余额会被 `§8` 按流水末条回写，重跑时若直接拿当前余额当起点，`100 → 174 → 248 → …` 一路漂。**修复**：`§1` 先 `UPDATE user SET balance = 100.00` 还原起点；自检补「流水首尾未接续」「近 7 日有 0 票房的日期」两项，首跑与重跑各 9 项全 0。 |
 | 前端 | **零测试** | `package.json` 无 test 脚本。 |
 
 ## 状态机与契约
@@ -250,7 +256,7 @@
 | 编号 | 问题 | 实测/复核 | 处置 |
 | --- | --- | --- | --- |
 | **BL-31** | 状态值有**三份副本**：库列（无约束）、Java `*Status` 常量、mapper XML 里的中文字面量 | 状态列是 `varchar(20)`，库层不拒绝任何字符串。改了常量名或取值，编译器和数据库都不报错，SQL 只是从此匹配 0 行 —— 表现为「核销没反应」「超时单清不掉」，日志里一切正常 | **已修复**：新增 `common/OrderStatusCriteria`，mapper 通过 `@Param("s")` 取值，`OrderedMapper.xml` 里的状态字面量全部消除。唯一例外是 `paidOrderStatuses`（被 `FilmMapper` 跨 namespace 静态引用，那里 8 个方法都没有参数入口），由 `StatusLiteralGuardTest` 钉住 |
-| **BL-30** | `ordered.seat` 是逗号分隔串，占用检查用 `FIND_IN_SET` | 这不是单纯的设计口味：查重逐字节比对，`1排01座` 与 `1排1座` 在库里是两个不同的串 | **只加固、不改表**：规范化收敛到 `common/SeatParser`（上一轮），并有故障注入测试。拆成 `order_seat` 子表属"改表"量级（建表 + 迁移存量串 + 改写占用检查 + 十余处展示契约），留待与 BL-18/19/20 同轮 |
+| **BL-53** | `ordered.seat` 是逗号分隔串，占用检查用 `FIND_IN_SET` | 这不是单纯的设计口味：查重逐字节比对，`1排01座` 与 `1排1座` 在库里是两个不同的串 | **只加固、不改表**：规范化收敛到 `common/SeatParser`（上一轮），并有故障注入测试。拆成 `order_seat` 子表属"改表"量级（建表 + 迁移存量串 + 改写占用检查 + 十余处展示契约），留待与 BL-18/19/20 同轮。原误用 BL-30，2026-10-22 改为 BL-53；BL-30 保留给文件上传 |
 | **BL-24** | 订单 `total/payAmount/refundAmount` 用 `Double` | **纠正原描述**：库列早已是 `decimal(10,2)`，Double 只在 Java 侧。实测 `BigDecimal → double → BigDecimal.valueOf` 在 decimal(10,2) 范围内**往返无损**（8 组样本 0 损失），但这个结论依赖 `valueOf` 走 `Double.toString`，是巧合不是保证；累加才会失真，而代码里金额聚合都在 SQL 里 | **已修复**：4 个类的 3 个金额字段全部改 `BigDecimal`，`OrderedService` 里两处 `doubleValue()`/`valueOf()` 转换随之消失。JSON 形态实测仍为数字（`45.5`），前端 `Number(...)` 与插值行为不变。**`Film.boxOffice` 未改**：该列已废弃（恒 0，票房实时聚合），一并改会牵动 FilmMapper 的 `COALESCE(rev.revenue, 0)` 与前端榜单 |
 
 **本轮刻意未做（写明理由，避免被当成遗漏）**：
@@ -258,7 +264,7 @@
 | 事项 | 未做的原因 |
 | --- | --- |
 | 给状态列加库级 `CHECK` | MySQL 8 的 CHECK 能拦非法写入，但需要先校验存量数据、并同步测试库与演示数据脚本；本轮改动已能保证**读路径**不吃到非法值（取值来自常量），写入路径由 Service 归一化。加约束属下一轮的迁移工作 |
-| `seat` 拆子表 | 见 BL-30，改表 + 迁移 + 十余处契约，风险量级不同 |
+| `seat` 拆子表 | 见 BL-53，改表 + 迁移 + 十余处契约，风险量级不同 |
 | `Film.boxOffice` 改 BigDecimal | 列已废弃、恒为 0；改它只增加 diff 不增加正确性 |
 | 重新生成 schema 快照 | 本轮**没有改任何列类型**，快照仍然准确。重跑 `dump-schema.py` 只会产生 AUTO_INCREMENT 漂移与编码转义噪音 |
 
@@ -303,7 +309,7 @@
 | 编号 | 位置 | 问题 | 处置建议 |
 | --- | --- | --- | --- |
 | BL-30 | controller/FileUploadController.uploadFile（落盘在 common/FileUtil） | `/api/v1/files/upload` 不在 ADMIN_WRITE_PREFIXES / ADMIN_ONLY_PREFIXES，任何已登录角色（含 USER）都能上传。本轮已把落盘扩展名从客户端文件名改为按已校验 MIME 派生（堵掉 `.html` 落盘 + MIME 可伪造那条），但"谁可上传"未收紧。UNCERTAIN：CINEMA 自助改头像/资料是否依赖此端点。 | 确认用途后给前缀加写门禁，或按角色拆端点。 |
-| BL-31 | controller/CinemaDirectoryController.page | 本轮已给 BaseController 抽出 `toPageView`，但本类不继承 BaseController，`PageInfo` 拷贝 + toView 映射仍自成一份（与 BL-13 同类的映射重复）。 | 抽静态 `PageMapper.map(PageInfo<S>, Function<S,T>)`，基类与独立控制器共用。 |
+| BL-54 | controller/CinemaDirectoryController.page | 本轮已给 BaseController 抽出 `toPageView`，但本类不继承 BaseController，`PageInfo` 拷贝 + toView 映射仍自成一份（与 BL-13 同类的映射重复）。原误用 BL-31，2026-10-22 改为 BL-54。 | 抽静态 `PageMapper.map(PageInfo<S>, Function<S,T>)`，基类与独立控制器共用。 |
 | BL-32 | controller/AuthController.updatePassword、me | 手工 `httpRequest.getAttribute("userId"/"role")` 再 `Integer.valueOf`，绕过 AuthContext.role()/userId()；身份存放方式一改此处静默失效（AuthContext 类注释正警告此坑）。 | 改用 AuthContext（`me` 的 userId 参数需由 String 放宽为 Integer）。 |
 | BL-35 | controller/StatisticsController.overview、controller/AccountController.requireUser | 角色门禁在方法内逐端点各写一份（`/api/v1/statistics` 未进任何前缀表），新增端点易漏（与 BL-17 同类）。 | 统计前缀加 ADMIN_ONLY_PREFIXES；账户前缀加统一 USER 守卫，或与 BL-17 同轮抽统一守卫。 |
 | BL-43 | controller/UserController.getById | 管理员查不存在的 id 返回 200 + `data:null`；Record/Room/Ordered 的同名方法经 ensure 抛 NOT_FOUND（404）。根因是 `UserService.selectByIdScoped` 直接返回 `selectById`（不判存在），与其余 scoped 读不一致。 | 若要统一：`UserService.selectByIdScoped` 补存在性判定抛 NOT_FOUND。属行为变更（该路径现为 200），先定口径。 |
@@ -325,12 +331,12 @@
 | BL-39 | dto/ 的同名 Request/View 对（Actor、Area、Type、Video、Room、Record、FundFlow、Notice、RechargeOrder、CinemaDirectory、Ordered，以及 MarkRequest 与 MarkEntityView，共 12 对） | 同名字段逐字重复、各对字段完全一致：增删改一个字段要在两个 DTO 加 toEntity、toView 共四处同步，无机制保证两列表不漂移。 | 合并为单一 DTO，或加断言两列表相等的测试；属架构级，另立一轮。 |
 | BL-40 | dto/request/RecordRequest 的 cinemaName/roomName/roomSeatRows/roomSeatCols；dto/request/OrderedRequest 的 userName/filmName/cinemaName/roomName | join 派生字段只作 SQL 输出，却落在请求 DTO 上成为可绑定入参；toEntity 逐层拷贝后 mapper 不写这些列，入参被静默丢弃。 | 入参 DTO 剥离这些只读字段（与 BL-18 实体展示字段剥离同轮）。 |
 
-## 有意不整改（与既定政策一致，非债务）
+## 有意不整改（仅限本机配置项）
 
-- S14 子项：application.yml 中明文 DB 口令、jwt.signing-key、TMDB token、高德 key；file.upload-dir 绝对路径。依据本仓"仅本机运行、配置直写字面量、不引入环境变量注入"的既定政策，属有意偏离。
+- S14 子项：application.yml 中明文 DB 口令、TMDB token、高德 key；file.upload-dir 绝对路径。依据本仓"仅本机运行、配置直写字面量、不引入环境变量注入"的既定政策，属有意偏离。
+- **同文件的 `jwt.signing-key` 不在此列**：它可伪造任意 ADMIN token，已登记为 SEC-02，必须修复。
 
 ## 已核验为非缺陷（防二次误报）
 
 - service/RecordService.selectByIdScoped 忽略 role/userId：排片信息（价格/时间/影片/影厅）本属公开可读，非越权，是按存在性校验的既定口径。
-- service/RechargeService.handleCallback 允许订单归属用户自助"模拟支付"回调：与前端演示按钮一致的既定设计，非缺陷。
 - 订单资金路径（WalletService 行锁 + balance>= 守卫、payOrder/refundOrder 的 selectByIdForUpdate、markPickedUpByCode 条件更新、PayPasswordService 的 REQUIRES_NEW 计数）：审查核验无双重扣款/负余额/幂等缺口。

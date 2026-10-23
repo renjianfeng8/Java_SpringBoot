@@ -30,7 +30,7 @@ npm run build      # 产物到 dist/
 
 ```bash
 cd xm_film/springboot
-mvn -o test                                   # 335 个用例
+mvn test                                      # 43 个测试类 / 403 条用例（2026-10-22）
 mvn -o test -Dtest=OrderedServiceTest         # 单类
 mvn -o clean test -Dtest=XxxTest              # 改了 mapper XML / 改了 main 代码后，用这个
 ```
@@ -54,9 +54,9 @@ python dump-schema.py --target xm_film_test   # 见 §2
 
 ### 1.4 验证清单（改完必须主动提议跑）
 
-- 后端：`mvn -o test` 全绿。
+- 后端：`mvn test` 全绿（43 类 / 403 条）。
 - 前端：`npm run build` 成功（无 TS/模板报错）。
-- 涉及页面：`npm run dev` 起 5173 目视；涉及数据链路时先确保库里有 `room` + `record`（**当前库这两张表是空的**，见 `项目索引.md` §3.3）。
+- 涉及页面：`npm run dev` 起 5173 目视；涉及数据链路时先确保库里有 `room` + `record`。当前开发库已由 `demo-data.sql` 建好演示影厅/排片；若刚重置或换库，按 `项目索引.md` §3.3 重新导入。
 
 ---
 
@@ -95,6 +95,8 @@ python dump-schema.py --target xm_film_test   # 用来初始化测试库
 | `docs/domain.md` | 业务规则变化（状态机、金额口径、时限） |
 | `docs/backend.md` / `docs/frontend.md` | 新增控制器前缀、新增页面、新增 composable |
 | `audit/backend-backlog.md` / `audit/frontend-audit.md` | 新增或关闭债务条目 |
+| `audit/frontend-progress.md` | 前端收尾/功能项进度与验证结果变化 |
+| `audit/sonarqube-report.md` | 重新扫描后更新快照；不重扫时明确标注历史快照 |
 | `audit/table-spec.md` | 表格规范变化 |
 | `xm_film/.../db/README.md` | 库表事实变化 |
 
@@ -122,6 +124,8 @@ python dump-schema.py --target xm_film_test   # 用来初始化测试库
 | 调用方引起的错误不得落到兜底 500；在 `GlobalExceptionHandler` 加具名处理器 | `architecture.md` §4 |
 | 时间比较只能用 DB `NOW()`；超时判断必须 `include` `pendingExpiredCondition`，不得另写谓词 | `domain.md` §3.4 |
 | **回调/入账类端点必须有服务端可验证的凭证**；「归属校验通过」不等于「授权通过」 | `backend-backlog.md` §安全 SEC-01 |
+| **管理员重置密码只走 `PUT /auth/password/reset`**：控制器限 ADMIN，目标按 role 路由，6–64 位 BCrypt，不校验旧密码；日志不打印密码 | `AuthController` / `AuthService` |
+| **管理端取消/退票复用订单状态机**：取消只限待支付、退票只限待取票且不绕过映前 60 分钟截止 | `domain.md` §3 |
 | **删除守卫必须在 Service 且在同一事务内**：先锁父行 → 再数子表 → 再删；批量按 id 升序加锁 | `backend-backlog.md` §架构分层 BL-44 |
 | **外部 HTTP/文件 IO 不得出现在 `@Transactional` 方法体内**；用 `TransactionTemplate` 只包写库段 | `backend-backlog.md` §架构分层 BL-45 |
 | **并发冲突（死锁/等锁超时）必须映射为 409 可重试**，不得落到 500；用父类型 `PessimisticLockingFailureException` 一并覆盖 | `backend-backlog.md` §并发 BL-47 |
@@ -161,8 +165,9 @@ python dump-schema.py --target xm_film_test   # 用来初始化测试库
 
 ---
 
-## 6 本轮（2026-10-18）复核后的已知边界
+## 6 当前已知边界（2026-10-22）
 
-- 库里 `room`、`record`、`ordered` 均为 **0 行**，购票主链未经真实数据验证。
-- 前端无任何自动化测试；`npm run build` 是唯一自动验证手段。
-- 集成测试只验证"XML 能被解析并执行"，不验证业务语义（语义由 Mockito 单测覆盖）。
+- 开发库已由 `demo-data.sql` 建好演示影厅、排片与账号，购票主链已用真实数据跑通；重置数据后需重新导入。
+- 前端无单元测试框架；`npm run build` 与无头 Chrome 冒烟脚本是自动验证手段。
+- 集成测试验证"XML 能被解析并执行"；业务语义由 Mockito 单测覆盖，二者合并为 43 类 / 403 条。
+- SEC-01（充值回调无签名）、SEC-02（JWT 密钥硬编码）、SEC-03（登录密码明文回退）仍未修，当前只按本机演示环境使用。

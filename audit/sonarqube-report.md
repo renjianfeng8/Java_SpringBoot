@@ -3,9 +3,13 @@
 > 环境：SonarQube 10.7.0.96327（Community，Docker）· 规则集 `Sonar way`（默认）
 > 分析器：Java 8.2 · JavaScript/TypeScript/CSS 10.16 · XML 2.10
 > 基线：`master` @ `0ff8331c`（工作区干净）
-> 结果代码：`12730a75`（第二轮清理；之后的提交仅改文档）
+> 结果代码：`12730a75`（第二轮清理）；2026-10-21/22 之后又有 A/B/C 项代码改动，本快照未重新扫描。
 > 范围：`xm_film/springboot/src/main/java`、`src/test/java`、`xm_film/vue/src`；排除 `node_modules/`、`dist/`
 > **状态**：基线 **74** 条 → P0 修复后 **69** 条 → 本轮清理后 **32** 条（漏洞 0，安全评级 A）。
+>
+> **这是 2026-10-20 的扫描快照，不是当前问题数。** 2026-10-22 已修复 8 条 `Web:S6819`（ARIA），但未重新扫描；当前明确未处理的只剩 2 条 `javascript:S3776`。本文件其余计数仅用于复盘当轮，勿直接当现值引用。
+>
+> **“漏洞 0 / 安全评级 A”只是 Sonar 静态规则结果**，不覆盖 `backend-backlog.md` §安全 中已实测的 SEC-01/02/03。
 
 ---
 
@@ -25,7 +29,7 @@
 | 类型分布 | BUG 8 · 漏洞 1 · 坏味 65 | BUG 6 · 漏洞 0 · 坏味 63 | BUG 3 · **漏洞 0** · 坏味 29 |
 | 安全热点 | 4 | 2 | 2（均为已判定为安全的正则） |
 
-**一句话结论**：三条 P0（支付密码事务边界、硬编码默认口令、取票码随机源）与本轮 12 类清理项（含 BL-52）均已修复，测试代码问题清零；安全评级 A、漏洞 0。剩余 32 条里，22 条是“自调用但传播行为正确”的 `S6809`（14 条）与 ARIA 语义建议（8 条），2 条是前端复杂度，其余 8 条为单点低风险项或已核验误报；可靠性 E 只因 3 条 BUG，且这 3 条全部是**已核验的误报/有意为之**（`Thread.sleep` 限流、volatile 不可变快照、Vue 键盘指令不被识别）。
+**一句话结论**：三条 P0（支付密码事务边界、硬编码默认口令、取票码随机源）与本轮 12 类清理项（含 BL-52）均已修复，测试代码问题清零；安全评级 A、漏洞 0（仅 Sonar 静态口径）。当时剩余 32 条里，22 条是“自调用但传播行为正确”的 `S6809`（14 条）与 ARIA 语义建议（8 条，已于 2026-10-22 修复），2 条是前端复杂度，其余 8 条为单点低风险项或已核验误报；可靠性 E 只因 3 条 BUG，且这 3 条全部是**已核验的误报/有意为之**（`Thread.sleep` 限流、volatile 不可变快照、Vue 键盘指令不被识别）。
 
 > ⚠️ 质量门禁显示 `OK` **不代表没有问题**：该门禁只配置了「新代码违规数 = 0」，本次是基线扫描（无 Previous Version 可比），所以整体问题数不影响门禁结果。判定请看上面的级别分布。
 
@@ -40,7 +44,7 @@
 | **Sonar `java:S6437`**<br>批量导入影院共用 `cinema123` | 每个账号生成独立的 12 位随机初始口令（约 70 bit 熵），库中只存 BCrypt 哈希；明文只在 `POST /cinemas/from-directory` 的 `accounts[]` 里返回一次。`insertCinema` 对空口令返回 400，不再回退默认值。后台名录页新增「账号与初始口令」弹窗 + 复制全部。 | `CinemaServiceTest` 新增/加强 3 条：明文能匹配落库哈希、不同账号口令不同、空口令被拒。 | 改回共用 `cinema123` → 3 条用例红（`expected: not equal but was: <cinema123>`），已确认还原。 |
 | **BL-52 / Sonar `java:S1874`**<br>弃用异常（4 条） | `CinemaService` 的 catch 改为父类型 `PessimisticLockingFailureException`，覆盖死锁与等锁超时；测试同步。另 1 条是 Spring 6.2 弃用的 `HttpMessageNotReadableException` 单参构造器，改用带 `MockHttpInputMessage` 的两参形式。 | `CinemaServiceTest#importFromDirectoryReportsLockWaitTimeoutAsRetryableConflict` 用 `CannotAcquireLockException` 证明超时那半也被捕获。 | 若只捕死锁子类，新增的等锁超时用例会红；已由该用例钉住。 |
 
-**回归**：`mvn -o clean test` = **398/398 通过**；`npm run build` 成功。
+**当时回归**：`mvn -o clean test` = **398/398 通过**；`npm run build` 成功。
 
 ---
 
@@ -151,11 +155,11 @@
 
 ---
 
-## 5 前端剩余（12 条）
+## 5 前端剩余（扫描时 12 条；其中 8 条已修）
 
 | 规则 | 数量 | 位置与判断 |
 | --- | --- | --- |
-| `Web:S6819` | 8 | `role="group"/"button"/"img"/"status"`；Element Plus 场景下多为可接受，至少 `manage/Film.vue:205` 的 `div role="button"` 建议换 `<button>`（需产品/样式确认） |
+| `Web:S6819` | 8 | **2026-10-22 已全部修复**：ARIA `role` 改为原生元素或补 `aria-hidden`；不再是当前剩余项 |
 | `javascript:S3776` | 2 | `views/front/FilmDetail.vue:291`（23）、`views/manage/Film.vue:369`（18）。可拆函数，非缺陷 |
 | `javascript:S1481` | 1 | `back/Person.vue:68` `_token` 解构排除字段 —— **误报**（有意保留，注释已说明） |
 | `Web:MouseEventWithoutKeyboardEquivalentCheck` | 1 | `manage/Film.vue:205` —— **误报**：模板已有 `@keyup.enter`，Sonar 不识别 Vue 指令 |
@@ -175,13 +179,13 @@
 | `S1874` 弃用异常 | **BL-52** | **已修复**（父类型 + 两参构造器） |
 | `S2259` TMDB 空 body | 本报告 §0.2（第二轮清理） | **已修复** + 守卫测试 |
 | `S1192`/`S1128`/`S6213`/`S3863`/`S6068`/`S5838` | 清理项 | **已清零** |
-| 前端 12 条 | `audit/frontend-audit.md` | 建议登记 FE-67 起（复杂度/ARIA） |
+| 前端 12 条 | `audit/frontend-audit.md` | 8 条 ARIA 已修；2 条 `S3776` 仍登记；其余为误报/热点 |
 
 ---
 
 ## 7 剩余建议
 
-1. **`S6819`（8 条）**：按页面上报的 `role` 逐条确认；`manage/Film.vue:205` 优先换原生 `<button>`，其余多为 Element Plus 组件的语义补充。
+1. **`S6819`（8 条，2026-10-22 已修）**：`role` 已逐条处理完毕，保留此项仅作复盘；复扫时确认清零。
 2. **`S3776`（2 条）**：`FilmDetail.vue` 的详情加载与 `manage/Film.vue` 的导入流程可拆成 2–3 个小函数；属可维护性，不是缺陷。
 3. **`S6809`（14 条）**：批量消警收益低，建议在 `BaseService` 一处注释说明，不做逐条改动。
 4. **`S1172`/`S3011`/`S135`**：保留现状并注明理由，或按上表替换为框架工具。

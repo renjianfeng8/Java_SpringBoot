@@ -1,4 +1,6 @@
-# 前端未修项攻坚：进度记录（2026-10-21 收尾）
+# 前端未修项攻坚：进度记录（2026-10-22 收尾）
+
+> 当前代码基线：`master` @ `2286861e` + 2026-10-22 未提交的 A/B/C 项改动。下列「已提交」表只到 `93adba6e`，A/B/C 项均尚未提交。
 
 > 目标：集中处理 `audit/frontend-audit.md` 里「本轮登记未做 / 2026-10-18 全盘复核新增」
 > 与 Sonar 前端剩余项。一次只做一类，每类过 `npm run build`，能起浏览器的额外跑无头 Chrome。
@@ -38,13 +40,49 @@
 
 ## 四、仍未做
 
-- **FE-03 残留**：角色不符已回本角色主页；「已登录访问 `/login`」策略未定。
+- ~~**FE-03 残留**：角色不符已回本角色主页；「已登录访问 `/login`」策略未定。~~ 2026-10-22 已修，见 §六。
 - **FE-05**：缺一条路由表断言（受保护前缀下每个子路由必须带门禁标记）。
 - **FE-09**：`/front` 与 login/register/404 上无消费者的 `meta.name` 仍在。
+- **FE-18**：网络类失败保持登录（fail-open）的口径未定，未改。
 - **FE-19**：失败语义下沉到拦截器属行为变更，未动。
-- **Sonar 前端**：8 条 ARIA（`Web:S6819`）+ 2 条 `S3776` 复杂度。
+- **FE-49**：`front/Orders`、`front/Cinema` 已用 `usePagedList`；`front/Movie`、`back/*` 仍手写分页（已补 `loadSeq`）。
+- **FE-60**：`App.vue` / `request.js` 裸前缀匹配残余两处，当前路由不可达，未做。
+- **Sonar 前端**：8 条 ARIA（`Web:S6819`）已处理（2026-10-22），2 条 `S3776` 复杂度仍未动。
 
 ## 五、临时工具（不在仓库内）
 
 - `%TEMP%\smoke\`：puppeteer-core、`smoke.cjs`（页面渲染冒烟）、`paging.cjs`（翻页行为）、
   `pagedlist.test.mjs`（usePagedList 断言）。需要时可用 `http-server dist -p <port>` 起静态服务再跑。
+
+## 六、2026-10-22 追加（用户感知四项）
+
+| 条目 | 做了什么 | 验证 |
+| --- | --- | --- |
+| FE-03 收尾 | `Login.vue` 已登录时回 `?redirect=`（站内、非 `/login`、角色允许）或角色主页；登录成功复用同一 `landingPath()` | 冒烟：游客留登录页、已登录回主页/目标页、`redirect=/login` 不循环 |
+| BL-49 前端兜底 | 详情请求成功但 `data` 为空时显示「电影/影院/场次不存在或已下架」，不再出现「加载失败：操作成功」。覆盖 FilmDetail（影片+演员）、CinemaDetail、FilmCinema、BuyTicket | 冒烟：四个失效详情页文案均正确 |
+| 管理端筛选 | 影片列表加类型/地区/年份/状态；用户列表加电话/角色；订单列表加电影/影院。三者均复用后端已有查询字段，未改接口 | 冒烟：三页筛选参数正确 |
+| 分页条数 | 当时 18 个列表页的 `:page-sizes` 增加 50/100（原最大 20）；新增 `manage/Finance` 后当前为 23 个页面 / 24 处分页配置 | 冒烟：切到 100 条/页后请求 `pageSize=100` |
+
+四项均过 `npm run build`；无头 Chrome 拦截 `/api/v1` 共 13 条断言全绿（8 + 5）。
+
+## 七、2026-10-22 追加（B 项：管理端与一致性）
+
+| 条目 | 做了什么 | 验证 |
+| --- | --- | --- |
+| B1 批量删除点名 | 排片/影厅/用户/订单的批量删除仍保持「全有或全无」，但不再遇到第一条被引用就中断；`BatchDeleteGuard` 汇总被挡行（类型 + id + 名称 + 原因），最多列 5 条，其余报数量 | `RecordDeleteGuardTest` 新增断言：文案含「整批未删除」「排片 #7」且不调用 `deleteBatch` |
+| B2 跨页勾选 | 13 个 manage 列表 + 影院名录 + 3 个 back 列表加 `row-key` + `reserve-selection`；`useCrud` 暴露 `tableRef`，写入成功、查询、重置时同时清表格内部选中，避免带已删除/已隐藏 id 去批量删 | 无头 Chrome 5/5：第 1 页选 1 条、翻到第 2 页再选 1 条，界面显示「已选 2 项」，批量删除请求体为 `[1,11]`；查询后选中清零 |
+| B3 大盘同源 | `StatisticsService` 的待取票数改为从同一份 `orderStatus` 分组派生，不再对订单表发第二次 COUNT，避免同一屏 KPI 与图表对不上 | `StatisticsServiceTest` 5/5；`pendingPickupOrders` 断言改为 `12L` |
+| B4 补预告片查询 | 新增 `FilmMapper.selectMissingVideo()`，只查 `video` 为空的行；不再用带票房聚合与 area/actor JOIN 的 `selectAll` 扫全表 | `TmdbBackfillServiceTest` 6/6；MySQL mapper 加载测试通过 |
+| B5 ARIA | `div role=button` 改原生 `<button>`（内部 div 改 span，补按钮样式重置）；4 处 `role=group` 改 `<fieldset aria-label>` 并清默认边框/内边距；`role=status` 改 `<output>`；走势图改 `aria-hidden`，结论由可见 caption 承担 | `Web:S6819` 的 8 个位置已无 ARIA role；build + 原有前台冒烟 8/8 |
+
+验证汇总：后端 `mvn test` 43 个测试类 / 403 条用例，0 失败；前端 `npm run build` 通过；无头 Chrome 8/8 + 5/5 + B2 5/5。
+
+## 八、2026-10-22 追加（C 项：管理端能力）
+
+| 条目 | 做了什么 | 验证 |
+| --- | --- | --- |
+| C1 管理员重置密码 | `PUT /auth/password/reset` 只允许 ADMIN；按目标 `role` 路由到 user/admin/cinema 三张账号表，新密码 BCrypt 后写库，统一 6–64 位校验；三个管理列表共用 `ResetPasswordDialog`，操作日志只记操作人/目标，不打印密码 | `GlobalExceptionHandlerTest` 非 ADMIN 返回 403、ADMIN 正确路由；`UserServiceTest` 断言入库为 BCrypt 且不校验旧密码；前端冒烟正确发送 `{id,role,newPassword}` |
+| C2 管理端取消/退票 | 订单页在「待支付」显示取消、在「待取票」显示退票，复用既有 `PUT /orders/{id}/cancel`、`/refund`；确认框带订单号/金额，成功后重载并清选中。沿用后端状态机，管理员不绕过开场前 60 分钟退款截止 | 无头 Chrome：取消/退票分别命中 `PUT /orders/11/cancel`、`/orders/12/refund` |
+| C3 充值 / 资金流水 | 新增 `/manage/finance` 两个只读页签：充值单据（单号/用户/金额/状态/时间）与资金流水（用户/来源/关联单/变动额/余额），支持单号、用户 ID、状态、来源筛选及分页；后端查询 LEFT JOIN `user.name` 带出姓名。未加人工入账，避免在 SEC-01 未处理时新开资金写入面 | 无头 Chrome：两页签数据、姓名、金额正确；前端 build 通过 |
+
+C 项验证：后端全量 `mvn test` 通过（0 失败）；前端 `npm run build` 通过；新增无头 Chrome 5/5 通过。C1 暂未做「强制下次登录改密/DB 审计流水」，C2 未做管理员超时退款绕过，C3 未做人工补单，均需先定策略。
