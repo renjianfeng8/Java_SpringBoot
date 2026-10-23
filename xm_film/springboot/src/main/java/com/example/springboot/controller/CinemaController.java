@@ -13,6 +13,7 @@ import com.example.springboot.dto.response.CinemaRegionView;
 import com.example.springboot.dto.response.CinemaView;
 import com.example.springboot.entity.Cinema;
 import com.example.springboot.exception.CustomException;
+import com.example.springboot.service.CinemaCoverService;
 import com.example.springboot.service.CinemaService;
 import com.github.pagehelper.PageInfo;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -33,9 +34,12 @@ public class CinemaController extends BaseController<Cinema, CinemaRequest, Cine
 
     private final CinemaService cinemaService;
 
-    public CinemaController(CinemaService cinemaService) {
+    private final CinemaCoverService cinemaCoverService;
+
+    public CinemaController(CinemaService cinemaService, CinemaCoverService cinemaCoverService) {
         super(cinemaService);
         this.cinemaService = cinemaService;
+        this.cinemaCoverService = cinemaCoverService;
     }
 
     @Override
@@ -84,7 +88,8 @@ public class CinemaController extends BaseController<Cinema, CinemaRequest, Cine
     public Result<PageInfo<CinemaView>> page(CinemaRequest query,
                        @RequestParam(defaultValue = "1") Integer pageNum,
                        @RequestParam(defaultValue = "10") Integer pageSize) {
-        PageInfo<Cinema> src = cinemaService.selectPage(toEntity(query), query.getFilmId(), pageNum, pageSize, !isAdmin());
+        // 只给管理员放全部：影院与会员在前台也带 token，放行非管理员会让未审核影院重新露出
+        PageInfo<Cinema> src = cinemaService.selectPage(toEntity(query), query.getFilmId(), pageNum, pageSize, !seesUnapproved());
         return Result.success(toPageView(src));
     }
 
@@ -105,6 +110,13 @@ public class CinemaController extends BaseController<Cinema, CinemaRequest, Cine
         return Result.success(cinemaService.regions());
     }
 
+    /** 补齐缺失的影院封面：逐家从高德取图、转存 /files 并写回 avatar（幂等，只处理空封面的） */
+    @PostMapping("/covers/backfill")
+    public Result<Integer> backfillCovers() {
+        requireAdmin();
+        return Result.success(cinemaCoverService.backfillMissingCovers());
+    }
+
     /** 从名录批量生成影院（幂等）。仅管理员 —— 写角色门禁在方法内 */
     @PostMapping("/from-directory")
     public Result<CinemaAccountImportView> importFromDirectory(@RequestBody CinemaFromDirectoryRequest request) {
@@ -116,7 +128,7 @@ public class CinemaController extends BaseController<Cinema, CinemaRequest, Cine
     @Override
     @GetMapping
     public Result<List<CinemaView>> list(CinemaRequest query) {
-        return Result.success(cinemaService.selectAll(toEntity(query), query.getFilmId(), !isAdmin())
+        return Result.success(cinemaService.selectAll(toEntity(query), query.getFilmId(), !seesUnapproved())
                 .stream().map(this::toView).toList());
     }
 
@@ -161,6 +173,11 @@ public class CinemaController extends BaseController<Cinema, CinemaRequest, Cine
         requireAdmin();
         cinemaService.deleteGuarded(ids);
         return Result.success();
+    }
+
+    /** 列表/详情是否放行未审核影院。仅后台管理员；影院角色带 token 走前台时也必须只看已审核 */
+    private boolean seesUnapproved() {
+        return isAdmin();
     }
 
     private boolean isAdmin() {

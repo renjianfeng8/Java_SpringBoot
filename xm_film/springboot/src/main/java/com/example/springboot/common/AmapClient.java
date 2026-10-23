@@ -5,6 +5,7 @@ import com.example.springboot.exception.CustomException;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
@@ -13,6 +14,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * 高德接口客户端：只负责「发请求 + 认字段」，不做业务判断。
@@ -23,6 +25,7 @@ import java.util.List;
 public class AmapClient {
 
     private static final String PLACE_TEXT_URL = "https://restapi.amap.com/v5/place/text";
+    private static final String PLACE_DETAIL_URL = "https://restapi.amap.com/v5/place/detail";
     private static final String DISTRICT_URL = "https://restapi.amap.com/v3/config/district";
 
     /** 高德「电影院」分类码 */
@@ -138,11 +141,59 @@ public class AmapClient {
     }
 
     /**
+     * 取某个影院 POI 的首张门店图 URL。
+     *
+     * <p>搜索接口（{@link #searchCinemas}）不带 photos：高德 Web 服务里图片只在
+     * 「详情」接口的 {@code show_fields=photos} 下返回。实测万州 10 家影院里 9 家能取到
+     * 1~3 张，取第一张即可 —— 第一张是门店外观，后面的多是用户评论图。
+     *
+     * <p>无图 / POI 已下架（count=0）都返回 empty，不抛异常：图是锦上添花，
+     * 缺图由前端 {@code avatarSrc} 兜底，不该让导入整批失败。
+     */
+    public Optional<String> firstPhotoUrl(String poiId) {
+        if (poiId == null || poiId.isBlank()) {
+            return Optional.empty();
+        }
+        URI uri = UriComponentsBuilder.fromHttpUrl(PLACE_DETAIL_URL)
+                .queryParam("key", key)
+                .queryParam("id", poiId)
+                .queryParam("show_fields", "photos")
+                .build()
+                .encode()
+                .toUri();
+        JsonNode root = get(uri);
+        JsonNode photos = root.path("pois").path(0).path("photos");
+        if (!photos.isArray()) {
+            return Optional.empty();
+        }
+        for (JsonNode photo : photos) {
+            String url = text(photo, "url");
+            if (url != null) {
+                return Optional.of(url);
+            }
+        }
+        return Optional.empty();
+    }
+
+    /** 下载图片字节；失败返回 empty，理由同 {@link #firstPhotoUrl} */
+    public Optional<byte[]> downloadImage(String url) {
+        if (url == null || url.isBlank()) {
+            return Optional.empty();
+        }
+        try {
+            ResponseEntity<byte[]> response = restTemplate.getForEntity(url, byte[].class);
+            byte[] body = response.getBody();
+            return body == null || body.length == 0 ? Optional.empty() : Optional.of(body);
+        } catch (RestClientException e) {
+            return Optional.empty();
+        }
+    }
+
+    /**
      * status != "1" 一律抛业务异常，让管理员看到高德给的原话（Key 无效/额度用尽等）；
      * 唯一的例外是并发超限：它是瞬时的，退避重试几次，仍不行才抛。
      */
-    private JsonNode get(URI uri) {
-        for (int attempt = 0; ; attempt++) {
+    private JsonNode get(URI uri) {        for (int attempt = 0; ; attempt++) {
             JsonNode root;
             try {
                 root = restTemplate.getForObject(uri, JsonNode.class);

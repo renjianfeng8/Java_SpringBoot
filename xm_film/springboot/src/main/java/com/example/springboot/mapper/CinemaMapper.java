@@ -21,6 +21,16 @@ public interface CinemaMapper extends BaseMapper<Cinema> {
 
     void updatePassword(Cinema cinema);
 
+    /** 只改封面地址：补图专用，避免整行 update 覆盖别的字段 */
+    void updateAvatar(@Param("id") Integer id, @Param("avatar") String avatar);
+
+    /** 缺封面且能关联高德名录的影院 */
+    List<MissingCoverTarget> selectMissingCovers();
+
+    /** 补图目标：影院 id + 高德 POI id */
+    record MissingCoverTarget(Integer cinemaId, String poiId) {
+    }
+
     /** 大盘统计：影院状态分布（[{name, value}]，由 cinema 实时计数） */
     List<NameValueView> countGroupByStatus();
 

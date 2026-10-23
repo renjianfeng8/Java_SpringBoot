@@ -62,7 +62,8 @@
                 AND EXISTS (SELECT 1 FROM record r WHERE r.cinema_id = c.id AND r.film_id = #{filmId})
             </if>
         </where>
-        ORDER BY c.id DESC
+        <!-- 有封面的排在前面（前台列表要求），其余仍按 id 倒序 -->
+        ORDER BY (c.avatar IS NULL OR c.avatar = '') ASC, c.id DESC
     </select>
 
     <!-- 大盘统计：影院状态分布（由 cinema 实时计数） -->
@@ -152,5 +153,18 @@
         WHERE directory_id IN
         <foreach collection="list" item="id" open="(" separator="," close=")">#{id}</foreach>
     </select>
+
+    <!-- 补图目标：有高德名录、封面为空。左连接只是为了取 POI id -->
+    <select id="selectMissingCovers" resultType="com.example.springboot.mapper.CinemaMapper$MissingCoverTarget">
+        SELECT c.id AS cinemaId, d.poi_id AS poiId
+        FROM cinema c
+        INNER JOIN cinema_directory d ON d.id = c.directory_id
+        WHERE c.avatar IS NULL OR c.avatar = ''
+        ORDER BY c.id
+    </select>
+
+    <update id="updateAvatar">
+        UPDATE cinema SET avatar = #{avatar} WHERE id = #{id}
+    </update>
 
 </mapper>
