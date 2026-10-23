@@ -50,6 +50,11 @@ frontend.log
 # === 数据库备份 ===
 *backup*.sql
 *.sql.bak
+# 一次性数据补齐脚本按规范不入库（见 docs/engineering-rules.md §5）。
+# 例外：demo-data.sql 是演示环境入口；src/test/resources/db/ 下的结构快照是对照源。
+*.sql
+!**/demo-data.sql
+!**/src/test/resources/db/*.sql
 
 # === Claude ===
 .claude/
