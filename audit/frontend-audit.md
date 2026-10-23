@@ -1,4 +1,4 @@
-# 前端 Vue3 代码安全与质量审计（FE-01…FE-66）
+# 前端 Vue3 代码安全与质量审计（FE-01…FE-74）
 
 > 2026-10-18 全盘复核：本文件原为仓库根的 `前端 Vue3 代码安全与质量审计报告.md`，已移入 `audit/` 并改名，`git mv` 保留了历史。复核只改动了确有出入的描述（见下），条目编号与结论未动。索引见根目录 `项目索引.md`。
 >
@@ -222,6 +222,21 @@
 - **管理端效率（A 项）**：`manage/Film` 增加类型/地区/年份/状态筛选，`manage/User` 增加电话/角色，`manage/Ordered` 增加电影/影院；全部复用后端已有查询字段。当时 18 个列表页的每页条数上限由 20 提到 100；新增 `manage/Finance` 后当前为 23 个页面 / 24 处分页配置。
 - **A 项验证**：build + 无头 Chrome 5/5，断言三页筛选参数与 `pageSize=100` 均正确。
 - **管理端 C 项**：C1 管理员重置密码（仅 ADMIN、三账号表、BCrypt）、C2 取消/退票（复用状态机、映前 60 分钟截止）、C3 充值/资金流水只读页已补；C3 未做人工入账。详见 `audit/frontend-progress.md` §八。
+
+## 2026-10-23 性能候选（只读实测，未改代码）
+
+本轮只做发现：没有修改源码，也没有跑 Lighthouse / JVM / DB 压测。数据来自本机运行中的后端与 MySQL（64 部影片、243 笔订单、5,240 条排片、87 家影院），**毫秒数不代表生产规模**；可复用的事实是请求次数、payload 大小与扫描方式。
+
+| 编号 | 位置 | 问题 | 处置建议 |
+| --- | --- | --- | --- |
+| FE-67 | views/front/CinemaDetail.vue:348-368、408-432 | `load()` 先串行 `await` 影院信息、影片列表，再 `Promise.all(films.map(fetchFilmSessions))`。影院 1 实测 35 部片 → **35 个场次请求**（加影院/影片共 37 个），而当天实际只有 5 部片有场次；浏览器同域并发通常 6 个，其余排队。 | 一次 `records/page?cinemaId=...` 取回该影院全部排片，按 `filmId` 分组；影院信息与影片列表并行。当前单影院最多 63 条排片，取 100/200 即可，仍要用 `total` 判断截断。 |
+| FE-68 | views/front/Home.vue:37、194；CinemaDetail.vue:107；FilmDetail.vue:88-137；FilmMarks.vue:19；Search.vue:20；FilmCinema.vue:81 | 首页 Hero 5 张图全部 eager，实测合计 **554,172 B**；影院详情 35 张海报无 `loading="lazy"`（采样 10 张共 1,081,619 B，均约 108KB/张）；榜单、搜索结果、演员头像等列表图也无懒加载。`/files/**` 还没有 `Cache-Control`（见 BL-56）。 | 首屏第一张加 `fetchpriority="high"`，其余延迟加载；非首屏图片补 `loading="lazy" decoding="async"`。Hero 因横向 transform 不能直接靠原生 lazy，需缩略图或 IntersectionObserver。 |
+| FE-69 | views/front/Home.vue:461-478 | 首页调 `GET /api/v1/films` 取全表：实测 **42,681 B / 11-27ms**；页面只用 `status` 过滤后的 8+8 条和两个总数，响应却含所有影片的 `content` 长文本、`actorInfo` 等。同条件分页接口 `films/page?pageSize=8&status=已上映` 只有 **5,621 B**。 | 改两次分页请求（或新增轻量首页接口，一次返回 playing/upcoming 各 8 条 + total）；标题里的总数改读 `total`。 |
+| FE-70 | views/front/FilmCinema.vue:324-329 | `onMounted` 先 `fetchFilmFullInfo()` 成功后才 `loadCinemaList()`，两个独立请求被串成 2 个 RTT。 | `Promise.all` 并行发起；影片无效时再丢弃影院结果。 |
+| FE-71 | views/front/Account.vue:301-343 | `loadFlows()` 与 `loadTrend()` 对同一个 `fund-flows/page` 各请求一次，参数不同但同一用户、同一批流水。 | 趋势窗口覆盖当前页时复用一次响应；或后端提供聚合趋势接口。 |
+| FE-72 | views/front/Movie.vue:170-198 | 每次进入影片列表都重新请求 `types` / `areas` / `years` 三份几乎不变的字典。 | 模块级 Promise 缓存，与登录态无关。 |
+| FE-73 | views/front/Home.vue:226-227、391-421；CinemaDetail.vue:405-431 | 首屏被 `MIN_REFRESH_MS = 450` / `MIN_SKELETON_MS = 400` 强制撑满，接口实测只要 3-8ms；下限本来是为防手动刷新时转圈一闪。 | 下限只用于手动刷新或慢请求；首屏直接提交结果。 |
+| FE-74 | views/manage/Home.vue:173-185 | 后台驾驶舱 chunk 实测 **367KB（gzip 125KB）**，因顶层引入 echarts；只在进入 `/manage/home` 时加载，路由拆分已生效。 | 低优先级；若要再压，可在数据到位后动态 `import('echarts/core')`。 |
 
 ## 已核验为非缺陷（防二次误报）
 

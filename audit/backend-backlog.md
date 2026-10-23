@@ -223,6 +223,16 @@
 | BL-10 | service/StatisticsService.summary | overview 已取回 countGroupByStatus()，summary 又单独发 countByStatus("待取票")，同页对 ordered 多发一次 COUNT，两次读之间还有快照窗口。 | 复用同一份分组结果（countOf 派生）。注意改后 pendingPickupOrders 的 Java 类型由 Integer 变 Long，需同步 3 处测试桩。 |
 | BL-11 | service/TmdbBackfillService.backfillVideos | 用 selectAll(new Film())（含票房聚合与 area/actor JOIN）取全表再在 Java 里过滤 video 为空的行。 | 改投影查询 SELECT id,title,... WHERE video IS NULL OR video=''，避开聚合。 |
 | BL-12 | service/TmdbService.resolveTypes | 逐类型 selectByTitleExact 并按需 insert（≤4 次）。 | 批量 selectByTitleExact(IN ...) 一次取回。管理员低频，优先级低。 |
+| BL-55 | mapper/OrderedMapper.xml:150-181；schema.sql 的 ordered 索引 | `ordered.pay_time` **无索引**；`selectTodayPaidRevenue`、`countTodayPaidOrders`、`selectPaidRevenueByDay` 都按 `pay_time` 过滤，EXPLAIN 为 `type=ALL`（当前 243 行）。今日票房在首页每次加载都查。 | 加 `KEY idx_ordered_pay_time (pay_time)` 或 `(pay_time, status)`；改表后按 `docs/engineering-rules.md` §2 重新生成 `schema.sql` 并同步真实库迁移。 |
+| BL-56 | common/config/WebMvcConfig.java:24-27 | `/files/**` 只返回 `Last-Modified`，**没有 `Cache-Control` / `ETag`**。上传文件名是 UUID、内容不变，重复访问仍会条件请求。 | `setCachePeriod(86400)` 或 `CacheControl.maxAge(...)`；文件名唯一，可放心长缓存。 |
+| BL-57 | application.yml（server 段） | 未开启 HTTP 压缩；`/films` 的 42,681B JSON 响应没有 `content-encoding`。 | 开 `server.compression.enabled: true`，`mime-types` 含 `application/json`。 |
+| BL-58 | resources/logback-spring.xml:7-9 | `com.example.springboot.mapper` 固定 **DEBUG**，所有 SQL 与结果集都写控制台，开发/生产同样生效。 | 默认 INFO，开发用 profile 或环境变量开 DEBUG。 |
+| BL-59 | mapper/FilmMapper.xml:12-19、65-84 | 所有影片列表/详情/榜单/搜索都 `LEFT JOIN` 一个**全表 `ordered` 聚合子查询**；首页一次加载触发 3 次（`/films`、票房 Top、评分 Top）。EXPLAIN 当前扫 243 行。 | 数据量上来后考虑 `(status, film_id, total)` 覆盖索引；或把 `film.box_office` 恢复为支付/退票时维护的派生列；或只对需要票房的接口带聚合。 |
+| BL-60 | mapper/FilmMapper.xml:77；mapper/RecordMapper.xml:31 | `film.start LIKE '%year%'`、`record.start LIKE '%date%'` 让 `idx_start` 失效，日期/年份筛选退化为全表扫描。 | 前端传完整日期时改范围查询（`>= day AND < day+1`）。 |
+| BL-61 | mapper/MarkMapper.xml:55-62 | 影评列表每行两个相关子查询（`likeCount`、`liked`），分页前对整片评价逐行计算。 | 用 `mark_like` 聚合 JOIN / 派生表一次算好，或缓存点赞数。当前 25 条评价无感。 |
+| BL-62 | common/BaseController.list；mapper/FilmMapper.selectAll | 集合根无分页上限，且全列返回（含 `content` 长文本）；后台下拉也全量拉。首页的消费方问题见 FE-69。 | 列表改投影/分页；下拉只取 id/title 等轻量字段。 |
+
+**2026-10-23 复核备注**：BL-08 / BL-09 / BL-12 仍成立；BL-10 的现状已与描述不符 —— `StatisticsService.summary` 现在复用 `countGroupByStatus()` 的结果（`countOf`），BL-11 也已在 `TmdbBackfillService` 改用 `selectMissingVideo`。本轮只读、未重跑测试，因此只记备注、未改这两条的状态。
 
 ## 重复代码与可维护性（2026-10-20 专项：BL-13/14/15/16 已修复）
 
