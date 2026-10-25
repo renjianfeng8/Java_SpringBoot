@@ -2,7 +2,8 @@
   <div>
     <div class="card page-card">
       <el-input v-model="data.title"  placeholder="请输入电影名称查询" class="search-input" :prefix-icon="Search"/>
-      <el-input  v-model="data.start"  placeholder="按放映日期查询 (YYYY-MM-DD)" class="search-input" :prefix-icon="Search"/>
+      <el-date-picker v-model="data.start" type="date" placeholder="按放映日期查询"
+                      value-format="YYYY-MM-DD" class="search-input"/>
       <el-select v-model="data.status" placeholder="请选择放映状态" class="search-input">
         <el-option label="正常" value="正常" />
         <el-option label="停售" value="停售" />

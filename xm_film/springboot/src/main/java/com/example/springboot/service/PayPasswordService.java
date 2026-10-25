@@ -138,7 +138,7 @@ public class PayPasswordService {
 
     /**
      * 登录密码比对。判定与 {@code UserService.login} / {@code updatePassword} 同口径：
-     * 先 BCrypt 比对，再退到明文相等（存量种子账号的密码是明文）。
+     * 只认 BCrypt（存量明文由 {@code PlaintextPasswordMigration} 启动时迁移，见 SEC-03）。
      * 重设与第一步的只验不写共用这一处，口径不会分叉。
      */
     private void checkLoginPassword(Integer userId, String rawLoginPassword) {

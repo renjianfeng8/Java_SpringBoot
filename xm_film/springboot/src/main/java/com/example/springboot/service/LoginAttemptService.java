@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -79,8 +80,13 @@ public class LoginAttemptService {
         }
     }
 
+    /**
+     * 计数 key 必须与查库的比较口径一致：username 列是字符串列，比较时忽略大小写与尾部空格，
+     * 若按请求原值计数，换个大小写或补几个空格就是一份新计数，锁定可被无限绕过。
+     */
     private static String key(String role, String username) {
-        return (role == null ? "" : role) + ":" + (username == null ? "" : username);
+        String normalized = username == null ? "" : username.trim().toLowerCase(Locale.ROOT);
+        return (role == null ? "" : role) + ":" + normalized;
     }
 
     private static final class Attempt {

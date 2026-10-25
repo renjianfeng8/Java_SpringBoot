@@ -193,6 +193,32 @@ class OrderedServiceTest {
         verify(orderedMapper, never()).insert(any(Ordered.class));
     }
 
+    /** 历史行可能用全角逗号分隔座位：判重按两种分隔符都切开，不能把 "3排4座" 当成空闲 */
+    @Test
+    void createOrderRejectsSeatStoredWithFullWidthComma() {
+        Record recordRow = new Record();
+        recordRow.setId(1);
+        recordRow.setFilmId(24);
+        recordRow.setCinemaId(10);
+        recordRow.setRoomId(7);
+        recordRow.setPrice("45.00");
+        recordRow.setStart(futureStart());
+        when(recordMapper.selectByIdForUpdate(1)).thenReturn(recordRow);
+
+        Ordered existing = new Ordered();
+        existing.setSeat("3排3座，3排4座");
+        when(orderedMapper.selectActiveByRecordId(1)).thenReturn(List.of(existing));
+
+        Ordered ordered = new Ordered();
+        ordered.setRecordId(1);
+        ordered.setSeat("3排4座");
+
+        assertThatThrownBy(() -> orderedService.createOrder(ordered, RoleEnum.USER.name(), 8))
+                .isInstanceOf(CustomException.class)
+                .hasMessageContaining("座位已售");
+        verify(orderedMapper, never()).insert(any(Ordered.class));
+    }
+
     @Test
     void cannotCreateOrderForStartedRecord() {
         Record recordRow = new Record();

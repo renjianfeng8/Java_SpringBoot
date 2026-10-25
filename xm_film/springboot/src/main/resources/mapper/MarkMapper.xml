@@ -54,17 +54,25 @@
         CASE WHEN #{viewerId} IS NOT NULL AND m.user_id = #{viewerId} THEN 1 ELSE 0 END AS mine
     </sql>
 
+    <!-- 点赞聚合与"我是否赞过"的 JOIN：两处查询共用，统计口径只此一处。
+         聚合先按 film_id 收窄到当前影片，不能写成不带过滤的 (SELECT mark_id, COUNT(*) FROM mark_like
+         GROUP BY mark_id)：派生表会物化整张 mark_like，评价页每次分页都要全表扫一遍。 -->
+    <sql id="markViewJoins">
+        LEFT JOIN (
+            SELECT ml.mark_id, COUNT(*) AS likeCount
+            FROM mark_like ml
+            JOIN mark m2 ON m2.id = ml.mark_id AND m2.film_id = #{filmId}
+            GROUP BY ml.mark_id
+        ) lc ON lc.mark_id = m.id
+        LEFT JOIN mark_like viewer_like
+               ON viewer_like.mark_id = m.id AND viewer_like.user_id = #{viewerId}
+    </sql>
+
     <select id="selectFilmMarks" resultType="com.example.springboot.dto.response.MarkView">
         SELECT <include refid="markViewColumns"/>
         FROM mark m
         LEFT JOIN user u ON m.user_id = u.id
-        LEFT JOIN (
-            SELECT mark_id, COUNT(*) AS likeCount
-            FROM mark_like
-            GROUP BY mark_id
-        ) lc ON lc.mark_id = m.id
-        LEFT JOIN mark_like viewer_like
-               ON viewer_like.mark_id = m.id AND viewer_like.user_id = #{viewerId}
+        <include refid="markViewJoins"/>
         WHERE m.film_id = #{filmId}
         ORDER BY likeCount DESC, m.id DESC
     </select>
@@ -76,13 +84,7 @@
         SELECT <include refid="markViewColumns"/>
         FROM mark m
         LEFT JOIN user u ON m.user_id = u.id
-        LEFT JOIN (
-            SELECT mark_id, COUNT(*) AS likeCount
-            FROM mark_like
-            GROUP BY mark_id
-        ) lc ON lc.mark_id = m.id
-        LEFT JOIN mark_like viewer_like
-               ON viewer_like.mark_id = m.id AND viewer_like.user_id = #{viewerId}
+        <include refid="markViewJoins"/>
         WHERE m.film_id = #{filmId} AND m.user_id = #{viewerId}
         LIMIT 1
     </select>

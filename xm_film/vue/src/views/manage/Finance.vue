@@ -126,7 +126,7 @@
 
 <script setup>
 import { reactive, ref } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import request from '@/utils/request'
 import { usePagedList } from '@/composables/usePagedList'
 import {
@@ -160,6 +160,18 @@ const callbacking = ref(null)
 
 const review = async (row, success) => {
   if (callbacking.value) return
+  // 入账/置失败都是一次性的（后端只接受「处理中」且没有冲正入口），点错无法回退
+  const action = success ? '通过' : '拒绝'
+  try {
+    await ElMessageBox.confirm(
+      `确认${action}充值单 ${row.rechargeNo}？用户 ${row.userName || '#' + row.userId}，金额 ¥${money(row.amount)}。`
+        + (success ? '通过后立即入账，不可撤销。' : '拒绝后该单据不可再审核。'),
+      `${action}充值单`,
+      { type: 'warning' },
+    )
+  } catch {
+    return
+  }
   callbacking.value = row.id
   try {
     const res = await request.post(RECHARGE_API.CALLBACK(row.id), {
