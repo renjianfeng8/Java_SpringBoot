@@ -70,6 +70,7 @@ public class RecordController extends BaseController<Record, RecordRequest, Reco
     @Override
     @GetMapping
     public Result<List<RecordView>> list(RecordRequest query) {
+        limitList();
         Record entity = toEntity(query);
         recordService.applyCinemaScope(entity, AuthContext.role(), AuthContext.userId());
         return Result.success(recordService.selectAll(entity).stream().map(this::toView).toList());

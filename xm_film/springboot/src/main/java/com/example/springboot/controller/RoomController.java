@@ -59,6 +59,7 @@ public class RoomController extends BaseController<Room, RoomRequest, RoomView> 
     @Override
     @GetMapping
     public Result<List<RoomView>> list(RoomRequest query) {
+        limitList();
         Room entity = toEntity(query);
         roomService.applyCinemaScope(entity, AuthContext.role(), AuthContext.userId());
         return Result.success(roomService.selectAll(entity).stream().map(this::toView).toList());

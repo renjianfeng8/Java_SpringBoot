@@ -73,6 +73,7 @@ public class UserController extends BaseController<User, UserRequest, UserView> 
     @Override
     @GetMapping
     public Result<List<UserView>> list(UserRequest query) {
+        limitList();
         return Result.success(userService.listScoped(toEntity(query), AuthContext.role(), AuthContext.userId())
                 .stream().map(this::toView).toList());
     }

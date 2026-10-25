@@ -106,6 +106,7 @@ public class OrderedController extends BaseController<Ordered, OrderedRequest, O
     @Override
     @GetMapping
     public Result<List<OrderedView>> list(OrderedRequest query) {
+        limitList();
         Ordered entity = toEntity(query);
         orderedService.applyScope(entity, AuthContext.role(), AuthContext.userId());
         return Result.success(orderedService.selectAll(entity).stream().map(this::toView).toList());

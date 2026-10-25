@@ -43,6 +43,10 @@ public interface OrderedMapper extends BaseMapper<Ordered> {
      */
     List<NameValueView> countGroupByStatus();
 
+    /**
+     * 单座位占用 COUNT：生产下单已改为 selectActiveByRecordId 一次取回，
+     * 本方法保留给 seatActiveCondition 的 SQL 回归测试。
+     */
     int countSeatInUse(@Param("recordId") Integer recordId,
                        @Param("seat") String seat,
                        @Param("s") OrderStatusCriteria criteria);

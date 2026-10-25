@@ -36,6 +36,7 @@ import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -162,8 +163,22 @@ public class OrderedService extends BaseService<Ordered> {
 
         List<String> seats = normalizeSeats(ordered.getSeat(), recordItem.getRoomId());
         int number = seats.size();
+        // 一次取该场全部占用座位再内存判重：原实现每个座位一条 countSeatInUse，
+        // 6 个座位就是 6 条查询，而且全部压在 record 行锁持有期间。
+        Set<String> occupiedSeats = new HashSet<>();
+        for (Ordered active : orderedMapper.selectActiveByRecordId(recordItem.getId())) {
+            if (active.getSeat() == null) {
+                continue;
+            }
+            for (String stored : active.getSeat().split("[,，]")) {
+                String trimmed = stored.trim();
+                if (!trimmed.isEmpty()) {
+                    occupiedSeats.add(trimmed);
+                }
+            }
+        }
         for (String seat : seats) {
-            if (orderedMapper.countSeatInUse(recordItem.getId(), seat, STATUS) > 0) {
+            if (occupiedSeats.contains(seat)) {
                 throw new CustomException(ErrorCode.BUSINESS_CONFLICT, "座位已售: " + seat);
             }
         }
@@ -270,7 +285,7 @@ public class OrderedService extends BaseService<Ordered> {
 
     /**
      * 退票：仅待取票（即已支付未取票）订单可退，且需在放映前 60 分钟之前办理。
-     * 退票后订单流转为已退票，座位不再计入占用（见 OrderedMapper.countSeatInUse）。
+     * 退票后订单流转为已退票，座位不再计入占用（见 OrderedMapper.seatActiveCondition）。
      */
     @Transactional(rollbackFor = Exception.class)
     public void refundOrder(Integer id, String role, Integer userId) {

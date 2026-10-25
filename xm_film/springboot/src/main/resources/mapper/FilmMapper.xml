@@ -9,6 +9,9 @@
          只统计已支付状态；已取消/已退票不计。状态集合 <include> OrderedMapper.paidOrderStatuses ——
          全仓只有那一处定义，新增任何"是否已支付"的状态时无需再同步第二个副本。
          片段里的 status 不带表前缀：本子查询只有 ordered o 一张表，解析到 o.status。 -->
+    <!-- 聚合走 ordered(status, film_id, total) 覆盖索引，避免回表；
+         但它仍然会扫全部已支付订单。订单量继续增长时应改为支付/退票时维护的汇总表，
+         否则每次电影列表/详情都要重算一遍。shortcut: 覆盖索引，订单量大时改汇总表。 -->
     <sql id="filmRevenueJoin">
         LEFT JOIN (
             SELECT o.film_id, SUM(o.total) AS revenue
@@ -74,7 +77,11 @@
         <where>
             <if test="title != null and title != ''">AND film.title LIKE CONCAT('%', #{title}, '%')</if>
             <if test="typeId != null">AND EXISTS (SELECT 1 FROM film_type ft WHERE ft.film_id = film.id AND ft.type_id = #{typeId})</if>
-            <if test="year != null and year != ''">AND film.start LIKE CONCAT('%', #{year}, '%')</if>
+            <!-- 年份用范围而不是 LIKE '%2026%'：后者对 date 列必然全表扫，且用不上 idx_start -->
+            <if test="year != null and year != ''">
+                AND film.start &gt;= CONCAT(#{year}, '-01-01')
+                AND film.start &lt; DATE_ADD(CONCAT(#{year}, '-01-01'), INTERVAL 1 YEAR)
+            </if>
             <if test="areaId != null">AND film.area_id = #{areaId}</if>
             <if test="status != null and status != ''">AND film.status = #{status}</if>
             <if test="actorId != null">AND film.actor_id = #{actorId}</if>

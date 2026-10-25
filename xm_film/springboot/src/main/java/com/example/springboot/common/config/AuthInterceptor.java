@@ -5,6 +5,7 @@ import com.example.springboot.common.Result;
 import com.example.springboot.common.enums.ErrorCode;
 import com.example.springboot.common.enums.RoleEnum;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.github.pagehelper.page.PageMethod;
 import io.jsonwebtoken.Claims;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -130,6 +131,17 @@ public class AuthInterceptor implements HandlerInterceptor {
 
         writeUnauthorized(response);
         return false;
+    }
+
+    /**
+     * PageHelper 的 ThreadLocal 只在真正执行 SQL 后由分页拦截器清理。
+     * /list 的权限分支可能在 startPage 之后直接抛异常（尚未执行 SQL），
+     * 不清理会污染线程池里的下一个请求，让别人的查询莫名带上 LIMIT 500。
+     */
+    @Override
+    public void afterCompletion(HttpServletRequest request, HttpServletResponse response,
+                                Object handler, Exception ex) {
+        PageMethod.clearPage();
     }
 
     /** 匿名放行总判定。读写两条规则的依据不同，故分开维护、此处只做并集 */

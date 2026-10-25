@@ -6,6 +6,7 @@ public enum ErrorCode {
     PARAM_INVALID("400", "参数校验失败"),
     NOT_FOUND("404", "资源不存在"),
     BUSINESS_CONFLICT("409", "业务状态冲突"),
+    TOO_MANY_REQUESTS("429", "请求过于频繁"),
     FILE_INVALID("415", "上传文件非法"),
     SYSTEM_ERROR("500", "系统错误");
 

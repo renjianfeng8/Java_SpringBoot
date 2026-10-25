@@ -10,6 +10,7 @@ import com.example.springboot.exception.GlobalExceptionHandler;
 import com.example.springboot.service.AdminService;
 import com.example.springboot.service.AuthService;
 import com.example.springboot.service.CinemaService;
+import com.example.springboot.service.LoginAttemptService;
 import com.example.springboot.service.UserService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.jsonwebtoken.Claims;
@@ -52,6 +53,9 @@ class GlobalExceptionHandlerTest {
 
     @MockBean
     JwtUtils jwtUtils;
+
+    @MockBean
+    LoginAttemptService loginAttemptService;
 
     /** 让真实拦截器放行，同时把登录态交给控制器；中间件本身由 AuthInterceptorAccessTest 覆盖 */
     private void authenticateAs(String role) {

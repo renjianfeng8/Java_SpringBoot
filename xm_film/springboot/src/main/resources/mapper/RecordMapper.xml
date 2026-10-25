@@ -28,7 +28,11 @@
         <include refid="recordJoins"/>
         <where>
             <if test="title != null and title != ''">AND record.title LIKE CONCAT('%', #{title}, '%')</if>
-            <if test="start != null and start != ''">AND record.start LIKE CONCAT('%', #{start}, '%')</if>
+            <!-- 日期用半开区间而不是 LIKE '%2026-10-25%'：datetime 上的 LIKE 会阻止 idx_record_start -->
+            <if test="start != null and start != ''">
+                AND record.start &gt;= #{start}
+                AND record.start &lt; DATE_ADD(#{start}, INTERVAL 1 DAY)
+            </if>
             <if test="status != null and status != ''">AND record.status = #{status}</if>
             <if test="cinemaId != null">AND record.cinema_id = #{cinemaId} </if>
             <if test="roomId != null">AND record.room_id = #{roomId} </if>

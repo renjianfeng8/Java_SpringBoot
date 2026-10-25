@@ -92,7 +92,7 @@ COL	ordered	start	datetime	YES		<null>
 COL	ordered	seat	varchar(200)	YES		<null>	
 COL	ordered	create_time	datetime	YES		CURRENT_TIMESTAMP	DEFAULT_GENERATED
 COL	ordered	pending_timeout_at	datetime	YES		<null>	
-COL	ordered	pay_time	datetime	YES		<null>	
+COL	ordered	pay_time	datetime	YES	MUL	<null>	
 COL	ordered	pay_amount	decimal(10,2)	YES		<null>	
 COL	ordered	refund_time	datetime	YES		<null>	
 COL	ordered	refund_amount	decimal(10,2)	YES		<null>	
@@ -171,9 +171,13 @@ IDX	mark_like	PRIMARY	non_unique=0	user_id	2
 IDX	notice	PRIMARY	non_unique=0	id	1		
 IDX	ordered	idx_ordered_cinema_id	non_unique=1	cinema_id	1		
 IDX	ordered	idx_ordered_film_id	non_unique=1	film_id	1		
+IDX	ordered	idx_ordered_pay_time	non_unique=1	pay_time	1		
 IDX	ordered	idx_ordered_record_id	non_unique=1	record_id	1		
 IDX	ordered	idx_ordered_room_id	non_unique=1	room_id	1		
 IDX	ordered	idx_ordered_status	non_unique=1	status	1		
+IDX	ordered	idx_ordered_status_film_total	non_unique=1	status	1		
+IDX	ordered	idx_ordered_status_film_total	non_unique=1	film_id	2		
+IDX	ordered	idx_ordered_status_film_total	non_unique=1	total	3		
 IDX	ordered	idx_ordered_status_timeout	non_unique=1	status	1		
 IDX	ordered	idx_ordered_status_timeout	non_unique=1	pending_timeout_at	2		
 IDX	ordered	idx_ordered_user_id	non_unique=1	user_id	1		

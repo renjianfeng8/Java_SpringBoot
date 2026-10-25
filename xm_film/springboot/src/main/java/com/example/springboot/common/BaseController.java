@@ -24,6 +24,9 @@ import java.util.List;
  */
 public abstract class BaseController<T extends Identifiable, R, V> {
 
+    /** 下拉/列表接口的硬上限：需要全量数据走 /page，不允许 GET /list 拖全表。 */
+    private static final int MAX_LIST_SIZE = 500;
+
     protected final BaseService<T> service;
 
     protected BaseController(BaseService<T> service) {
@@ -36,8 +39,17 @@ public abstract class BaseController<T extends Identifiable, R, V> {
     /** 实体 → 响应 DTO；对外只暴露视图字段 */
     protected abstract V toView(T entity);
 
+    /**
+     * 给 /list 加硬上限。子类覆盖 list() 时必须先调一次，否则绕过 BaseController 的默认实现。
+     * 第三个参数 false：只要 LIMIT，不要额外的 COUNT(*)；列表接口本来就不返回总数。
+     */
+    protected void limitList() {
+        PageMethod.startPage(1, MAX_LIST_SIZE, false);
+    }
+
     @GetMapping
     public Result<List<V>> list(R query) {
+        limitList();
         return Result.success(service.selectAll(toEntity(query)).stream().map(this::toView).toList());
     }
 

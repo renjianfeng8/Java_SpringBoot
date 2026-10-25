@@ -249,6 +249,8 @@ CREATE TABLE `ordered` (
   KEY `idx_ordered_room_id` (`room_id`),
   KEY `idx_ordered_status` (`status`),
   KEY `idx_ordered_status_timeout` (`status`,`pending_timeout_at`),
+  KEY `idx_ordered_pay_time` (`pay_time`),
+  KEY `idx_ordered_status_film_total` (`status`,`film_id`,`total`),
   CONSTRAINT `ordered_ibfk_1` FOREIGN KEY (`record_id`) REFERENCES `record` (`id`) ON DELETE RESTRICT,
   CONSTRAINT `ordered_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `user` (`id`) ON DELETE RESTRICT,
   CONSTRAINT `ordered_ibfk_3` FOREIGN KEY (`film_id`) REFERENCES `film` (`id`) ON DELETE RESTRICT,

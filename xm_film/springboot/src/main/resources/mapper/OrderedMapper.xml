@@ -81,7 +81,7 @@
     </select>
 
     <!-- 座位占用的唯一判定：已取消/已退票都不再锁座；待支付仅在未超时时锁座。
-         selectActiveByRecordId（占座列表）与 countSeatInUse（下单前查重）共用本片段 ——
+         selectActiveByRecordId（占座列表 + 下单查重）与 countSeatInUse（FIND_IN_SET 片段回归测试）共用本片段 ——
          两处口径一旦分叉，就会出现"列表说占用、查重说空闲"的双卖。
          状态取值由 OrderStatusCriteria 以 @Param("s") 传入，SQL 里不出现中文状态字面量。 -->
     <sql id="seatActiveCondition">

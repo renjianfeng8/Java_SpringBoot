@@ -49,8 +49,8 @@
         u.avatar AS avatar,
         m.score AS score,
         m.comment AS comment,
-        (SELECT COUNT(*) FROM mark_like ml WHERE ml.mark_id = m.id) AS likeCount,
-        EXISTS (SELECT 1 FROM mark_like ml2 WHERE ml2.mark_id = m.id AND ml2.user_id = #{viewerId}) AS liked,
+        COALESCE(lc.likeCount, 0) AS likeCount,
+        (viewer_like.mark_id IS NOT NULL) AS liked,
         CASE WHEN #{viewerId} IS NOT NULL AND m.user_id = #{viewerId} THEN 1 ELSE 0 END AS mine
     </sql>
 
@@ -58,6 +58,13 @@
         SELECT <include refid="markViewColumns"/>
         FROM mark m
         LEFT JOIN user u ON m.user_id = u.id
+        LEFT JOIN (
+            SELECT mark_id, COUNT(*) AS likeCount
+            FROM mark_like
+            GROUP BY mark_id
+        ) lc ON lc.mark_id = m.id
+        LEFT JOIN mark_like viewer_like
+               ON viewer_like.mark_id = m.id AND viewer_like.user_id = #{viewerId}
         WHERE m.film_id = #{filmId}
         ORDER BY likeCount DESC, m.id DESC
     </select>
@@ -69,6 +76,13 @@
         SELECT <include refid="markViewColumns"/>
         FROM mark m
         LEFT JOIN user u ON m.user_id = u.id
+        LEFT JOIN (
+            SELECT mark_id, COUNT(*) AS likeCount
+            FROM mark_like
+            GROUP BY mark_id
+        ) lc ON lc.mark_id = m.id
+        LEFT JOIN mark_like viewer_like
+               ON viewer_like.mark_id = m.id AND viewer_like.user_id = #{viewerId}
         WHERE m.film_id = #{filmId} AND m.user_id = #{viewerId}
         LIMIT 1
     </select>

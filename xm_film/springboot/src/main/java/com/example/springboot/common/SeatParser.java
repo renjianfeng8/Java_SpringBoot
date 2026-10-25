@@ -19,7 +19,7 @@ import java.util.regex.Pattern;
  * <b>规范化与去重</b>（{@code "1排01座"} 必须变成 {@code "1排1座"}）。
  * 它原先埋在 {@code OrderedService} 里，与订单状态机搅在一起；
  * 而"同一座位被双卖"这类事故的根因恰恰可能是规范化没做全
- * —— {@code countSeatInUse} 用的是逐字节的 {@code FIND_IN_SET}，
+ * —— 下单查重按规范化后的座位串做精确匹配（{@code countSeatInUse} 的 {@code FIND_IN_SET} 同样逐字节比较），
  * {@code "1排01座"} 与 {@code "1排1座"} 在库里就是两个不同的串。
  * 抽出来之后，这条规则可以被单独穷举测试，而不必拉起整个订单服务。
  *

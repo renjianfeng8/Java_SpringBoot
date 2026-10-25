@@ -24,26 +24,40 @@ public class AuthService {
 
     private final UserService userService;
 
-    public AuthService(AdminService adminService, CinemaService cinemaService, UserService userService) {
+    private final LoginAttemptService loginAttemptService;
+
+    public AuthService(AdminService adminService, CinemaService cinemaService, UserService userService,
+                       LoginAttemptService loginAttemptService) {
         this.adminService = adminService;
         this.cinemaService = cinemaService;
         this.userService = userService;
+        this.loginAttemptService = loginAttemptService;
     }
 
     /** 按角色校验账号密码并返回对应主体；角色非法或未取到主体时报参数错误 */
     public Account login(Account account) {
-        Account result = null;
-        if (RoleEnum.ADMIN.name().equals(account.getRole())) {
-            result = adminService.login(account);
-        } else if (RoleEnum.CINEMA.name().equals(account.getRole())) {
-            result = cinemaService.login(account);
-        } else if (RoleEnum.USER.name().equals(account.getRole())) {
-            result = userService.login(account);
+        String role = account.getRole();
+        String username = account.getUsername();
+        // 锁定检查放在 try 外：已锁定账号再试一次不延长锁定期，也不增加计数
+        loginAttemptService.checkAllowed(role, username);
+        try {
+            Account result = null;
+            if (RoleEnum.ADMIN.name().equals(role)) {
+                result = adminService.login(account);
+            } else if (RoleEnum.CINEMA.name().equals(role)) {
+                result = cinemaService.login(account);
+            } else if (RoleEnum.USER.name().equals(role)) {
+                result = userService.login(account);
+            }
+            if (result == null) {
+                throw new CustomException(ErrorCode.PARAM_INVALID, "无效的角色类型");
+            }
+            loginAttemptService.onSuccess(role, username);
+            return result;
+        } catch (CustomException e) {
+            loginAttemptService.onFailure(role, username);
+            throw e;
         }
-        if (result == null) {
-            throw new CustomException(ErrorCode.PARAM_INVALID, "无效的角色类型");
-        }
-        return result;
     }
 
     /**

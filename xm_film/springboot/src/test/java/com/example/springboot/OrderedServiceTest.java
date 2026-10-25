@@ -156,7 +156,7 @@ class OrderedServiceTest {
         recordRow.setPrice("45.00");
         recordRow.setStart(futureStart());
         when(recordMapper.selectByIdForUpdate(1)).thenReturn(recordRow);
-        when(orderedMapper.countSeatInUse(1, "1排1座", OrderStatusCriteria.INSTANCE)).thenReturn(0);
+        when(orderedMapper.selectActiveByRecordId(1)).thenReturn(List.of());
 
         Ordered ordered = new Ordered();
         ordered.setRecordId(1);
@@ -166,6 +166,31 @@ class OrderedServiceTest {
 
         verify(recordMapper).selectByIdForUpdate(1);
         verify(orderedMapper).insert(ordered);
+    }
+
+    @Test
+    void createOrderRejectsSeatAlreadyActive() {
+        Record recordRow = new Record();
+        recordRow.setId(1);
+        recordRow.setFilmId(24);
+        recordRow.setCinemaId(10);
+        recordRow.setRoomId(7);
+        recordRow.setPrice("45.00");
+        recordRow.setStart(futureStart());
+        when(recordMapper.selectByIdForUpdate(1)).thenReturn(recordRow);
+
+        Ordered existing = new Ordered();
+        existing.setSeat("1排1座,1排2座");
+        when(orderedMapper.selectActiveByRecordId(1)).thenReturn(List.of(existing));
+
+        Ordered ordered = new Ordered();
+        ordered.setRecordId(1);
+        ordered.setSeat("1排2座");
+
+        assertThatThrownBy(() -> orderedService.createOrder(ordered, RoleEnum.USER.name(), 8))
+                .isInstanceOf(CustomException.class)
+                .hasMessageContaining("座位已售");
+        verify(orderedMapper, never()).insert(any(Ordered.class));
     }
 
     @Test
@@ -206,7 +231,7 @@ class OrderedServiceTest {
         recordRow.setPrice("abc");
         recordRow.setStart(futureStart());
         when(recordMapper.selectByIdForUpdate(1)).thenReturn(recordRow);
-        when(orderedMapper.countSeatInUse(1, "1排1座", OrderStatusCriteria.INSTANCE)).thenReturn(0);
+        when(orderedMapper.selectActiveByRecordId(1)).thenReturn(List.of());
 
         Ordered ordered = new Ordered();
         ordered.setRecordId(1);
