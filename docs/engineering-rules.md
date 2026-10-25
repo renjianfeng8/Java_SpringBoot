@@ -14,7 +14,7 @@ mvn -o spring-boot:run                      # 缺省 9090
 mvn -o spring-boot:run -Dspring-boot.run.arguments=--server.port=9091   # 备用端口，勿动 9090
 ```
 
-前置：MySQL 8 在 `localhost:3306`，库 `xm-film`，账号口令见 `application.yml`（`root` / `123456`）。
+前置：MySQL 8 在 `localhost:3306`，库 `xm-film`。先复制 `xm_film/springboot/.env.example` 为 `.env` 并填写 `JWT_SIGNING_KEY`、`DB_PASSWORD`（以及需要导入数据时的 `TMDB_TOKEN` / `AMAP_KEY`）；`application.yml` 不再保存任何密钥或口令，缺少 `JWT_SIGNING_KEY` 时后端会拒绝启动。
 
 ### 1.2 前端
 
@@ -30,7 +30,7 @@ npm run build      # 产物到 dist/
 
 ```bash
 cd xm_film/springboot
-mvn test                                      # 43 个测试类 / 403 条用例（2026-10-22）
+mvn test                                      # 48 个测试类 / 414 条用例（2026-10-25）
 mvn -o test -Dtest=OrderedServiceTest         # 单类
 mvn -o clean test -Dtest=XxxTest              # 改了 mapper XML / 改了 main 代码后，用这个
 ```
@@ -169,5 +169,5 @@ python dump-schema.py --target xm_film_test   # 用来初始化测试库
 
 - 开发库已由 `demo-data.sql` 建好演示影厅、排片与账号，购票主链已用真实数据跑通；重置数据后需重新导入。
 - 前端无单元测试框架；`npm run build` 与无头 Chrome 冒烟脚本是自动验证手段。
-- 集成测试验证"XML 能被解析并执行"；业务语义由 Mockito 单测覆盖，二者合并为 43 类 / 403 条。
-- SEC-01（充值回调无签名）、SEC-02（JWT 密钥硬编码）、SEC-03（登录密码明文回退）仍未修，当前只按本机演示环境使用。
+- 集成测试验证"XML 能被解析并执行"；业务语义由 Mockito 单测覆盖，二者合并为 48 类 / 414 条。
+- SEC-01 / SEC-02 / SEC-03 已于 2026-10-25 修复：充值回调改为仅 ADMIN 可审核（用户在账户页只能提交申请，管理员在「充值流水」页通过/拒绝）；JWT 密钥移入 `.env` 的 `JWT_SIGNING_KEY` 并在启动时校验长度；删除明文密码回退，新增 `PlaintextPasswordMigration` 在启动时把存量明文转成 BCrypt。

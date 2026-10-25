@@ -232,18 +232,18 @@ requirePositive → SELECT balance FOR UPDATE → 校验/变更
 
 - 流水**只增不改不删**；`balance_before` 与上一行 `balance_after` 恒等（账本连续性的可证明前提，见 `audit/frontend-audit.md` 关于删列的那段）。
 - 事务传播一律 `REQUIRED`：`payOrder` 的扣款、出码、状态更新是**同一事务**。
-- 管理端 `/manage/finance` 可看全部充值单与流水（含用户姓名），但页面是只读的；**没有人工入账/补单入口**，避免在 SEC-01 未修时再开一条资金写入面。
+- 管理端 `/manage/finance` 的「充值单据」页有「通过 / 拒绝」按钮；只有 ADMIN 能调用回调端点，用户端只能提交申请。
 
 ### 4.1 充值
 
 ```
 createRecharge（仅 USER，>0 且 ≤50000，建「处理中」单据，不动余额）
-   → handleCallback（ADMIN 或单据本人可触发；行锁；只接受「处理中」）
+   → handleCallback（仅 ADMIN；行锁；只接受「处理中」）
         ├ 成功：置「已完成」+ creditRecharge
         └ 失败：置「已失败」+ 备注，余额不变
 ```
 
-- 这是**模拟网关**：前端按钮直接回调。当前 USER 可对自己的单据直接回调成功，属**已实测的 SEC-01 漏洞**，只是在演示环境暂缓修复；不能当成“已核验非缺陷”，生产不可开启此路径（见 `audit/backend-backlog.md` §安全）。
+- 这是**模拟网关**：用户端只提交申请，管理员在「充值流水」页通过/拒绝；接入真实支付平台时再把回调改成签名/查单。SEC-01 的「任意用户给自己充值」路径已关闭。
 - 幂等：`selectByIdForUpdate` + 状态判定，没有幂等键。
 
 ## 5 支付密码
@@ -252,7 +252,7 @@ createRecharge（仅 USER，>0 且 ≤50000，建「处理中」单据，不动�
 - 限次：连续错 5 次锁 15 分钟；**支付与改密共用同一计数**（否则改密成为不限次试错通道）。
 - **关键设计**：`checkForPayment` / `checkOldPassword` 标注 `REQUIRES_NEW` 且**返回异常而不是抛出**。原因：失败计数必须先由独立事务提交，若在同一事务内抛出，计数会随回滚一起消失，限次形同虚设。调用方拿到非 null 自行 throw。**改签名前先读这段注释。**
 - `verifyOldPassword`（只验不写）是同类**自调用**，`REQUIRES_NEW` 被代理绕过 —— 它只在"入口无外层事务"（`AccountController` 直接调用）时成立。**不要把它挪进事务方法里。**
-- 登录密码比对：先 BCrypt，再退到明文相等（兼容存量种子账号），四个服务类共用 `common/PasswordMatcher`（BL-13）；这个回退就是已知未修的 SEC-03，修完应删除并迁移演示账号。
+- 登录密码比对：只认 BCrypt，四个服务类共用 `common/PasswordMatcher`（BL-13）；存量明文由 `PlaintextPasswordMigration` 在启动时统一迁移，SEC-03 的明文回退已删除。
 
 ## 6 评价（mark）
 

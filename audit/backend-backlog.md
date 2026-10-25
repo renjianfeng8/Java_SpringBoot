@@ -10,9 +10,9 @@
 
 更新日期：2026-10-22（B/C 项收尾后）。当前代码基线：`master` @ `2286861e` + 2026-10-22 未提交改动；历史清单基线 `bfdd1c07`、`a2144fc4`，复核基线 `3112f8b7`，Sonar 扫描基线 `0ff8331c`。
 
-**当前实测基线**：`mvn test` = **403/403 通过，43 个测试类**（2026-10-22）。历史记录：2026-10-18 309/309、2026-10-19 343/343、2026-10-20 398/398。开发库 `xm-film` 已由 `springboot/demo-data.sql` 补入演示影厅、排片与账号，购票主链已实测跑通。
+**当前实测基线**：`mvn test` = **414/414 通过，48 个测试类**（2026-10-25）。历史记录：2026-10-22 403/403、2026-10-20 398/398、2026-10-19 343/343、2026-10-18 309/309。开发库 `xm-film` 已由 `springboot/demo-data.sql` 补入演示影厅、排片与账号，购票主链已实测跑通。
 
-**状态口径**：本文件只把「已确认不是缺陷」放在末节；SEC-01/02/03 是**已知未修漏洞**，即使演示环境暂缓修复也不得标成非缺陷。
+**状态口径**：SEC-01/02/03 已于 2026-10-25 修复（见 §安全 的修复记录），历史证据保留；不再作为未修漏洞跟踪。
 
 ## 架构分层（2026-10-19 专项，三项均已修复）
 
@@ -67,7 +67,7 @@
 
 **反证**：把 `OrderedController` 的 `viewerId` 改回无条件传 `userId` → 「非 USER 传 null」那条立刻红（`Argument(s) are different! Wanted: (42, isNull())`）。
 
-**关于 SEC-01 的测试策略（重要）**：`RechargeControllerTest` **刻意不把"任意用户给自己回调充值成功"写进断言**。当前该路径确实能打穿（SEC-01），但把它固化成"期望行为"后，将来修安全时会被自己的测试挡住。本类只钉"归属"与"幂等"这两条已经成立且不应被破坏的规则，并在类注释里注明修复后需要跟着改。
+**关于 SEC-01 的测试策略（2026-10-25 更新）**：修复前本类刻意不把"任意用户给自己回调充值成功"写进断言，避免把缺陷固化成期望行为；修复后新增 `userCallbackSurfacesForbidden`，钉住 USER 即使操作自己的单据也得到 403。当前本类还钉"归属"与"幂等"两条规则。
 
 **一个测不出来的点（诚实记录）**：`TicketController` 的「GET 同路径必须 401」在 `@WebMvcTest` 里验证不了 —— 该控制器只有 `@PostMapping`，GET 在 HandlerMapping 阶段就 405，到不了拦截器。这条改由 `AuthInterceptorAccessTest` 在拦截器层覆盖，没有造一个假通过的用例。
 
@@ -80,6 +80,13 @@
 | **SEC-01** | controller/RechargeController.callback；service/RechargeService.handleCallback（归属判定分支） | **任意 USER 可无限给自己充值**。归属校验允许 USER 操作*自己的*单据，而 `success` 完全取自请求体，没有任何验签。 | `POST /recharges {amount:50000}` → `POST /recharges/{id}/callback {success:true}` → **余额 500 → 50500**。纯 HTTP，无需任何伪造。 | 回调加服务端密钥/签名校验；或干脆下线 USER 可达的 callback，改为 ADMIN 审核入账。**演示环境与生产必须分开**，不能靠"注释里说是演示"约束。 |
 | **SEC-02** | resources/application.yml `jwt.signing-key` | **JWT 密钥硬编码在源码，可自签 ADMIN 令牌**。51 字节够长，但密钥本身随仓库公开，长度不构成保护。 | 用 `REDACTED_JWT_SECRET-2024-…` 自签 `{"sub":"1","role":"ADMIN"}`：无令牌 `DELETE /areas/999999` → **401**；同一请求带伪造令牌 → **200 成功**。伪造 USER 令牌读 `/admins/page` → 403（**角色校验本身正确**）。 | 密钥移入环境变量并在启动时校验强度；**当前密钥必须视为已泄露并更换**；考虑加 `jti` 黑名单以支持吊销。 |
 | **SEC-03** | service/UserService.login:95-96；AdminService:78-80；CinemaService:201-203；PayPasswordService:136 | **明文回退让哈希可当密码用**。`!matches(pwd, stored) && !pwd.equals(stored)` —— 当 `stored` 是 BCrypt 串时，把该串原样当密码提交即可通过。 | 用库中 `password` 列原文登录 `u1`、`999` 均 **code=200 成功**。叠加 mapper DEBUG 日志（`logback-spring.xml:7` 会打印绑定参数），**日志即凭证**。 | 删除回退分支；存量明文账号一次性迁移为 BCrypt 后删除该分支。演示数据 `demo-data.sql` 不应依赖明文回退。 |
+
+**2026-10-25 修复并移出本表**：
+
+- **SEC-01**：`RechargeService.handleCallback` 改为仅接受 ADMIN；用户端「模拟支付回调」按钮移除，管理员在「充值流水」页通过/拒绝。真实网关接入时再加签名/查单，当前不再存在“任意用户给自己充值”的路径。
+- **SEC-02**：`jwt.signing-key` 改为从 `.env` 的 `JWT_SIGNING_KEY` 读取，`JwtUtils` 启动时校验长度 ≥ 32 字节；TMDB token、Amap key、DB 口令也一并移入 `.env`（模板见 `.env.example`，`.env` 不入库）。
+- **SEC-03**：删除 `PasswordMatcher` 的 `raw.equals(stored)` 回退；新增 `PlaintextPasswordMigration`，启动时把 user/admin/cinema 的登录口令与 user.pay_password 中的明文统一转成 BCrypt。
+- 守卫：新增 `PlaintextPasswordMigrationTest`、`FileUploadControllerTest`；`mvn test` = **414/414 通过，48 个测试类**（2026-10-25）。
 
 **连带发现（中危，未逐条实测）**：
 
@@ -226,7 +233,7 @@
 | BL-55 | mapper/OrderedMapper.xml:150-181；schema.sql 的 ordered 索引 | `ordered.pay_time` **无索引**；`selectTodayPaidRevenue`、`countTodayPaidOrders`、`selectPaidRevenueByDay` 都按 `pay_time` 过滤，EXPLAIN 为 `type=ALL`（当前 243 行）。今日票房在首页每次加载都查。 | 加 `KEY idx_ordered_pay_time (pay_time)` 或 `(pay_time, status)`；改表后按 `docs/engineering-rules.md` §2 重新生成 `schema.sql` 并同步真实库迁移。 |
 | BL-56 | common/config/WebMvcConfig.java:24-27 | `/files/**` 只返回 `Last-Modified`，**没有 `Cache-Control` / `ETag`**。上传文件名是 UUID、内容不变，重复访问仍会条件请求。 | `setCachePeriod(86400)` 或 `CacheControl.maxAge(...)`；文件名唯一，可放心长缓存。 |
 | BL-57 | application.yml（server 段） | 未开启 HTTP 压缩；`/films` 的 42,681B JSON 响应没有 `content-encoding`。 | 开 `server.compression.enabled: true`，`mime-types` 含 `application/json`。 |
-| BL-58 | resources/logback-spring.xml:7-9 | `com.example.springboot.mapper` 固定 **DEBUG**，所有 SQL 与结果集都写控制台，开发/生产同样生效。 | 默认 INFO，开发用 profile 或环境变量开 DEBUG。 |
+| BL-58 | resources/logback-spring.xml:7-9 | `com.example.springboot.mapper` 固定 **DEBUG**，所有 SQL 与结果集都写控制台，开发/生产同样生效。 | **2026-10-25 已修复**：默认 INFO；需要看 SQL 时在 `.env` 里设 `logging.level.com.example.springboot.mapper=DEBUG`。 |
 | BL-59 | mapper/FilmMapper.xml:12-19、65-84 | 所有影片列表/详情/榜单/搜索都 `LEFT JOIN` 一个**全表 `ordered` 聚合子查询**；首页一次加载触发 3 次（`/films`、票房 Top、评分 Top）。EXPLAIN 当前扫 243 行。 | 数据量上来后考虑 `(status, film_id, total)` 覆盖索引；或把 `film.box_office` 恢复为支付/退票时维护的派生列；或只对需要票房的接口带聚合。 |
 | BL-60 | mapper/FilmMapper.xml:77；mapper/RecordMapper.xml:31 | `film.start LIKE '%year%'`、`record.start LIKE '%date%'` 让 `idx_start` 失效，日期/年份筛选退化为全表扫描。 | 前端传完整日期时改范围查询（`>= day AND < day+1`）。 |
 | BL-61 | mapper/MarkMapper.xml:55-62 | 影评列表每行两个相关子查询（`likeCount`、`liked`），分页前对整片评价逐行计算。 | 用 `mark_like` 聚合 JOIN / 派生表一次算好，或缓存点赞数。当前 25 条评价无感。 |
@@ -343,8 +350,8 @@
 
 ## 有意不整改（仅限本机配置项）
 
-- S14 子项：application.yml 中明文 DB 口令、TMDB token、高德 key；file.upload-dir 绝对路径。依据本仓"仅本机运行、配置直写字面量、不引入环境变量注入"的既定政策，属有意偏离。
-- **同文件的 `jwt.signing-key` 不在此列**：它可伪造任意 ADMIN token，已登记为 SEC-02，必须修复。
+- S14 子项：application.yml 中明文 DB 口令、TMDB token、高德 key；file.upload-dir 绝对路径。**2026-10-25 已把前三项移入 `.env`（与 SEC-02 同批修复）**；`upload-dir` 保留本机默认值，可用 `UPLOAD_DIR` 覆盖。
+- **同文件的 `jwt.signing-key` 已于 2026-10-25 移入 `.env` 的 `JWT_SIGNING_KEY`，并在 `JwtUtils` 启动时校验长度**（SEC-02 修复）；当前密钥必须视为已泄露并更换。
 
 ## 已核验为非缺陷（防二次误报）
 

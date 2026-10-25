@@ -20,6 +20,12 @@ public class JwtUtils {
     private final long expire;
 
     public JwtUtils(@Value("${jwt.signing-key}") String secret, @Value("${jwt.expire}") long expire) {
+        // 密钥必须来自 .env（JWT_SIGNING_KEY）。空值或过短直接拒绝启动，
+        // 避免把仓库里的字符串当成可用密钥，也避免 HS256 在弱密钥下被离线爆破。
+        if (secret == null || secret.getBytes(StandardCharsets.UTF_8).length < 32) {
+            throw new IllegalStateException(
+                    "JWT_SIGNING_KEY 未配置或短于 32 字节；请复制 xm_film/springboot/.env.example 为 .env 并填写");
+        }
         this.secret = secret;
         this.expire = expire;
     }

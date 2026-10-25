@@ -40,6 +40,8 @@ Thumbs.db
 # `.env` 刻意不入库：它是机器本地文件，各机各有各的值
 # 密钥与机器专属覆盖写 .env.local / .env.*.local —— 已被上面的 .env.* 覆盖，无需再加规则
 !.env.development
+# 例外：后端密钥模板要入库，真实 `.env` 仍然忽略
+!.env.example
 /claude.log
 scripts/start-claude.bat
 /start_claude.bat

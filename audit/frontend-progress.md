@@ -83,6 +83,6 @@
 | --- | --- | --- |
 | C1 管理员重置密码 | `PUT /auth/password/reset` 只允许 ADMIN；按目标 `role` 路由到 user/admin/cinema 三张账号表，新密码 BCrypt 后写库，统一 6–64 位校验；三个管理列表共用 `ResetPasswordDialog`，操作日志只记操作人/目标，不打印密码 | `GlobalExceptionHandlerTest` 非 ADMIN 返回 403、ADMIN 正确路由；`UserServiceTest` 断言入库为 BCrypt 且不校验旧密码；前端冒烟正确发送 `{id,role,newPassword}` |
 | C2 管理端取消/退票 | 订单页在「待支付」显示取消、在「待取票」显示退票，复用既有 `PUT /orders/{id}/cancel`、`/refund`；确认框带订单号/金额，成功后重载并清选中。沿用后端状态机，管理员不绕过开场前 60 分钟退款截止 | 无头 Chrome：取消/退票分别命中 `PUT /orders/11/cancel`、`/orders/12/refund` |
-| C3 充值 / 资金流水 | 新增 `/manage/finance` 两个只读页签：充值单据（单号/用户/金额/状态/时间）与资金流水（用户/来源/关联单/变动额/余额），支持单号、用户 ID、状态、来源筛选及分页；后端查询 LEFT JOIN `user.name` 带出姓名。未加人工入账，避免在 SEC-01 未处理时新开资金写入面 | 无头 Chrome：两页签数据、姓名、金额正确；前端 build 通过 |
+| C3 充值 / 资金流水 | 新增 `/manage/finance` 两个页签：充值单据（单号/用户/金额/状态/时间）与资金流水（用户/来源/关联单/变动额/余额），支持单号、用户 ID、状态、来源筛选及分页；后端查询 LEFT JOIN `user.name` 带出姓名。**2026-10-25 补上 ADMIN 审核按钮（通过/拒绝）**，与后端「回调仅 ADMIN」配套；用户端不再有回调按钮 | 无头 Chrome：两页签数据、姓名、金额正确；前端 build 通过；`RechargeControllerTest` 钉住 USER 回调 403 |
 
-C 项验证：后端全量 `mvn test` 通过（0 失败）；前端 `npm run build` 通过；新增无头 Chrome 5/5 通过。C1 暂未做「强制下次登录改密/DB 审计流水」，C2 未做管理员超时退款绕过，C3 未做人工补单，均需先定策略。
+C 项验证：后端全量 `mvn test` 通过（0 失败）；前端 `npm run build` 通过；新增无头 Chrome 5/5 通过。C1 暂未做「强制下次登录改密/DB 审计流水」，C2 未做管理员超时退款绕过，C3 已加 ADMIN 审核（通过/拒绝）但未做补单，均需先定策略。

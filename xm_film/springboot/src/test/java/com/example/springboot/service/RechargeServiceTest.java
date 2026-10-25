@@ -103,7 +103,7 @@ class RechargeServiceTest {
     void handleCallbackSuccessShouldMarkDoneAndCreditBalance() {
         when(rechargeOrderMapper.selectByIdForUpdate(7)).thenReturn(processingOrder());
 
-        rechargeService.handleCallback(7, true, null, RoleEnum.USER.name(), USER_ID);
+        rechargeService.handleCallback(7, true, null, RoleEnum.ADMIN.name());
 
         verify(walletService).creditRecharge(USER_ID, new BigDecimal("200.00"), 7);
 
@@ -116,7 +116,7 @@ class RechargeServiceTest {
     void handleCallbackFailureShouldMarkFailedWithoutCrediting() {
         when(rechargeOrderMapper.selectByIdForUpdate(7)).thenReturn(processingOrder());
 
-        rechargeService.handleCallback(7, false, "余额不足", RoleEnum.USER.name(), USER_ID);
+        rechargeService.handleCallback(7, false, "余额不足", RoleEnum.ADMIN.name());
 
         verifyNoInteractions(walletService);
 
@@ -133,7 +133,7 @@ class RechargeServiceTest {
         when(rechargeOrderMapper.selectByIdForUpdate(7)).thenReturn(done);
 
         CustomException ex = assertThrows(CustomException.class,
-                () -> rechargeService.handleCallback(7, true, null, RoleEnum.USER.name(), USER_ID));
+                () -> rechargeService.handleCallback(7, true, null, RoleEnum.ADMIN.name()));
 
         assertEquals(ErrorCode.BUSINESS_CONFLICT.code(), ex.getCode());
         verify(walletService, never()).creditRecharge(anyInt(), any(), anyInt());
@@ -147,19 +147,18 @@ class RechargeServiceTest {
         when(rechargeOrderMapper.selectByIdForUpdate(7)).thenReturn(failed);
 
         assertThrows(CustomException.class,
-                () -> rechargeService.handleCallback(7, true, null, RoleEnum.USER.name(), USER_ID));
+                () -> rechargeService.handleCallback(7, true, null, RoleEnum.ADMIN.name()));
 
         verify(walletService, never()).creditRecharge(anyInt(), any(), anyInt());
     }
 
     @Test
-    void handleCallbackWhenNotOwnerAndNotAdminShouldThrow() {
-        when(rechargeOrderMapper.selectByIdForUpdate(7)).thenReturn(processingOrder());
-
+    void handleCallbackAsUserShouldThrowForbiddenEvenForOwnOrder() {
         CustomException ex = assertThrows(CustomException.class,
-                () -> rechargeService.handleCallback(7, true, null, RoleEnum.USER.name(), 999));
+                () -> rechargeService.handleCallback(7, true, null, RoleEnum.USER.name()));
 
         assertEquals(ErrorCode.FORBIDDEN.code(), ex.getCode());
+        verify(rechargeOrderMapper, never()).selectByIdForUpdate(anyInt());
         verify(walletService, never()).creditRecharge(anyInt(), any(), anyInt());
         verify(rechargeOrderMapper, never()).updateById(any());
     }
@@ -167,7 +166,7 @@ class RechargeServiceTest {
     @Test
     void handleCallbackWhenOrderMissingShouldThrowNotFound() {
         CustomException ex = assertThrows(CustomException.class,
-                () -> rechargeService.handleCallback(7, true, null, RoleEnum.USER.name(), USER_ID));
+                () -> rechargeService.handleCallback(7, true, null, RoleEnum.ADMIN.name()));
 
         assertEquals(ErrorCode.NOT_FOUND.code(), ex.getCode());
         verify(walletService, never()).creditRecharge(anyInt(), any(), anyInt());

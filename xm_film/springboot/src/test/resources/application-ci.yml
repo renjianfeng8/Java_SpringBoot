@@ -23,3 +23,7 @@ mybatis:
   configuration:
     log-impl: org.apache.ibatis.logging.nologging.NoLoggingImpl
   mapper-locations: classpath:mapper/*.xml
+
+# 测试专用签名密钥：只在 ci profile 生效，长度 >= 32 字节以满足 JwtUtils 的启动校验。
+jwt:
+  signing-key: ci-only-jwt-signing-key-32-bytes-minimum

@@ -102,24 +102,22 @@ class SharedComponentTest {
     }
 
     /**
-     * 存量明文账号仍可登录（已登记为 SEC-03，本轮只收敛、不改行为）。
+     * 明文不再通过：存量明文由 {@code PlaintextPasswordMigration} 在启动时转成 BCrypt。
      *
-     * <p>这条测试<b>记录的是缺陷现状</b>，不是"期望的正确行为"。
-     * 修 SEC-03 时（迁移存量密文 + 删除回退分支）本用例应改为
-     * {@code isFalse()}，届时它会红 —— 那是预期内的，不是回归。
+     * <p>同时钉住 SEC-03 的原始攻击面：把库里存的 BCrypt 串本身当密码提交也必须失败，
+     * 不能再靠 {@code raw.equals(stored)} 通过。
      */
     @Test
-    void plaintextFallbackStillPassesForLegacyRows() {
-        assertThat(PasswordMatcher.matches(encoder, "u1", "u1")).isTrue();
+    void plaintextAndStoredHashNeverMatch() {
+        String stored = PasswordMatcher.encode("s3cret");
+        assertThat(PasswordMatcher.matches(encoder, "u1", "u1")).isFalse();
+        assertThat(PasswordMatcher.matches(encoder, stored, stored)).isFalse();
+        assertThat(PasswordMatcher.matches(encoder, "", "")).isFalse();
     }
 
     /**
      * 空值一律不匹配：提交空口令、或库里密码列为空，都不算通过。
      * 收敛前各处写法是 {@code raw.equals(stored)}，{@code raw} 为 null 时会直接 NPE。
-     *
-     * <p>注意 {@code ""} 与 {@code ""} 是<b>匹配</b>的 —— BCrypt 对空串照常算出不匹配，
-     * 但明文回退那一半会让它通过。这是 SEC-03 同源的既有行为（空密码账号），
-     * 不在本次收敛里改；见 {@link #plaintextFallbackStillPassesForLegacyRows()}。
      */
     @Test
     void nullValuesNeverMatch() {

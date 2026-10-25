@@ -1,11 +1,14 @@
-# 仅本机运行：所有配置直接写死，不经环境变量注入。
+# 仅本机运行：密钥与口令从 .env 读取（.env 不入库，模板见 .env.example）。
+# 不设默认值：缺少 JWT_SIGNING_KEY 时启动即失败，避免把仓库里的字符串当成生产密钥。
 server:
   port: 9090  # 后端接口端口，只提供 /api/v1/** 的 JSON；前端页面访问端口见 vue/vite.config.js 的 server.port
 
 spring:
+  config:
+    import: optional:file:.env[.properties]
   datasource:
-    username: root
-    password: ""
+    username: "${DB_USERNAME:root}"
+    password: "${DB_PASSWORD:}"
     driver-class-name: com.mysql.cj.jdbc.Driver
     url: jdbc:mysql://localhost:3306/xm-film?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&characterEncoding=UTF-8
 
@@ -20,35 +23,35 @@ mybatis:
     map-underscore-to-camel-case: true
   mapper-locations: classpath:mapper/*.xml
 
-# 日志级别不在此重复定义：mapper 的 DEBUG 由 logback-spring.xml 统一控制（带 additivity=false）
+# 日志级别不在此重复定义：mapper 默认 INFO；需要看 SQL 时在 .env 里加
+# logging.level.com.example.springboot.mapper=DEBUG（见 .env.example）。
 
 cors:
   allowed-origins: http://localhost:5173
 
 jwt:
   # 键名刻意不叫 secret —— 本机存在用户级环境变量 JWT_SECRET（属于另一个项目，不可动），
-  # Spring 的宽松绑定会把它映射到 jwt.secret，而环境变量优先级高于本文件，
-  # 于是这行会被静默覆盖、形同虚设。改名成 signing-key 后本文件才是唯一来源。
-  # 再改回 secret 就会复现该问题；改名的代价是换密钥、旧令牌失效需重新登录。
-  signing-key: change-me-from-env
+  # Spring 的宽松绑定会把它映射到 jwt.secret，而环境变量优先级高于本文件。
+  # 实际值从 .env 的 JWT_SIGNING_KEY 读取；JwtUtils 在启动时校验长度，空值直接拒绝启动。
+  signing-key: "${JWT_SIGNING_KEY:}"
   expire: 86400000
 
 file:
-  upload-dir: "D:/project/picture"
-  access-prefix: http://localhost:9090/files/
+  upload-dir: "${UPLOAD_DIR:D:/project/picture}"
+  access-prefix: "${FILE_ACCESS_PREFIX:http://localhost:9090/files/}"
 
 # TMDB 电影数据接口，仅后台「从 TMDB 导入」使用。
 # 本机直连 api.themoviedb.org 恒超时（实测 8s 无响应），必须经下面这个本机代理；
 # 换机器或代理端口变了，改这两行即可，其余（图片尺寸、接口路径）是 TMDB 的契约，写在 TmdbClient 里。
 tmdb:
-  token: REDACTED_TMDB_TOKEN
+  token: "${TMDB_TOKEN:}"
   proxy-host: 127.0.0.1
   proxy-port: 7897
 
 # 高德开放平台 Web 服务 Key，仅后台「从高德导入影院名录」使用。
 # 国内直连，不经代理（与 TMDB 不同）。Key 在 console.amap.com 申请，服务平台选「Web服务」。
 amap:
-  key: REDACTED_AMAP_KEY
+  key: "${AMAP_KEY:}"
   # 相邻高德请求的最小间隔（毫秒）。个人 Key 的 QPS 上限实测约 5 次/秒，
   # 导入会背靠背发几十个请求，间隔 300ms（≈3.3 QPS）留出余量。
   request-interval-ms: 300

@@ -64,11 +64,12 @@
       <section class="card page-card account-section">
         <div class="section-head">
           <h2 class="section-head__title">我的充值单据</h2>
+          <p class="muted">提交后由管理员审核入账，无需重复操作。</p>
         </div>
 
         <!-- 列宽配比见下方「资金流水」表头前的说明。本表与资金流水表同一套对齐口径：
              每列 align 与 header-align 都取 center，同一列的表头与内容必然同侧。
-             金额 / 状态 / 操作三列定宽保留 —— 富余宽度全给单号与时间戳这类长文本列，
+             金额 / 状态两列定宽保留 —— 富余宽度全给单号与时间戳这类长文本列，
              它们比数值列更需要宽度。 -->
         <el-table v-loading="loadingRecharges" :data="recharges">
           <el-table-column label="充值单号" prop="rechargeNo" min-width="170" show-overflow-tooltip
@@ -87,22 +88,6 @@
                            align="center" header-align="center" />
           <el-table-column label="备注" prop="remark" min-width="110" show-overflow-tooltip
                            align="center" header-align="center" />
-          <el-table-column label="模拟支付回调" width="170" align="center" header-align="center">
-            <template #default="scope">
-              <!-- 只有「处理中」单据可被回调；已处理单据后端也会拒绝重复回调。
-                   这是演示控件而非业务动作，故取常规文字色（6.11:1）压到次要位置、
-                   hover 才转主色 —— 原用 success / danger 是把「状态色」当「动作色」使。 -->
-              <div v-if="scope.row.status === '处理中'" class="row-actions">
-                <button class="callback-action" type="button" @click="triggerCallback(scope.row, true)">
-                  <el-icon><CircleCheck /></el-icon>模拟成功
-                </button>
-                <button class="callback-action" type="button" @click="triggerCallback(scope.row, false)">
-                  <el-icon><CircleClose /></el-icon>模拟失败
-                </button>
-              </div>
-              <span v-else class="muted">已处理</span>
-            </template>
-          </el-table-column>
 
           <!-- 失败与空态文案不同：请求失败不该说成「确实没有充值记录」 -->
           <template #empty>
@@ -208,7 +193,6 @@
 import { isSuccess, ACCOUNT_API, FUND_FLOW_API, RECHARGE_API, getRechargeStatusType } from '@/constants';
 import { computed, onMounted, reactive, ref } from 'vue';
 import { ElMessage } from 'element-plus';
-import { CircleCheck, CircleClose } from '@element-plus/icons-vue';
 import request from '@/utils/request.js';
 
 /** 快捷档位；与自由输入并存，二者都受后端金额校验约束 */
@@ -232,9 +216,6 @@ const amount = ref(50);
 const submitting = ref(false);
 const loadingRecharges = ref(false);
 const loadingFlows = ref(false);
-// 回调进行中的单一守卫：按钮是自绘的，没有 EP 的 disabled 通道，
-// 双击会发两次 POST，第二次必被后端拒绝并弹一条无谓的失败提示
-const callbacking = ref(false);
 // 失败态与「确实没有记录」分开：空表可能是一次请求失败，而非真的没有资金凭证
 const rechargeError = ref(false);
 const flowError = ref(false);
@@ -384,7 +365,7 @@ const trend = computed(() => {
   };
 });
 
-// 提交充值 / 触发回调后回到第 1 页：新单据与它产生的流水都按 id DESC 排在最前，
+// 提交充值后回到第 1 页：新单据按 id DESC 排在最前，
 // 提交完仍停在第 3 页重载，会让用户以为「点了没反应」
 const reloadFromFirstPage = () => {
   rechargePage.pageNum = 1;
@@ -405,7 +386,7 @@ const submitRecharge = async () => {
   try {
     const res = await request.post(RECHARGE_API.CREATE, { amount: value });
     if (isSuccess(res)) {
-      ElMessage.success('充值申请已提交，等待支付回调入账');
+      ElMessage.success('充值申请已提交，等待管理员审核入账');
       await reloadFromFirstPage();
     } else {
       ElMessage.error(res.msg || '提交失败');
@@ -414,30 +395,6 @@ const submitRecharge = async () => {
     // request.js 已统一提示
   } finally {
     submitting.value = false;
-  }
-};
-
-/** 演示环境手动触发回调；正式环境由支付网关调用同一端点 */
-const triggerCallback = async (order, success) => {
-  if (callbacking.value) {
-    return;
-  }
-  callbacking.value = true;
-  try {
-    const res = await request.post(RECHARGE_API.CALLBACK(order.id), {
-      success,
-      remark: success ? '' : '模拟支付回调失败',
-    });
-    if (isSuccess(res)) {
-      ElMessage.success(success ? '回调成功，充值已入账' : '回调失败，单据已置为已失败');
-      await reloadFromFirstPage();
-    } else {
-      ElMessage.error(res.msg || '回调处理失败');
-    }
-  } catch (error) {
-    // request.js 已统一提示
-  } finally {
-    callbacking.value = false;
   }
 };
 
@@ -545,13 +502,6 @@ onMounted(loadAll);
    （曾以为 EP 恒定渲染一个补滚动条宽度的 gutter 单元格，该断言在 element-plus 2.14.2
    上不成立 —— 见「前端表格设计规范.md」§3。） */
 
-/* 操作列的按钮组是 flex 容器，text-align 管不到它的主轴分布：
-   列的 align="center" 只让 .cell 里的行内内容居中，两个按钮仍会贴左。
-   故这里补 justify-content，否则该列的表头居中、按钮却在左边。 */
-.account-section :deep(.row-actions) {
-  justify-content: center;
-}
-
 .tier-options {
   margin-top: var(--space-16);
 }
@@ -570,31 +520,6 @@ onMounted(loadAll);
 .amount-label {
   font-size: var(--fs-base);
   color: var(--el-text-color-regular);
-}
-
-/* 回调是演示控件：常规文字色（6.11:1）→ hover 主色（5.58:1），两态都达 AA */
-.callback-action {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-4);
-  padding: 0;
-  border: none;
-  background: none;
-  font-family: inherit;
-  font-size: var(--fs-sm);
-  color: var(--el-text-color-regular);
-  cursor: pointer;
-  transition: color 100ms ease-out;
-}
-
-.callback-action:hover {
-  color: var(--el-color-primary);
-}
-
-.callback-action:focus-visible {
-  outline: 2px solid var(--el-color-primary);
-  outline-offset: 2px;
-  border-radius: var(--el-border-radius-base);
 }
 
 /* 表格空态。字体规格对齐 EP 默认空文案，只把颜色换成常规文字色（6.11:1） */

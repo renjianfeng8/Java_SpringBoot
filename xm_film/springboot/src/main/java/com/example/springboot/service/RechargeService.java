@@ -70,18 +70,23 @@ public class RechargeService {
     }
 
     /**
-     * 模拟第三方支付网关回调。演示环境由前端按钮触发，正式环境即支付平台异步回调入口。
-     * 只有「处理中」单据可被处理，已完成/已失败再次回调一律拒绝（幂等）。
+     * 管理员审核充值单据：通过则入账，拒绝则置为失败。
+     *
+     * <p>这个端点曾经允许 USER 回调自己的单据，而 {@code success} 完全取自请求体，
+     * 等于任意用户可给自己充值（SEC-01）。在接入真实支付网关的验签/查单之前，
+     * 唯一安全的入口是管理员人工审核 —— 用户只能提交申请，不能确认到账。
+     *
+     * <p>只有「处理中」单据可被处理，已完成/已失败再次回调一律拒绝（幂等）。
      */
     @Transactional(rollbackFor = Exception.class)
-    public void handleCallback(Integer id, boolean success, String remark, String role, Integer tokenUserId) {
+    public void handleCallback(Integer id, boolean success, String remark, String role) {
+        // 先判角色再查库：非管理员既拿不到单据内容，也无法用 404/403 的差异探测 id 是否存在
+        if (!RoleEnum.ADMIN.name().equals(role)) {
+            throw new CustomException(ErrorCode.FORBIDDEN, "仅管理员可审核充值单据");
+        }
         RechargeOrder order = rechargeOrderMapper.selectByIdForUpdate(id);
         if (order == null) {
             throw new CustomException(ErrorCode.NOT_FOUND, "充值单据不存在");
-        }
-        if (!RoleEnum.ADMIN.name().equals(role)
-                && !(RoleEnum.USER.name().equals(role) && tokenUserId != null && tokenUserId.equals(order.getUserId()))) {
-            throw new CustomException(ErrorCode.FORBIDDEN, "无权操作该充值单据");
         }
         if (!RechargeStatus.PROCESSING.equals(order.getStatus())) {
             throw new CustomException(ErrorCode.BUSINESS_CONFLICT, "该充值单据已处理，不可重复回调");

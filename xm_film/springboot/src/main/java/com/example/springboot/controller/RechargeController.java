@@ -58,7 +58,7 @@ public class RechargeController {
     @PostMapping("/{id}/callback")
     public Result<Void> callback(@PathVariable Integer id, @Valid @RequestBody RechargeCallbackRequest request) {
         rechargeService.handleCallback(id, Boolean.TRUE.equals(request.getSuccess()),
-                request.getRemark(), AuthContext.role(), AuthContext.userId());
+                request.getRemark(), AuthContext.role());
         return Result.success();
     }
 

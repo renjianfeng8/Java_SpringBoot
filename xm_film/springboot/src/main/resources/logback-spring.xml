@@ -3,8 +3,12 @@
     <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
     <include resource="org/springframework/boot/logging/logback/console-appender.xml"/>
 
-    <!-- MyBatis SQL 日志（仅 DEBUG 级别输出，嫌吵时调高 level 即可关掉） -->
-    <logger name="com.example.springboot.mapper" level="DEBUG" additivity="false">
+    <!-- MyBatis SQL 日志：默认 INFO，不把绑定参数（含口令哈希）写进控制台。
+         需要看 SQL 时在 .env 里加 logging.level.com.example.springboot.mapper=DEBUG。 -->
+    <springProperty scope="context" name="mapperLogLevel"
+                    source="logging.level.com.example.springboot.mapper"
+                    defaultValue="INFO"/>
+    <logger name="com.example.springboot.mapper" level="${mapperLogLevel}" additivity="false">
         <appender-ref ref="CONSOLE"/>
     </logger>
 

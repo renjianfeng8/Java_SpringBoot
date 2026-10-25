@@ -73,6 +73,12 @@ public class FileUtil {
         }
     }
 
+    /** 上传前检查磁盘余量：任何角色都不该把机器写满。 */
+    public static boolean hasUsableSpace(String uploadDir, long requiredBytes) throws IOException {
+        ensureDir(uploadDir);
+        return new File(uploadDir).getUsableSpace() >= requiredBytes;
+    }
+
     public static String getFileExtension(String fileName) {
         if (fileName == null || fileName.isEmpty()) {
             return "";

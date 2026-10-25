@@ -70,7 +70,8 @@ WHERE f.id IN (2, 3, 8, 12, 15, 17, 25, 30, 44, 45);
 
 -- ------------------------------------------------------------
 -- 2. 账号、公告、预告片
---    - 登录口令：明文（后端 login 支持明文回退，见 UserService.login）
+--    - 登录口令：明文（启动时由 PlaintextPasswordMigration 转为 BCrypt，不再有登录回退）
+--      若在后端已启动后重跑本脚本，请重启后端一次，让迁移把新插入的明文转成 BCrypt。
 --    - 支付密码：BCrypt('123456')
 -- ------------------------------------------------------------
 INSERT INTO user (username, password, name, role, balance, pay_password,

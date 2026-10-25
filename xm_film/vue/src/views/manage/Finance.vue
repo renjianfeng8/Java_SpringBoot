@@ -41,6 +41,17 @@
             <el-table-column label="申请时间" prop="createTime" min-width="150" show-overflow-tooltip/>
             <el-table-column label="完成时间" prop="finishTime" min-width="150" show-overflow-tooltip/>
             <el-table-column label="备注" prop="remark" min-width="140" show-overflow-tooltip/>
+            <el-table-column label="审核" width="140" align="center">
+              <template #default="scope">
+                <template v-if="scope.row.status === '处理中'">
+                  <el-button link type="success" :loading="callbacking === scope.row.id"
+                             @click="review(scope.row, true)">通过</el-button>
+                  <el-button link type="danger" :loading="callbacking === scope.row.id"
+                             @click="review(scope.row, false)">拒绝</el-button>
+                </template>
+                <span v-else class="muted">已处理</span>
+              </template>
+            </el-table-column>
             <template #empty>
               <div class="empty-hint">{{ rechargeState.error || '暂无充值单据' }}</div>
             </template>
@@ -115,11 +126,12 @@
 
 <script setup>
 import { reactive, ref } from 'vue'
+import { ElMessage } from 'element-plus'
 import request from '@/utils/request'
 import { usePagedList } from '@/composables/usePagedList'
 import {
   FUND_FLOW_API, FUND_SOURCE_OPTIONS, RECHARGE_API, RECHARGE_STATUS_OPTIONS,
-  getRechargeStatusType,
+  getRechargeStatusType, isSuccess,
 } from '@/constants'
 
 const activeTab = ref('recharge')
@@ -142,6 +154,30 @@ const flowItems = flows.items
 const flowState = flows.state
 
 const money = (value) => Number(value ?? 0).toFixed(2)
+
+/** 同一时刻只处理一张单据；后端对已处理单据也会返回 409，这里先挡住双击 */
+const callbacking = ref(null)
+
+const review = async (row, success) => {
+  if (callbacking.value) return
+  callbacking.value = row.id
+  try {
+    const res = await request.post(RECHARGE_API.CALLBACK(row.id), {
+      success,
+      remark: success ? '管理员审核通过' : '管理员审核拒绝',
+    })
+    if (isSuccess(res)) {
+      ElMessage.success(success ? '已通过并入账' : '已拒绝')
+      recharges.reload(rechargeParams())
+    } else {
+      ElMessage.error(res.msg || '操作失败')
+    }
+  } catch (error) {
+    // request.js 已统一提示
+  } finally {
+    callbacking.value = null
+  }
+}
 
 function rechargeParams() {
   return {

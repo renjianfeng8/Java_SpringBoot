@@ -127,12 +127,14 @@ class PayPasswordServiceTest {
         verify(userMapper, never()).updatePayPassword(anyInt(), anyString());
     }
 
-    /** 存量种子账号的登录密码是明文，判定口径必须与 login / reset 一致 */
+    /** SEC-03 修复后，库里的明文不再能登录；存量明文由启动迁移转成 BCrypt。 */
     @Test
-    void verifyLoginPasswordWithPlaintextStoredPasswordPasses() {
+    void verifyLoginPasswordWithPlaintextStoredPasswordThrows() {
         when(userMapper.selectById(USER_ID)).thenReturn(userWith("123"));
 
-        payPasswordService.verifyLoginPassword(USER_ID, "123");
+        assertThatThrownBy(() -> payPasswordService.verifyLoginPassword(USER_ID, "123"))
+                .isInstanceOf(CustomException.class)
+                .hasMessageContaining("登录密码错误");
 
         verify(userMapper, never()).updatePayPassword(anyInt(), anyString());
     }

@@ -40,7 +40,7 @@
 | `tmdb.*` | token + `127.0.0.1:7897` 代理 | 本机直连 TMDB 恒超时 |
 | `amap.key` / `request-interval-ms` | Key + 300ms | 个人 Key QPS ≈5 |
 
-DB/TMDB/高德等本机配置直写属既定演示政策（`audit/backend-backlog.md`「有意不整改」）；但 **JWT 密钥硬编码（SEC-02）和登录密码明文回退（SEC-03）是已知未修漏洞，不是“非缺陷”**，当前只适用于本机演示，不能按生产安全口径部署。
+DB/TMDB/高德等本机配置直写属既定演示政策（`audit/backend-backlog.md`「有意不整改」）；但 **JWT 密钥与第三方 Key 已移入 `.env`（SEC-02 修复）、登录密码明文回退已删除（SEC-03 修复）**，后端启动前必须提供 `JWT_SIGNING_KEY`，不再按“仓库自带密钥”运行。
 
 ## 3 后端分层
 
