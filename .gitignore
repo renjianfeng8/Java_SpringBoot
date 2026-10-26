@@ -72,3 +72,6 @@ JIANLI.txt
 # picture/ 与 video/ 为本地素材源，不入库；video/ 内容与 picture/ 完全重复。
 /picture/
 /video/
+
+# === Playwright MCP artifacts ===
+.playwright-mcp/
