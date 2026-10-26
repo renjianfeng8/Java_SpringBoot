@@ -329,6 +329,15 @@ public class CinemaService extends BaseService<Cinema> {
         return dbCinema;
     }
 
+    /**
+     * 登录计数定位：返回库中该用户名的账号 id，不存在时返回 null。
+     * 比较交给库的 collation，因此大小写/重音/全角/尾随空格等拼写变体都落到同一 id。
+     */
+    public Integer findIdByUsername(String username) {
+        Cinema dbCinema = cinemaMapper.selectByUsername(username);
+        return dbCinema == null ? null : dbCinema.getId();
+    }
+
     @Transactional(rollbackFor = Exception.class)
     public void updatePassword(Account account) {
         Integer id = account.getId();

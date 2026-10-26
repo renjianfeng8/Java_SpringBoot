@@ -38,8 +38,10 @@ public class AuthService {
     public Account login(Account account) {
         String role = account.getRole();
         String username = account.getUsername();
-        // 锁定检查放在 try 外：已锁定账号再试一次不延长锁定期，也不增加计数
-        loginAttemptService.checkAllowed(role, username);
+        // 计数主体按库中账号 id 归一，拼写变体（重音/全角/大小写）不会各拿一份 5 次。
+        // 查库只定位账号、不验密，锁定检查仍在验密之前，且已锁定账号不会被延长锁定期。
+        Integer accountId = loginAccountId(role, username);
+        loginAttemptService.checkAllowed(role, accountId, username);
         try {
             Account result = null;
             if (RoleEnum.ADMIN.name().equals(role)) {
@@ -52,12 +54,29 @@ public class AuthService {
             if (result == null) {
                 throw new CustomException(ErrorCode.PARAM_INVALID, "无效的角色类型");
             }
-            loginAttemptService.onSuccess(role, username);
+            loginAttemptService.onSuccess(role, accountId, username);
             return result;
         } catch (CustomException e) {
-            loginAttemptService.onFailure(role, username);
+            loginAttemptService.onFailure(role, accountId, username);
             throw e;
         }
+    }
+
+    /**
+     * 登录计数定位：账号存在时返回 id（库的 collation 已把所有拼写变体解析到同一行）；
+     * 账号不存在时返回 null，由计数服务退回请求文本。
+     */
+    private Integer loginAccountId(String role, String username) {
+        if (RoleEnum.ADMIN.name().equals(role)) {
+            return adminService.findIdByUsername(username);
+        }
+        if (RoleEnum.CINEMA.name().equals(role)) {
+            return cinemaService.findIdByUsername(username);
+        }
+        if (RoleEnum.USER.name().equals(role)) {
+            return userService.findIdByUsername(username);
+        }
+        return null;
     }
 
     /**

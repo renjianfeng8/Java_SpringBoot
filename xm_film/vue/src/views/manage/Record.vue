@@ -8,8 +8,8 @@
       <div class="list-toolbar__filters">
         <el-input v-model="searchForm.title" placeholder="请输入电影名称查询" aria-label="电影名称"
                   class="search-input" :prefix-icon="Search" @keyup.enter="onSearch"/>
-        <el-input v-model="searchForm.start" placeholder="按放映日期查询 (YYYY-MM-DD)" aria-label="放映日期"
-                  class="search-input" :prefix-icon="Search" @keyup.enter="onSearch"/>
+        <el-date-picker v-model="searchForm.start" type="date" placeholder="按放映日期查询" aria-label="放映日期"
+                        value-format="YYYY-MM-DD" class="search-input"/>
         <el-select v-model="searchForm.status" placeholder="请选择放映状态" aria-label="放映状态" class="field-md">
           <el-option label="正常" value="正常" />
           <el-option label="停售" value="停售" />

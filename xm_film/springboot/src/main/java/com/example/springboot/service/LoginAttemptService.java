@@ -12,7 +12,10 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * 登录失败限流：同一 role + username 连续失败 5 次后锁 15 分钟。
+ * 登录失败限流：同一 role + 登录主体连续失败 5 次后锁 15 分钟。
+ *
+ * <p>计数主体由 {@link AuthService} 给出：解析到账号时是账号 id，拼写变体（大小写、重音、
+ * 全角、尾随空格）在查库时已经落到同一行；账号不存在时才退回请求里的用户名。
  *
  * <p>为什么放在这里：登录的三个入口（User/Admin/Cinema）都经 {@link AuthService} 分发，
  * 在这一层计数不会漏掉某个角色。支付密码已有独立的 5 次/15 分钟计数，两者互不影响。
@@ -39,15 +42,15 @@ public class LoginAttemptService {
         this.clock = clock;
     }
 
-    public void checkAllowed(String role, String username) {
-        Attempt attempt = attempts.get(key(role, username));
+    public void checkAllowed(String role, Integer accountId, String username) {
+        Attempt attempt = attempts.get(key(role, accountId, username));
         if (attempt != null && attempt.lockedUntil != null && attempt.lockedUntil.isAfter(clock.instant())) {
             throw new CustomException(ErrorCode.TOO_MANY_REQUESTS, "登录失败次数过多，请15分钟后再试");
         }
     }
 
-    public void onFailure(String role, String username) {
-        Attempt attempt = attempts.computeIfAbsent(key(role, username), ignored -> new Attempt());
+    public void onFailure(String role, Integer accountId, String username) {
+        Attempt attempt = attempts.computeIfAbsent(key(role, accountId, username), ignored -> new Attempt());
         synchronized (attempt) {
             Instant now = clock.instant();
             if (attempt.lockedUntil != null && !attempt.lockedUntil.isAfter(now)) {
@@ -62,8 +65,8 @@ public class LoginAttemptService {
         cleanupIfNeeded();
     }
 
-    public void onSuccess(String role, String username) {
-        attempts.remove(key(role, username));
+    public void onSuccess(String role, Integer accountId, String username) {
+        attempts.remove(key(role, accountId, username));
     }
 
     private void cleanupIfNeeded() {
@@ -81,12 +84,14 @@ public class LoginAttemptService {
     }
 
     /**
-     * 计数 key 必须与查库的比较口径一致：username 列是字符串列，比较时忽略大小写与尾部空格，
-     * 若按请求原值计数，换个大小写或补几个空格就是一份新计数，锁定可被无限绕过。
+     * 计数 key：有账号 id 时用它（库的 collation 已把所有拼写变体解析到同一行）；
+     * 账号不存在时才退回用户名，并归一化大小写/尾随空格，避免同一文本的变体各占一条计数。
      */
-    private static String key(String role, String username) {
-        String normalized = username == null ? "" : username.trim().toLowerCase(Locale.ROOT);
-        return (role == null ? "" : role) + ":" + normalized;
+    private static String key(String role, Integer accountId, String username) {
+        String identity = accountId != null
+                ? "id:" + accountId
+                : "name:" + (username == null ? "" : username.trim().toLowerCase(Locale.ROOT));
+        return (role == null ? "" : role) + ":" + identity;
     }
 
     private static final class Attempt {
