@@ -37,7 +37,7 @@
         </el-table-column>
         <el-table-column label="上映日期" prop="start" />
         <el-table-column label="操作" width="110">
-          <template #default="scope">
+          <template #default>
             <el-button class="row-action" link :icon="Edit" aria-label="编辑"
                        @click="$router.push('/manage/film')" type="primary" />
           </template>

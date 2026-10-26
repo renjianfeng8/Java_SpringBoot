@@ -82,7 +82,7 @@
               <!-- 导演组 -->
               <div class="cast-group" v-if="directorList.length > 0">
                 <div class="cast-card-container"> <!-- 卡片容器：横向排列 -->
-                  <div v-for="(director, idx) in directorList" :key="director.id" class="cast-card">
+                  <div v-for="(director) in directorList" :key="director.id" class="cast-card">
                     <!-- 圆形头像 -->
                     <div class="cast-avatar">
                       <img :src="director.picture" :alt="`${director.actor}的头像`" class="avatar-img">
@@ -100,7 +100,7 @@
               <div class="cast-group cast-group--spaced" v-if="actorList.length > 0">
 
                 <div class="cast-card-container">
-                  <div v-for="(actor, idx) in actorList" :key="actor.id" class="cast-card">
+                  <div v-for="(actor) in actorList" :key="actor.id" class="cast-card">
                     <div class="cast-role">{{ actor.role || '主演' }}</div>
                     <div class="cast-avatar">
                       <img :src="actor.picture" :alt="`${actor.actor}的头像`" class="avatar-img">
@@ -116,7 +116,7 @@
               <div class="cast-group cast-group--spaced" v-if="screenwriterList.length > 0">
 
                 <div class="cast-card-container">
-                  <div v-for="(writer, idx) in screenwriterList" :key="writer.id" class="cast-card">
+                  <div v-for="(writer) in screenwriterList" :key="writer.id" class="cast-card">
                     <div class="cast-avatar">
                       <img :src="writer.picture" :alt="`${writer.actor}的头像`" class="avatar-img">
                     </div>
@@ -132,7 +132,7 @@
               <div class="cast-group cast-group--spaced" v-if="supportActorList.length > 0">
 
                 <div class="cast-card-container">
-                  <div v-for="(actor, idx) in supportActorList" :key="actor.id" class="cast-card">
+                  <div v-for="(actor) in supportActorList" :key="actor.id" class="cast-card">
                     <div class="cast-avatar">
                       <img :src="actor.picture" :alt="`${actor.actor}的头像`" class="avatar-img">
                     </div>
