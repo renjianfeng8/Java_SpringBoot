@@ -41,6 +41,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
+@SuppressWarnings("java:S5778") // 测试 lambda 内除被测调用外还有 helper 调用，规则只影响可读性
 class CinemaServiceTest {
 
     @Mock

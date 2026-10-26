@@ -89,7 +89,7 @@ class TicketControllerTest {
         verify(orderedService, never()).redeemByCode(anyString());
     }
 
-    /**
+    /*
      * 匿名写放行<b>只限 POST</b>：同路径的 GET 不是公开读。
      *
      * <p>这条在 {@code @WebMvcTest} 里验证不了：{@code TicketController} 只有

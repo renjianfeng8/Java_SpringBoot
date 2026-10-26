@@ -23,6 +23,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  *   <li>{@link SystemClock} / {@link DateTimeFormats} —— 落库时间形态。</li>
  * </ol>
  */
+@SuppressWarnings("java:S5778") // 测试 lambda 内除被测调用外还有 helper 调用，规则只影响可读性
 class SharedComponentTest {
 
     // ---------- PriceParser ----------

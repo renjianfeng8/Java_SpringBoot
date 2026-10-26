@@ -29,7 +29,7 @@ class CinemaDirectoryMapperLoadTest {
     @Test
     void selectAllDerivesLinkedFlagForEveryRow() {
         List<CinemaDirectory> rows = mapper.selectAll(new CinemaDirectory());
-        assertThat(rows).allSatisfy(row -> assertThat(row.getLinked()).isNotNull());
+        assertThat(rows).extracting(CinemaDirectory::getLinked).doesNotContainNull();
     }
 
     @Test

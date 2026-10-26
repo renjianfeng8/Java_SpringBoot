@@ -200,7 +200,8 @@ public class PayPasswordService {
 
     /** 向上取整到分钟：剩 30 秒也提示"1 分钟"，说"0 分钟"会让人以为已经能试了 */
     private static long remainingMinutes(LocalDateTime now, LocalDateTime lockedUntil) {
-        long seconds = Duration.between(now, lockedUntil).getSeconds();
+        ZoneId zone = ZoneId.systemDefault();
+        long seconds = Duration.between(now.atZone(zone), lockedUntil.atZone(zone)).getSeconds();
         return Math.max(1, (seconds + 59) / 60);
     }
 

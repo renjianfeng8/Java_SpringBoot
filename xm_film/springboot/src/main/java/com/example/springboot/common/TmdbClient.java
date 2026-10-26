@@ -51,6 +51,7 @@ public class TmdbClient {
     private final String token;
 
     /** 国家代码 → 中文名的整表缓存。静态参考数据，进程内拉一次即可。 */
+    @SuppressWarnings("java:S3077") // Map.copyOf 不可变快照 + volatile 发布
     private volatile Map<String, String> countryNamesCache;
 
     public TmdbClient(@Qualifier("tmdbRestTemplate") RestTemplate restTemplate,

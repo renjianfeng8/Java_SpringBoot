@@ -5,6 +5,7 @@ import com.example.springboot.exception.CustomException;
 import com.github.pagehelper.PageInfo;
 import com.github.pagehelper.page.PageMethod;
 import org.springframework.beans.BeanUtils;
+import org.springframework.util.ReflectionUtils;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -140,7 +141,7 @@ public abstract class BaseController<T extends Identifiable, R, V> {
             if (Modifier.isStatic(field.getModifiers()) || field.isSynthetic()) {
                 continue;
             }
-            field.setAccessible(true);
+            ReflectionUtils.makeAccessible(field);
             try {
                 if (field.get(entity) != null) {
                     return;

@@ -8,7 +8,7 @@ import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
-import java.util.Date;
+import java.time.Instant;
 
 @Component
 public class JwtUtils {
@@ -35,11 +35,13 @@ public class JwtUtils {
     }
 
     public String generateToken(Integer userId, String role) {
+        // iat/exp 直接写 NumericDate 秒值，不经过 java.util.Date（jjwt 0.11 的 Date API）；线上格式一致
+        long issuedAt = Instant.now().getEpochSecond();
         return Jwts.builder()
                 .setSubject(userId.toString())
                 .claim("role", role)
-                .setIssuedAt(new Date())
-                .setExpiration(new Date(System.currentTimeMillis() + expire))
+                .claim("iat", issuedAt)
+                .claim("exp", issuedAt + expire / 1000)
                 .signWith(getSigningKey())
                 .compact();
     }

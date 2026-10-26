@@ -53,6 +53,7 @@ public class AmapConfig {
             return execution.execute(request, body);
         }
 
+        @SuppressWarnings("java:S2276") // 持锁 sleep 就是限流本身；改 wait() 会释放监视器
         private synchronized void awaitSlot() {
             long wait = lastRequestAt + intervalMs - System.currentTimeMillis();
             if (wait > 0) {

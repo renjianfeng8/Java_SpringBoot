@@ -41,6 +41,8 @@ import java.util.Set;
  * 影院账号与资料的读写：登录/注册/密码维护、按影片与区域分页查询、区域树聚合，
  * 以及从影院名录批量导入。影院分「已审核 / 未审核」，公开列表只出已审核的。
  */
+// 同类调用 BaseService 的 REQUIRED 方法，外层事务已存在；规则说明见 audit/sonarqube-report.md §9.1
+@SuppressWarnings("java:S6809")
 @Service
 @Transactional(readOnly = true)
 public class CinemaService extends BaseService<Cinema> {

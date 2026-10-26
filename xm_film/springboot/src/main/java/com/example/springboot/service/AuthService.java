@@ -18,6 +18,8 @@ public class AuthService {
 
     private static final Logger log = LoggerFactory.getLogger(AuthService.class);
 
+    private static final String INVALID_ROLE = "无效的角色类型";
+
     private final AdminService adminService;
 
     private final CinemaService cinemaService;
@@ -52,7 +54,7 @@ public class AuthService {
                 result = userService.login(account);
             }
             if (result == null) {
-                throw new CustomException(ErrorCode.PARAM_INVALID, "无效的角色类型");
+                throw new CustomException(ErrorCode.PARAM_INVALID, INVALID_ROLE);
             }
             loginAttemptService.onSuccess(role, accountId, username);
             return result;
@@ -91,7 +93,7 @@ public class AuthService {
         if (RoleEnum.USER.name().equals(account.getRole())) {
             return userService.register(account);
         }
-        throw new CustomException(ErrorCode.PARAM_INVALID, "无效的角色类型");
+        throw new CustomException(ErrorCode.PARAM_INVALID, INVALID_ROLE);
     }
 
     /** 按角色读取当前登录主体；角色非法或账号不存在时报未授权 */
@@ -145,7 +147,7 @@ public class AuthService {
         } else if (RoleEnum.USER.name().equals(role)) {
             userService.resetPassword(id, newPassword);
         } else {
-            throw new CustomException(ErrorCode.PARAM_INVALID, "无效的角色类型");
+            throw new CustomException(ErrorCode.PARAM_INVALID, INVALID_ROLE);
         }
     }
 

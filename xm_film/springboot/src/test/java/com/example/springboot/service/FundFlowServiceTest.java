@@ -27,6 +27,7 @@ import static org.mockito.Mockito.when;
  * （前端传 userId 不能越权读别人的账）。
  */
 @ExtendWith(MockitoExtension.class)
+@SuppressWarnings("java:S5778") // 测试 lambda 内除被测调用外还有 helper 调用，规则只影响可读性
 class FundFlowServiceTest {
 
     private static final Integer USER_ID = 6;

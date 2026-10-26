@@ -25,6 +25,8 @@ import java.util.List;
  * 普通用户账号的注册、登录与密码维护。注册时固定角色为 USER、缺省密码兜底，
  * 密码一律经 BCrypt 存储；更新资料时不允许改动密码与角色字段。
  */
+// 同类调用 BaseService 的 REQUIRED 方法，外层事务已存在；规则说明见 audit/sonarqube-report.md §9.1
+@SuppressWarnings("java:S6809")
 @Service
 @Transactional(readOnly = true)
 public class UserService extends BaseService<User> {

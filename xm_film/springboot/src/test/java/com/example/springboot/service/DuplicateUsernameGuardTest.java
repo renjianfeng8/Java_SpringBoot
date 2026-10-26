@@ -39,6 +39,7 @@ import static org.mockito.Mockito.when;
  * <p>这条守护在多实例部署、或将来去掉先查后插改为直接插入时，就是唯一的正确性来源。
  */
 @ExtendWith(MockitoExtension.class)
+@SuppressWarnings("java:S5778") // 测试 lambda 内除被测调用外还有 helper 调用，规则只影响可读性
 class DuplicateUsernameGuardTest {
 
     @Mock

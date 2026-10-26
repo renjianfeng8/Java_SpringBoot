@@ -90,7 +90,7 @@ public class RecordController extends BaseController<Record, RecordRequest, Reco
     @Override
     @GetMapping("/{id}")
     public Result<RecordView> getById(@PathVariable Integer id) {
-        Record recordItem = recordService.selectByIdScoped(id, AuthContext.role(), AuthContext.userId());
+        Record recordItem = recordService.selectByIdScoped(id);
         return Result.success(toView(recordItem));
     }
 

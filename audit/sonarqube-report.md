@@ -7,7 +7,7 @@
 > 范围：`xm_film/springboot/src/main/java`、`src/test/java`、`xm_film/vue/src`；排除 `node_modules/`、`dist/`
 > **状态**：基线 **74** 条 → P0 修复后 **69** 条 → 本轮清理后 **32** 条（漏洞 0，安全评级 A）。
 >
-> **这是 2026-10-20 的扫描快照，不是当前问题数。** 2026-10-22 已修复 8 条 `Web:S6819`（ARIA），但未重新扫描；当前明确未处理的只剩 2 条 `javascript:S3776`。本文件其余计数仅用于复盘当轮，勿直接当现值引用。
+> **这是 2026-10-20 的扫描快照，不是当前问题数。** 2026-10-22 已修复 8 条 `Web:S6819`（ARIA）；**2026-10-26 的后端复查与整改见文末 §9**（整改后主代码与测试代码均为 0 条）。本节其余计数仅用于复盘当轮，勿直接当现值引用。
 >
 > **“漏洞 0 / 安全评级 A”只是 Sonar 静态规则结果**；SEC-01/02/03 已于 2026-10-25 修复（见 `backend-backlog.md` §安全），本快照未重新扫描。
 
@@ -287,3 +287,58 @@ docker stop sonarqube && docker rm sonarqube
 - `javascript:S5852` `vue/views/front/BuyTicket.vue:496`
 
 > 两条均为无锚点正则的 O(n²) 理论风险；输入是服务端生成的座位标签，长度受控，无 DoS 面。已在人工复核中判定为安全。
+
+---
+
+## 9 后端复查与整改：SonarQube 规则（2026-10-26）
+
+> **范围**：后端 `xm_film/springboot/src/main/java`（189 文件）与 `src/test/java`（53 文件），前端不在本轮。
+>
+> **工具**：Docker 不可用，无法启动 SonarQube 10.7 服务。本轮用 SonarLint 9.8 standalone + sonar-java 8.2（与 10.7 同版本）和 sonar-java 8.45（776 条 Java 规则）双跑；8.45 需 sonar-plugin-api 12 兼容层，个别规则（如 `S1192`）在该层下未触发，因此以 8.2 为计数基线、8.45 补新规则。SonarLint 不跑污点分析，也不产出覆盖率/重复率；安全面另做人工检查。
+>
+> **结果**：整改前 8.2 口径主代码 24 条、测试 52 条；8.45 另补 `S8491`/`S8700`/`S8688`/`S2143`（合计主代码 30 条）。**整改后两个版本均为 0 条、0 个失败文件（242 文件）**。`mvn -o test` 431 条全绿（新增 `JwtUtilsTest` 3 条）。
+
+### 9.1 主代码：30 条处置
+
+| 规则 | 位置 | 处置 |
+| --- | --- | --- |
+| `java:S6809` ×14 | `CinemaService`、`FilmService`、`RecordService`、`RoomService`、`UserService` | **类级 `@SuppressWarnings`**。均为同类 `this` 调用 `BaseService` 的 `REQUIRED` 方法，外层事务已存在；改 `REQUIRES_NEW` 会破坏 BL-50 的语义。 |
+| `java:S8491` ×2 | `OrderedService:56`、`CinemaDirectoryImportService:124` | 删除悬挂 Javadoc，有效说明并入相邻注释。 |
+| `java:S8700` | `PayPasswordService:203` | `Duration.between` 两端先 `atZone(ZoneId.systemDefault())`，不再依赖 `LocalDateTime` 的隐式时区。 |
+| `java:S8688` ×2 | `StatisticsService:92`、`TmdbService:79` | `LocalDate.now(ZoneId.systemDefault())`，与本仓其他时间入口同口径。 |
+| `java:S3358` | `LoginAttemptService:93` | `key()` 里的嵌套三元改成 `if/else`，语义不变。 |
+| `java:S1192` | `AuthService:55/94/148` | 抽 `INVALID_ROLE` 常量。8.45 因规则调整未报，10.7 口径仍按有效处理。 |
+| `java:S3011` | `BaseController:143` | `field.setAccessible(true)` → `ReflectionUtils.makeAccessible(field)`。 |
+| `java:S3776` | `OrderedService.insertOrder`（复杂度 21） | 拆为 `requireCreatable` / `lockPurchasableRecord` / `ensureSeatsFree` / `fillOrderSnapshot`，锁顺序与校验顺序未变。 |
+| `java:S135` | `TmdbBackfillService:45` | 循环内 `continue` 改为 `if/else`，无提前退出。 |
+| `java:S1172` | `RecordService:197` | 删除未用的 `role/userId` 参数，同步改 `RecordController` 的 1 处调用（其余 service 的同名方法签名未动）。 |
+| `java:S6829` | `LoginAttemptService:26` | 删除无参构造器，新增 `ClockConfig` 提供 `Clock` bean；测试仍可直接注入固定时钟。 |
+| `java:S2276` | `AmapConfig:56` | **方法级 `@SuppressWarnings`**。`synchronized` 里的 `Thread.sleep` 就是限流本身；改 `wait()` 会释放监视器。 |
+| `java:S3077` | `TmdbClient:54` | **字段级 `@SuppressWarnings`**。`Map.copyOf` 不可变快照 + `volatile` 发布，是正确写法。 |
+| `java:S6548` | `OrderStatusCriteria:28` | **类级 `@SuppressWarnings`**。无状态共享单例，MyBatis 只读 getter。 |
+| `java:S2143` | `JwtUtils` | 不再使用 `java.util.Date`：`iat`/`exp` 直接写 NumericDate 秒值（与 jjwt 对 `Date` 的序列化完全一致），新增 `JwtUtilsTest` 钉住解析、过期判定与弱密钥拒绝。 |
+
+### 9.2 测试代码：53 条处置
+
+| 规则 | 数量 | 处置 |
+| --- | --- | --- |
+| `java:S5778` | 50（8.2）/ 14（8.45） | 9 个测试类类级 `@SuppressWarnings`。lambda 内除被测方法外还有 `room()`/`List.of()`/`account()` 等 helper 调用；逐条外提会让断言离被测调用更远，收益为负。 |
+| `java:S5841` | 1 | `allSatisfy` → `extracting(...).doesNotContainNull()`；不新增行数依赖，ci 空库下仍成立。 |
+| `java:S1130` | 1 | 删除 `StatusLiteralGuardTest` 方法上多余的 `throws IOException`。 |
+| `java:S8491` | 1 | `TicketControllerTest` 悬挂 Javadoc 合并到相邻用例注释。 |
+
+### 9.3 安全面人工复核（SonarLint 不跑污点分析）
+
+- `src/main/resources/mapper/*.xml` 无 `${}`，全部走 `#{}`；未发现 SQL 拼接。
+- `application.yml` 的 DB/JWT/TMDB/AMAP 口令全部是 `${ENV:}` 占位，无仓库内硬编码密钥；JWT 密钥启动时校验 ≥32 字节。
+- 口令统一 BCrypt；取票码与导入初始口令走 `SecureCodes`（`SecureRandom`）；上传按 MIME 白名单落盘并用 UUID 命名；CORS 只放配置的来源且带凭据；鉴权前缀有路径边界判断。未发现 `printStackTrace`、`System.out`、弱哈希/弱加密。
+- **不属于 Sonar 规则、本轮未改的一处加固点**：`AdminService.add` 缺省口令 `admin123`、`UserService.insertUser` 缺省口令 `user123`；`RegisterRequest`、`PasswordChangeRequest` 只有 `@NotBlank`，没有最小长度。入口仅管理员，风险低于原 `cinema123`，但仍是已知默认凭证。
+- **已在源码中保留的抑制（共 17 处，均带一行理由）**：主代码 8 处（`S6809` ×5、`S2276`、`S3077`、`S6548`），测试 9 处（`S5778`）。Sonar 面板上不会再出条目；若以后 `BaseService` 改为自调用代理或测试 helper 重排，可再回收这些抑制。
+
+### 9.4 复扫与验证
+
+- 8.2（10.7 基线）：`files=242 indexed=242 issues=0 failed=0`。
+- 8.45（最新规则）：`files=242 indexed=242 issues=0 failed=0`。
+- `mvn -o test`：431 tests, 0 failures / 0 errors / 0 skipped。
+- SonarLint standalone 与 SonarQube 服务端仍有口径差（无污点分析、无覆盖率/重复率）；正式门禁仍建议按 §8 的 Docker 流程在 10.7 上复扫一次，预期新增 0 条。
+

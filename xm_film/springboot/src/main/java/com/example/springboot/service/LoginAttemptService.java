@@ -9,6 +9,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -33,12 +34,7 @@ public class LoginAttemptService {
     private final Map<String, Attempt> attempts = new ConcurrentHashMap<>();
     private final Clock clock;
 
-    public LoginAttemptService() {
-        this(Clock.systemUTC());
-    }
-
-    /** 测试用：可注入固定时钟。 */
-    LoginAttemptService(Clock clock) {
+    public LoginAttemptService(Clock clock) {
         this.clock = clock;
     }
 
@@ -88,10 +84,13 @@ public class LoginAttemptService {
      * 账号不存在时才退回用户名，并归一化大小写/尾随空格，避免同一文本的变体各占一条计数。
      */
     private static String key(String role, Integer accountId, String username) {
-        String identity = accountId != null
-                ? "id:" + accountId
-                : "name:" + (username == null ? "" : username.trim().toLowerCase(Locale.ROOT));
-        return (role == null ? "" : role) + ":" + identity;
+        String identity;
+        if (accountId != null) {
+            identity = "id:" + accountId;
+        } else {
+            identity = "name:" + Objects.toString(username, "").trim().toLowerCase(Locale.ROOT);
+        }
+        return Objects.toString(role, "") + ":" + identity;
     }
 
     private static final class Attempt {

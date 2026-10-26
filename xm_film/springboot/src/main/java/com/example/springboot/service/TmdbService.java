@@ -17,6 +17,7 @@ import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -76,7 +77,7 @@ public class TmdbService {
         preview.setContent(detail.overview());
         preview.setEmployee(detail.companyName());
         preview.setLanguage(TmdbMapping.languageFormOption(detail.languageCode()));
-        preview.setStatus(TmdbMapping.deriveStatus(detail.releaseDate(), LocalDate.now()));
+        preview.setStatus(TmdbMapping.deriveStatus(detail.releaseDate(), LocalDate.now(ZoneId.systemDefault())));
         preview.setVideo(detail.trailerUrl());
         preview.setImg(download("海报", detail.posterPath(), TmdbClient.POSTER_SIZE, warnings));
 

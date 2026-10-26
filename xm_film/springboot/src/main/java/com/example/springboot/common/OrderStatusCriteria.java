@@ -25,6 +25,7 @@ import com.example.springboot.common.enums.RecordStatus;
  * 没有这个参数。要纳进来就得给全部 8 个方法加参数，收益低于成本。
  * 它的字面量副本改由 {@code StatusLiteralGuardTest} 钉住"与枚举逐字一致"。
  */
+@SuppressWarnings("java:S6548") // 无状态共享单例，MyBatis 只读 getter
 public final class OrderStatusCriteria {
 
     /** 无状态的共享实例（MyBatis 只读它的 getter） */

@@ -51,10 +51,10 @@ public class TmdbBackfillService {
                 Resolved resolved = resolve(film);
                 if (resolved.url() == null) {
                     missed.add(new TmdbBackfillView.Miss(film.getId(), film.getTitle(), resolved.reason()));
-                    continue;
+                } else {
+                    filmMapper.updateById(videoPatch(film.getId(), resolved.url()));
+                    updated++;
                 }
-                filmMapper.updateById(videoPatch(film.getId(), resolved.url()));
-                updated++;
             } catch (RestClientException e) {
                 log.warn("TMDB 回填预告片失败 film={}: {}", film.getId(), e.getMessage());
                 missed.add(new TmdbBackfillView.Miss(film.getId(), film.getTitle(), "TMDB 请求失败"));

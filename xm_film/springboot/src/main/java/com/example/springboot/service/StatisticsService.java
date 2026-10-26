@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -89,7 +90,7 @@ public class StatisticsService {
 
     /** 近 days 个完整日（截至昨日）的逐日票房与订单数 */
     List<Map<String, Object>> revenueTrend(int days) {
-        return revenueTrend(LocalDate.now(), days);
+        return revenueTrend(LocalDate.now(ZoneId.systemDefault()), days);
     }
 
     /**

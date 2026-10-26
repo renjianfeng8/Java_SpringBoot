@@ -37,6 +37,7 @@ import static org.mockito.Mockito.when;
  * 实测把锁去掉后那种测试依然全绿，它没有覆盖锁定行为。这里直接盯调用序列。
  */
 @ExtendWith(MockitoExtension.class)
+@SuppressWarnings("java:S5778") // 测试 lambda 内除被测调用外还有 helper 调用，规则只影响可读性
 class RecordDeleteGuardTest {
 
     @Mock

@@ -48,7 +48,7 @@ import java.util.Set;
 @Transactional(readOnly = true)
 public class OrderedService extends BaseService<Ordered> {
 
-    /** 座位号形状与上限统一在 {@link SeatParser} —— 所有"什么算合法座位"都在那里 */
+    // 座位号形状与上限统一在 SeatParser —— 所有"什么算合法座位"都在那里
 
     /**
      * 传给 mapper 的状态取值。XML 里不再写中文状态字面量，见 {@link OrderStatusCriteria}。
@@ -137,6 +137,16 @@ public class OrderedService extends BaseService<Ordered> {
     }
 
     private void insertOrder(Ordered ordered, String role, Integer tokenUserId) {
+        requireCreatable(ordered, role, tokenUserId);
+        Record recordItem = lockPurchasableRecord(ordered.getRecordId());
+        List<String> seats = normalizeSeats(ordered.getSeat(), recordItem.getRoomId());
+        ensureSeatsFree(recordItem.getId(), seats);
+        fillOrderSnapshot(ordered, recordItem, seats);
+        orderedMapper.insert(ordered);
+    }
+
+    /** 建单前的入参/角色校验；通过后把 token 中的用户 ID 落到订单上 */
+    private static void requireCreatable(Ordered ordered, String role, Integer tokenUserId) {
         if (role != null && !RoleEnum.USER.name().equals(role)) {
             throw new CustomException(ErrorCode.FORBIDDEN, "仅普通用户可创建订单");
         }
@@ -149,8 +159,11 @@ public class OrderedService extends BaseService<Ordered> {
         if (ordered.getUserId() == null) {
             throw new CustomException(ErrorCode.PARAM_INVALID, "缺少购票用户");
         }
+    }
 
-        Record recordItem = recordMapper.selectByIdForUpdate(ordered.getRecordId());
+    /** 锁场次行并确认仍可售；与支付/改期/停售抢同一把锁 */
+    private Record lockPurchasableRecord(Integer recordId) {
+        Record recordItem = recordMapper.selectByIdForUpdate(recordId);
         if (recordItem == null) {
             throw new CustomException(ErrorCode.PARAM_INVALID, "放映场次不存在");
         }
@@ -160,13 +173,13 @@ public class OrderedService extends BaseService<Ordered> {
         if (!RecordService.isPurchasable(recordItem)) {
             throw new CustomException(ErrorCode.BUSINESS_CONFLICT, "该场次已开场，无法购票");
         }
+        return recordItem;
+    }
 
-        List<String> seats = normalizeSeats(ordered.getSeat(), recordItem.getRoomId());
-        int number = seats.size();
-        // 一次取该场全部占用座位再内存判重：原实现每个座位一条 countSeatInUse，
-        // 6 个座位就是 6 条查询，而且全部压在 record 行锁持有期间。
+    /** 一次取该场全部占用座位再内存判重，避免每座一条查询压在 record 行锁里 */
+    private void ensureSeatsFree(Integer recordId, List<String> seats) {
         Set<String> occupiedSeats = new HashSet<>();
-        for (Ordered active : orderedMapper.selectActiveByRecordId(recordItem.getId())) {
+        for (Ordered active : orderedMapper.selectActiveByRecordId(recordId)) {
             if (active.getSeat() == null) {
                 continue;
             }
@@ -182,10 +195,13 @@ public class OrderedService extends BaseService<Ordered> {
                 throw new CustomException(ErrorCode.BUSINESS_CONFLICT, "座位已售: " + seat);
             }
         }
+    }
 
+    /** 用场次快照填充订单：价格、座位、场次信息与图片 */
+    private void fillOrderSnapshot(Ordered ordered, Record recordItem, List<String> seats) {
         Film film = filmMapper.selectById(recordItem.getFilmId());
         BigDecimal price = parsePrice(recordItem.getPrice());
-        BigDecimal total = price.multiply(BigDecimal.valueOf(number)).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal total = price.multiply(BigDecimal.valueOf(seats.size())).setScale(2, RoundingMode.HALF_UP);
 
         ordered.setOrders(generateOrderNo());
         ordered.setRecordId(recordItem.getId());
@@ -194,7 +210,7 @@ public class OrderedService extends BaseService<Ordered> {
         ordered.setRoomId(recordItem.getRoomId());
         ordered.setAppointment("场次ID:" + recordItem.getId());
         ordered.setStart(recordItem.getStart());
-        ordered.setNumber(number);
+        ordered.setNumber(seats.size());
         ordered.setTotal(total);
         // 单价快照：场次日后改价不影响这张订单的金额还原
         ordered.setUnitPrice(price);
@@ -207,8 +223,6 @@ public class OrderedService extends BaseService<Ordered> {
         if (film != null) {
             ordered.setImg(film.getImg());
         }
-
-        orderedMapper.insert(ordered);
     }
 
     /**

@@ -37,6 +37,7 @@ import static org.mockito.Mockito.when;
  *   4. 已处理单据不可重复回调（幂等）
  */
 @ExtendWith(MockitoExtension.class)
+@SuppressWarnings("java:S5778") // 测试 lambda 内除被测调用外还有 helper 调用，规则只影响可读性
 class RechargeServiceTest {
 
     private static final Integer USER_ID = 6;

@@ -32,6 +32,8 @@ import java.util.List;
  * 放映场次的增删改查，含排期时间的多种写法兼容解析、片长兜底与票价规范化
  * （票价以两位小数的 BigDecimal 落库）。
  */
+// 同类调用 BaseService 的 REQUIRED 方法，外层事务已存在；规则说明见 audit/sonarqube-report.md §9.1
+@SuppressWarnings("java:S6809")
 @Service
 @Transactional(readOnly = true)
 public class RecordService extends BaseService<Record> {
@@ -194,7 +196,7 @@ public class RecordService extends BaseService<Record> {
     }
 
     /** 详情：仅做存在性校验（与原控制器口径一致，不在此追加归属限制） */
-    public Record selectByIdScoped(Integer id, String role, Integer userId) {
+    public Record selectByIdScoped(Integer id) {
         Record recordItem = selectById(id);
         if (recordItem == null) {
             throw new CustomException(ErrorCode.NOT_FOUND, "排片不存在");

@@ -52,6 +52,7 @@ import com.example.springboot.common.OrderStatusCriteria;
 import com.example.springboot.common.enums.OrderStatus;
 
 @SpringBootTest(classes = OrderedService.class)
+@SuppressWarnings("java:S5778") // 测试 lambda 内除被测调用外还有 helper 调用，规则只影响可读性
 class OrderedServiceTest {
 
     @Autowired

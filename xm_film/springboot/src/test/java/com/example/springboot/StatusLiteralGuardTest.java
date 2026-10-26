@@ -63,7 +63,7 @@ class StatusLiteralGuardTest {
      * 而且不会有任何异常。
      */
     @Test
-    void paidOrderStatusesFragmentMatchesPaidEnums() throws IOException {
+    void paidOrderStatusesFragmentMatchesPaidEnums() {
         String xml = read("OrderedMapper.xml");
         String fragment = extract(xml, "<sql id=\"paidOrderStatuses\">", "</sql>");
 

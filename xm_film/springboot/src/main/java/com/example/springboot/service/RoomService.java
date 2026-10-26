@@ -19,6 +19,8 @@ import java.util.List;
  * 影厅的通用增删改查，外加按影院计数（统计与删除前置校验用）；
  * 以及角色范围内的增删改查编排（归属校验、座位规模校验、影院名称派生、引用校验）。
  */
+// 同类调用 BaseService 的 REQUIRED 方法，外层事务已存在；规则说明见 audit/sonarqube-report.md §9.1
+@SuppressWarnings("java:S6809")
 @Service
 @Transactional(readOnly = true)
 public class RoomService extends BaseService<Room> {

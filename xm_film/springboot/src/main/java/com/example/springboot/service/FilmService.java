@@ -26,6 +26,8 @@ import java.util.Objects;
  * 影片的增删改查，外加类型关联的同步读写与按票房/评分的榜单查询。
  * 类型详情在此一次性批量填充，避免逐条影片各查一轮。
  */
+// 同类调用 BaseService 的 REQUIRED 方法，外层事务已存在；规则说明见 audit/sonarqube-report.md §9.1
+@SuppressWarnings("java:S6809")
 @Service
 @Transactional(readOnly = true)
 public class FilmService extends BaseService<Film> {
