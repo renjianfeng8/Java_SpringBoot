@@ -8,9 +8,9 @@
 
 维护口径：一处事实一处归属；每条给出 `文件` 与符号，行号随改动可能漂移、以符号为准。状态分三档：待办、有意不整改（与既定政策一致，非债务）、已核验非缺陷；修复完成的条目从表中移出，在该节以「本轮修复并移出本表」一句登记。
 
-更新日期：2026-10-22（B/C 项收尾后）。当前代码基线：`master` @ `2286861e` + 2026-10-22 未提交改动；历史清单基线 `bfdd1c07`、`a2144fc4`，复核基线 `3112f8b7`，Sonar 扫描基线 `0ff8331c`。
+更新日期：2026-10-26。当前代码基线：`master` @ `d9a7fe5d`（工作区干净）；历史清单基线 `bfdd1c07`、`a2144fc4`，复核基线 `3112f8b7`，Sonar 扫描基线 `0ff8331c`。
 
-**当前实测基线**：`mvn test` = **414/414 通过，48 个测试类**（2026-10-25）。历史记录：2026-10-22 403/403、2026-10-20 398/398、2026-10-19 343/343、2026-10-18 309/309。开发库 `xm-film` 已由 `springboot/demo-data.sql` 补入演示影厅、排片与账号，购票主链已实测跑通。
+**当前实测基线**：`mvn test` = **428/428 通过，52 个测试类**（2026-10-26）。历史记录：2026-10-25 414/414、2026-10-22 403/403、2026-10-20 398/398、2026-10-19 343/343、2026-10-18 309/309。开发库 `xm-film` 已由 `springboot/demo-data.sql` 补入演示影厅、排片与账号，购票主链已实测跑通。
 
 **状态口径**：SEC-01/02/03 已于 2026-10-25 修复（见 §安全 的修复记录），历史证据保留；不再作为未修漏洞跟踪。
 
@@ -86,14 +86,14 @@
 - **SEC-01**：`RechargeService.handleCallback` 改为仅接受 ADMIN；用户端「模拟支付回调」按钮移除，管理员在「充值流水」页通过/拒绝。真实网关接入时再加签名/查单，当前不再存在“任意用户给自己充值”的路径。
 - **SEC-02**：`jwt.signing-key` 改为从 `.env` 的 `JWT_SIGNING_KEY` 读取，`JwtUtils` 启动时校验长度 ≥ 32 字节；TMDB token、Amap key、DB 口令也一并移入 `.env`（模板见 `.env.example`，`.env` 不入库）。
 - **SEC-03**：删除 `PasswordMatcher` 的 `raw.equals(stored)` 回退；新增 `PlaintextPasswordMigration`，启动时把 user/admin/cinema 的登录口令与 user.pay_password 中的明文统一转成 BCrypt。
-- 守卫：新增 `PlaintextPasswordMigrationTest`、`FileUploadControllerTest`；`mvn test` = **414/414 通过，48 个测试类**（2026-10-25）。
+- 守卫：新增 `PlaintextPasswordMigrationTest`、`FileUploadControllerTest`；`mvn test` = **428/428 通过，52 个测试类**（2026-10-26）。
 
 **连带发现（中危，未逐条实测）**：
 
 - `FileUploadController` 对**任意登录角色**开放、无配额（`application.yml` 单文件 50MB）—— 可反复上传填满磁盘。
 - `FileUtil` 只信客户端 `Content-Type`，不嗅探文件头 —— 可上传伪装成 png 的任意内容（**不构成 XSS**：扩展名由服务端白名单决定，且不含 svg）。
 - ~~`CinemaService.importFromDirectory` 批量影院共用默认密码 `cinema123` 且直接 `APPROVED`，用户名规则 `amap_+poiId` 可推导。~~ **2026-10-20 已修复**：每个账号独立随机初始口令（12 位，`SecureRandom`），明文只在导入响应中返回一次；`insertCinema` 不再回退默认口令。见 §SonarQube 静态扫描。
-- 登录**无失败锁定**（只有支付密码有 5 次/15 分钟锁定），可暴力撞库。
+- ~~登录**无失败锁定**（只有支付密码有 5 次/15 分钟锁定），可暴力撞库。~~ **2026-10-25 已修复**：`AuthService` 统一接入 `LoginAttemptService`，同一角色 + 账号连续失败 5 次锁 15 分钟；2026-10-26 起计数按库中解析出的账号 id，大小写/重音/全角拼写变体不能各拿一份 5 次。仍是单进程内存计数，重启清零、多实例不共享。
 - 无令牌吊销：删号/改密后旧令牌 24h 内仍有效。
 - 匿名核销端点 `POST /tickets/redeem` **无速率限制**（码空间 31⁸ 不可猜，但可被刷接口）。
 
@@ -225,27 +225,21 @@
 
 | 编号 | 位置 | 问题 | 处置建议 |
 | --- | --- | --- | --- |
-| BL-08 | service/OrderedService.insertOrder | 逐座位调用 countSeatInUse（每单最多 6 次查询）。 | 复用已有的 selectActiveByRecordId(recordId) 一次取回，再在 Java 内求交。 |
 | BL-09 | service/RecordService/RoomService/UserService.deleteBatchScoped | 批量删除逐个 id 查存在性与引用计数，N 个选中 = 2~3N 次查询（RoomService 最重）。 | 增加按 IN 批量的 selectByIds 与 countByXxxIds，单批降至 1~2 次查询。 |
-| BL-10 | service/StatisticsService.summary | overview 已取回 countGroupByStatus()，summary 又单独发 countByStatus("待取票")，同页对 ordered 多发一次 COUNT，两次读之间还有快照窗口。 | 复用同一份分组结果（countOf 派生）。注意改后 pendingPickupOrders 的 Java 类型由 Integer 变 Long，需同步 3 处测试桩。 |
-| BL-11 | service/TmdbBackfillService.backfillVideos | 用 selectAll(new Film())（含票房聚合与 area/actor JOIN）取全表再在 Java 里过滤 video 为空的行。 | 改投影查询 SELECT id,title,... WHERE video IS NULL OR video=''，避开聚合。 |
 | BL-12 | service/TmdbService.resolveTypes | 逐类型 selectByTitleExact 并按需 insert（≤4 次）。 | 批量 selectByTitleExact(IN ...) 一次取回。管理员低频，优先级低。 |
-| BL-55 | mapper/OrderedMapper.xml:150-181；schema.sql 的 ordered 索引 | `ordered.pay_time` **无索引**；`selectTodayPaidRevenue`、`countTodayPaidOrders`、`selectPaidRevenueByDay` 都按 `pay_time` 过滤，EXPLAIN 为 `type=ALL`（当前 243 行）。今日票房在首页每次加载都查。 | 加 `KEY idx_ordered_pay_time (pay_time)` 或 `(pay_time, status)`；改表后按 `docs/engineering-rules.md` §2 重新生成 `schema.sql` 并同步真实库迁移。 |
 | BL-56 | common/config/WebMvcConfig.java:24-27 | `/files/**` 只返回 `Last-Modified`，**没有 `Cache-Control` / `ETag`**。上传文件名是 UUID、内容不变，重复访问仍会条件请求。 | `setCachePeriod(86400)` 或 `CacheControl.maxAge(...)`；文件名唯一，可放心长缓存。 |
 | BL-57 | application.yml（server 段） | 未开启 HTTP 压缩；`/films` 的 42,681B JSON 响应没有 `content-encoding`。 | 开 `server.compression.enabled: true`，`mime-types` 含 `application/json`。 |
 | BL-58 | resources/logback-spring.xml:7-9 | `com.example.springboot.mapper` 固定 **DEBUG**，所有 SQL 与结果集都写控制台，开发/生产同样生效。 | **2026-10-25 已修复**：默认 INFO；需要看 SQL 时在 `.env` 里设 `logging.level.com.example.springboot.mapper=DEBUG`。 |
 | BL-59 | mapper/FilmMapper.xml:12-19、65-84 | 所有影片列表/详情/榜单/搜索都 `LEFT JOIN` 一个**全表 `ordered` 聚合子查询**；首页一次加载触发 3 次（`/films`、票房 Top、评分 Top）。EXPLAIN 当前扫 243 行。 | 数据量上来后考虑 `(status, film_id, total)` 覆盖索引；或把 `film.box_office` 恢复为支付/退票时维护的派生列；或只对需要票房的接口带聚合。 |
-| BL-60 | mapper/FilmMapper.xml:77；mapper/RecordMapper.xml:31 | `film.start LIKE '%year%'`、`record.start LIKE '%date%'` 让 `idx_start` 失效，日期/年份筛选退化为全表扫描。 | 前端传完整日期时改范围查询（`>= day AND < day+1`）。 |
-| BL-61 | mapper/MarkMapper.xml:55-62 | 影评列表每行两个相关子查询（`likeCount`、`liked`），分页前对整片评价逐行计算。 | 用 `mark_like` 聚合 JOIN / 派生表一次算好，或缓存点赞数。当前 25 条评价无感。 |
-| BL-62 | common/BaseController.list；mapper/FilmMapper.selectAll | 集合根无分页上限，且全列返回（含 `content` 长文本）；后台下拉也全量拉。首页的消费方问题见 FE-69。 | 列表改投影/分页；下拉只取 id/title 等轻量字段。 |
+| BL-62 | common/BaseController.list；mapper/FilmMapper.selectAll | 集合根原本无分页上限，且全列返回（含 `content` 长文本）；后台下拉也全量拉。首页的消费方问题见 FE-69。 | `MAX_LIST_SIZE = 500` 已加；剩余：列表改投影/分页，下拉只取 id/title 等轻量字段。 |
 
-**2026-10-23 复核备注**：BL-08 / BL-09 / BL-12 仍成立；BL-10 的现状已与描述不符 —— `StatisticsService.summary` 现在复用 `countGroupByStatus()` 的结果（`countOf`），BL-11 也已在 `TmdbBackfillService` 改用 `selectMissingVideo`。本轮只读、未重跑测试，因此只记备注、未改这两条的状态。
+**2026-10-26 修复并移出本表**：BL-08（选座改 `selectActiveByRecordId` 一次取回）、BL-10（`summary` 复用 `countGroupByStatus()`）、BL-11（改用 `selectMissingVideo`）、BL-55（`idx_ordered_pay_time` / `idx_ordered_status_film_total` 已入 schema）、BL-60（年份/日期改半开区间）、BL-61（点赞改 `mark_like` 聚合 JOIN）。仍成立：BL-09 / BL-12 / BL-56 / BL-57。
 
 ## 重复代码与可维护性（2026-10-20 专项：BL-13/14/15/16 已修复）
 
 | 编号 | 位置 | 问题 | 状态 |
 | --- | --- | --- | --- |
-| BL-13 | service/UserService、AdminService、CinemaService、PayPasswordService | 凭证比对被抄 4 处（"BCrypt.matches 或明文 equals"），4 个类各 new 一个 BCryptPasswordEncoder | **已修复** → `common/PasswordMatcher`。空值由 NPE 改为不匹配。**明文回退刻意保留**（SEC-03，只收敛不改行为）。测试 `SharedComponentTest` 明确标注 `plaintextFallbackStillPassesForLegacyRows` 记录的是缺陷现状，修 SEC-03 时应改为 false 并会变红 |
+| BL-13 | service/UserService、AdminService、CinemaService、PayPasswordService | 凭证比对被抄 4 处（"BCrypt.matches 或明文 equals"），4 个类各 new 一个 BCryptPasswordEncoder | **已修复** → `common/PasswordMatcher`。空值由 NPE 改为不匹配。SEC-03 已移除明文回退；`SharedComponentTest#plaintextAndStoredHashNeverMatch` 现在钉住"明文与库中哈希都不通过"，存量明文由 `PlaintextPasswordMigration` 在启动时转成 BCrypt |
 | BL-14 | service/OrderedService.parsePrice、RecordService.parsePrice | 逐字重复，仅 ErrorCode 与文案不同 | **已修复** → `common/PriceParser`。抽的过程中发现真实口径分裂：录入侧 400、下单侧 500。另补捕 `ArithmeticException`（`1e999999999` 构造成功但 setScale 溢出，原先漏成 500）。**可达性如实记录**：`record.price` 是 `decimal(10,2)`，库层拒绝非法字符串（实测 SQL 直接报错），下单侧不可达；这是口径统一 + 未来防线，不是正在发生的 500 |
 | BL-15 | 时间格式串 4 处 + now() 2 处 | 同上 | **已修复** → `common/DateTimeFormats`（格式）+ `common/SystemClock`（当前时间）。刻意不叫 `Clock`：那会让人以为可替代数据库时钟，而超时判定必须用 DB 时钟（BL-05 根因） |
 | BL-16 | generateOrderNo / generateRechargeNo | 日期 + UUID 前 8 位大写，仅前缀不同 | **已修复** → `common/OrderNumber`。订单号无前缀、充值单号 `R` |

@@ -70,20 +70,22 @@ ANONYMOUS_WRITE_EXACT = { /api/v1/tickets/redeem }
 - 列名映射：`map-underscore-to-camel-case: true` 只作用于 bean 属性，**不作用于 Map 的 key** —— 返回 `Map` 的语句别名必须写 camelCase。
 - `SELECT *` 是常态；join 派生列用别名（`user.name as userName`）。
 - `ONLY_FULL_GROUP_BY` 开启：`GROUP BY` 必须与 `SELECT` 里的表达式**逐字相同**（`DATE_FORMAT(...)` 而非 `DATE(...)`）。
+- `GET /list` 硬上限 500 条（`BaseController.MAX_LIST_SIZE`）；要全量或翻页走 `/page`，不要把 `/list` 当全量导出用。
+- 日期/年份筛选用半开区间（`>= day AND < day+1`、`>= year-01-01 AND < 下一年`），不要写 `LIKE '%...%'`，否则 `idx_start` 失效。
 
 ## 6 测试
 
-43 个测试类 / 7,789 行，共 403 条执行（2026-10-22），分三类：
+52 个测试类 / 8,456 行，共 428 条执行（2026-10-26），分三类：
 
 | 类型 | 数量 | 依赖数据库 | 说明 |
 | --- | --- | --- | --- |
 | Mockito 单测 | 大多数 | 否 | `@ExtendWith(MockitoExtension.class)` + `@InjectMocks` |
-| `@SpringBootTest` 绑定层守卫 | 12 个类（含 `*LoadTest`、`OrderedSeatConflictTest`、`OrderedServiceTest`、并发/事务边界测试） | **是，走 `xm_film_test`** | 证明 mapper XML 能被 MyBatis 解析并执行 |
+| `@SpringBootTest` 绑定层守卫 | 16 个类（含 `*LoadTest`、`OrderedSeatConflictTest`、`OrderedServiceTest`、并发/事务边界测试） | **是，走 `xm_film_test`** | 证明 mapper XML 能被 MyBatis 解析并执行 |
 | `@WebMvcTest` 控制器切片 | 5 个类 | 否 | Ordered / Recharge / Ticket / Auth+GlobalExceptionHandler / Health |
 
 **硬规则**：任何新增 `@SpringBootTest` 必须同时加 `@ActiveProfiles("ci")`；会写库的再加 `@Transactional`。缺前者 = 写开发库，缺后者 = 失败即留脏行。
 
-`OrderedServiceTest` 是唯一一个 `@SpringBootTest(classes = OrderedService.class)`（只装一个 bean 的切片）的单测，51 个用例覆盖了状态机、权限、金额、取票码全路径（mock 掉全部 mapper）。
+`OrderedServiceTest` 是唯一一个 `@SpringBootTest(classes = OrderedService.class)`（只装一个 bean 的切片）的单测，53 个用例覆盖了状态机、权限、金额、取票码全路径（mock 掉全部 mapper）。
 
 ## 7 值得记住的三个"反直觉"实现
 

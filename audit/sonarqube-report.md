@@ -113,7 +113,7 @@
 
 **原位置**：`service/CinemaService.java:139`（常量在 `:56`，`DEFAULT_PASSWORD = "cinema123"`）
 
-名录导入创建的影院账号全部使用同一口令，用户名规则 `amap_+poiId` 可推导，且登录无失败锁定。Sonar 判为 VULNERABILITY 是准确的。
+名录导入创建的影院账号全部使用同一口令，用户名规则 `amap_+poiId` 可推导，且登录无失败锁定。Sonar 判为 VULNERABILITY 是准确的。**2026-10-25 已补登录失败锁定**（同一角色 + 账号 5 次/15 分钟），这一条不再是可利用的缺口。
 
 **修复**：逐账号随机初始口令 + 一次性返回，见 §0.1。`insertCinema` 也不再回退默认口令（空口令 400）。
 

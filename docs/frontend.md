@@ -3,12 +3,12 @@
 ## 1 目录与规模
 
 ```
-src/                       80 文件 / 17,433 行（vue+js+scss）
-├── views/                 48 个 .vue / 13,627 行
+src/                       80 文件 / 17,387 行（vue+js+scss）
+├── views/                 48 个 .vue / 13,559 行
 │   ├── 根目录 7 篇：Front / Back / Manage / AdminShell / Login / Register / 404
-│   ├── front/  16 篇 / 7,660 行
-│   ├── back/    7 篇 / 1,336 行
-│   └── manage/ 18 篇 / 3,642 行
+│   ├── front/  16 篇 / 7,585 行
+│   ├── back/    7 篇 / 1,337 行
+│   └── manage/ 18 篇 / 3,648 行
 ├── components/  6 个 / 1,199 行
 ├── composables/ 6 个（useAuth / useCrud / useFormDialog / usePagedList / useLoginPrompt / useLogout）
 ├── utils/       6 个（含 navigation）
@@ -53,7 +53,7 @@ src/                       80 文件 / 17,433 行（vue+js+scss）
 `utils/request.js`：
 
 - `axios.create({ baseURL: API_BASE_URL, timeout: 30000 })`，`API_BASE_URL` 来自 `constants/index.js`（唯一读取点）。
-- 响应拦截器**直接返回 `res.data`**；业务码 `code !== '200'` **不在这里处理**，由各页面自行 `ElMessage.error(res.msg)`（FE-19 仍未改）。当前业务码判断已收敛到 `isSuccess()`：**117 处调用 / 39 个文件，业务码字面量 0 处**。
+- 响应拦截器**直接返回 `res.data`**；业务码 `code !== '200'` **不在这里处理**，由各页面自行 `ElMessage.error(res.msg)`（FE-19 仍未改）。当前业务码判断已收敛到 `isSuccess()`：**116 处调用 / 39 个文件，业务码字面量 0 处**。
 - HTTP 401 → 清存储 + 跳登录（防重入）；网络/超时单独中文提示。
 
 `utils/authStorage.js`：localStorage 键 `xm-film-user`；解析失败自动清空。

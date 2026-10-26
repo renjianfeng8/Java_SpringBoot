@@ -4,13 +4,13 @@
 >
 > 复核更正：2026-10-18 时 `views/` 下共 **46 个 `.vue`**（另有 3 个壳 `Front.vue` / `Back.vue` / `Manage.vue` 与 `Login` / `Register` / `404` 也在此目录，均已计入），实测 13,399 行。2026-10-22 新增共享壳 `AdminShell.vue` 与 `manage/Finance.vue` 后为 **48 个 / 13,627 行**。
 
-> **当前状态（2026-10-22）**：`master` @ `2286861e` + 未提交的 A/B/C 项改动；`npm run build` 通过，无头 Chrome 冒烟 5/5（C1–C3）、8/8（UX）、5/5（管理端筛选）、5/5（跨页选择）。当前仍未做：FE-05、FE-09、FE-18、FE-19、FE-49（部分）、FE-60，以及 2 条 `S3776`；8 条 `Web:S6819` 已修。详细进度见 `audit/frontend-progress.md`。
+> **历史快照（2026-10-22）**：当时基线 `master` @ `2286861e` + 未提交的 A/B/C 项改动（A/B/C 已于 2026-10-23 提交，当前基线见 `项目索引.md`）；`npm run build` 通过，无头 Chrome 冒烟 5/5（C1–C3）、8/8（UX）、5/5（管理端筛选）、5/5（跨页选择）。当时仍未做：FE-05、FE-09、FE-18、FE-19、FE-49（部分）、FE-60，以及 2 条 `S3776`；8 条 `Web:S6819` 已修。详细进度见 `audit/frontend-progress.md`。
 
 本文件登记 2026-10-14 起前端代码安全与质量审查的结论。第一轮审查 `xm_film/vue/src/router/`（导航守卫与路由表，vue-router 4.5.1），并登记该轮牵连核实的跨文件前端问题（前端鉴权与跳转口径：`utils/request.js`、`composables/useAuth.js`、`views/Login.vue`、`views/404.vue`、`views/Front.vue`、`views/back/Back.vue`、`views/manage/Manage.vue`）。同日第二轮审查 `xm_film/vue/src/composables/` 三个复用件（`useAuth.js`、`useCrud.js`、`useFormDialog.js`）及其调用方（`views/manage/*`、`views/back/*`、`views/front/*`），结论见「已修复（composables 复用件）」一节。2026-10-15 第三轮审查 `xm_film/vue/src/views/` 全目录（**当时 46 个视图文件，13,399 行**；原文误作 47 / 12.8k；2026-10-22 为 48 / 13,627），结论见「已修复（views/ 目录）」及「本轮登记未做」新增条目；同日就 FE-48 做契约对齐（前端读错键名，非后端缺字段），见「已修复（契约对齐）」，多角色 1:N 需求转登 `audit/backend-backlog.md`。后端条目另见 `audit/backend-backlog.md`，本文件不重复。2026-10-15 另对重做后的前台影院列表页做了复查（并核到与 FE-34 同形的后端前缀匹配），结论见「已修复（影院列表页复查）」及「本轮登记未做」新增条目。
 
 维护口径：一处事实一处归属；每条给出 `文件` 与符号，行号随改动可能漂移、以符号为准。状态分三档：已修复、本轮登记未做、已核验非缺陷。编号 FE-xx 与后端 BL-xx 区隔。
 
-更新日期：2026-10-22。当前基线：`master` @ `2286861e` + 未提交改动；历史基线：`cf83e680`（第一轮）、`7e0dcc1a`（第二轮 composables 修复）、`02527cf4`（第三轮 views/ 起点）、`1f813fa5`（契约对齐起点）、`f8b10705`（影院列表页复查起点）、`120df194`（2026-10-21 前端未修项攻坚收尾）。
+更新日期：2026-10-22（历史快照；当前基线见 `项目索引.md`）。当时基线：`master` @ `2286861e` + 未提交改动；历史基线：`cf83e680`（第一轮）、`7e0dcc1a`（第二轮 composables 修复）、`02527cf4`（第三轮 views/ 起点）、`1f813fa5`（契约对齐起点）、`f8b10705`（影院列表页复查起点）、`120df194`（2026-10-21 前端未修项攻坚收尾）。
 
 ## 已修复（2026-10-14）
 

@@ -18,7 +18,7 @@
 
 ## 重新生成
 
-本机 MySQL 8.0.37，库 `xm-film`，口令取自 `application.yml`：
+本机 MySQL 8.0.37，库 `xm-film`；连接参数从环境变量读取（`MYSQL_USER` / `MYSQL_PASSWORD`，默认 `root` / `123456`）：
 
 ```bash
 python dump-schema.py          # MYSQL_EXE 可用环境变量覆盖 mysql 客户端路径
@@ -32,8 +32,7 @@ python dump-schema.py          # MYSQL_EXE 可用环境变量覆盖 mysql 客户
   这是 `audit/backend-backlog.md` BL-01「先查后插」在数据库侧的证据。
 - `ordered` 表有 `uk_ordered_orders`（订单号）与 `uk_ordered_pickup_code`（取票码），
   二者是资金/凭证路径上仅有的硬唯一约束；**座位占用无唯一约束**，只靠 `record` 行锁串行化。
-- `user` / `admin` / `cinema` 三表均已有 `username` 唯一索引 —— BL-03 的「唯一索引兜底」
-  这一半在库里已具备，缺的是 Java 侧对 `DuplicateKeyException` 的转换。
+- `user` / `admin` / `cinema` 三表均已有 `username` 唯一索引 —— BL-03 的「唯一索引兜底」这一半在库里已具备；Java 侧对 `DuplicateKeyException` 的转换也已补上（BL-03 已修复）。
 - `cinema_directory.poi_id` 为 `NOT NULL` 且唯一，BL-04 里「poiId 可能为空」的 UNCERTAIN 不成立。
 - `cinema.directory_id` 于 2026-10-19 补了 `uk_cinema_directory_id`（BL-04）。此前**没有任何唯一约束**，
   同一名录可关联多家影院。该列为 `NULL` 时不受唯一索引限制，未关联名录的影院可有任意多条。

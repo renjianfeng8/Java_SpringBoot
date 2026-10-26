@@ -1,6 +1,6 @@
 # 前端未修项攻坚：进度记录（2026-10-22 收尾）
 
-> 当前代码基线：`master` @ `2286861e` + 2026-10-22 未提交的 A/B/C 项改动。下列「已提交」表只到 `93adba6e`，A/B/C 项均尚未提交。
+> 历史快照：当时基线 `master` @ `2286861e` + 2026-10-22 未提交的 A/B/C 项改动；A/B/C 已于 2026-10-23 提交。当前基线见 `项目索引.md`。下列「已提交」表只到 `93adba6e`。
 
 > 目标：集中处理 `audit/frontend-audit.md` 里「本轮登记未做 / 2026-10-18 全盘复核新增」
 > 与 Sonar 前端剩余项。一次只做一类，每类过 `npm run build`，能起浏览器的额外跑无头 Chrome。
@@ -75,7 +75,7 @@
 | B4 补预告片查询 | 新增 `FilmMapper.selectMissingVideo()`，只查 `video` 为空的行；不再用带票房聚合与 area/actor JOIN 的 `selectAll` 扫全表 | `TmdbBackfillServiceTest` 6/6；MySQL mapper 加载测试通过 |
 | B5 ARIA | `div role=button` 改原生 `<button>`（内部 div 改 span，补按钮样式重置）；4 处 `role=group` 改 `<fieldset aria-label>` 并清默认边框/内边距；`role=status` 改 `<output>`；走势图改 `aria-hidden`，结论由可见 caption 承担 | `Web:S6819` 的 8 个位置已无 ARIA role；build + 原有前台冒烟 8/8 |
 
-验证汇总：后端 `mvn test` 43 个测试类 / 403 条用例，0 失败；前端 `npm run build` 通过；无头 Chrome 8/8 + 5/5 + B2 5/5。
+验证汇总（当时）：后端 `mvn test` 43 个测试类 / 403 条用例，0 失败；前端 `npm run build` 通过；无头 Chrome 8/8 + 5/5 + B2 5/5。
 
 ## 八、2026-10-22 追加（C 项：管理端能力）
 

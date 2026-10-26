@@ -11,6 +11,14 @@
 
 关键：**影院的 `id` 同时也是它的「用户 id」**。`ordered.cinema_id` 与 token 里的 `userId` 在 CINEMA 语境下是同一 id 空间，所以 `ensureOrderAccess` 能直接比。
 
+### 1.1 登录失败锁定
+
+- 同一 `role` + 账号连续失败 **5 次锁 15 分钟**；成功登录清零。
+- 计数主体是**库中解析出的账号 id**，不是请求里的用户名。MySQL `utf8mb4_unicode_ci` 会把大小写、重音、全角、尾随空格视为同一账号；按原文本计数会让人用拼写变体各拿一份 5 次，锁定形同虚设。
+- 锁定检查在验密之前；已锁定账号再试不延长锁定期，也不增加计数。
+- 计数在单进程内存（`LoginAttemptService`），重启清空、多实例不共享；换 Redis/DB 前不要假设多节点口径一致。
+- 支付密码有独立的 5 次/15 分钟计数（§5），两者互不影响。
+
 ## 2 排片（record）
 
 一场 = `cinema_id + room_id + film_id + start + price + status`。

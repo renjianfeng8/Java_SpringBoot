@@ -34,20 +34,20 @@
 | 键 | 值 | 说明 |
 | --- | --- | --- |
 | `spring.datasource.url` | `jdbc:mysql://localhost:3306/xm-film?...` | 唯一数据源 |
-| `jwt.signing-key` | 字面量 | **刻意不叫 `secret`**：本机有用户级环境变量 `JWT_SECRET` 会被 Spring 宽松绑定覆盖 |
+| `jwt.signing-key` | `JWT_SIGNING_KEY`（`.env`） | 启动时校验长度 ≥ 32 字节；**刻意不叫 `secret`**：本机有用户级环境变量 `JWT_SECRET` 会被 Spring 宽松绑定覆盖 |
 | `jwt.expire` | 86400000（24h） | |
 | `file.upload-dir` | `D:/project/picture` | 上传落盘目录；`access-prefix` 指向 `http://localhost:9090/files/` |
-| `tmdb.*` | token + `127.0.0.1:7897` 代理 | 本机直连 TMDB 恒超时 |
-| `amap.key` / `request-interval-ms` | Key + 300ms | 个人 Key QPS ≈5 |
+| `tmdb.*` | token 从 `.env`，代理 `127.0.0.1:7897` | 本机直连 TMDB 恒超时 |
+| `amap.key` / `request-interval-ms` | `AMAP_KEY`（`.env`）+ 300ms | 个人 Key QPS ≈5 |
 
-DB/TMDB/高德等本机配置直写属既定演示政策（`audit/backend-backlog.md`「有意不整改」）；但 **JWT 密钥与第三方 Key 已移入 `.env`（SEC-02 修复）、登录密码明文回退已删除（SEC-03 修复）**，后端启动前必须提供 `JWT_SIGNING_KEY`，不再按“仓库自带密钥”运行。
+DB 口令、TMDB token、高德 Key、JWT 密钥均从 `.env` 读取（SEC-02 修复），登录密码明文回退已删除（SEC-03 修复）；后端启动前必须提供 `JWT_SIGNING_KEY`，不再按“仓库自带密钥”运行。其余本机连接参数（代理、上传目录）仍直写，属既定演示政策。
 
 ## 3 后端分层
 
 ```
 controller/  (23)  ── 只做 请求→实体→视图 映射，统一返回 Result<T>
    │
-service/     (23)  ── 业务规则与事务边界，BaseService<T> 兜底 CRUD
+service/     (25)  ── 业务规则与事务边界，BaseService<T> 兜底 CRUD
    │
 mapper/      (17)  ── BaseMapper<T> 六个语句；XML 在 resources/mapper/
    │
@@ -56,7 +56,7 @@ entity/      (17)  ── 与表一一对应（Account 例外：三账号的父�
 dto/request (32) dto/response (33) ── HTTP 边界只用 DTO，实体不出 controller
 ```
 
-每层文件数（2026-10-22 实测）：controller 23 / 1,974 行，service 23 / 3,714 行，mapper 接口 17 / 448 行，mapper XML 17 / 1,833 行，entity 17 / 564 行，dto 65 / 1,454 行。
+每层文件数（2026-10-26 实测）：controller 23 / 2,016 行，service 25 / 4,044 行，mapper 接口 17 / 463 行，mapper XML 17 / 1,875 行，entity 17 / 564 行，dto 65 / 1,454 行。
 
 **核心基类**（`common/`）：
 
