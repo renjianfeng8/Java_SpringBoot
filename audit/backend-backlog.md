@@ -10,7 +10,7 @@
 
 更新日期：2026-10-27。当前代码基线：`master` @ `e502811f`；历史清单基线 `bfdd1c07`、`a2144fc4`，复核基线 `3112f8b7`，Sonar 扫描基线 `0ff8331c`。
 
-**当前实测基线**：`mvn test` = **548/548 通过，72 个测试文件**（2026-10-27）。历史记录：2026-10-26 428/428、2026-10-25 414/414、2026-10-22 403/403、2026-10-20 398/398、2026-10-19 343/343、2026-10-18 309/309。开发库 `xm-film` 已由 `springboot/demo-data.sql` 补入演示影厅、排片与账号，购票主链已实测跑通。
+**当前实测基线**：`mvn test` = **551/551 通过，74 个测试文件**（2026-10-27）。历史记录：2026-10-26 428/428、2026-10-25 414/414、2026-10-22 403/403、2026-10-20 398/398、2026-10-19 343/343、2026-10-18 309/309。开发库 `xm-film` 已由 `springboot/demo-data.sql` 补入演示影厅、排片与账号，购票主链已实测跑通。
 
 **状态口径**：SEC-01/02/03 已于 2026-10-25 修复（见 §安全 的修复记录），历史证据保留；不再作为未修漏洞跟踪。
 
@@ -181,7 +181,7 @@
 
 ## 测试覆盖缺口（2026-10-27 已关闭）
 
-23 个 Controller 全部有直接测试；Service、定时任务与异常分支已补齐；mapper XML 参数名有静态守卫（`MapperXmlParameterGuardTest`）与真库执行测试（`MarkEligibilityMapperLoadTest`）。当前 72 文件 / 548 条；前端已接入 Vitest（33 条），组件渲染与端到端仍靠构建 + 无头 Chrome。
+23 个 Controller 全部有直接测试；Service、定时任务与异常分支已补齐；mapper XML 参数名有静态守卫（`MapperXmlParameterGuardTest`）与真库执行测试（`MarkEligibilityMapperLoadTest`）。当前 74 文件 / 551 条；前端已接入 Vitest（33 条），组件渲染与端到端仍靠构建 + 无头 Chrome。
 
 历史备忘：`OrderedMapper.countPickedUpByUserAndFilm` 曾因 XML 写 `#{pickedUp}` 而方法签名只有 `userId/filmId`，评论区与发评价在真库上恒抛 `BindingException`；已改走 `@Param("s") OrderStatusCriteria` 并用真库测试钉住。`demo-data.sql` 重跑的余额漂移已由 §1 重置起点修复，末尾 7 项自检全 0。
 

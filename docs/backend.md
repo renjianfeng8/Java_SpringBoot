@@ -75,16 +75,16 @@ ANONYMOUS_WRITE_EXACT = { /api/v1/tickets/redeem }
 
 ## 6 测试
 
-72 个测试文件 / 548 条执行（2026-10-27），按启动方式分四类：
+74 个测试文件 / 551 条执行（2026-10-27），按启动方式分四类：
 
 | 类型 | 数量 | 依赖数据库 | 说明 |
 | --- | --- | --- | --- |
 | Mockito 单测 | 21 个类 | 否 | `@ExtendWith(MockitoExtension.class)` + `@InjectMocks` |
-| `@SpringBootTest` 绑定层守卫 | 17 个类（含 `*LoadTest`、`OrderedSeatConflictTest`、`OrderedServiceTest`、并发/事务边界测试） | **是，走 `xm_film_test`** | 证明 mapper XML 能被 MyBatis 解析并执行 |
+| `@SpringBootTest` 绑定层守卫 | 19 个类（含 `*LoadTest`、`OrderedSeatConflictTest`、`OrderedServiceTest`、并发/事务边界测试） | **是，走 `xm_film_test`** | 证明 mapper XML 能被 MyBatis 解析并执行 |
 | `@WebMvcTest` 控制器切片 | 13 个类（覆盖全部 23 个 Controller） | 否 | 鉴权前缀、角色范围、空请求体、业务码透传 |
 | 纯单元 / 静态守卫 | 22 个类 | 否 | 无上述注解，如 `FileUtilTest`、`TmdbClientTest`、`StatusLiteralGuardTest`、`MapperXmlParameterGuardTest` |
 
-> `RecordDeleteGuardTest` 同时带 `MockitoExtension` 与 `@SpringBootTest`，前两行各计一次；四类去重后共 72 个文件。
+> `RecordDeleteGuardTest` 同时带 `MockitoExtension` 与 `@SpringBootTest`，前两行各计一次；四类去重后共 74 个文件。
 
 **硬规则**：任何新增 `@SpringBootTest` 必须同时加 `@ActiveProfiles("ci")`；会写库的再加 `@Transactional`。缺前者 = 写开发库，缺后者 = 失败即留脏行。
 
