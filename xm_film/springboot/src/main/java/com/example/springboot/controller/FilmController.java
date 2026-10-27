@@ -3,6 +3,7 @@ package com.example.springboot.controller;
 import com.example.springboot.common.BaseController;
 import com.example.springboot.common.Result;
 import com.example.springboot.dto.request.FilmRequest;
+import com.example.springboot.dto.response.FilmOptionView;
 import com.example.springboot.dto.response.FilmView;
 import com.example.springboot.dto.response.TodayRevenueView;
 import com.example.springboot.dto.response.TypeView;
@@ -105,6 +106,17 @@ public class FilmController extends BaseController<Film, FilmRequest, FilmView> 
     @GetMapping("/search")
     public Result<List<FilmView>> search(@RequestParam String title) {
         return Result.success(filmService.selectByTitle(title).stream().map(this::toView).toList());
+    }
+
+    /**
+     * 下拉选项：只回 id/title。
+     * 后台的「影片」筛选下拉原先拉 {@code GET /films} 整表，把每部片的 content 长文本
+     * 一起搬过来（实测 42,681B），而消费方只读 id/title。
+     */
+    @GetMapping("/options")
+    public Result<List<FilmOptionView>> options() {
+        return Result.success(filmService.selectOptions().stream()
+                .map(film -> new FilmOptionView(film.getId(), film.getTitle())).toList());
     }
 
     @GetMapping("/by-cinema")

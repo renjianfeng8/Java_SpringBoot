@@ -23,7 +23,9 @@ public class WebMvcConfig implements WebMvcConfigurer {
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
         registry.addResourceHandler("/files/**")
-                .addResourceLocations("file:" + uploadDir + File.separator);
+                .addResourceLocations("file:" + uploadDir + File.separator)
+                // 上传文件名是 UUID、内容永不改写 → 可安全长缓存，省掉后续每次的 Last-Modified 条件请求
+                .setCachePeriod(86400);
     }
 
     @Override

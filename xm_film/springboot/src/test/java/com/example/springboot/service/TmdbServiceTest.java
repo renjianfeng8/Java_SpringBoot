@@ -175,12 +175,14 @@ class TmdbServiceTest {
     @Test
     void previewReusesExistingTypeRowsInsteadOfCreating() {
         stubHappyPath(List.of("剧情"));
-        when(typeMapper.selectByTitleExact("剧情")).thenReturn(new Type(9, "剧情"));
+        when(typeMapper.selectByTitles(List.of("剧情"))).thenReturn(List.of(new Type(9, "剧情")));
 
         TmdbImportView preview = service.preview(550);
 
         assertThat(preview.getTypeIds()).containsExactly(9);
         verify(typeMapper, never()).insert(any());
+        // 一次批量查询，不再逐类型各查一次（BL-12）
+        verify(typeMapper, times(1)).selectByTitles(List.of("剧情"));
     }
 
     @Test

@@ -2,6 +2,10 @@
 # 不设默认值：缺少 JWT_SIGNING_KEY 时启动即失败，避免把仓库里的字符串当成生产密钥。
 server:
   port: 9090  # 后端接口端口，只提供 /api/v1/** 的 JSON；前端页面访问端口见 vue/vite.config.js 的 server.port
+  # 列表接口的 JSON 动辄几十 KB（/films 实测 42,681B），文本压缩比高。
+  # Tomcat 默认 mime-types 已含 application/json，故只开开关，不重复声明清单。
+  compression:
+    enabled: true
 
 spring:
   config:

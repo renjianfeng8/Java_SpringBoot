@@ -86,6 +86,24 @@ class FilmControllerTest {
                 .andExpect(jsonPath("$.code").value(ErrorCode.PARAM_INVALID.code()));
     }
 
+    /** 下拉选项必须走只取 id/title 的轻量查询，不能退回整表 selectAll（BL-62） */
+    @Test
+    void optionsUsesLightweightQuery() throws Exception {
+        Film film = new Film();
+        film.setId(1);
+        film.setTitle("流浪地球");
+        when(filmService.selectOptions()).thenReturn(List.of(film));
+
+        mockMvc.perform(get("/api/v1/films/options"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data[0].id").value(1))
+                .andExpect(jsonPath("$.data[0].title").value("流浪地球"))
+                .andExpect(jsonPath("$.data[0].content").doesNotExist());
+
+        verify(filmService).selectOptions();
+        verify(filmService, never()).selectAll(any());
+    }
+
     /** 删除必须一次交给 deleteGuarded（锁父行 + 数引用 + 删），不能退回逐条 delete */
     @Test
     void deleteUsesGuardedPath() throws Exception {

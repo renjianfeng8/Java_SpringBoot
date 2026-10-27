@@ -19,7 +19,9 @@ import java.io.IOException;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -89,23 +91,31 @@ public class TmdbService {
         return preview;
     }
 
-    /** 类型名（TMDB 在 zh-CN 下直接给中文）→ type 表 id。有就复用，没有才建。 */
+    /** 类型名（TMDB 在 zh-CN 下直接给中文）→ type 表 id。有就复用，没有才建。一次查回已有行，只对缺失项插入 */
     private List<Integer> resolveTypes(List<String> genreNames, List<String> warnings) {
         List<String> names = TmdbMapping.trimToFormLimit(genreNames);
         if (names.size() < genreNames.size()) {
             warnings.add("TMDB 给出 " + genreNames.size() + " 个类型，表单最多 4 个，已截取前 " + names.size() + " 个");
         }
+        if (names.isEmpty()) {
+            return new ArrayList<>();
+        }
+
+        Map<String, Integer> idByTitle = new HashMap<>();
+        for (Type existing : typeMapper.selectByTitles(names)) {
+            idByTitle.putIfAbsent(existing.getTitle(), existing.getId());
+        }
 
         List<Integer> typeIds = new ArrayList<>();
         for (String name : names) {
-            Type existing = typeMapper.selectByTitleExact(name);
-            if (existing != null) {
-                typeIds.add(existing.getId());
-                continue;
+            Integer id = idByTitle.get(name);
+            if (id == null) {
+                Type created = new Type(null, name);
+                typeMapper.insert(created);
+                id = created.getId();
+                idByTitle.put(name, id);
             }
-            Type created = new Type(null, name);
-            typeMapper.insert(created);
-            typeIds.add(created.getId());
+            typeIds.add(id);
         }
         return typeIds;
     }

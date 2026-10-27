@@ -298,7 +298,7 @@ const loadRoom = () => {
 
 // 片库为全局资源，影院从中选片排期；影院上映列表由排片反推
 const loadFilm = () => {
-  return request.get(API_PATHS.FILMS).then(res => {
+  return request.get(API_PATHS.FILM_OPTIONS).then(res => {
     if (isSuccess(res)) {
       data.filmData = res.data;
     } else {

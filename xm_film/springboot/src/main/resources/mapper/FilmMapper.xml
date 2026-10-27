@@ -99,6 +99,12 @@
         ORDER BY id
     </select>
 
+    <!-- 下拉选项：后台两个下拉原先拉 GET /films 全表（含 content 长文本），实测 42,681B → 2,379B。
+         不要复用 selectAll —— 它带票房聚合与 area/actor JOIN，为了 id+标题不值当。 -->
+    <select id="selectOptions" resultType="com.example.springboot.entity.Film">
+        SELECT id, title FROM film ORDER BY id DESC
+    </select>
+
     <!-- 与其它 film 查询共用票房口径：若这里退回 film.box_office，同一部片会出现
          "搜索结果里票房 0、详情页里是真实值" 的分叉 -->
     <select id="selectByTitle" resultType="com.example.springboot.entity.Film">

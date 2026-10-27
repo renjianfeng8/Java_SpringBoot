@@ -78,6 +78,11 @@ public class FilmService extends BaseService<Film> {
         return filmMapper.selectByTitle(title);
     }
 
+    /** 下拉选项：只有 id/title，不填类型、不做票房聚合 */
+    public List<Film> selectOptions() {
+        return filmMapper.selectOptions();
+    }
+
     public PageInfo<Film> selectPage(Film film, Integer pageNum, Integer pageSize) {
         PageMethod.startPage(pageNum, pageSize);
         List<Film> list = filmMapper.selectAll(film);

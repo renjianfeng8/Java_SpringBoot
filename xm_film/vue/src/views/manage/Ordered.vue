@@ -147,7 +147,7 @@ const { dataList, total, pageNum, pageSize, searchForm, selectedIds, tableRef, l
 // 筛选下拉的候选值。两处列表都不大，进页时一次取回，避免远程搜索的额外交互。
 const filmOptions = ref([])
 const cinemaOptions = ref([])
-request.get(API_PATHS.FILMS).then(res => {
+request.get(API_PATHS.FILM_OPTIONS).then(res => {
   if (isSuccess(res)) filmOptions.value = res.data || []
 }).catch(() => {})
 request.get(API_PATHS.CINEMAS).then(res => {

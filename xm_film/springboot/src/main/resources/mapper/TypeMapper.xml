@@ -28,8 +28,12 @@
     </select>
 
 
-    <select id="selectByTitleExact" resultType="com.example.springboot.entity.Type">
-        SELECT * FROM type WHERE title = #{title} LIMIT 1
+    <!-- 一次取回该批类型名已存在的行，TMDB 导入据此只对缺失项建行（BL-12：原为逐名一次查询） -->
+    <select id="selectByTitles" resultType="com.example.springboot.entity.Type">
+        SELECT * FROM type WHERE title IN
+        <foreach collection="titles" item="title" open="(" separator="," close=")">
+            #{title}
+        </foreach>
     </select>
 
     <!-- 插入操作。useGeneratedKeys 是 TMDB 导入的必需项：建完类型要拿回自增 id

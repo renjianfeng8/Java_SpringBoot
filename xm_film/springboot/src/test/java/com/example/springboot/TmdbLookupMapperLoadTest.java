@@ -12,6 +12,8 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
@@ -23,7 +25,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * <p>
  * 回滚而不是 {@code finally deleteById}：断言失败、JVM 被杀、断电都不会走到 finally，
  * 脏行就留在库里；事务回滚由 Spring 在用例结束后无条件执行。
- * 那些 {@code finally} 块保留，是为了让 {@code selectByTitleExact} 在**同一事务内**
+ * 那些 {@code finally} 块保留，是为了让 {@code selectByTitles} 在**同一事务内**
  * 看不到自己刚插的行之外的行 —— 实际上同名唯一性靠的是标题探针，不是删除。
  * <p>
  * {@code @ActiveProfiles("ci")} 指向独立空结构库 xm_film_test（见 application-ci.yml）：
@@ -47,7 +49,7 @@ class TmdbLookupMapperLoadTest {
 
     @Test
     void typeExactLookupReturnsNullWhenAbsent() {
-        assertThat(typeMapper.selectByTitleExact(PROBE_TITLE)).isNull();
+        assertThat(typeMapper.selectByTitles(List.of(PROBE_TITLE))).isEmpty();
     }
 
     @Test
@@ -66,7 +68,10 @@ class TmdbLookupMapperLoadTest {
             typeMapper.insert(type);
 
             assertThat(type.getId()).isNotNull();
-            assertThat(typeMapper.selectByTitleExact(PROBE_TITLE).getId()).isEqualTo(type.getId());
+            assertThat(typeMapper.selectByTitles(List.of(PROBE_TITLE)))
+                    .singleElement()
+                    .extracting(Type::getId)
+                    .isEqualTo(type.getId());
         } finally {
             if (type.getId() != null) {
                 typeMapper.deleteById(type.getId());

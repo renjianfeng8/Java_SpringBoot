@@ -4,6 +4,8 @@ export const API_PATHS = {
   USERS: '/api/v1/users',
   CINEMAS: '/api/v1/cinemas',
   FILMS: '/api/v1/films',
+  /** 影片下拉：后端只回 id/title，供后台筛选/排片表单使用 */
+  FILM_OPTIONS: '/api/v1/films/options',
   ACTORS: '/api/v1/actors',
   AREAS: '/api/v1/areas',
   TYPES: '/api/v1/types',
