@@ -48,11 +48,19 @@ class AuthInterceptorAccessTest {
         }
     }
 
+    // ========== 经营数据 ==========
+
+    /** 统计驾驶舱只有管理端首页消费；拦截器默认放行非管理员 GET，必须显式进 ADMIN_ONLY。 */
+    @Test
+    void userCannotReachStatisticsDashboard() {
+        assertThat(hasAccess(newInterceptor(), "/api/v1/statistics/overview", "GET", RoleEnum.USER.name())).isFalse();
+        assertThat(hasAccess(newInterceptor(), "/api/v1/statistics/overview", "GET", RoleEnum.ADMIN.name())).isTrue();
+    }
+
     // ========== Film write protection ==========
 
     @Test
-    void cinemaCannotWriteFilms() {
-        assertThat(hasAccess(newInterceptor(), "/api/v1/films", "POST", RoleEnum.CINEMA.name())).isFalse();
+    void cinemaCannotWriteFilms() {        assertThat(hasAccess(newInterceptor(), "/api/v1/films", "POST", RoleEnum.CINEMA.name())).isFalse();
     }
 
     @Test

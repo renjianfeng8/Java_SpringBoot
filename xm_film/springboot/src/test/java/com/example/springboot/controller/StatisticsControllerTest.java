@@ -25,8 +25,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /**
  * 统计大盘：整条端点只对 ADMIN 开放。
  *
- * <p>该前缀没有进 AuthInterceptor 的任何前缀表，因此权限判断只在控制器里，
- * 没有第二道网 —— 这条测试就是那道网。
+ * <p>2026-10-27 起该前缀已进 `AuthInterceptor.ADMIN_ONLY_PREFIXES`，拦截器先返回 403；
+ * 控制器内那道判断保留为第二道网（Interceptors 被绕过的场景）。
  */
 @WebMvcTest(StatisticsController.class)
 class StatisticsControllerTest {
@@ -64,7 +64,7 @@ class StatisticsControllerTest {
         loginAs(7, RoleEnum.CINEMA);
 
         mockMvc.perform(get("/api/v1/statistics/overview").header("Authorization", TOKEN))
-                .andExpect(status().isOk())
+                .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.code").value(ErrorCode.FORBIDDEN.code()));
 
         verify(statisticsService, never()).overview();

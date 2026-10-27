@@ -24,11 +24,15 @@ public class AuthInterceptor implements HandlerInterceptor {
 
     private static final String JSON_CONTENT_TYPE = "application/json;charset=UTF-8";
 
-    private static final Set<String> ADMIN_ONLY_PREFIXES = Set.of(
+    // 包级可见：ControllerAuthClassificationTest 逐条核对每个控制器基路径都被四张表分类，
+    // 新增控制器漏登记时测试变红（拦截器对非管理员默认放行 GET，漏登记=静默放开）。
+    static final Set<String> ADMIN_ONLY_PREFIXES = Set.of(
             "/api/v1/admins",
             // 影院名录：读 /page、/filters 与写 /import 全在后台管理页，无前台消费方，
             // 故整条前缀在此按方法无关拦下（不再拆成 PUBLIC_READ + ADMIN_WRITE 两份）
             "/api/v1/cinema-directory",
+            // 经营驾驶舱：票房、用户数、待办计数，只有管理端首页消费
+            "/api/v1/statistics",
             // TMDB 导入：/search 与 /movie/{id} 是 GET，/backfill-videos 是 POST。
             // 放进这里而不是 ADMIN_WRITE_PREFIXES —— 后者只拦写方法，放不住那两个 GET，
             // 结果是任何登录用户都能触发建行与落盘（与选座越权读同一类缺陷）。
@@ -36,7 +40,7 @@ public class AuthInterceptor implements HandlerInterceptor {
             "/api/v1/tmdb"
     );
 
-    private static final Set<String> ADMIN_WRITE_PREFIXES = Set.of(
+    static final Set<String> ADMIN_WRITE_PREFIXES = Set.of(
             "/api/v1/films",
             "/api/v1/actors",
             "/api/v1/areas",
@@ -45,7 +49,7 @@ public class AuthInterceptor implements HandlerInterceptor {
             "/api/v1/videos"
     );
 
-    private static final Set<String> PUBLIC_READ_PREFIXES = Set.of(
+    static final Set<String> PUBLIC_READ_PREFIXES = Set.of(
             "/api/v1/films",
             "/api/v1/cinemas",
             "/api/v1/types",
@@ -73,7 +77,7 @@ public class AuthInterceptor implements HandlerInterceptor {
      * 新增任何条目都必须同样能回答那五个问题（唯一入参是凭证、凭证不可猜、
      * 一次性、有寿命、不泄露他人数据）。
      */
-    private static final Set<String> ANONYMOUS_WRITE_EXACT = Set.of(
+    static final Set<String> ANONYMOUS_WRITE_EXACT = Set.of(
             "/api/v1/tickets/redeem"
     );
 

@@ -3,82 +3,11 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { clearStoredUser, getStoredUser } from '@/utils/authStorage'
 import { LOGIN_PROMPT_MESSAGE, SITE_NAME, loginPath, pathForRole } from '@/utils/navigation'
 
+import { routes } from './routes'
+
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
-  routes: [
-    { path: '/', redirect: '/front/home' },
-    {
-      // 后台外壳的门禁标在父路由上：子路由只带 name（一处漏写不会让整组裸奔）
-      path: '/manage',
-      component: () => import('../views/Manage.vue'),
-      meta: { requiresAuth: true, roles: ['ADMIN'] },
-      children: [
-        { path: 'home', meta: { name: '管理首页', title: SITE_NAME }, component: () => import('../views/manage/Home.vue') },
-        { path: 'admin', meta: { name: '管理员信息' }, component: () => import('../views/manage/Admin.vue') },
-        { path: 'user', meta: { name: '用户信息' }, component: () => import('../views/manage/User.vue') },
-        { path: 'password', meta: { name: '修改密码' }, component: () => import('../views/manage/Password.vue') },
-        { path: 'person', meta: { name: '个人资料' }, component: () => import('../views/manage/Person.vue') },
-        { path: 'notice', meta: { name: '系统公告' }, component: () => import('../views/manage/Notice.vue') },
-        { path: 'cinema', meta: { name: '影院信息' }, component: () => import('../views/manage/Cinema.vue') },
-        { path: 'type', meta: { name: '电影分类' }, component: () => import('../views/manage/Type.vue') },
-        { path: 'area', meta: { name: '电影地区' }, component: () => import('../views/manage/Area.vue') },
-        { path: 'film', meta: { name: '电影信息' }, component: () => import('../views/manage/Film.vue') },
-        { path: 'video', meta: { name: '电影预告' }, component: () => import('../views/manage/Video.vue') },
-        { path: 'actor', meta: { name: '演职人员' }, component: () => import('../views/manage/Actor.vue') },
-        { path: 'room', meta: { name: '影厅管理' }, component: () => import('../views/manage/Room.vue') },
-        { path: 'cinemaDirectory', meta: { name: '影院名录' }, component: () => import('../views/manage/CinemaDirectory.vue') },
-        { path: 'record', meta: { name: '放映记录' }, component: () => import('../views/manage/Record.vue') },
-        { path: 'ordered', meta: { name: '购票订单' }, component: () => import('../views/manage/Ordered.vue') },
-        { path: 'finance', meta: { name: '充值流水' }, component: () => import('../views/manage/Finance.vue') },
-        { path: 'mark', meta: { name: '用户评价' }, component: () => import('../views/manage/Mark.vue') },
-      ],
-    },
-    {
-      path: '/back',
-      component: () => import('../views/Back.vue'),
-      meta: { requiresAuth: true, roles: ['CINEMA'] },
-      children: [
-        { path: 'home', meta: { name: '影院首页' }, component: () => import('../views/back/Home.vue') },
-        { path: 'film', meta: { name: '电影信息' }, component: () => import('../views/back/Film.vue') },
-        { path: 'room', meta: { name: '影厅管理' }, component: () => import('../views/back/Room.vue') },
-        { path: 'record', meta: { name: '放映记录' }, component: () => import('../views/back/Record.vue') },
-        { path: 'ordered', meta: { name: '购票订单' }, component: () => import('../views/back/Ordered.vue') },
-        { path: 'person', meta: { name: '个人资料' }, component: () => import('../views/back/Person.vue') },
-        { path: 'password', meta: { name: '修改密码' }, component: () => import('../views/back/Password.vue') },
-      ],
-    },
-    {
-      // 前台统一用同一套范式：每个子路由自带 requiresAuth + roles（或 guest）。
-      // 父路由刻意不挂门禁 —— 前台有游客页与会员页混排，父级标记会把游客页一并拦下。
-      path: '/front',
-      component: () => import('../views/Front.vue'),
-      children: [
-        { path: 'home', meta: { guest: true, name: '首页', title: SITE_NAME, nav: { label: '首页' } }, component: () => import('../views/front/Home.vue') },
-        { path: 'orders', meta: { requiresAuth: true, roles: ['USER'], name: '购票记录', nav: { label: '购票记录' } }, component: () => import('../views/front/Orders.vue') },
-        { path: 'account', meta: { requiresAuth: true, roles: ['USER'], name: '我的账户', nav: { label: '我的账户' } }, component: () => import('../views/front/Account.vue') },
-        { path: 'buyTicket', meta: { requiresAuth: true, roles: ['USER'], name: '购票' }, component: () => import('../views/front/BuyTicket.vue') },
-        { path: 'person', meta: { requiresAuth: true, roles: ['USER'], name: '个人中心' }, component: () => import('../views/front/Person.vue') },
-        { path: 'password', meta: { requiresAuth: true, roles: ['USER'], name: '修改密码' }, component: () => import('../views/front/Password.vue') },
-        // 支付密码：设置 / 修改 / 忘记重设三态同页，余额支付的前置条件
-        { path: 'payPassword', meta: { requiresAuth: true, roles: ['USER'], name: '支付密码' }, component: () => import('../views/front/PayPassword.vue') },
-        { path: 'movie', meta: { guest: true, name: '电影列表', nav: { label: '电影', sections: ['/front/movie', '/front/search', '/front/filmDetail', '/front/filmCinema', '/front/filmMarks'] } }, component: () => import('../views/front/Movie.vue') },
-        { path: 'cinema', meta: { guest: true, name: '影院列表', nav: { label: '影院', sections: ['/front/cinema', '/front/cinemaDetail'] } }, component: () => import('../views/front/Cinema.vue') },
-        { path: 'rank', meta: { guest: true, name: '排行榜', nav: { label: '排行榜' } }, component: () => import('../views/front/Rank.vue') },
-        // 取票大厅是自助机口径：免登录，凭取票码核销（见后端 TicketController）
-        { path: 'pickup', meta: { guest: true, name: '取票大厅', nav: { label: '取票大厅' } }, component: () => import('../views/front/Pickup.vue') },
-        { path: 'filmDetail/:id', meta: { guest: true, name: '电影详情' }, component: () => import('../views/front/FilmDetail.vue') },
-        // 影评页：只从影片详情页与购票记录两处进入，不进顶部导航（guest 可读，游客也能看别人的评价）
-        { path: 'filmMarks/:id', meta: { guest: true, name: '影评' }, component: () => import('../views/front/FilmMarks.vue') },
-        { path: 'filmCinema/:id', meta: { guest: true, name: '选择影院' }, component: () => import('../views/front/FilmCinema.vue') },
-        { path: 'cinemaDetail/:id', meta: { guest: true, name: '影院详情' }, component: () => import('../views/front/CinemaDetail.vue') },
-        { path: 'search', meta: { guest: true, name: '搜索结果' }, component: () => import('../views/front/Search.vue') },
-      ],
-    },
-    { path: '/404', meta: { name: '404', title: '404页面', guest: true }, component: () => import('../views/404.vue') },
-    { path: '/login', meta: { name: '登录', title: '欢迎登录电影购票系统', guest: true }, component: () => import('../views/Login.vue') },
-    { path: '/register', meta: { name: '注册', title: '欢迎注册电影购票系统', guest: true }, component: () => import('../views/Register.vue') },
-    { path: '/:pathMatch(.*)*', redirect: '/404' },
-  ],
+  routes,
 })
 
 // 登录引导确认框的「在途」标志：受保护页上双击链接会重入守卫，

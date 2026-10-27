@@ -1,0 +1,69 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: 后端测试
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: "123456"
+          MYSQL_ROOT_HOST: "%"
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -p123456 --silent"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+      # 测试库只需要结构：@SpringBootTest 的绑定层测试不依赖任何业务数据
+      - name: 建测试库
+        run: |
+          mysql -h127.0.0.1 -uroot -p123456 -e \
+            "CREATE DATABASE \`xm_film_test\` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+          mysql -h127.0.0.1 -uroot -p123456 xm_film_test \
+            < xm_film/springboot/src/test/resources/db/schema.sql
+      - name: mvn test
+        run: mvn -B -f xm_film/springboot/pom.xml test
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: surefire-reports
+          path: xm_film/springboot/target/surefire-reports
+
+  frontend:
+    name: 前端 lint / 单测 / 构建
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: xm_film/vue
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: xm_film/vue/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
+
+# e2e（Playwright 冒烟）刻意不进 CI：它需要 demo-data 的业务基础数据，而本仓不含业务数据行。
+# 本地跑法见 xm_film/vue/e2e/README.md。

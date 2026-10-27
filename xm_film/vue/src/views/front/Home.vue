@@ -191,7 +191,7 @@
             >
               <div class="rank-badge" :class="rankBadgeClass(index)">{{ index + 1 }}</div>
               <div class="rank-row__poster">
-                <img :src="movie.img" :alt="`《${movie.title}》海报`" class="rank-row__img">
+                <img :src="movie.img" :alt="`《${movie.title}》海报`" class="rank-row__img" loading="lazy" decoding="async">
               </div>
               <div class="rank-row__body">
                 <div class="rank-row__title">{{ movie.title }}</div>

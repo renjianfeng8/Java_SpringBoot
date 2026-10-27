@@ -75,3 +75,8 @@ JIANLI.txt
 
 # === Playwright MCP artifacts ===
 .playwright-mcp/
+
+# === Playwright（e2e）产物 ===
+test-results/
+playwright-report/
+blob-report/

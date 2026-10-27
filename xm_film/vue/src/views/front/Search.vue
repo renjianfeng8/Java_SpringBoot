@@ -17,7 +17,7 @@
           :to="`/front/filmDetail/${film.id}`"
       >
         <div class="film-row__poster">
-          <img :src="film.img" :alt="`《${film.title}》海报`" class="film-row__img">
+          <img :src="film.img" :alt="`《${film.title}》海报`" class="film-row__img" loading="lazy" decoding="async">
           <!-- 评分压在图上（--color-rating 可用于图片叠加）。
                垫一层 --overlay-mask 就不需要给文字描边，也就不再手写 text-shadow -->
           <span v-if="scoreText(film)" class="film-row__score">{{ scoreText(film) }}</span>

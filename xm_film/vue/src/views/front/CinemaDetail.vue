@@ -108,6 +108,7 @@
                     :src="row.film.img"
                     :alt="`《${row.film.title || '影片'}》海报`"
                     class="film-row__img"
+                    loading="lazy" decoding="async"
                 >
               </div>
 

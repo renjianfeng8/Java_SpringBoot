@@ -78,7 +78,7 @@
             <div v-for="(cinema, index) in cinemaData.filmData" :key="index" class="cinema-card">
               <!-- 1. 图片容器 -->
               <div class="cinema-card__poster">
-                <img :src="cinemaCoverSrc(cinema.avatar)" :alt="`${cinema.name || '影院'} 图片`" class="cinema-card__img" @error="onCinemaCoverError">
+                <img :src="cinemaCoverSrc(cinema.avatar)" :alt="`${cinema.name || '影院'} 图片`" class="cinema-card__img" loading="lazy" decoding="async" @error="onCinemaCoverError">
               </div>
 
               <!-- 2. 信息容器 -->
