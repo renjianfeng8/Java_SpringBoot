@@ -5,7 +5,7 @@
 ## 1 角色
 
 三个账号表各自独立、互不 JOIN：`admin`（角色 ADMIN）、`cinema`（CINEMA）、`user`（USER，有余额与支付密码）。
-`entity/Account` 是三者的父类（**无对应表**），`token` / `newPassword` 挂在它上面（BL-19）。
+`entity/Account` 是三者的父类（**无对应表**），`token` / `newPassword` 挂在它上面（既定取舍，不打算拆）。
 
 管理员重置他人登录密码只走 `PUT /auth/password/reset`，只允许 ADMIN，不校验旧密码，新密码 6–64 位并一律 BCrypt 入库；重置会吊销该账号已签发的 JWT（`TokenRevocationService` 按 `iat` 截断，本人改密同样生效），旧令牌在下一次请求即被视为失效。管理端订单的取消/退票复用同一状态机，管理员也不能绕过映前 60 分钟退款截止。
 
@@ -30,7 +30,7 @@
 | 排片冲突 | `countRoomOverlap(room, id, start, start+片长)`；**先锁影厅行再查（当前读）** | `validateSchedule`；见下 |
 | 片长兜底 | 影片 `time` ≤ 0 时用 120 分钟 | `DEFAULT_DURATION_MINUTES` |
 | 删除守卫 | 已产生订单的场次禁止物理删除；`deleteScoped` 先锁行再数订单 | `ensureNoOrders`（BL-02，见 §2.2） |
-| `room.title` | 存的是**影院名**，`room.name` 才是影厅名 | BL-23 |
+| `room.title` | 存的是**影院名**，`room.name` 才是影厅名；无展示点，不打算改 | — |
 
 ### 2.1 排片并发（BL-01，2026-10-18 修复）
 
@@ -288,7 +288,7 @@ createRecharge（仅 USER，>0 且 ≤50000，建「处理中」单据，不动�
 - 现状是 **1:1**：`film.actor_id` 指向 `actor.id`；`actor.film_id` 是另一套未使用的 1:N 关联（65 行全 NULL → 实际 0 行使用）。
 - 前端详情页按 `grade` 分四组（导演/主演/编剧/二级演员），但库中 65 行 `grade` 全为「主演」，故只有一组有数据。属正确空态，不是死 UI。
 - `figure` = 饰演角色名（如 `Andy Dufresne`），`grade` = 所属角色。FE-48 曾误读 `roleType`/`role` 两个不存在的键，已修。
-- 多角色 1:N 属新特性，见 BL-41。
+- 多角色 1:N 属新特性，已按「不做」关闭，不再跟踪。
 
 ## 9 影院名录（cinema_directory）
 

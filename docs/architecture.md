@@ -113,9 +113,9 @@ dto/request (32) dto/response (34) ── HTTP 边界只用 DTO，实体不出 c
 
 ## 6 数据边界
 
-- 实体与表一一对应，**join 派生字段**（`Film.areaName/typeList`、`Ordered.filmName` 等）直接挂在实体上（BL-18）。
-- 金额：`unitPrice` / `ordered.total/payAmount/refundAmount` / `recharge_order.amount` / `fund_flow.*` 均为 `BigDecimal`；唯一例外是已废弃、恒为 0 的 `film.box_office`（BL-24 已完成）。
-- 时间：绝大多数是 `String`（`yyyy-MM-dd HH:mm:ss`），唯一例外 `CinemaDirectory.createTime` 是 `LocalDateTime`（BL-22）。
+- 实体与表一一对应，**join 派生字段**（`Film.areaName/typeList`、`Ordered.filmName` 等）直接挂在实体上；这是既定取舍，不打算改。
+- 金额：`unitPrice` / `ordered.total/payAmount/refundAmount` / `recharge_order.amount` / `fund_flow.*` 均为 `BigDecimal`；唯一例外是已废弃、恒为 0 的 `film.box_office`。
+- 时间：绝大多数是 `String`（`yyyy-MM-dd HH:mm:ss`），唯一例外 `CinemaDirectory.createTime` 是 `LocalDateTime`（无消费者，不打算改）。
 - 状态：中文枚举值（`common/enums/OrderStatus` 等），库端已加 `CHECK`（film/record/ordered/recharge_order/cinema 的 status 与三张账号表的 role），非法值由数据库拒绝（2026-10-27，`StatusConstraintLoadTest`）。
 
 ## 7 前端结构

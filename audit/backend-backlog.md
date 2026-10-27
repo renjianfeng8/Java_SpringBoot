@@ -6,11 +6,11 @@
 
 本文件是本仓唯一的技术债登记处，承接已删除的 `后端代码规范审查报告.md`（**该文件已不在仓内**，以下为历史引用）的全部"登记备查"项，并汇总 2026-10-13 两轮代码审查（`entity/`、`service/`）、2026-10-14 控制器层审查（`controller/`）、2026-10-14 mapper 层审查（`mapper/`）与 2026-10-14 DTO 层审查（`dto/`）中判定延后或建议的条目。已完成项不进本表；已判定非缺陷的条目集中在末节，避免二次误报。2026-10-15 承 FE-48 契约对齐复查演职人员数据模型，补登 BL-41；同日做纯清理四项（BL-28/33/34/38），另登记 BL-42（同形字符串筛选未做）、BL-43（UserController 读口径分歧）。
 
-维护口径：一处事实一处归属；每条给出 `文件` 与符号，行号随改动可能漂移、以符号为准。状态分三档：待办、有意不整改（与既定政策一致，非债务）、已核验非缺陷；修复完成的条目从表中移出，在该节以「本轮修复并移出本表」一句登记。
+维护口径：一处事实一处归属；每条给出 `文件` 与符号，行号随改动可能漂移、以符号为准。状态分三档：待办、有意不整改（与既定政策一致，非债务）、已核验非缺陷；修复完成的条目从表中移出，在该节以「本轮修复并移出本表」一句登记；判定不做的条目直接删除，只留一行「关闭记录」（编号 + 理由），避免下一轮重新论证。
 
 更新日期：2026-10-27。当前代码基线：`master` @ `e502811f`；历史清单基线 `bfdd1c07`、`a2144fc4`，复核基线 `3112f8b7`，Sonar 扫描基线 `0ff8331c`。
 
-**当前实测基线**：`mvn test` = **551/551 通过，74 个测试文件**（2026-10-27）。历史记录：2026-10-26 428/428、2026-10-25 414/414、2026-10-22 403/403、2026-10-20 398/398、2026-10-19 343/343、2026-10-18 309/309。开发库 `xm-film` 已由 `springboot/demo-data.sql` 补入演示影厅、排片与账号，购票主链已实测跑通。
+**当前实测基线**：`mvn test` = **555/555 通过，75 个测试文件**；前端 `npm test` 37 条、`npm run test:e2e` 5 条（2026-10-27）。历史记录：2026-10-26 428/428、2026-10-25 414/414、2026-10-22 403/403、2026-10-20 398/398、2026-10-19 343/343、2026-10-18 309/309。开发库 `xm-film` 已由 `springboot/demo-data.sql` 补入演示影厅、排片与账号，购票主链已实测跑通。
 
 **状态口径**：SEC-01/02/03 已于 2026-10-25 修复（见 §安全 的修复记录），历史证据保留；不再作为未修漏洞跟踪。
 
@@ -77,11 +77,11 @@
 - **SEC-01**：`RechargeService.handleCallback` 改为仅接受 ADMIN；用户端「模拟支付回调」按钮移除，管理员在「充值流水」页通过/拒绝。真实网关接入时再加签名/查单，当前不再存在“任意用户给自己充值”的路径。
 - **SEC-02**：`jwt.signing-key` 改为从 `.env` 的 `JWT_SIGNING_KEY` 读取，`JwtUtils` 启动时校验长度 ≥ 32 字节；TMDB token、Amap key、DB 口令也一并移入 `.env`（模板见 `.env.example`，`.env` 不入库）。
 - **SEC-03**：删除 `PasswordMatcher` 的 `raw.equals(stored)` 回退；新增 `PlaintextPasswordMigration`，启动时把 user/admin/cinema 的登录口令与 user.pay_password 中的明文统一转成 BCrypt。
-- 守卫：新增 `PlaintextPasswordMigrationTest`、`FileUploadControllerTest`；`mvn test` = **548/548 通过，72 个测试文件**（2026-10-27）。
+- 守卫：新增 `PlaintextPasswordMigrationTest`、`FileUploadControllerTest`；`mvn test` 现为 **555/555 通过，75 个测试文件**（2026-10-27）。
 
 **连带发现（中危，未逐条实测）**：
 
-- `FileUploadController` 对**任意登录角色**开放、无配额（`application.yml` 单文件 50MB）—— 可反复上传填满磁盘。
+- `FileUploadController`：非管理员已限「仅 `image/*` 且 ≤2MB」，另有 1GB 余量下限；管理员仍可传 50MB 视频且无按账号配额 —— 属「管理员可信」的既定取舍，不再当漏洞跟踪。
 - `FileUtil` 只信客户端 `Content-Type`，不嗅探文件头 —— 可上传伪装成 png 的任意内容（**不构成 XSS**：扩展名由服务端白名单决定，且不含 svg）。
 - ~~`CinemaService.importFromDirectory` 批量影院共用默认密码 `cinema123` 且直接 `APPROVED`，用户名规则 `amap_+poiId` 可推导。~~ **2026-10-20 已修复**：每个账号独立随机初始口令（12 位，`SecureRandom`），明文只在导入响应中返回一次；`insertCinema` 不再回退默认口令。见 §SonarQube 静态扫描。
 - ~~登录**无失败锁定**（只有支付密码有 5 次/15 分钟锁定），可暴力撞库。~~ **2026-10-25 已修复**：`AuthService` 统一接入 `LoginAttemptService`，同一角色 + 账号连续失败 5 次锁 15 分钟；2026-10-26 起计数按库中解析出的账号 id，大小写/重音/全角拼写变体不能各拿一份 5 次。仍是单进程内存计数，重启清零、多实例不共享。
@@ -181,7 +181,7 @@
 
 ## 测试覆盖缺口（2026-10-27 已关闭）
 
-23 个 Controller 全部有直接测试；Service、定时任务与异常分支已补齐；mapper XML 参数名有静态守卫（`MapperXmlParameterGuardTest`）与真库执行测试（`MarkEligibilityMapperLoadTest`）。当前 74 文件 / 551 条；前端已接入 Vitest（33 条），组件渲染与端到端仍靠构建 + 无头 Chrome。
+23 个 Controller 全部有直接测试；Service、定时任务与异常分支已补齐；mapper XML 参数名有静态守卫（`MapperXmlParameterGuardTest`）与真库执行测试（`MarkEligibilityMapperLoadTest`）。当前 75 文件 / 555 条；前端 Vitest 37 条 + Playwright 冒烟 5 条。
 
 历史备忘：`OrderedMapper.countPickedUpByUserAndFilm` 曾因 XML 写 `#{pickedUp}` 而方法签名只有 `userId/filmId`，评论区与发评价在真库上恒抛 `BindingException`；已改走 `@Param("s") OrderStatusCriteria` 并用真库测试钉住。`demo-data.sql` 重跑的余额漂移已由 §1 重置起点修复，末尾 7 项自检全 0。
 
@@ -197,13 +197,11 @@
 
 | 编号 | 位置 | 问题 | 处置建议 |
 | --- | --- | --- | --- |
-| BL-09 | service/RecordService/RoomService/UserService.deleteBatchScoped | 批量删除逐个 id 查存在性与引用计数，N 个选中 = 2~3N 次查询（RoomService 最重）。 | 增加按 IN 批量的 selectByIds 与 countByXxxIds，单批降至 1~2 次查询。**未做**：逐条 `selectByIdForUpdate` 是 BL-02/BL-44 的锁语义本体，改成 IN 批量锁会改变加锁顺序与间隙锁范围，须连同守卫测试另立一轮。 |
-| BL-59 | mapper/FilmMapper.xml:12-19、65-84 | 所有影片列表/详情/榜单/搜索都 `LEFT JOIN` 一个**全表 `ordered` 聚合子查询**；首页一次加载触发 3 次（`/films`、票房 Top、评分 Top）。EXPLAIN 当前扫 243 行。 | 数据量上来后考虑 `(status, film_id, total)` 覆盖索引；或把 `film.box_office` 恢复为支付/退票时维护的派生列；或只对需要票房的接口带聚合。 |
-| BL-62 | common/BaseController.list；mapper/FilmMapper.selectAll | 集合根的分页上限已由 `MAX_LIST_SIZE = 500` 兜住，但列表仍全列返回（含 `content` 长文本）。首页的浪费已由 FE-69 改走 `/films/page` 解决；后台影片表仍需全列（气泡与编辑表单），故列表投影暂不动。 | 列表改投影/分页（详情仍走 `/{id}`）。 |
+| BL-59 | mapper/FilmMapper.xml:12-19、65-84 | 所有影片列表/详情/榜单/搜索都 `LEFT JOIN` 一个**全表 `ordered` 聚合子查询**；首页一次加载触发 3 次（`/films`、票房 Top、评分 Top）。EXPLAIN 当前扫 243 行。 | 只做一行 DDL：加 `(status, film_id, total)` 覆盖索引，让聚合走索引扫描。不重写 SQL、不改派生列。 |
 
 **2026-10-25 已修复并移出本表**：BL-58（mapper 日志默认 INFO，需要 SQL 时在 `.env` 设 `logging.level.com.example.springboot.mapper=DEBUG`）。
 
-**2026-10-27 修复并移出本表**：BL-12（类型判重改为 `TypeMapper.selectByTitles(IN ...)` 一次取回，导入从 ≤4 次查询降到 1 次）、BL-56（`/files/**` 加 `setCachePeriod(86400)`）、BL-57（`server.compression.enabled=true`，Tomcat 默认 mime-types 已含 `application/json`）、BL-62 的下拉部分（新增 `GET /films/options` 只回 id/title，后台两个下拉由 42,681B 降到 2,379B）。仍成立：BL-09 与 BL-62 的列表投影。
+**2026-10-27 修复并移出本表**：BL-12（类型判重改为 `TypeMapper.selectByTitles(IN ...)` 一次取回，导入从 ≤4 次查询降到 1 次）、BL-56（`/files/**` 加 `setCachePeriod(86400)`）、BL-57（`server.compression.enabled=true`，Tomcat 默认 mime-types 已含 `application/json`）、BL-62（下拉改 `GET /films/options`，后台两个下拉由 42,681B 降到 2,379B；列表投影按「后台表格需要全列」关闭）。
 
 ## 重复代码与可维护性（2026-10-20 专项：BL-13/14/15/16 已修复）
 
@@ -226,9 +224,7 @@
 **反证记录**：`PriceParser` 错误码改回 `SYSTEM_ERROR` → 对应用例红；
 `SeatParser` 去掉规范化（改回存 `raw`）→ 防双卖用例红。两次均确认已精确还原。
 
-| 编号 | 位置 | 问题 | 处置建议 |
-| --- | --- | --- | --- |
-| BL-17 | service/RecordService/RoomService 的 requireAdminOrCinema、applyCinemaScope；OrderedService/RecordService/RoomService 的 ensureXxxAccess | ADMIN 放行、CINEMA 归属 的守卫与 scope 谓词按实体各写一份。 | 在 AuthContext 旁抽统一的角色守卫。**未做**：与 BL-13 不同，这几处的差异是真实的实体语义（谁的 id、查哪张表），强行合并会引入参数化歧义，收益低于风险。 |
+**2026-10-27 关闭**：BL-17（统一角色守卫）—— 各处差异是真实的实体语义，硬合并会引入参数化歧义。本节没有在跟踪的条目。
 
 ## 数据库设计（2026-10-20 专项）
 
@@ -237,17 +233,15 @@
 | 编号 | 问题 | 实测/复核 | 处置 |
 | --- | --- | --- | --- |
 | **BL-31** | 状态值有**三份副本**：库列（无约束）、Java `*Status` 常量、mapper XML 里的中文字面量 | 状态列是 `varchar(20)`，库层不拒绝任何字符串。改了常量名或取值，编译器和数据库都不报错，SQL 只是从此匹配 0 行 —— 表现为「核销没反应」「超时单清不掉」，日志里一切正常 | **已修复**：新增 `common/OrderStatusCriteria`，mapper 通过 `@Param("s")` 取值，`OrderedMapper.xml` 里的状态字面量全部消除。唯一例外是 `paidOrderStatuses`（被 `FilmMapper` 跨 namespace 静态引用，那里 8 个方法都没有参数入口），由 `StatusLiteralGuardTest` 钉住 |
-| **BL-53** | `ordered.seat` 是逗号分隔串，占用检查用 `FIND_IN_SET` | 这不是单纯的设计口味：查重逐字节比对，`1排01座` 与 `1排1座` 在库里是两个不同的串 | **只加固、不改表**：规范化收敛到 `common/SeatParser`（上一轮），并有故障注入测试。拆成 `order_seat` 子表属"改表"量级（建表 + 迁移存量串 + 改写占用检查 + 十余处展示契约），留待与 BL-18/19/20 同轮。原误用 BL-30，2026-10-22 改为 BL-53；BL-30 保留给文件上传 |
-| **BL-24** | 订单 `total/payAmount/refundAmount` 用 `Double` | **纠正原描述**：库列早已是 `decimal(10,2)`，Double 只在 Java 侧。实测 `BigDecimal → double → BigDecimal.valueOf` 在 decimal(10,2) 范围内**往返无损**（8 组样本 0 损失），但这个结论依赖 `valueOf` 走 `Double.toString`，是巧合不是保证；累加才会失真，而代码里金额聚合都在 SQL 里 | **已修复**：4 个类的 3 个金额字段全部改 `BigDecimal`，`OrderedService` 里两处 `doubleValue()`/`valueOf()` 转换随之消失。JSON 形态实测仍为数字（`45.5`），前端 `Number(...)` 与插值行为不变。**`Film.boxOffice` 未改**：该列已废弃（恒 0，票房实时聚合），一并改会牵动 FilmMapper 的 `COALESCE(rev.revenue, 0)` 与前端榜单 |
+| **BL-53** | `ordered.seat` 是逗号分隔串，占用检查用 `FIND_IN_SET` | 这不是单纯的设计口味：查重逐字节比对，`1排01座` 与 `1排1座` 在库里是两个不同的串 | **关闭，不改表**：防双卖已由「排片行锁 + `SeatParser` 规范化」保证，并有故障注入测试；没有按座位退票/热度统计的需求，拆子表只增加迁移风险 |
+| **BL-24** | 订单 `total/payAmount/refundAmount` 用 `Double` | **纠正原描述**：库列早已是 `decimal(10,2)`，Double 只在 Java 侧。实测 `BigDecimal → double → BigDecimal.valueOf` 在 decimal(10,2) 范围内**往返无损**（8 组样本 0 损失），但这个结论依赖 `valueOf` 走 `Double.toString`，是巧合不是保证；累加才会失真，而代码里金额聚合都在 SQL 里 | **已修复**：4 个类的 3 个金额字段全部改 `BigDecimal`，`OrderedService` 里两处 `doubleValue()`/`valueOf()` 转换随之消失。JSON 形态实测仍为数字（`45.5`），前端 `Number(...)` 与插值行为不变。`Film.boxOffice` 按「列已废弃恒 0」关闭 |
 
 **本轮刻意未做（写明理由，避免被当成遗漏）**：
 
 | 事项 | 未做的原因 |
 | --- | --- |
-| 给状态列加库级 `CHECK` | MySQL 8 的 CHECK 能拦非法写入，但需要先校验存量数据、并同步测试库与演示数据脚本；本轮改动已能保证**读路径**不吃到非法值（取值来自常量），写入路径由 Service 归一化。加约束属下一轮的迁移工作 |
-| `seat` 拆子表 | 见 BL-53，改表 + 迁移 + 十余处契约，风险量级不同 |
+| `seat` 拆子表 | 见 BL-53，已按「不改表」关闭 |
 | `Film.boxOffice` 改 BigDecimal | 列已废弃、恒为 0；改它只增加 diff 不增加正确性 |
-| 重新生成 schema 快照 | 本轮**没有改任何列类型**，快照仍然准确。重跑 `dump-schema.py` 只会产生 AUTO_INCREMENT 漂移与编码转义噪音 |
 
 **故障注入反证**：在 `OrderedMapper.xml` 里把一个参数化的状态改回裸字面量 `'待取票'` → `StatusLiteralGuardTest` 立刻红，报「出现了裸状态字面量，应改为 #{s.xxx}」（已确认还原）。
 
@@ -255,23 +249,15 @@
 
 ## 实体层遗留（承接 S10）
 
-| 编号 | 位置 | 问题 | 处置建议 |
-| --- | --- | --- | --- |
-| BL-18 | entity/ 全 17 类 | 实体混入非持久化展示/派生字段并直接对外：Film.areaName/typeList、Cinema.province/city/district、Ordered/Mark/Record 的 join 字段。 | S10 展示字段剥离，移入对应 View（需改 JOIN 查询 resultType 与 Service 签名）。架构级，用户另立一轮。 |
-| BL-19 | entity/Account 及 User/Admin/Cinema | token/newPassword 置于 Account 被三子类继承；三子类 @AllArgsConstructor 只覆盖自身字段、不含父字段（误用会建出 role/password 为 null 的账号，当前无调用者）。 | S10 继承解耦，把 token/newPassword 移出 Account（需改 login/updatePassword 签名）。 |
-| BL-20 | entity/Admin 与 entity/User | 两实体字段完全一致；avatar/phone 在 Admin/User/Cinema 三处重复声明。 | 上提至 Account 或抽 Profile 基类（与 BL-19 同轮）。 |
-| BL-22 | entity/CinemaDirectory.createTime | 全仓唯一非 String 时间字段（LocalDateTime），序列化为 ISO 带 T 串，与其余 String 时间字段口径不一；前端未读取。 | 统一为 String，或全仓统一改 LocalDateTime（需联动 mapper/DTO/前端）。 |
-| BL-23 | entity/Room.title | 存的是所属影院名（RoomService 由 cinema.getName() 派生），而 name 才是影厅自身名。命名与语义不符，是未标注的冗余快照。 | 改名或去除（需联动 mapper/Service/前端）。 |
-| BL-24 | entity/Ordered 的 total/payAmount/refundAmount、entity/Film.boxOffice | 金额用 Double，而同实体 unitPrice、RechargeOrder.amount、FundFlow 各额均 BigDecimal。 | **订单三字段已改为 BigDecimal（2026-10-20）**，详见上文 §数据库设计。`Film.boxOffice` 未改（列已废弃、恒为 0）。 |
-| BL-41 | 库表 actor 的关联列（`film.actor_id` 与 `actor.film_id`）；views/front/FilmDetail.vue 的四分组 | 演职人员与影片的关联存在两套机制：`film.actor_id` 单值外键（1:1，在用，FilmMapper 多处 JOIN）与 `actor.film_id`（库中已建且带非唯一索引，但全仓无任何读写、`film_id IS NOT NULL` 实测 0 行）。前端按 `grade` 分导演/主演/编剧/二级演员四组，但库中 actor 65 行 `grade` 全为「主演」、film 又只关联单行，故非主演三组无数据可显。 | 要支持多角色展示须先定唯一关联口径（保留 `film.actor_id` 还是改走 `actor.film_id`，二者不可并存），再落 1:N 写路径 + 数据导入；当前无数据、无写路径，属新特性而非缺陷，另立一轮。FE-48 的「读错键名」缺陷已在前端就地修复（见前端审计报告）。 |
+**2026-10-27 全部关闭，不再跟踪**：BL-18（展示字段剥离）、BL-19（token/newPassword 移出 Account）、BL-20（Admin/User 合并）、BL-22（时间字段统一）、BL-23（Room.title 语义）、BL-24 残留（`Film.boxOffice` 改 BigDecimal）、BL-41（演职人员 1:N）。
+
+判断口径：这些改动都不改变任何一次请求的行为，却要同时动实体、mapper、Service 与前端；`Room.title` 与 `Cinema.province/city/district` 已核验全仓无展示点，`boxOffice` 列已废弃恒 0。收益低于风险与噪音。
 
 ## 规范建议遗留（承接 S4/S6/S15）
 
-| 编号 | 位置 | 问题 | 处置建议 |
-| --- | --- | --- | --- |
-| BL-25 | S4：controller/OrderedController、MarkController、CinemaDirectoryController、TicketController | 路径用动词（/create、/cancel、/pay、/refund、/{id}/like、/redeem）；/import/preview 只读却用 POST；PUT 被用于 cancel/pay 等非幂等语义。 | 改资源式路径与方法（需联动前端与 AuthInterceptor 白名单）。对本地演示无收益，2026-10-12 已决定跳过。 |
-| BL-26 | S6：exception/GlobalExceptionHandler | 全局异常一律 HTTP 200、业务码在 body。凭证类错误（约 10 处）用 UNAUTHORIZED，若改 HTTP 状态会令"输错支付密码"→401→前端清会话跳登录；且前端约 5 处依赖 `code !== 200` 做功能分支。 | 先重判凭证类业务码，再连同前端一起改。已决定跳过。 |
-| BL-27 | S15 纯风格项：test/ 根包类、*LoadTest 命名、GlobalExceptionHandlerTest 名实不符、JUnit Assertions 与 AssertJ 并存、OrderedServiceTest 用 @SpringBootTest 而非 MockitoExtension | 不改变覆盖与行为，翻动面大、收益低。 | 已决定跳过。 |
+**2026-10-27 全部关闭，不再跟踪**：BL-25（REST 化路径与方法）、BL-26（全局异常改真实 HTTP 状态码）、BL-27（测试命名与 JUnit/AssertJ 风格）。
+
+判断口径：三条都不改变任何用户可见行为，却要联动前端约 5 处 `code !== 200` 分支与全部测试；对本地演示无收益。
 
 ## 健壮性（低优先 / 未证实可达）
 
@@ -279,9 +265,7 @@
 
 2026-10-15 补充（同层；与前端 FE-34 同形）：common/config/AuthInterceptor 的三个前缀集合原本用裸 `startsWith` 匹配，没有路径分隔符边界 —— 与某个前缀只差字符相邻的新端点会静默继承该档位（放行的被多放行、拦下的被多拦下）。已抽出 `matchesPrefix`（相等，或以 `前缀 + '/'` 开头），`isAnonymousRead` / `hasAccess` 三处调用点全部换用；AuthInterceptorAccessTest 补 3 条用例，其中 2 条在改回裸匹配时各失败一条（已实测）。全部 23 个控制器基路径实测无碰撞，即改动前也无可达缺陷，属防未来误判。
 
-| 编号 | 位置 | 问题 | 处置建议 |
-| --- | --- | --- | --- |
-| BL-29 | entity/Cinema.province/city/district | /auth/me 与 /login 经 CinemaMapper.selectById/selectByUsername（SELECT *，无 JOIN）取影院，区域字段恒为 null；/cinemas/page 则有值。UNCERTAIN：当前无前端读取该路径的区域。 | 若需在登录态展示区域，给该查询补 JOIN。 |
+**2026-10-27 关闭**：BL-29（`/auth/me` 的影院区域恒为 null）—— 全仓无消费者，前端只从 `/cinemas/page` 取区域。本节没有在跟踪的条目。
 
 ## 控制器层遗留（2026-10-14 控制器审查）
 
@@ -289,19 +273,17 @@
 
 | 编号 | 位置 | 问题 | 处置建议 |
 | --- | --- | --- | --- |
-| BL-30 | controller/FileUploadController.uploadFile（落盘在 common/FileUtil） | `/api/v1/files/upload` 不在 ADMIN_WRITE_PREFIXES / ADMIN_ONLY_PREFIXES，任何已登录角色（含 USER）都能上传。本轮已把落盘扩展名从客户端文件名改为按已校验 MIME 派生（堵掉 `.html` 落盘 + MIME 可伪造那条），但"谁可上传"未收紧。UNCERTAIN：CINEMA 自助改头像/资料是否依赖此端点。 | 确认用途后给前缀加写门禁，或按角色拆端点。 |
-| BL-54 | controller/CinemaDirectoryController.page | 本轮已给 BaseController 抽出 `toPageView`，但本类不继承 BaseController，`PageInfo` 拷贝 + toView 映射仍自成一份（与 BL-13 同类的映射重复）。原误用 BL-31，2026-10-22 改为 BL-54。 | 抽静态 `PageMapper.map(PageInfo<S>, Function<S,T>)`，基类与独立控制器共用。 |
 | BL-32 | controller/AuthController.updatePassword、me | 手工 `httpRequest.getAttribute("userId"/"role")` 再 `Integer.valueOf`，绕过 AuthContext.role()/userId()；身份存放方式一改此处静默失效（AuthContext 类注释正警告此坑）。 | 改用 AuthContext（`me` 的 userId 参数需由 String 放宽为 Integer）。 |
-| BL-35 | controller/StatisticsController.overview、controller/AccountController.requireUser | 角色门禁在方法内逐端点各写一份（`/api/v1/statistics` 未进任何前缀表），新增端点易漏（与 BL-17 同类）。 | 统计前缀加 ADMIN_ONLY_PREFIXES；账户前缀加统一 USER 守卫，或与 BL-17 同轮抽统一守卫。 |
+| BL-54 | controller/CinemaDirectoryController.page | 本轮已给 BaseController 抽出 `toPageView`，但本类不继承 BaseController，`PageInfo` 拷贝 + toView 映射仍自成一份（与 BL-13 同类的映射重复）。原误用 BL-31，2026-10-22 改为 BL-54。 | 抽静态 `PageMapper.map(PageInfo<S>, Function<S,T>)`，基类与独立控制器共用。 |
 | BL-43 | controller/UserController.getById | 管理员查不存在的 id 返回 200 + `data:null`；Record/Room/Ordered 的同名方法经 ensure 抛 NOT_FOUND（404）。根因是 `UserService.selectByIdScoped` 直接返回 `selectById`（不判存在），与其余 scoped 读不一致。 | 若要统一：`UserService.selectByIdScoped` 补存在性判定抛 NOT_FOUND。属行为变更（该路径现为 200），先定口径。 |
+
+**2026-10-27 关闭/移出**：BL-29（影院区域在登录态为 null，全仓无展示点）、BL-30（上传权限：控制器已限「非管理员仅图片且 ≤2MB」，且 `front/Person.vue` 头像依赖它）、BL-35（`/api/v1/statistics` 已进 `ADMIN_ONLY_PREFIXES`，并由 `ControllerAuthClassificationTest` 逐控制器兜底）。
 
 ## Mapper 层遗留（2026-10-14 mapper 审查）
 
 本轮修复并移出本表：BL-36 —— 该条所列 13 个 mapper 之外漏登 RechargeOrderMapper，实为 14 个；全部在 `updateById` 的 `<set>` 末尾加 `id = #{id}` 自赋值兜底，SET 恒非空，`UPDATE t WHERE id=?` 触发的 1064 不再出现。实测渲染：`UPDATE area SET id = ? WHERE id = ?`。BL-38 —— 字符串筛选的空串判定，按 CinemaMapper 既有口径（`x != null and x != ''`）补齐 6 个 mapper 共 12 处：CinemaDirectoryMapper（name/province/city/district/brand）、FundFlowMapper（source）、OrderedMapper（status）、RechargeOrderMapper（status）、RecordMapper（title/start/status）、FilmMapper（year）。未补的同形点见 BL-42。
 
-| 编号 | 位置 | 问题 | 处置建议 |
-| --- | --- | --- | --- |
-| BL-42 | mapper/ 其余字符串筛选：ActorMapper.actorName；AdminMapper.name；AreaMapper.title；NoticeMapper.title；TypeMapper.title；VideoMapper.title；UserMapper.name/username/phone；RoomMapper.name；CinemaMapper.selectAll.name（共 11 处） | 与 BL-38 同形：`<if>` 只判 `!= null`、不判空串。（CinemaMapper 的 selectByFilmId 已带判定，此处为其 selectAll 简易查询。）空串入参落成 `= ''` / `LIKE '%%'` 查出零行。 | 同 BL-38 补 `and x != ''`。**本轮未做（登记备查）**：这些文件为 mixed/CRLF 行尾，改一行即整篇重写 EOL（实测 AdminMapper 原始 diff 16 行 vs `--ignore-cr-at-eol` 1 行），噪声大于收益。**2026-10-18 复核**：空串入参不可达 —— `useCrud.searchForm` 起于 `reactive({})`（不发键，`onReset` 写 `undefined`），文本输入框均无 `clearable`；`manage/CinemaDirectory.vue:141` 的 `|| undefined` 归一属于 `query.city/brand`（clearable 下拉），该页并**没有** `searchForm`，旧文把两处事实混写在一句里。真正 clearable 的输入类控件是 `manage/Admin.vue:12`、`manage/User.vue:12`，清空得 `''`，但只经 `onSearch` 发出，`onReset` 已把键写为 `undefined`。结论不变。 |
+**2026-10-27 关闭**：BL-42（11 处字符串筛选未判空串）—— 2026-10-18 已复核空串入参在前端不可达（`useCrud.searchForm` 起于 `reactive({})`，`onReset` 写 `undefined`），不值得为不可达路径翻动 mixed/CRLF 文件。本节没有在跟踪的条目。
 
 ## DTO 层遗留（2026-10-14 dto 审查）
 
@@ -309,8 +291,8 @@
 
 | 编号 | 位置 | 问题 | 处置建议 |
 | --- | --- | --- | --- |
-| BL-39 | dto/ 的同名 Request/View 对（Actor、Area、Type、Video、Room、Record、FundFlow、Notice、RechargeOrder、CinemaDirectory、Ordered，以及 MarkRequest 与 MarkEntityView，共 12 对） | 同名字段逐字重复、各对字段完全一致：增删改一个字段要在两个 DTO 加 toEntity、toView 共四处同步，无机制保证两列表不漂移。 | 合并为单一 DTO，或加断言两列表相等的测试；属架构级，另立一轮。 |
-| BL-40 | dto/request/RecordRequest 的 cinemaName/roomName/roomSeatRows/roomSeatCols；dto/request/OrderedRequest 的 userName/filmName/cinemaName/roomName | join 派生字段只作 SQL 输出，却落在请求 DTO 上成为可绑定入参；toEntity 逐层拷贝后 mapper 不写这些列，入参被静默丢弃。 | 入参 DTO 剥离这些只读字段（与 BL-18 实体展示字段剥离同轮）。 |
+| BL-39 | dto/ 的同名 Request/View 对（Actor、Area、Type、Video、Room、Record、FundFlow、Notice、RechargeOrder、CinemaDirectory、Ordered，以及 MarkRequest 与 MarkEntityView，共 12 对） | 同名字段逐字重复、各对字段完全一致：增删改一个字段要在两个 DTO 加 toEntity、toView 共四处同步，无机制保证两列表不漂移。 | **只加守卫，不合并**：反射断言同名字段集合相等，漂移时测试变红。合并 DTO 属架构级改动，收益是审美，不做。 |
+| BL-40 | dto/request/RecordRequest 的 cinemaName/roomName/roomSeatRows/roomSeatCols；dto/request/OrderedRequest 的 userName/filmName/cinemaName/roomName | join 派生字段只作 SQL 输出，却落在请求 DTO 上成为可绑定入参；toEntity 逐层拷贝后 mapper 不写这些列，入参被静默丢弃。 | **不加处理**：入参被丢弃是安全的那一侧（不会写进库）；剥离会联动实体与 mapper，属同一轮架构重构。 |
 
 ## 有意不整改（仅限本机配置项）
 

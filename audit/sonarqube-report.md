@@ -339,6 +339,6 @@ docker stop sonarqube && docker rm sonarqube
 
 - 8.2（10.7 基线）：`files=242 indexed=242 issues=0 failed=0`。
 - 8.45（最新规则）：`files=242 indexed=242 issues=0 failed=0`。
-- `mvn -o test`：547 tests（快照时点；当前 551），0 failures / 0 errors / 0 skipped（2026-10-27；扫描时为 431）。
+- `mvn -o test`：547 tests（快照时点；当前 555），0 failures / 0 errors / 0 skipped（2026-10-27；扫描时为 431）。
 - SonarLint standalone 与 SonarQube 服务端仍有口径差（无污点分析、无覆盖率/重复率）；正式门禁仍建议按 §8 的 Docker 流程在 10.7 上复扫一次，预期新增 0 条。
 

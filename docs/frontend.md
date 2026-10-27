@@ -3,7 +3,8 @@
 ## 1 目录与规模
 
 ```
-src/                       85 文件 / 17,889 行（vue+js+scss）
+src/                       86 文件（vue+js+scss；含路由表与新增的门禁测试）
+e2e/                       3 个 spec + helpers / README（Playwright 冒烟）
 ├── views/                 48 个 .vue / 13,572 行
 │   ├── 根目录 7 篇：Front / Back / Manage / AdminShell / Login / Register / 404（989 行）
 │   ├── front/  16 篇 / 7,594 行
@@ -17,7 +18,7 @@ src/                       85 文件 / 17,889 行（vue+js+scss）
 
 三个最大的单文件：`manage/Home.vue` 974、`front/BuyTicket.vue` 944、`front/Home.vue` 914 行。
 
-## 2 路由表（`router/index.js`，单文件 142 行）
+## 2 路由表（`router/routes.js` 存表，`router/index.js` 存守卫）
 
 | 前缀 | 壳 | meta |
 | --- | --- | --- |
@@ -33,7 +34,7 @@ src/                       85 文件 / 17,889 行（vue+js+scss）
 3. 无 token/role → 清存储 → 确认框 →「去登录」带 `redirect`；「取消」时若 `from === START_LOCATION` 落首页（否则白屏，FE-01），否则 `next(false)`。
 4. 角色不匹配 → 提示 + 回**该角色自己的主页**（不再踢到 `/login`；FE-03 已修）。
 
-两种 meta 范式并存是已知债务（FE-05）：`/front` 下新增子路由漏写 meta 会**静默公开**。
+两种 meta 范式并存，由 `router/routes.test.js` 钉住：每条路由必须显式表态（`guest` / `requiresAuth` / `roles` / `redirect`），`/front` 子路由逐条标，`/manage`、`/back` 标在父级；`guest` 与门禁混写视为错误。
 
 ## 3 composables（六个复用件）
 
@@ -129,10 +130,6 @@ src/                       85 文件 / 17,889 行（vue+js+scss）
 
 ## 9 已知债务（详见 `audit/frontend-audit.md`）
 
-- **FE-05**：后台父路由已统一门禁，前台仍逐子路由标 `guest` / `requiresAuth`，缺一条路由表断言防未来漏写。
-- **FE-09**：`/front` 与 login/register/404 上无消费者的 `meta.name` 仍在。
-- **FE-18**：网络类失败保持登录（fail-open）的口径未定，未改。
-- **FE-19**：`isSuccess()` 只收敛字面量，失败语义下沉到拦截器仍未做。
-- **FE-49**：`front/Orders`、`front/Cinema` 已用 `usePagedList`；`front/Movie`、`back/*` 仍手写分页（已补 `loadSeq`）。
-- **Sonar 前端**：2 条 `S3776` 复杂度（`front/FilmDetail.vue`、`manage/Film.vue`）未处理；8 条 `S6819` ARIA 已于 2026-10-22 修复。
-- 前端自动化测试：**已接入 Vitest**（`npm test`），当前 5 个测试文件覆盖 `utils/`（navigation / format / avatar）、`constants/` 与 `composables/`（usePagedList / useCrud）的纯逻辑；组件渲染与端到端仍靠 `npm run build` + 无头 Chrome 脚本。
+**2026-10-27：本节已清空，没有在跟踪的前端债务。** FE-05 与 FE-68 已修（路由表断言、列表图片懒加载）；FE-09 / FE-18 / FE-19 / FE-49 / `S3776`×2 / FE-70–74 判定不做，理由各一行记在审计报告的「当前未做」一节。剩余成本只在「改到那个文件时顺手做」。
+
+- 前端自动化测试：**Vitest 6 个文件 / 37 条**（`npm test`）覆盖路由门禁、`utils/`、`constants/` 与 `composables/` 的纯逻辑；**Playwright 冒烟 5 条**（`npm run test:e2e`）覆盖注册、登录拦截、下单取消、影院筛选、重复分类，跑法见 `e2e/README.md`。

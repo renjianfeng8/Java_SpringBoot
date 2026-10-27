@@ -24,16 +24,16 @@
 | `RechargeController` | `/api/v1/recharges` | 登录态；审核回调仅 ADMIN | page、{id}/callback |
 | `FundFlowController` | `/api/v1/fund-flows` | 登录态 | 只读 page |
 | `AccountController` | `/api/v1/account` | 登录态（**方法内 `requireUser` 守卫**） | 余额、支付密码 |
-| `StatisticsController` | `/api/v1/statistics` | 方法内判 ADMIN | **未进任何前缀表**（BL-35） |
-| `FileUploadController` | `/api/v1/files` | **未进任何前缀表**，任何登录角色可上传（BL-30） | |
+| `StatisticsController` | `/api/v1/statistics` | ADMIN_ONLY（2026-10-27 起） | 方法内仍保留一道 ADMIN 判断 |
+| `FileUploadController` | `/api/v1/files` | 登录态 | 非管理员仅图片且 ≤2MB，控制器内判定 |
 | `TmdbController` | `/api/v1/tmdb` | ADMIN_ONLY | search / movie/{id} / backfill-videos |
 
-> 新增端点自检：路径是否落在上面某个前缀下？该前缀的档位是不是你想要的？**没有"默认安全"** —— 未进前缀表即"登录即可访问"或"匿名可读（GET）"。
+> 新增端点自检：路径是否落在上面某个前缀下？该前缀的档位是不是你想要的？**没有"默认安全"** —— 未进前缀表即"登录即可访问"或"匿名可读（GET）"。`ControllerAuthClassificationTest` 会逐控制器核对是否被四张表或测试内的自助白名单显式归类，漏登记即变红。
 
 ## 2 鉴权前缀表（`AuthInterceptor`）
 
 ```java
-ADMIN_ONLY_PREFIXES   = { admins, cinema-directory, tmdb }
+ADMIN_ONLY_PREFIXES   = { admins, cinema-directory, tmdb, statistics }
 ADMIN_WRITE_PREFIXES  = { films, actors, areas, types, notices, videos }
 PUBLIC_READ_PREFIXES  = { films, cinemas, types, areas, notices, actors, records, marks }
 ANONYMOUS_WRITE_EXACT = { /api/v1/tickets/redeem }
@@ -55,7 +55,7 @@ ANONYMOUS_WRITE_EXACT = { /api/v1/tickets/redeem }
 | 加一个纯 CRUD 资源 | 实体实现 `Identifiable`；mapper 继承 `BaseMapper` 并写 XML（复制 `AreaMapper.xml` 为模板）；service 只实现 `mapper()`；controller `extends BaseController<T,R,V>` 实现两个映射 |
 | 加业务校验 | 覆写 `add/update/delete` 或在 controller 调 `*Scoped` 方法；**`update` 必须委派 `super.update`**（存在性判定的唯一出处） |
 | 局部更新 | 实体字段为 null 即"不更新"；XML 用 `<if test="x != null">`；`<set>` 结尾必须有 `id = #{id}` 兜底 |
-| 字符串筛选 | 判空必须写 `x != null and x != ''`（BL-38 口径；BL-42 是尚未补齐的同形点） |
+| 字符串筛选 | 判空必须写 `x != null and x != ''`（新增筛选照此口径；其余同形旧点已核验前端不可达，不再翻动） |
 
 ## 4 事务
 
@@ -75,16 +75,16 @@ ANONYMOUS_WRITE_EXACT = { /api/v1/tickets/redeem }
 
 ## 6 测试
 
-74 个测试文件 / 551 条执行（2026-10-27），按启动方式分四类：
+75 个测试文件 / 555 条执行（2026-10-27），按启动方式分四类：
 
 | 类型 | 数量 | 依赖数据库 | 说明 |
 | --- | --- | --- | --- |
 | Mockito 单测 | 21 个类 | 否 | `@ExtendWith(MockitoExtension.class)` + `@InjectMocks` |
-| `@SpringBootTest` 绑定层守卫 | 19 个类（含 `*LoadTest`、`OrderedSeatConflictTest`、`OrderedServiceTest`、并发/事务边界测试） | **是，走 `xm_film_test`** | 证明 mapper XML 能被 MyBatis 解析并执行 |
+| `@SpringBootTest` 绑定层守卫 | 20 个类（含 `*LoadTest`、`OrderedSeatConflictTest`、`OrderedServiceTest`、并发/事务边界测试、`ControllerAuthClassificationTest`） | **是，走 `xm_film_test`** | 证明 mapper XML 能被 MyBatis 解析并执行；控制器分类守卫也走容器 |
 | `@WebMvcTest` 控制器切片 | 13 个类（覆盖全部 23 个 Controller） | 否 | 鉴权前缀、角色范围、空请求体、业务码透传 |
 | 纯单元 / 静态守卫 | 22 个类 | 否 | 无上述注解，如 `FileUtilTest`、`TmdbClientTest`、`StatusLiteralGuardTest`、`MapperXmlParameterGuardTest` |
 
-> `RecordDeleteGuardTest` 同时带 `MockitoExtension` 与 `@SpringBootTest`，前两行各计一次；四类去重后共 74 个文件。
+> `RecordDeleteGuardTest` 同时带 `MockitoExtension` 与 `@SpringBootTest`，前两行各计一次；四类去重后共 75 个文件。
 
 **硬规则**：任何新增 `@SpringBootTest` 必须同时加 `@ActiveProfiles("ci")`；会写库的再加 `@Transactional`。缺前者 = 写开发库，缺后者 = 失败即留脏行。
 

@@ -18,7 +18,7 @@
 ### 硬性约束
 
 - 新增 `@SpringBootTest` 必须带 `@ActiveProfiles("ci")`；会写库的再加 `@Transactional`。**测试库是 `xm_film_test`，碰开发库即事故。**
-- 新增 `/api/v1/**` 端点必须核对 `AuthInterceptor` 四个集合（ADMIN_ONLY / ADMIN_WRITE / PUBLIC_READ / ANONYMOUS_WRITE_EXACT，`docs/backend.md` §2）。
+- 新增 `/api/v1/**` 端点必须核对 `AuthInterceptor` 四个集合（ADMIN_ONLY / ADMIN_WRITE / PUBLIC_READ / ANONYMOUS_WRITE_EXACT，`docs/backend.md` §2）；`ControllerAuthClassificationTest` 会兜底，漏登记即红。
 - 覆写 `BaseService.update` 必须委派 `super.update`（存在性判定的唯一出处）。
 - 状态是中文枚举值，改动须同步 Java 枚举、前端常量与两处 SQL 字面量（`paidOrderStatuses`、排片重叠查询）。
 - 动表格先读 `audit/table-spec.md`。
