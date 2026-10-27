@@ -73,13 +73,13 @@
 
       <div class="pay-pwd-links">
         <template v-if="step === 2">
-          <el-link type="primary" :underline="false" @click="backToVerify">返回上一步</el-link>
+          <el-link type="primary" underline="never" @click="backToVerify">返回上一步</el-link>
         </template>
         <template v-else-if="isChange">
-          <el-link type="primary" :underline="false" :disabled="submitting" @click="switchMode(false)">忘记支付密码？</el-link>
+          <el-link type="primary" underline="never" :disabled="submitting" @click="switchMode(false)">忘记支付密码？</el-link>
         </template>
         <template v-else-if="hasPayPassword">
-          <el-link type="primary" :underline="false" :disabled="submitting" @click="switchMode(true)">返回修改支付密码</el-link>
+          <el-link type="primary" underline="never" :disabled="submitting" @click="switchMode(true)">返回修改支付密码</el-link>
         </template>
       </div>
     </div>

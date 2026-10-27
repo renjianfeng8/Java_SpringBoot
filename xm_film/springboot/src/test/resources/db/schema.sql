@@ -106,7 +106,8 @@ DROP TABLE IF EXISTS `type`;
 CREATE TABLE `type` (
   `id` int NOT NULL AUTO_INCREMENT COMMENT '类型ID',
   `title` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '类型名称',
-  PRIMARY KEY (`id`)
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_type_title` (`title`)
 ) ENGINE=InnoDB AUTO_INCREMENT=73 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='电影类型表（如剧情、喜剧、动作）';
 
 DROP TABLE IF EXISTS `film_type`;

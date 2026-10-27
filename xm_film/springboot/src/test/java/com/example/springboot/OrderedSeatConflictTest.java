@@ -22,4 +22,10 @@ class OrderedSeatConflictTest {
         int count = orderedMapper.countSeatInUse(-1, "1排1座", OrderStatusCriteria.INSTANCE);
         assertThat(count).isZero();
     }
+
+    /** 座位占用列表必须带状态条件参数；缺 @Param("s") 时 XML 里的状态过滤会静默失效。 */
+    @Test
+    void mapperLoadsActiveSeatStatementWithStatusCriteria() {
+        assertThat(orderedMapper.selectActiveByRecordId(-1, OrderStatusCriteria.INSTANCE)).isEmpty();
+    }
 }

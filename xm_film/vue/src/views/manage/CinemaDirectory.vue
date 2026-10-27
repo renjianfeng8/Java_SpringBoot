@@ -18,7 +18,7 @@
           <el-option v-for="b in filterData.brands" :key="b" :label="b" :value="b"/>
         </el-select>
         <el-select v-model="query.linked" aria-label="收录状态" class="field-md" @change="reload">
-          <el-option label="全部收录状态" :value="null"/>
+          <el-option label="全部收录状态" value=""/>
           <el-option label="已收录" :value="true"/>
           <el-option label="未收录" :value="false"/>
         </el-select>
@@ -108,7 +108,7 @@ import { Upload } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import request from '@/utils/request'
 
-const query = reactive({ city: null, brand: null, linked: null, pageNum: 1, pageSize: 10 })
+const query = reactive({ city: null, brand: null, linked: '', pageNum: 1, pageSize: 10 })
 const filterData = reactive({ cities: [], brands: [] })
 const data = reactive({ list: [], total: 0, error: false, loading: false })
 const rows = computed(() => data.list)
@@ -181,9 +181,9 @@ const load = () => {
   data.error = false
   data.loading = true
   request.get(CINEMA_DIRECTORY_API.PAGE, {
-    // linked 是布尔：用 || 会把「未收录」(false) 吞成「全部」，故只判 null/undefined
+    // linked 是布尔：用 || 会把「未收录」(false) 吞成「全部」，故只判 null/undefined/空串
     params: { city: query.city || undefined, brand: query.brand || undefined,
-              linked: query.linked ?? undefined,
+              linked: query.linked === '' ? undefined : query.linked,
               pageNum: query.pageNum, pageSize: query.pageSize }
   }).then(res => {
     if (seq !== loadSeq) return

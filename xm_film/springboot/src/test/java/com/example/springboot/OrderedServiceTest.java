@@ -157,7 +157,7 @@ class OrderedServiceTest {
         recordRow.setPrice("45.00");
         recordRow.setStart(futureStart());
         when(recordMapper.selectByIdForUpdate(1)).thenReturn(recordRow);
-        when(orderedMapper.selectActiveByRecordId(1)).thenReturn(List.of());
+        when(orderedMapper.selectActiveByRecordId(eq(1), any())).thenReturn(List.of());
 
         Ordered ordered = new Ordered();
         ordered.setRecordId(1);
@@ -182,7 +182,7 @@ class OrderedServiceTest {
 
         Ordered existing = new Ordered();
         existing.setSeat("1排1座,1排2座");
-        when(orderedMapper.selectActiveByRecordId(1)).thenReturn(List.of(existing));
+        when(orderedMapper.selectActiveByRecordId(eq(1), any())).thenReturn(List.of(existing));
 
         Ordered ordered = new Ordered();
         ordered.setRecordId(1);
@@ -208,7 +208,7 @@ class OrderedServiceTest {
 
         Ordered existing = new Ordered();
         existing.setSeat("3排3座，3排4座");
-        when(orderedMapper.selectActiveByRecordId(1)).thenReturn(List.of(existing));
+        when(orderedMapper.selectActiveByRecordId(eq(1), any())).thenReturn(List.of(existing));
 
         Ordered ordered = new Ordered();
         ordered.setRecordId(1);
@@ -258,7 +258,7 @@ class OrderedServiceTest {
         recordRow.setPrice("abc");
         recordRow.setStart(futureStart());
         when(recordMapper.selectByIdForUpdate(1)).thenReturn(recordRow);
-        when(orderedMapper.selectActiveByRecordId(1)).thenReturn(List.of());
+        when(orderedMapper.selectActiveByRecordId(eq(1), any())).thenReturn(List.of());
 
         Ordered ordered = new Ordered();
         ordered.setRecordId(1);
@@ -777,7 +777,7 @@ class OrderedServiceTest {
         other.setStatus("待取票");
         other.setTotal(new BigDecimal("45.00"));
         other.setPendingTimeoutAt("2026-09-28 12:00:00");
-        when(orderedMapper.selectActiveByRecordId(1)).thenReturn(List.of(other));
+        when(orderedMapper.selectActiveByRecordId(eq(1), any())).thenReturn(List.of(other));
 
         List<SeatOccupancyView> view = orderedService.selectSeatOccupancy(1, 100);
 
@@ -802,7 +802,7 @@ class OrderedServiceTest {
         mine.setStatus("待支付");
         mine.setTotal(new BigDecimal("45.00"));
         mine.setPendingTimeoutAt("2026-09-28 12:00:00");
-        when(orderedMapper.selectActiveByRecordId(1)).thenReturn(List.of(mine));
+        when(orderedMapper.selectActiveByRecordId(eq(1), any())).thenReturn(List.of(mine));
 
         List<SeatOccupancyView> view = orderedService.selectSeatOccupancy(1, 100);
 
@@ -823,7 +823,7 @@ class OrderedServiceTest {
         other.setId(11);
         other.setUserId(100);
         other.setSeat("1排1座");
-        when(orderedMapper.selectActiveByRecordId(1)).thenReturn(List.of(other));
+        when(orderedMapper.selectActiveByRecordId(eq(1), any())).thenReturn(List.of(other));
 
         List<SeatOccupancyView> view = orderedService.selectSeatOccupancy(1, null);
 

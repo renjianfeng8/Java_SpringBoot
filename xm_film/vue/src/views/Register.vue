@@ -69,7 +69,7 @@ import {ElMessage} from "element-plus";
 
 const router = useRouter();
 
-const validatePass = (value, callback) => {
+const validatePass = (rule, value, callback) => {
   if (!value) {
     callback(new Error('请再次确认密码'));
   } else if (value !== data.form.password) {

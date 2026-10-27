@@ -13,7 +13,8 @@ import java.util.List;
 
 public interface OrderedMapper extends BaseMapper<Ordered> {
 
-    List<Ordered> selectActiveByRecordId(Integer recordId);
+    List<Ordered> selectActiveByRecordId(@Param("recordId") Integer recordId,
+                                         @Param("s") OrderStatusCriteria criteria);
 
     /**
      * 今日票房：今天支付的售票收入合计（元）+ 统计时刻。

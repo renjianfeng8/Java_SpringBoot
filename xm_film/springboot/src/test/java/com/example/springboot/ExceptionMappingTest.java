@@ -156,7 +156,7 @@ class ExceptionMappingTest {
         assertThat(r.getMsg()).doesNotContain("foreign key").doesNotContain("ordered_ibfk");
     }
 
-    /** 非外键的完整性冲突同样给 409，并保持通用文案 */
+    /** 非外键的唯一键冲突同样给 409，并回可操作的重复提示 */
     @Test
     void otherIntegrityViolationIsStillConflict() {
         DataIntegrityViolationException e = new DataIntegrityViolationException(
@@ -165,7 +165,7 @@ class ExceptionMappingTest {
         Result<Void> r = handler.dataIntegrityError(e);
 
         assertThat(r.getCode()).isEqualTo("409");
-        assertThat(r.getMsg()).contains("唯一性");
+        assertThat(r.getMsg()).contains("已存在");
     }
 
     /** TMDB/代理不可达：提示管理员检查代理，而不是抛 500 空白 */

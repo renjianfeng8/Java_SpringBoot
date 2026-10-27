@@ -179,7 +179,7 @@ public class OrderedService extends BaseService<Ordered> {
     /** 一次取该场全部占用座位再内存判重，避免每座一条查询压在 record 行锁里 */
     private void ensureSeatsFree(Integer recordId, List<String> seats) {
         Set<String> occupiedSeats = new HashSet<>();
-        for (Ordered active : orderedMapper.selectActiveByRecordId(recordId)) {
+        for (Ordered active : orderedMapper.selectActiveByRecordId(recordId, OrderStatusCriteria.INSTANCE)) {
             if (active.getSeat() == null) {
                 continue;
             }
@@ -450,7 +450,7 @@ public class OrderedService extends BaseService<Ordered> {
      * 订单号、用户 ID、金额都给到任意登录用户。归属判定只看 JWT 里的 userId。
      */
     public List<SeatOccupancyView> selectSeatOccupancy(Integer recordId, Integer tokenUserId) {
-        return orderedMapper.selectActiveByRecordId(recordId).stream()
+        return orderedMapper.selectActiveByRecordId(recordId, OrderStatusCriteria.INSTANCE).stream()
                 .map(ordered -> toSeatOccupancy(ordered, tokenUserId))
                 .toList();
     }

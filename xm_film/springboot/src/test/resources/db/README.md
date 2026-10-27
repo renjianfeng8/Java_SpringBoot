@@ -43,3 +43,5 @@ python dump-schema.py          # MYSQL_EXE 可用环境变量覆盖 mysql 客户
   实时聚合口径一致（实测 64 行全为 0）。
 - `ordered.seat` 为 `varchar(200)`，座位串以逗号分隔存于单列，故占用判定只能走
   `FIND_IN_SET`，无法在库端建座位级唯一索引。
+- `type.title` 于 2026-10-27 补了 `uk_type_title`：重复分类无法再落库（此前管理端可把
+  「剧情」建两次），`TypeTitleUniqueTest` 钉住；重复键由 `GlobalExceptionHandler` 映射为 409。

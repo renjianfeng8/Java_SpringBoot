@@ -32,9 +32,15 @@ import static org.assertj.core.api.Assertions.assertThat;
  * {@code #{...}} 根属性，与方法签名（@Param 名 / 单个 bean 属性 / foreach item）比对。
  * 不需要数据库，新增语句时写错参数名会直接变红。
  *
- * <p><b>覆盖边界</b>：{@code <sql>} 片段单独定义、被 {@code <include>} 引用的占位符
- * 不在此检查（片段没有方法签名可对照）；`${...}` 不检查；foreach 的 item 是动态变量，
- * 只认名字不认类型。
+ * <p><b>覆盖边界</b>：{@code <sql>} 片段在本类里先按 {@code <include>} 展开（同名引用），
+ * 因此片段里的占位符会和引用它的语句一起被检查；跨 namespace 的 {@code <include>} 不展开
+ * （{@code FilmMapper} 引用的 {@code paidOrderStatuses} 不含占位符），`${...}` 不检查；
+ * foreach 的 item 是动态变量，只认名字不认类型。
+ *
+ * <p>另加一条约定检查：{@code #{s.xxx}} 只允许出现在带 {@code @Param("s")} 的方法上。
+ * 单参数为简单类型时 MyBatis 不校验占位符名字（会把整个参数当值），静态上无法发现
+ * 「漏了 @Param("s")」—— 这正是 {@code selectActiveByRecordId} 曾把座位状态条件
+ * 退化成恒真的原因。
  */
 class MapperXmlParameterGuardTest {
 
@@ -44,6 +50,9 @@ class MapperXmlParameterGuardTest {
     private static final Pattern NAMESPACE = Pattern.compile("namespace=\"([^\"]+)\"");
     private static final Pattern PLACEHOLDER = Pattern.compile("#\\{\\s*([^,}\\s]+)");
     private static final Pattern FOREACH_ITEM = Pattern.compile("item=\"([^\"]+)\"");
+    private static final Pattern SQL_FRAGMENT = Pattern.compile(
+            "<sql\\s+[^>]*?id=\"([^\"]+)\"[^>]*>(.*?)</sql>", Pattern.DOTALL);
+    private static final Pattern INCLUDE = Pattern.compile("<include\\s+refid=\"([^\"]+)\"\\s*/>");
 
     @Test
     void everyPlaceholderResolvesToAParameterOrBeanProperty() throws Exception {
@@ -85,9 +94,10 @@ class MapperXmlParameterGuardTest {
         }
 
         Matcher statements = STATEMENT.matcher(xml);
+        Map<String, String> fragments = fragmentsOf(xml);
         while (statements.find()) {
             String id = statements.group(2);
-            String body = statements.group(3);
+            String body = expandIncludes(statements.group(3), fragments);
             List<Method> methods = methodsNamed(mapper, id);
             if (methods.isEmpty()) {
                 errors.add(file.getFileName() + ": 语句 " + id + " 找不到同名 mapper 方法");
@@ -110,6 +120,11 @@ class MapperXmlParameterGuardTest {
                     continue;
                 }
                 String root = token.contains(".") ? token.substring(0, token.indexOf('.')) : token;
+                if ("s".equals(root) && !allowed.roots.contains("s")) {
+                    errors.add(file.getFileName() + ": " + id + " 的 #{" + token
+                            + "} 需要 @Param(\"s\") OrderStatusCriteria 参数");
+                    continue;
+                }
                 if (!allowed.allowAll && !allowed.roots.contains(root)) {
                     errors.add(file.getFileName() + ": " + id + " 的 #{" + token
                             + "} 找不到参数 " + root + "（可用: " + allowed.roots + "）");
@@ -123,6 +138,39 @@ class MapperXmlParameterGuardTest {
                 }
             }
         }
+    }
+
+    private static Map<String, String> fragmentsOf(String xml) {
+        Map<String, String> fragments = new HashMap<>();
+        Matcher matcher = SQL_FRAGMENT.matcher(xml);
+        while (matcher.find()) {
+            fragments.put(matcher.group(1), matcher.group(2));
+        }
+        return fragments;
+    }
+
+    /** 展开同文件内的 {@code <include refid="...">}；跨 namespace 引用（带 {@code .}）不展开 */
+    private static String expandIncludes(String body, Map<String, String> fragments) {
+        for (int depth = 0; depth < 5; depth++) {
+            Matcher matcher = INCLUDE.matcher(body);
+            StringBuilder expanded = new StringBuilder();
+            boolean replaced = false;
+            while (matcher.find()) {
+                String refid = matcher.group(1);
+                String fragment = refid.contains(".") ? null : fragments.get(refid);
+                if (fragment == null) {
+                    continue;
+                }
+                replaced = true;
+                matcher.appendReplacement(expanded, Matcher.quoteReplacement(fragment));
+            }
+            if (!replaced) {
+                return body;
+            }
+            matcher.appendTail(expanded);
+            body = expanded.toString();
+        }
+        return body;
     }
 
     private static List<Method> methodsNamed(Class<?> mapper, String name) {

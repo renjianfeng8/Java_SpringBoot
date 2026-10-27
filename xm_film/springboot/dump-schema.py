@@ -97,6 +97,7 @@ def write_repo_files() -> None:
         f.write("\n".join(parts) + "\n")
 
     inv = run(f"""
+SELECT * FROM (
 SELECT 'COL', TABLE_NAME, COLUMN_NAME, COLUMN_TYPE, IS_NULLABLE, COLUMN_KEY, IFNULL(COLUMN_DEFAULT,'<null>'), EXTRA
   FROM information_schema.COLUMNS WHERE TABLE_SCHEMA='{SOURCE_DB}'
 UNION ALL
@@ -105,6 +106,7 @@ SELECT 'IDX', TABLE_NAME, INDEX_NAME, CONCAT('non_unique=', NON_UNIQUE), COLUMN_
 UNION ALL
 SELECT 'TBL', TABLE_NAME, CAST(TABLE_ROWS AS CHAR), ENGINE, TABLE_COLLATION, '', IFNULL(TABLE_COMMENT,''), ''
   FROM information_schema.TABLES WHERE TABLE_SCHEMA='{SOURCE_DB}'
+) inventory ORDER BY 1, 2, 3, 5
 """).replace("\r\n", "\n")
     with open(os.path.join(OUT, "inventory.tsv"), "w", encoding="utf-8", newline="\n") as f:
         f.write(inv)

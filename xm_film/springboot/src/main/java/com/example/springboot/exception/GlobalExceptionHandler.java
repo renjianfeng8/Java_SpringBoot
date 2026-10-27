@@ -96,6 +96,10 @@ public class GlobalExceptionHandler {
             return Result.error(ErrorCode.BUSINESS_CONFLICT,
                     "该记录仍被其他数据引用，无法删除；如涉及场次请将状态改为「停售」");
         }
+        if (detail != null && detail.contains("Duplicate entry")) {
+            return Result.error(ErrorCode.BUSINESS_CONFLICT,
+                    "该记录已存在，请更换后重试");
+        }
         return Result.error(ErrorCode.BUSINESS_CONFLICT,
                 "数据违反唯一性或完整性约束，请检查后重试");
     }
