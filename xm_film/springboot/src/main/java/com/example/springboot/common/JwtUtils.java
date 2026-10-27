@@ -19,7 +19,10 @@ public class JwtUtils {
 
     private final long expire;
 
-    public JwtUtils(@Value("${jwt.signing-key}") String secret, @Value("${jwt.expire}") long expire) {
+    private final TokenRevocationService revocation;
+
+    public JwtUtils(@Value("${jwt.signing-key}") String secret, @Value("${jwt.expire}") long expire,
+                    TokenRevocationService revocation) {
         // 密钥必须来自 .env（JWT_SIGNING_KEY）。空值或过短直接拒绝启动，
         // 避免把仓库里的字符串当成可用密钥，也避免 HS256 在弱密钥下被离线爆破。
         if (secret == null || secret.getBytes(StandardCharsets.UTF_8).length < 32) {
@@ -28,6 +31,7 @@ public class JwtUtils {
         }
         this.secret = secret;
         this.expire = expire;
+        this.revocation = revocation;
     }
 
     private SecretKey getSigningKey() {
@@ -47,10 +51,16 @@ public class JwtUtils {
     }
 
     public Claims parseToken(String token) {
-        return Jwts.parserBuilder()
+        Claims claims = Jwts.parserBuilder()
                 .setSigningKey(getSigningKey())
                 .build()
                 .parseClaimsJws(token)
                 .getBody();
+        // 改密后旧令牌立即失效：调用方（AuthInterceptor）统一把异常映射成 401
+        Number issuedAt = claims.get("iat", Number.class);
+        if (revocation.isRevoked(claims.get("role", String.class), claims.getSubject(), issuedAt)) {
+            throw new io.jsonwebtoken.JwtException("令牌已失效，请重新登录");
+        }
+        return claims;
     }
 }

@@ -22,8 +22,9 @@ CREATE TABLE `film` (
   KEY `idx_area_id` (`area_id`),
   KEY `idx_status` (`status`),
   KEY `idx_start` (`start`),
-  FULLTEXT KEY `idx_title` (`title`)
-) ENGINE=InnoDB AUTO_INCREMENT=66 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='电影表';
+  FULLTEXT KEY `idx_title` (`title`),
+  CONSTRAINT `chk_film_status` CHECK ((`status` in (_utf8mb4'已上映',_utf8mb4'待上映',_utf8mb4'停止上映')))
+) ENGINE=InnoDB AUTO_INCREMENT=77 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='电影表';
 
 DROP TABLE IF EXISTS `actor`;
 CREATE TABLE `actor` (
@@ -51,15 +52,16 @@ CREATE TABLE `admin` (
   `avatar` varchar(500) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '头像URL',
   `phone` varchar(20) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '手机号',
   PRIMARY KEY (`id`),
-  UNIQUE KEY `username` (`username`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='管理员表';
+  UNIQUE KEY `username` (`username`),
+  CONSTRAINT `chk_admin_role` CHECK ((`role` in (_utf8mb4'ADMIN',_utf8mb4'CINEMA',_utf8mb4'USER')))
+) ENGINE=InnoDB AUTO_INCREMENT=55 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='管理员表';
 
 DROP TABLE IF EXISTS `area`;
 CREATE TABLE `area` (
   `id` int NOT NULL AUTO_INCREMENT COMMENT '区域ID',
   `title` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '区域名称',
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=65 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='区域/产地表（如中国大陆、美国、日本）';
+) ENGINE=InnoDB AUTO_INCREMENT=67 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='区域/产地表（如中国大陆、美国、日本）';
 
 DROP TABLE IF EXISTS `cinema`;
 CREATE TABLE `cinema` (
@@ -76,8 +78,10 @@ CREATE TABLE `cinema` (
   `directory_id` int DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `username` (`username`),
-  UNIQUE KEY `uk_cinema_directory_id` (`directory_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=1036 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='影院表';
+  UNIQUE KEY `uk_cinema_directory_id` (`directory_id`),
+  CONSTRAINT `chk_cinema_role` CHECK ((`role` in (_utf8mb4'ADMIN',_utf8mb4'CINEMA',_utf8mb4'USER'))),
+  CONSTRAINT `chk_cinema_status` CHECK ((`status` in (_utf8mb4'未审核',_utf8mb4'已审核')))
+) ENGINE=InnoDB AUTO_INCREMENT=1228 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='影院表';
 
 DROP TABLE IF EXISTS `cinema_directory`;
 CREATE TABLE `cinema_directory` (
@@ -96,14 +100,14 @@ CREATE TABLE `cinema_directory` (
   UNIQUE KEY `uk_cinema_directory_poi_id` (`poi_id`),
   KEY `idx_cinema_directory_city` (`city`),
   KEY `idx_cinema_directory_brand` (`brand`)
-) ENGINE=InnoDB AUTO_INCREMENT=708 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='影院名录(高德 POI 导入, 只读展示)';
+) ENGINE=InnoDB AUTO_INCREMENT=715 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='影院名录(高德 POI 导入, 只读展示)';
 
 DROP TABLE IF EXISTS `type`;
 CREATE TABLE `type` (
   `id` int NOT NULL AUTO_INCREMENT COMMENT '类型ID',
   `title` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '类型名称',
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=71 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='电影类型表（如剧情、喜剧、动作）';
+) ENGINE=InnoDB AUTO_INCREMENT=73 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='电影类型表（如剧情、喜剧、动作）';
 
 DROP TABLE IF EXISTS `film_type`;
 CREATE TABLE `film_type` (
@@ -129,8 +133,9 @@ CREATE TABLE `user` (
   `pay_pwd_error_count` int NOT NULL DEFAULT '0' COMMENT '支付密码连续错误次数（达上限即锁定）',
   `pay_pwd_locked_until` datetime DEFAULT NULL COMMENT '支付密码锁定截止时刻（NULL = 未锁定）',
   PRIMARY KEY (`id`),
-  UNIQUE KEY `username` (`username`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='用户表';
+  UNIQUE KEY `username` (`username`),
+  CONSTRAINT `chk_user_role` CHECK ((`role` in (_utf8mb4'ADMIN',_utf8mb4'CINEMA',_utf8mb4'USER')))
+) ENGINE=InnoDB AUTO_INCREMENT=161 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='用户表';
 
 DROP TABLE IF EXISTS `fund_flow`;
 CREATE TABLE `fund_flow` (
@@ -146,7 +151,7 @@ CREATE TABLE `fund_flow` (
   KEY `idx_flow_user_id` (`user_id`),
   KEY `idx_flow_source` (`source`),
   CONSTRAINT `fund_flow_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `user` (`id`) ON DELETE RESTRICT
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='资金流水表（只增不改不删）';
+) ENGINE=InnoDB AUTO_INCREMENT=691 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='资金流水表（只增不改不删）';
 
 DROP TABLE IF EXISTS `mark`;
 CREATE TABLE `mark` (
@@ -161,7 +166,7 @@ CREATE TABLE `mark` (
   KEY `idx_mark_film_id` (`film_id`),
   CONSTRAINT `mark_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `user` (`id`) ON DELETE CASCADE,
   CONSTRAINT `mark_ibfk_2` FOREIGN KEY (`film_id`) REFERENCES `film` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='评分表';
+) ENGINE=InnoDB AUTO_INCREMENT=207 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='评分表';
 
 DROP TABLE IF EXISTS `mark_like`;
 CREATE TABLE `mark_like` (
@@ -180,7 +185,7 @@ CREATE TABLE `notice` (
   `content` text COLLATE utf8mb4_unicode_ci COMMENT '通知内容',
   `time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '发布时间',
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='通知公告表';
+) ENGINE=InnoDB AUTO_INCREMENT=54 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='通知公告表';
 
 DROP TABLE IF EXISTS `room`;
 CREATE TABLE `room` (
@@ -193,7 +198,7 @@ CREATE TABLE `room` (
   PRIMARY KEY (`id`),
   KEY `idx_room_cinema_id` (`cinema_id`),
   CONSTRAINT `room_ibfk_1` FOREIGN KEY (`cinema_id`) REFERENCES `cinema` (`id`) ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='放映厅表';
+) ENGINE=InnoDB AUTO_INCREMENT=656 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='放映厅表';
 
 DROP TABLE IF EXISTS `record`;
 CREATE TABLE `record` (
@@ -212,8 +217,9 @@ CREATE TABLE `record` (
   KEY `idx_record_start` (`start`),
   CONSTRAINT `record_ibfk_1` FOREIGN KEY (`cinema_id`) REFERENCES `cinema` (`id`) ON DELETE RESTRICT,
   CONSTRAINT `record_ibfk_2` FOREIGN KEY (`room_id`) REFERENCES `room` (`id`) ON DELETE RESTRICT,
-  CONSTRAINT `record_ibfk_3` FOREIGN KEY (`film_id`) REFERENCES `film` (`id`) ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='放映记录表（排片/场次）';
+  CONSTRAINT `record_ibfk_3` FOREIGN KEY (`film_id`) REFERENCES `film` (`id`) ON DELETE RESTRICT,
+  CONSTRAINT `chk_record_status` CHECK ((`status` in (_utf8mb4'正常',_utf8mb4'停售')))
+) ENGINE=InnoDB AUTO_INCREMENT=8837 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='放映记录表（排片/场次）';
 
 DROP TABLE IF EXISTS `ordered`;
 CREATE TABLE `ordered` (
@@ -255,8 +261,9 @@ CREATE TABLE `ordered` (
   CONSTRAINT `ordered_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `user` (`id`) ON DELETE RESTRICT,
   CONSTRAINT `ordered_ibfk_3` FOREIGN KEY (`film_id`) REFERENCES `film` (`id`) ON DELETE RESTRICT,
   CONSTRAINT `ordered_ibfk_4` FOREIGN KEY (`cinema_id`) REFERENCES `cinema` (`id`) ON DELETE RESTRICT,
-  CONSTRAINT `ordered_ibfk_5` FOREIGN KEY (`room_id`) REFERENCES `room` (`id`) ON DELETE RESTRICT
-) ENGINE=InnoDB AUTO_INCREMENT=1000000 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='订单表';
+  CONSTRAINT `ordered_ibfk_5` FOREIGN KEY (`room_id`) REFERENCES `room` (`id`) ON DELETE RESTRICT,
+  CONSTRAINT `chk_ordered_status` CHECK ((`status` in (_utf8mb4'待支付',_utf8mb4'待取票',_utf8mb4'已取票',_utf8mb4'已取消',_utf8mb4'已退票')))
+) ENGINE=InnoDB AUTO_INCREMENT=1001342 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='订单表';
 
 DROP TABLE IF EXISTS `recharge_order`;
 CREATE TABLE `recharge_order` (
@@ -272,8 +279,22 @@ CREATE TABLE `recharge_order` (
   UNIQUE KEY `uk_recharge_no` (`recharge_no`),
   KEY `idx_recharge_user_id` (`user_id`),
   KEY `idx_recharge_status` (`status`),
-  CONSTRAINT `recharge_order_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `user` (`id`) ON DELETE RESTRICT
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='充值单据表';
+  CONSTRAINT `recharge_order_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `user` (`id`) ON DELETE RESTRICT,
+  CONSTRAINT `chk_recharge_status` CHECK ((`status` in (_utf8mb4'处理中',_utf8mb4'已完成',_utf8mb4'已失败')))
+) ENGINE=InnoDB AUTO_INCREMENT=126 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='充值单据表';
+
+DROP TABLE IF EXISTS `tmp_user_tx`;
+CREATE TABLE `tmp_user_tx` (
+  `uid` int DEFAULT NULL,
+  `idx` int DEFAULT NULL,
+  `offs` int DEFAULT NULL,
+  `film` int DEFAULT NULL,
+  `rec_var` varchar(16) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `num` int DEFAULT NULL,
+  `status` varchar(10) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `seats` varchar(200) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `amount` decimal(10,2) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 DROP TABLE IF EXISTS `video`;
 CREATE TABLE `video` (
@@ -284,4 +305,4 @@ CREATE TABLE `video` (
   `preview` varchar(500) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '视频预览URL',
   `start` date DEFAULT NULL COMMENT '上映日期',
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='视频/预告片表';
+) ENGINE=InnoDB AUTO_INCREMENT=53 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='视频/预告片表';

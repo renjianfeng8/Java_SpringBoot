@@ -64,7 +64,7 @@
 
       <!-- 正在热映 -->
       <div class="section-head">
-        <h2 class="section-head__title">正在热映（{{ data.data1.length }} 部）</h2>
+        <h2 class="section-head__title">正在热映（{{ data.playingTotal }} 部）</h2>
         <!-- 「全部」不带筛选参数：影片列表页目前只支持 类型/年代/区域 三个筛选，
              没有按上映状态筛的口径（`/front/movie` 也从不读 query），
              带上一个没人消费的 ?type= 只会让人以为这里真的筛过 -->
@@ -85,7 +85,7 @@
 
       <!-- 即将上映 -->
       <div class="section-head home-main__upcoming">
-        <h2 class="section-head__title">即将上映（{{ data.data2.length }} 部）</h2>
+        <h2 class="section-head__title">即将上映（{{ data.noPlayTotal }} 部）</h2>
         <router-link class="section-head__more" to="/front/movie">
           全部 ›
         </router-link>
@@ -208,7 +208,7 @@
 </template>
 
 <script setup>
-import { isSuccess, API_PATHS, FILM_API } from '@/constants';
+import { isSuccess, API_PATHS, FILM_API, apiPage } from '@/constants';
 import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
@@ -227,10 +227,10 @@ const HERO_HOVER_DELAY = 120;
 const MIN_REFRESH_MS = 450;
 
 const data = reactive({
-  data1: [],        // 已上映电影
-  data2: [],        // 待上映电影
   playingData: [],  // 正在热映展示数据（前 8 条）
   noPlayData: [],   // 即将上映展示数据（前 8 条）
+  playingTotal: 0,  // 正在热映总数（分页接口的 total）
+  noPlayTotal: 0,   // 即将上映总数（分页接口的 total）
   error: false      // 与「暂无数据」区分：网络失败不该显示成"没有影片"
 });
 
@@ -458,18 +458,22 @@ const loadFilmMarkTop = () => {
   });
 };
 
+// 只取展示所需的 8 条 + 总数：此前拉 /films 全表（42 KB）再在前端过滤，
+// 页面实际只用 8+8 条。总数从分页接口的 total 拿，标题里的「N 部」仍然是全量口径。
 const load = () => {
-  request.get(API_PATHS.FILMS).then(res => {
-    if (isSuccess(res)) {
-      data.data1 = res.data.filter(v => v.status === '已上映');
-      data.data2 = res.data.filter(v => v.status === '待上映');
-      // 最多展示 8 条，避免页面过长
-      data.playingData = data.data1.slice(0, 8);
-      data.noPlayData = data.data2.slice(0, 8);
-    } else {
+  const fetchByStatus = status => request.get(apiPage(API_PATHS.FILMS), {
+    params: { status, pageNum: 1, pageSize: 8 }
+  });
+  Promise.all([fetchByStatus('已上映'), fetchByStatus('待上映')]).then(([playing, upcoming]) => {
+    if (!isSuccess(playing) || !isSuccess(upcoming)) {
       data.error = true;
-      ElMessage.error(res.msg);
+      ElMessage.error(!isSuccess(playing) ? playing.msg : upcoming.msg);
+      return;
     }
+    data.playingData = playing.data.list || [];
+    data.playingTotal = playing.data.total || 0;
+    data.noPlayData = upcoming.data.list || [];
+    data.noPlayTotal = upcoming.data.total || 0;
   }).catch(err => {
     // 网络异常的统一提示由 request.js 的响应拦截器给出，这里只落错误态
     console.error('电影列表接口请求异常：', err);

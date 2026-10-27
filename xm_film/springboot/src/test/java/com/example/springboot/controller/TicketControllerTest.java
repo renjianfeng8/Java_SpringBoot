@@ -5,6 +5,7 @@ import com.example.springboot.common.enums.ErrorCode;
 import com.example.springboot.dto.response.TicketVoucherView;
 import com.example.springboot.exception.CustomException;
 import com.example.springboot.service.OrderedService;
+import com.example.springboot.service.RedeemRateLimiter;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -44,6 +45,9 @@ class TicketControllerTest {
 
     @MockBean
     private OrderedService orderedService;
+
+    @MockBean
+    private RedeemRateLimiter rateLimiter;
 
     @MockBean
     private JwtUtils jwtUtils;
@@ -166,5 +170,42 @@ class TicketControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(ErrorCode.SYSTEM_ERROR.code()))
                 .andExpect(jsonPath("$.msg").value("系统错误"));
+    }
+
+    /** 被限流后不再落库：429 由限流器抛出，service 一次都不能被调用 */
+    @Test
+    void blockedClientIsRejectedBeforeService() throws Exception {
+        org.mockito.Mockito.doThrow(new CustomException(ErrorCode.TOO_MANY_REQUESTS, "尝试次数过多，请稍后再试"))
+                .when(rateLimiter).checkAllowed(anyString());
+
+        mockMvc.perform(post("/api/v1/tickets/redeem")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"code\":\"ABCD1234\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(ErrorCode.TOO_MANY_REQUESTS.code()));
+
+        verify(orderedService, never()).redeemByCode(anyString());
+    }
+
+    /** 失败按来源 IP 计数，成功清零：两条路径都不能漏 */
+    @Test
+    void failuresAreCountedAndSuccessClears() throws Exception {
+        when(orderedService.redeemByCode("BADCODE1"))
+                .thenThrow(new CustomException(ErrorCode.NOT_FOUND, "取票码无效或已使用"));
+        when(orderedService.redeemByCode("ABCD1234")).thenReturn(voucher());
+
+        mockMvc.perform(post("/api/v1/tickets/redeem")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"code\":\"BADCODE1\"}"))
+                .andExpect(jsonPath("$.code").value(ErrorCode.NOT_FOUND.code()));
+
+        mockMvc.perform(post("/api/v1/tickets/redeem")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"code\":\"ABCD1234\"}"))
+                .andExpect(jsonPath("$.code").value("200"));
+
+        verify(rateLimiter, org.mockito.Mockito.times(2)).checkAllowed("127.0.0.1");
+        verify(rateLimiter).onFailure("127.0.0.1");
+        verify(rateLimiter).onSuccess("127.0.0.1");
     }
 }

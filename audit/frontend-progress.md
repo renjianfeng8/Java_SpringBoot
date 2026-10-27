@@ -46,7 +46,7 @@
 - **FE-18**：网络类失败保持登录（fail-open）的口径未定，未改。
 - **FE-19**：失败语义下沉到拦截器属行为变更，未动。
 - **FE-49**：`front/Orders`、`front/Cinema` 已用 `usePagedList`；`front/Movie`、`back/*` 仍手写分页（已补 `loadSeq`）。
-- **FE-60**：`App.vue` / `request.js` 裸前缀匹配残余两处，当前路由不可达，未做。
+- **FE-60**：已于 2026-10-27 修复（两处改用 `isPathWithin`）。
 - **Sonar 前端**：8 条 ARIA（`Web:S6819`）已处理（2026-10-22），2 条 `S3776` 复杂度仍未动。
 
 ## 五、临时工具（不在仓库内）

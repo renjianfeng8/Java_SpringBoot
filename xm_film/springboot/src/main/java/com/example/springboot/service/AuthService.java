@@ -2,6 +2,7 @@ package com.example.springboot.service;
 
 import com.example.springboot.common.enums.ErrorCode;
 import com.example.springboot.common.enums.RoleEnum;
+import com.example.springboot.common.TokenRevocationService;
 import com.example.springboot.entity.Account;
 import com.example.springboot.entity.User;
 import com.example.springboot.exception.CustomException;
@@ -28,12 +29,15 @@ public class AuthService {
 
     private final LoginAttemptService loginAttemptService;
 
+    private final TokenRevocationService tokenRevocationService;
+
     public AuthService(AdminService adminService, CinemaService cinemaService, UserService userService,
-                       LoginAttemptService loginAttemptService) {
+                       LoginAttemptService loginAttemptService, TokenRevocationService tokenRevocationService) {
         this.adminService = adminService;
         this.cinemaService = cinemaService;
         this.userService = userService;
         this.loginAttemptService = loginAttemptService;
+        this.tokenRevocationService = tokenRevocationService;
     }
 
     /** 按角色校验账号密码并返回对应主体；角色非法或未取到主体时报参数错误 */
@@ -110,7 +114,7 @@ public class AuthService {
         throw new CustomException(ErrorCode.UNAUTHORIZED, "无效的用户角色");
     }
 
-    /** 按角色维护密码；角色非法时报系统错误 */
+    /** 按角色维护密码；角色非法时报系统错误。改密成功后吊销该账号的旧令牌。 */
     public void updatePassword(Account account) {
         if (RoleEnum.ADMIN.name().equals(account.getRole())) {
             adminService.updatePassword(account);
@@ -121,6 +125,7 @@ public class AuthService {
         } else {
             throw new CustomException(ErrorCode.SYSTEM_ERROR, "非法输入");
         }
+        tokenRevocationService.revoke(account.getRole(), account.getId());
     }
 
     /**
@@ -149,6 +154,7 @@ public class AuthService {
         } else {
             throw new CustomException(ErrorCode.PARAM_INVALID, INVALID_ROLE);
         }
+        tokenRevocationService.revoke(role, id);
     }
 
     private Account requireAccount(Account account) {

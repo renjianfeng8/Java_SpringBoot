@@ -1,219 +1,229 @@
-COL	actor	id	int	NO	PRI	<null>	auto_increment
-COL	actor	film_id	int	YES	MUL	<null>	
-COL	actor	title	varchar(100)	NO		<null>	
-COL	actor	img	varchar(500)	YES		<null>	
 COL	actor	actor	varchar(50)	YES		<null>	
 COL	actor	figure	varchar(50)	YES		<null>	
-COL	actor	picture	varchar(500)	YES		<null>	
+COL	actor	film_id	int	YES	MUL	<null>	
 COL	actor	grade	varchar(20)	YES		<null>	
+COL	actor	id	int	NO	PRI	<null>	auto_increment
+COL	actor	img	varchar(500)	YES		<null>	
+COL	actor	picture	varchar(500)	YES		<null>	
+COL	actor	title	varchar(100)	NO		<null>	
 COL	actor	video	varchar(500)	YES		<null>	
-COL	admin	id	int	NO	PRI	<null>	auto_increment
-COL	admin	username	varchar(50)	NO	UNI	<null>	
-COL	admin	password	varchar(100)	NO		<null>	
-COL	admin	role	varchar(20)	YES		ADMIN	
-COL	admin	name	varchar(50)	YES		<null>	
 COL	admin	avatar	varchar(500)	YES		<null>	
+COL	admin	id	int	NO	PRI	<null>	auto_increment
+COL	admin	name	varchar(50)	YES		<null>	
+COL	admin	password	varchar(100)	NO		<null>	
 COL	admin	phone	varchar(20)	YES		<null>	
+COL	admin	role	varchar(20)	YES		ADMIN	
+COL	admin	username	varchar(50)	NO	UNI	<null>	
 COL	area	id	int	NO	PRI	<null>	auto_increment
 COL	area	title	varchar(50)	NO		<null>	
-COL	cinema	id	int	NO	PRI	<null>	auto_increment
-COL	cinema	username	varchar(50)	NO	UNI	<null>	
-COL	cinema	password	varchar(100)	NO		<null>	
-COL	cinema	avatar	varchar(500)	YES		<null>	
-COL	cinema	role	varchar(20)	YES		CINEMA	
-COL	cinema	name	varchar(100)	YES		<null>	
-COL	cinema	phone	varchar(50)	YES		<null>	
 COL	cinema	address	varchar(255)	YES		<null>	
-COL	cinema	status	varchar(20)	YES		未审核	
+COL	cinema	avatar	varchar(500)	YES		<null>	
 COL	cinema	description	text	YES		<null>	
-COL	cinema	directory_id	int	YES		<null>	
-COL	cinema_directory	id	int	NO	PRI	<null>	auto_increment
-COL	cinema_directory	poi_id	varchar(32)	NO	UNI	<null>	
-COL	cinema_directory	name	varchar(100)	NO		<null>	
-COL	cinema_directory	brand	varchar(50)	YES	MUL	<null>	
-COL	cinema_directory	province	varchar(30)	YES		<null>	
-COL	cinema_directory	city	varchar(30)	YES	MUL	<null>	
-COL	cinema_directory	district	varchar(30)	YES		<null>	
+COL	cinema	directory_id	int	YES	UNI	<null>	
+COL	cinema	id	int	NO	PRI	<null>	auto_increment
+COL	cinema	name	varchar(100)	YES		<null>	
+COL	cinema	password	varchar(100)	NO		<null>	
+COL	cinema	phone	varchar(50)	YES		<null>	
+COL	cinema	role	varchar(20)	YES		CINEMA	
+COL	cinema	status	varchar(20)	YES		未审核	
+COL	cinema	username	varchar(50)	NO	UNI	<null>	
 COL	cinema_directory	address	varchar(255)	YES		<null>	
-COL	cinema_directory	phone	varchar(50)	YES		<null>	
-COL	cinema_directory	source	varchar(20)	NO		amap	
+COL	cinema_directory	brand	varchar(50)	YES	MUL	<null>	
+COL	cinema_directory	city	varchar(30)	YES	MUL	<null>	
 COL	cinema_directory	create_time	datetime	NO		CURRENT_TIMESTAMP	DEFAULT_GENERATED
-COL	film	id	int	NO	PRI	<null>	auto_increment
-COL	film	title	varchar(100)	NO	MUL	<null>	
-COL	film	english	varchar(200)	YES		<null>	
-COL	film	start	date	YES	MUL	<null>	
-COL	film	time	smallint unsigned	NO		0	
-COL	film	language	varchar(50)	YES		<null>	
-COL	film	content	text	YES		<null>	
-COL	film	img	varchar(500)	YES		<null>	
-COL	film	employee	varchar(100)	YES		<null>	
-COL	film	area_id	int	YES	MUL	<null>	
-COL	film	status	varchar(20)	YES	MUL	待上映	
-COL	film	score	decimal(3,1)	YES		<null>	
-COL	film	box_office	decimal(10,1)	YES		0.0	
+COL	cinema_directory	district	varchar(30)	YES		<null>	
+COL	cinema_directory	id	int	NO	PRI	<null>	auto_increment
+COL	cinema_directory	name	varchar(100)	NO		<null>	
+COL	cinema_directory	phone	varchar(50)	YES		<null>	
+COL	cinema_directory	poi_id	varchar(32)	NO	UNI	<null>	
+COL	cinema_directory	province	varchar(30)	YES		<null>	
+COL	cinema_directory	source	varchar(20)	NO		amap	
 COL	film	actor_id	int	YES		<null>	
+COL	film	area_id	int	YES	MUL	<null>	
+COL	film	box_office	decimal(10,1)	YES		0.0	
+COL	film	content	text	YES		<null>	
+COL	film	employee	varchar(100)	YES		<null>	
+COL	film	english	varchar(200)	YES		<null>	
+COL	film	id	int	NO	PRI	<null>	auto_increment
+COL	film	img	varchar(500)	YES		<null>	
+COL	film	language	varchar(50)	YES		<null>	
+COL	film	score	decimal(3,1)	YES		<null>	
+COL	film	start	date	YES	MUL	<null>	
+COL	film	status	varchar(20)	YES	MUL	待上映	
+COL	film	time	smallint unsigned	NO		0	
+COL	film	title	varchar(100)	NO	MUL	<null>	
 COL	film	video	varchar(500)	YES		<null>	
 COL	film_type	film_id	int	NO	PRI	<null>	
 COL	film_type	type_id	int	NO	PRI	<null>	
-COL	fund_flow	id	int	NO	PRI	<null>	auto_increment
-COL	fund_flow	user_id	int	NO	MUL	<null>	
-COL	fund_flow	source	varchar(20)	NO	MUL	<null>	
-COL	fund_flow	change_amount	decimal(10,2)	NO		<null>	
-COL	fund_flow	balance_before	decimal(10,2)	NO		<null>	
 COL	fund_flow	balance_after	decimal(10,2)	NO		<null>	
-COL	fund_flow	related_id	int	YES		<null>	
+COL	fund_flow	balance_before	decimal(10,2)	NO		<null>	
+COL	fund_flow	change_amount	decimal(10,2)	NO		<null>	
 COL	fund_flow	create_time	datetime	YES		CURRENT_TIMESTAMP	DEFAULT_GENERATED
-COL	mark	id	int	NO	PRI	<null>	auto_increment
-COL	mark	user_id	int	NO	MUL	<null>	
+COL	fund_flow	id	int	NO	PRI	<null>	auto_increment
+COL	fund_flow	related_id	int	YES		<null>	
+COL	fund_flow	source	varchar(20)	NO	MUL	<null>	
+COL	fund_flow	user_id	int	NO	MUL	<null>	
+COL	mark	comment	varchar(255)	YES		<null>	
 COL	mark	film_id	int	NO	MUL	<null>	
+COL	mark	id	int	NO	PRI	<null>	auto_increment
 COL	mark	img	varchar(500)	YES		<null>	
 COL	mark	score	decimal(3,1)	YES		<null>	
-COL	mark	comment	varchar(255)	YES		<null>	
+COL	mark	user_id	int	NO	MUL	<null>	
 COL	mark_like	mark_id	int	NO	PRI	<null>	
 COL	mark_like	user_id	int	NO	PRI	<null>	
-COL	notice	id	int	NO	PRI	<null>	auto_increment
-COL	notice	title	varchar(100)	NO		<null>	
 COL	notice	content	text	YES		<null>	
+COL	notice	id	int	NO	PRI	<null>	auto_increment
 COL	notice	time	datetime	YES		CURRENT_TIMESTAMP	DEFAULT_GENERATED
-COL	ordered	id	int	NO	PRI	<null>	auto_increment
-COL	ordered	orders	varchar(50)	NO	UNI	<null>	
-COL	ordered	record_id	int	YES	MUL	<null>	
-COL	ordered	user_id	int	NO	MUL	<null>	
-COL	ordered	film_id	int	NO	MUL	<null>	
-COL	ordered	img	varchar(500)	YES		<null>	
-COL	ordered	cinema_id	int	NO	MUL	<null>	
-COL	ordered	room_id	int	NO	MUL	<null>	
+COL	notice	title	varchar(100)	NO		<null>	
 COL	ordered	appointment	varchar(100)	YES		<null>	
+COL	ordered	cinema_id	int	NO	MUL	<null>	
+COL	ordered	create_time	datetime	YES		CURRENT_TIMESTAMP	DEFAULT_GENERATED
+COL	ordered	film_id	int	NO	MUL	<null>	
+COL	ordered	id	int	NO	PRI	<null>	auto_increment
+COL	ordered	img	varchar(500)	YES		<null>	
+COL	ordered	number	int	YES		1	
+COL	ordered	orders	varchar(50)	NO	UNI	<null>	
+COL	ordered	pay_amount	decimal(10,2)	YES		<null>	
+COL	ordered	pay_time	datetime	YES	MUL	<null>	
+COL	ordered	pending_timeout_at	datetime	YES		<null>	
+COL	ordered	pickup_code	varchar(20)	YES	UNI	<null>	
+COL	ordered	record_id	int	YES	MUL	<null>	
+COL	ordered	refund_amount	decimal(10,2)	YES		<null>	
+COL	ordered	refund_time	datetime	YES		<null>	
+COL	ordered	room_id	int	NO	MUL	<null>	
+COL	ordered	seat	varchar(200)	YES		<null>	
+COL	ordered	start	datetime	YES		<null>	
+COL	ordered	status	varchar(20)	YES	MUL	待取票	
 COL	ordered	total	decimal(10,2)	YES		0.00	
 COL	ordered	unit_price	decimal(10,2)	YES		<null>	
-COL	ordered	number	int	YES		1	
-COL	ordered	status	varchar(20)	YES	MUL	待取票	
-COL	ordered	start	datetime	YES		<null>	
-COL	ordered	seat	varchar(200)	YES		<null>	
-COL	ordered	create_time	datetime	YES		CURRENT_TIMESTAMP	DEFAULT_GENERATED
-COL	ordered	pending_timeout_at	datetime	YES		<null>	
-COL	ordered	pay_time	datetime	YES	MUL	<null>	
-COL	ordered	pay_amount	decimal(10,2)	YES		<null>	
-COL	ordered	refund_time	datetime	YES		<null>	
-COL	ordered	refund_amount	decimal(10,2)	YES		<null>	
-COL	ordered	pickup_code	varchar(20)	YES	UNI	<null>	
-COL	recharge_order	id	int	NO	PRI	<null>	auto_increment
-COL	recharge_order	recharge_no	varchar(50)	NO	UNI	<null>	
-COL	recharge_order	user_id	int	NO	MUL	<null>	
+COL	ordered	user_id	int	NO	MUL	<null>	
 COL	recharge_order	amount	decimal(10,2)	NO		<null>	
-COL	recharge_order	status	varchar(20)	NO	MUL	处理中	
 COL	recharge_order	create_time	datetime	YES		CURRENT_TIMESTAMP	DEFAULT_GENERATED
 COL	recharge_order	finish_time	datetime	YES		<null>	
+COL	recharge_order	id	int	NO	PRI	<null>	auto_increment
+COL	recharge_order	recharge_no	varchar(50)	NO	UNI	<null>	
 COL	recharge_order	remark	varchar(255)	YES		<null>	
-COL	record	id	int	NO	PRI	<null>	auto_increment
+COL	recharge_order	status	varchar(20)	NO	MUL	处理中	
+COL	recharge_order	user_id	int	NO	MUL	<null>	
 COL	record	cinema_id	int	NO	MUL	<null>	
-COL	record	room_id	int	NO	MUL	<null>	
 COL	record	film_id	int	NO	MUL	<null>	
-COL	record	title	varchar(100)	NO		<null>	
-COL	record	start	datetime	YES	MUL	<null>	
+COL	record	id	int	NO	PRI	<null>	auto_increment
 COL	record	price	decimal(10,2)	YES		0.00	
+COL	record	room_id	int	NO	MUL	<null>	
+COL	record	start	datetime	YES	MUL	<null>	
 COL	record	status	varchar(20)	YES		正常	
-COL	room	id	int	NO	PRI	<null>	auto_increment
+COL	record	title	varchar(100)	NO		<null>	
 COL	room	cinema_id	int	YES	MUL	<null>	
-COL	room	title	varchar(100)	NO		<null>	
+COL	room	id	int	NO	PRI	<null>	auto_increment
 COL	room	name	varchar(50)	NO		<null>	
-COL	room	seat_rows	int	NO		8	
 COL	room	seat_cols	int	NO		8	
+COL	room	seat_rows	int	NO		8	
+COL	room	title	varchar(100)	NO		<null>	
+COL	tmp_user_tx	amount	decimal(10,2)	YES		<null>	
+COL	tmp_user_tx	film	int	YES		<null>	
+COL	tmp_user_tx	idx	int	YES		<null>	
+COL	tmp_user_tx	num	int	YES		<null>	
+COL	tmp_user_tx	offs	int	YES		<null>	
+COL	tmp_user_tx	rec_var	varchar(16)	YES		<null>	
+COL	tmp_user_tx	seats	varchar(200)	YES		<null>	
+COL	tmp_user_tx	status	varchar(10)	YES		<null>	
+COL	tmp_user_tx	uid	int	YES		<null>	
 COL	type	id	int	NO	PRI	<null>	auto_increment
 COL	type	title	varchar(50)	NO		<null>	
-COL	user	id	int	NO	PRI	<null>	auto_increment
-COL	user	username	varchar(50)	NO	UNI	<null>	
-COL	user	password	varchar(100)	NO		<null>	
-COL	user	name	varchar(50)	YES		<null>	
-COL	user	role	varchar(20)	YES		USER	
 COL	user	avatar	varchar(500)	YES		<null>	
-COL	user	phone	varchar(20)	YES		<null>	
 COL	user	balance	decimal(10,2)	NO		0.00	
+COL	user	id	int	NO	PRI	<null>	auto_increment
+COL	user	name	varchar(50)	YES		<null>	
+COL	user	password	varchar(100)	NO		<null>	
 COL	user	pay_password	varchar(100)	YES		<null>	
 COL	user	pay_pwd_error_count	int	NO		0	
 COL	user	pay_pwd_locked_until	datetime	YES		<null>	
+COL	user	phone	varchar(20)	YES		<null>	
+COL	user	role	varchar(20)	YES		USER	
+COL	user	username	varchar(50)	NO	UNI	<null>	
 COL	video	id	int	NO	PRI	<null>	auto_increment
-COL	video	title	varchar(100)	NO		<null>	
 COL	video	img	varchar(500)	YES		<null>	
 COL	video	name	varchar(200)	YES		<null>	
 COL	video	preview	varchar(500)	YES		<null>	
 COL	video	start	date	YES		<null>	
-IDX	actor	film_id	non_unique=1	film_id	1		
-IDX	actor	PRIMARY	non_unique=0	id	1		
-IDX	admin	PRIMARY	non_unique=0	id	1		
-IDX	admin	username	non_unique=0	username	1		
+COL	video	title	varchar(100)	NO		<null>	
 IDX	area	PRIMARY	non_unique=0	id	1		
-IDX	cinema	PRIMARY	non_unique=0	id	1		
-IDX	cinema	username	non_unique=0	username	1		
-IDX	cinema	uk_cinema_directory_id	non_unique=0	directory_id	1		
-IDX	cinema_directory	idx_cinema_directory_brand	non_unique=1	brand	1		
-IDX	cinema_directory	idx_cinema_directory_city	non_unique=1	city	1		
-IDX	cinema_directory	PRIMARY	non_unique=0	id	1		
-IDX	cinema_directory	uk_cinema_directory_poi_id	non_unique=0	poi_id	1		
-IDX	film	idx_area_id	non_unique=1	area_id	1		
-IDX	film	idx_start	non_unique=1	start	1		
-IDX	film	idx_status	non_unique=1	status	1		
-IDX	film	idx_title	non_unique=1	title	1		
-IDX	film	PRIMARY	non_unique=0	id	1		
-IDX	film_type	idx_type_id	non_unique=1	type_id	1		
+IDX	type	PRIMARY	non_unique=0	id	1		
+IDX	actor	PRIMARY	non_unique=0	id	1		
+IDX	actor	film_id	non_unique=1	film_id	1		
 IDX	film_type	PRIMARY	non_unique=0	film_id	1		
 IDX	film_type	PRIMARY	non_unique=0	type_id	2		
-IDX	fund_flow	idx_flow_source	non_unique=1	source	1		
-IDX	fund_flow	idx_flow_user_id	non_unique=1	user_id	1		
+IDX	film_type	idx_type_id	non_unique=1	type_id	1		
+IDX	room	PRIMARY	non_unique=0	id	1		
+IDX	room	idx_room_cinema_id	non_unique=1	cinema_id	1		
+IDX	mark_like	PRIMARY	non_unique=0	mark_id	1		
+IDX	mark_like	PRIMARY	non_unique=0	user_id	2		
+IDX	mark_like	idx_mark_like_user_id	non_unique=1	user_id	1		
+IDX	notice	PRIMARY	non_unique=0	id	1		
+IDX	video	PRIMARY	non_unique=0	id	1		
 IDX	fund_flow	PRIMARY	non_unique=0	id	1		
-IDX	mark	idx_mark_film_id	non_unique=1	film_id	1		
+IDX	fund_flow	idx_flow_user_id	non_unique=1	user_id	1		
+IDX	fund_flow	idx_flow_source	non_unique=1	source	1		
+IDX	cinema_directory	PRIMARY	non_unique=0	id	1		
+IDX	cinema_directory	uk_cinema_directory_poi_id	non_unique=0	poi_id	1		
+IDX	cinema_directory	idx_cinema_directory_city	non_unique=1	city	1		
+IDX	cinema_directory	idx_cinema_directory_brand	non_unique=1	brand	1		
 IDX	mark	PRIMARY	non_unique=0	id	1		
 IDX	mark	uk_user_film	non_unique=0	user_id	1		
 IDX	mark	uk_user_film	non_unique=0	film_id	2		
-IDX	mark_like	idx_mark_like_user_id	non_unique=1	user_id	1		
-IDX	mark_like	PRIMARY	non_unique=0	mark_id	1		
-IDX	mark_like	PRIMARY	non_unique=0	user_id	2		
-IDX	notice	PRIMARY	non_unique=0	id	1		
-IDX	ordered	idx_ordered_cinema_id	non_unique=1	cinema_id	1		
-IDX	ordered	idx_ordered_film_id	non_unique=1	film_id	1		
-IDX	ordered	idx_ordered_pay_time	non_unique=1	pay_time	1		
-IDX	ordered	idx_ordered_record_id	non_unique=1	record_id	1		
-IDX	ordered	idx_ordered_room_id	non_unique=1	room_id	1		
-IDX	ordered	idx_ordered_status	non_unique=1	status	1		
-IDX	ordered	idx_ordered_status_film_total	non_unique=1	status	1		
-IDX	ordered	idx_ordered_status_film_total	non_unique=1	film_id	2		
-IDX	ordered	idx_ordered_status_film_total	non_unique=1	total	3		
-IDX	ordered	idx_ordered_status_timeout	non_unique=1	status	1		
-IDX	ordered	idx_ordered_status_timeout	non_unique=1	pending_timeout_at	2		
-IDX	ordered	idx_ordered_user_id	non_unique=1	user_id	1		
+IDX	mark	idx_mark_film_id	non_unique=1	film_id	1		
+IDX	film	PRIMARY	non_unique=0	id	1		
+IDX	film	idx_area_id	non_unique=1	area_id	1		
+IDX	film	idx_status	non_unique=1	status	1		
+IDX	film	idx_start	non_unique=1	start	1		
+IDX	film	idx_title	non_unique=1	title	1		
+IDX	record	PRIMARY	non_unique=0	id	1		
+IDX	record	idx_record_cinema_id	non_unique=1	cinema_id	1		
+IDX	record	idx_record_room_id	non_unique=1	room_id	1		
+IDX	record	idx_record_film_id	non_unique=1	film_id	1		
+IDX	record	idx_record_start	non_unique=1	start	1		
 IDX	ordered	PRIMARY	non_unique=0	id	1		
 IDX	ordered	uk_ordered_orders	non_unique=0	orders	1		
 IDX	ordered	uk_ordered_pickup_code	non_unique=0	pickup_code	1		
-IDX	recharge_order	idx_recharge_status	non_unique=1	status	1		
-IDX	recharge_order	idx_recharge_user_id	non_unique=1	user_id	1		
+IDX	ordered	idx_ordered_record_id	non_unique=1	record_id	1		
+IDX	ordered	idx_ordered_user_id	non_unique=1	user_id	1		
+IDX	ordered	idx_ordered_film_id	non_unique=1	film_id	1		
+IDX	ordered	idx_ordered_cinema_id	non_unique=1	cinema_id	1		
+IDX	ordered	idx_ordered_room_id	non_unique=1	room_id	1		
+IDX	ordered	idx_ordered_status	non_unique=1	status	1		
+IDX	ordered	idx_ordered_status_timeout	non_unique=1	status	1		
+IDX	ordered	idx_ordered_status_timeout	non_unique=1	pending_timeout_at	2		
+IDX	ordered	idx_ordered_pay_time	non_unique=1	pay_time	1		
+IDX	ordered	idx_ordered_status_film_total	non_unique=1	film_id	2		
+IDX	ordered	idx_ordered_status_film_total	non_unique=1	total	3		
+IDX	ordered	idx_ordered_status_film_total	non_unique=1	status	1		
 IDX	recharge_order	PRIMARY	non_unique=0	id	1		
 IDX	recharge_order	uk_recharge_no	non_unique=0	recharge_no	1		
-IDX	record	idx_record_cinema_id	non_unique=1	cinema_id	1		
-IDX	record	idx_record_film_id	non_unique=1	film_id	1		
-IDX	record	idx_record_room_id	non_unique=1	room_id	1		
-IDX	record	idx_record_start	non_unique=1	start	1		
-IDX	record	PRIMARY	non_unique=0	id	1		
-IDX	room	idx_room_cinema_id	non_unique=1	cinema_id	1		
-IDX	room	PRIMARY	non_unique=0	id	1		
-IDX	type	PRIMARY	non_unique=0	id	1		
+IDX	recharge_order	idx_recharge_user_id	non_unique=1	user_id	1		
+IDX	recharge_order	idx_recharge_status	non_unique=1	status	1		
 IDX	user	PRIMARY	non_unique=0	id	1		
 IDX	user	username	non_unique=0	username	1		
-IDX	video	PRIMARY	non_unique=0	id	1		
+IDX	admin	PRIMARY	non_unique=0	id	1		
+IDX	admin	username	non_unique=0	username	1		
+IDX	cinema	PRIMARY	non_unique=0	id	1		
+IDX	cinema	username	non_unique=0	username	1		
+IDX	cinema	uk_cinema_directory_id	non_unique=0	directory_id	1		
 TBL	actor	65	InnoDB	utf8mb4_unicode_ci		演员表	
 TBL	admin	1	InnoDB	utf8mb4_unicode_ci		管理员表	
 TBL	area	14	InnoDB	utf8mb4_unicode_ci		区域/产地表（如中国大陆、美国、日本）	
-TBL	cinema	10	InnoDB	utf8mb4_unicode_ci		影院表	
+TBL	cinema	87	InnoDB	utf8mb4_unicode_ci		影院表	
 TBL	cinema_directory	707	InnoDB	utf8mb4_0900_ai_ci		影院名录(高德 POI 导入, 只读展示)	
 TBL	film	64	InnoDB	utf8mb4_unicode_ci		电影表	
 TBL	film_type	162	InnoDB	utf8mb4_unicode_ci		电影-类型关联表	
-TBL	fund_flow	0	InnoDB	utf8mb4_unicode_ci		资金流水表（只增不改不删）	
-TBL	mark	0	InnoDB	utf8mb4_unicode_ci		评分表	
-TBL	mark_like	0	InnoDB	utf8mb4_unicode_ci		评价点赞关系	
-TBL	notice	0	InnoDB	utf8mb4_unicode_ci		通知公告表	
-TBL	ordered	0	InnoDB	utf8mb4_unicode_ci		订单表	
-TBL	recharge_order	1	InnoDB	utf8mb4_unicode_ci		充值单据表	
-TBL	record	0	InnoDB	utf8mb4_unicode_ci		放映记录表（排片/场次）	
-TBL	room	0	InnoDB	utf8mb4_unicode_ci		放映厅表	
+TBL	fund_flow	79	InnoDB	utf8mb4_unicode_ci		资金流水表（只增不改不删）	
+TBL	mark	25	InnoDB	utf8mb4_unicode_ci		评分表	
+TBL	mark_like	60	InnoDB	utf8mb4_unicode_ci		评价点赞关系	
+TBL	notice	3	InnoDB	utf8mb4_unicode_ci		通知公告表	
+TBL	ordered	244	InnoDB	utf8mb4_unicode_ci		订单表	
+TBL	recharge_order	14	InnoDB	utf8mb4_unicode_ci		充值单据表	
+TBL	record	5343	InnoDB	utf8mb4_unicode_ci		放映记录表（排片/场次）	
+TBL	room	260	InnoDB	utf8mb4_unicode_ci		放映厅表	
+TBL	tmp_user_tx	70	InnoDB	utf8mb4_unicode_ci			
 TBL	type	15	InnoDB	utf8mb4_unicode_ci		电影类型表（如剧情、喜剧、动作）	
-TBL	user	1	InnoDB	utf8mb4_unicode_ci		用户表	
-TBL	video	0	InnoDB	utf8mb4_unicode_ci		视频/预告片表	
+TBL	user	14	InnoDB	utf8mb4_unicode_ci		用户表	
+TBL	video	1	InnoDB	utf8mb4_unicode_ci		视频/预告片表	

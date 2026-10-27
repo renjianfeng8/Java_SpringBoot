@@ -3,7 +3,10 @@ package com.example.springboot.controller;
 import com.example.springboot.common.Result;
 import com.example.springboot.dto.request.TicketRedeemRequest;
 import com.example.springboot.dto.response.TicketVoucherView;
+import com.example.springboot.exception.CustomException;
 import com.example.springboot.service.OrderedService;
+import com.example.springboot.service.RedeemRateLimiter;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -28,6 +31,8 @@ import org.springframework.web.bind.annotation.RestController;
  *       没有 orderId / 订单编号 / 金额 / userId</li>
  * </ol>
  *
+ * <p>在此之上补了失败限流（{@link RedeemRateLimiter}）：码空间再大，没有节流也能被脚本持续试。
+ *
  * 新增任何其它匿名写端点都必须逐条回答上面五个问题，否则不要往白名单里加。
  */
 @RestController
@@ -36,12 +41,25 @@ public class TicketController {
 
     private final OrderedService orderedService;
 
-    public TicketController(OrderedService orderedService) {
+    private final RedeemRateLimiter rateLimiter;
+
+    public TicketController(OrderedService orderedService, RedeemRateLimiter rateLimiter) {
         this.orderedService = orderedService;
+        this.rateLimiter = rateLimiter;
     }
 
     @PostMapping("/redeem")
-    public Result<TicketVoucherView> redeem(@Valid @RequestBody TicketRedeemRequest request) {
-        return Result.success(orderedService.redeemByCode(request.getCode()));
+    public Result<TicketVoucherView> redeem(@Valid @RequestBody TicketRedeemRequest request,
+                                            HttpServletRequest httpRequest) {
+        String client = httpRequest.getRemoteAddr();
+        rateLimiter.checkAllowed(client);
+        try {
+            TicketVoucherView voucher = orderedService.redeemByCode(request.getCode());
+            rateLimiter.onSuccess(client);
+            return Result.success(voucher);
+        } catch (CustomException e) {
+            rateLimiter.onFailure(client);
+            throw e;
+        }
     }
 }

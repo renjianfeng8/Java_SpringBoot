@@ -57,6 +57,9 @@ class GlobalExceptionHandlerTest {
     @MockBean
     LoginAttemptService loginAttemptService;
 
+    @MockBean
+    com.example.springboot.common.TokenRevocationService tokenRevocationService;
+
     /** 让真实拦截器放行，同时把登录态交给控制器；中间件本身由 AuthInterceptorAccessTest 覆盖 */
     private void authenticateAs(String role) {
         Claims claims = mock(Claims.class);

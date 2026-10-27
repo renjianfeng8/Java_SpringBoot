@@ -124,7 +124,7 @@
 | FE-57 | views/front/Cinema.vue；views/front/CinemaDetail.vue；views/front/FilmCinema.vue | 影院服务三项（退票无忧 / 儿童优惠 / WiFi覆盖）的标签与图标在三处硬编码，只有底色 `.service-tag--*` 是共享的：改一个服务名要动三个模板，而底色共享、文案不共享，同一底色可以挂在两个不同名字下。 | 上提 `SERVICES` 数据常量到 constants/index.js（key 映射既有底色类），三处按各自形状 v-for。三处渲染形状不同（纯片 / 片+说明 / 无图标），共享单元应是常量而非组件。**2026-10-21 已修复**：新增 `constants/cinemaServices.js`，三处改为 v-for。 |
 | FE-58 | views/front/Cinema.vue 页头内层；views/front/CinemaDetail.vue、FilmDetail.vue、FilmCinema.vue、FilmMarks.vue 的 hero 与内容层 | 「1200px 居中内容测度」（`width: 55%`/`60%` + `max-width: 1200px`）手写在约 10 处，`.page-narrow`/`.page-wide` 只是其中两份：改一次内容宽度要动 10 个文件，新增页头一旦漂移就与其下方列表错位。 | 上提为共享 measure（front-pages.scss 的变量/mixin，或一个类加「无纵向外边距」变体），各页引用。**2026-10-21 已修复**：新增 `.measure` / `.measure-inline` / `.measure-inline--wide`，9 处手写与两个页头已替换。历史补充：2026-10-16 Account.vue 页头曾按同口径手写，属于本次替换范围。 |
 | FE-59 | views/Front.vue `NAV_ITEMS`；router/index.js 路由表 | 顶部导航由数组手工维护、与路由表并列，两者之间没有任何机制关联：删路由忘删导航项则会落 `/:pathMatch` 兜底 404，加路由忘加导航项则页面无入口。本次下线影院名录就需同时改两处，正是该漂移的实例。 | 导航改由路由 meta（如 `meta.nav`）派生，或加断言：/front 下需出现在导航的路由必须各有对应项。**2026-10-21 已修复**：新增 `constants/nav.js`，`Front.vue` 的 `NAV_ITEMS` 已删除。 |
-| FE-60 | App.vue `path.startsWith('/front')`；utils/request.js `pathname.startsWith('/login')` | 与 FE-34 同形的裸前缀匹配残余两处：只差字符前缀相邻的路径也会命中（`/frontx` 会被套上前台主题、`/loginx` 会走登录页的跳过分支）。当前路由表下均无可达碰撞，属同形未做点。 | 与 FE-34 同口径改为「相等或 `prefix + '/'`」。两条均非当前可达缺陷。 |
+| FE-60 | App.vue `path.startsWith('/front')`；utils/request.js `pathname.startsWith('/login')` | 与 FE-34 同形的裸前缀匹配残余两处：只差字符前缀相邻的路径也会命中（`/frontx` 会被套上前台主题、`/loginx` 会走登录页的跳过分支）。当前路由表下均无可达碰撞，属同形未做点。 | 与 FE-34 同口径改为「相等或 `prefix + '/'`」。**2026-10-27 已修**：两处均改用 `isPathWithin`，`navigation.test.js` 覆盖 `/frontx`、`/frontend/orders` 不命中。 |
 
 ## 2026-10-18 全盘复核新增
 
@@ -211,7 +211,7 @@
 - **FE-18**：`useAuth.verifyToken` 对网络类失败保持登录（fail-open）的口径未定，未改。
 - **FE-19**：`isSuccess` 只收敛了字面量，失败语义下沉到拦截器属行为变更，未动。
 - **FE-49**：`front/Orders`、`front/Cinema` 已改用 `usePagedList`；`front/Movie`、`back/*` 仍手写分页（已补 `loadSeq`）。
-- **FE-60**：`App.vue` 与 `request.js` 的裸前缀匹配残余两处，当前路由表下不可达，未做。
+- **FE-60**：已于 2026-10-27 修复——`App.vue` 与 `request.js` 均改用 `isPathWithin`，`navigation.test.js` 钉住前缀边界。
 - **Sonar 前端剩余**：2 条 `S3776` 复杂度未处理；8 条 ARIA（`Web:S6819`）已于 2026-10-22 处理（见 §七日志）。
 
 ### 2026-10-22 追加（用户感知四项）
@@ -229,9 +229,9 @@
 
 | 编号 | 位置 | 问题 | 处置建议 |
 | --- | --- | --- | --- |
-| FE-67 | views/front/CinemaDetail.vue:348-368、408-432 | `load()` 先串行 `await` 影院信息、影片列表，再 `Promise.all(films.map(fetchFilmSessions))`。影院 1 实测 35 部片 → **35 个场次请求**（加影院/影片共 37 个），而当天实际只有 5 部片有场次；浏览器同域并发通常 6 个，其余排队。 | 一次 `records/page?cinemaId=...` 取回该影院全部排片，按 `filmId` 分组；影院信息与影片列表并行。当前单影院最多 63 条排片，取 100/200 即可，仍要用 `total` 判断截断。 |
+| FE-67 | views/front/CinemaDetail.vue:348-368、408-432 | `load()` 先串行 `await` 影院信息、影片列表，再 `Promise.all(films.map(fetchFilmSessions))`。影院 1 实测 35 部片 → **35 个场次请求**（加影院/影片共 37 个），而当天实际只有 5 部片有场次；浏览器同域并发通常 6 个，其余排队。 | 一次 `records/page?cinemaId=...` 取回该影院全部排片，按 `filmId` 分组；影院信息与影片列表并行。当前单影院最多 63 条排片，取 100/200 即可，仍要用 `total` 判断截断。**2026-10-27 已修**：改为 `fetchCinemaSessions()` 单请求（`pageSize=5000`）后按 `filmId` 分组，请求数 35 → 1；未改影院信息与影片列表的串行顺序。 |
 | FE-68 | views/front/Home.vue:37、194；CinemaDetail.vue:107；FilmDetail.vue:88-137；FilmMarks.vue:19；Search.vue:20；FilmCinema.vue:81 | 首页 Hero 5 张图全部 eager，实测合计 **554,172 B**；影院详情 35 张海报无 `loading="lazy"`（采样 10 张共 1,081,619 B，均约 108KB/张）；榜单、搜索结果、演员头像等列表图也无懒加载。`/files/**` 还没有 `Cache-Control`（见 BL-56）。 | 首屏第一张加 `fetchpriority="high"`，其余延迟加载；非首屏图片补 `loading="lazy" decoding="async"`。Hero 因横向 transform 不能直接靠原生 lazy，需缩略图或 IntersectionObserver。 |
-| FE-69 | views/front/Home.vue:461-478 | 首页调 `GET /api/v1/films` 取全表：实测 **42,681 B / 11-27ms**；页面只用 `status` 过滤后的 8+8 条和两个总数，响应却含所有影片的 `content` 长文本、`actorInfo` 等。同条件分页接口 `films/page?pageSize=8&status=已上映` 只有 **5,621 B**。 | 改两次分页请求（或新增轻量首页接口，一次返回 playing/upcoming 各 8 条 + total）；标题里的总数改读 `total`。 |
+| FE-69 | views/front/Home.vue:461-478 | 首页调 `GET /api/v1/films` 取全表：实测 **42,681 B / 11-27ms**；页面只用 `status` 过滤后的 8+8 条和两个总数，响应却含所有影片的 `content` 长文本、`actorInfo` 等。同条件分页接口 `films/page?pageSize=8&status=已上映` 只有 **5,621 B**。 | 改两次分页请求（或新增轻量首页接口，一次返回 playing/upcoming 各 8 条 + total）；标题里的总数改读 `total`。**2026-10-27 已修**：两条 `/films/page?status=…&pageSize=8` 并行，标题总数改读 `data.total`；未新增后端接口。 |
 | FE-70 | views/front/FilmCinema.vue:324-329 | `onMounted` 先 `fetchFilmFullInfo()` 成功后才 `loadCinemaList()`，两个独立请求被串成 2 个 RTT。 | `Promise.all` 并行发起；影片无效时再丢弃影院结果。 |
 | FE-71 | views/front/Account.vue:301-343 | `loadFlows()` 与 `loadTrend()` 对同一个 `fund-flows/page` 各请求一次，参数不同但同一用户、同一批流水。 | 趋势窗口覆盖当前页时复用一次响应；或后端提供聚合趋势接口。 |
 | FE-72 | views/front/Movie.vue:170-198 | 每次进入影片列表都重新请求 `types` / `areas` / `years` 三份几乎不变的字典。 | 模块级 Promise 缓存，与登录态无关。 |

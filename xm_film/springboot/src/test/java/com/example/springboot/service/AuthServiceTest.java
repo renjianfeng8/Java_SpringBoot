@@ -35,6 +35,9 @@ class AuthServiceTest {
     @Mock
     private LoginAttemptService loginAttemptService;
 
+    @Mock
+    private com.example.springboot.common.TokenRevocationService tokenRevocationService;
+
     @InjectMocks
     private AuthService authService;
 
@@ -105,6 +108,27 @@ class AuthServiceTest {
                 .isInstanceOf(CustomException.class);
 
         verify(loginAttemptService).onFailure("USER", 7, "usér1");
+    }
+
+    /** 改密成功即吊销该账号全部旧令牌；角色非法时不能误发吊销 */
+    @Test
+    void passwordChangeRevokesExistingTokens() {
+        Account account = account("USER", "u1");
+        account.setId(7);
+        account.setNewPassword("new-pass");
+
+        authService.updatePassword(account);
+
+        verify(userService).updatePassword(account);
+        verify(tokenRevocationService).revoke("USER", 7);
+    }
+
+    @Test
+    void adminPasswordResetRevokesTargetAccountTokens() {
+        authService.resetPassword("CINEMA", 5, "new-pass", 1);
+
+        verify(cinemaService).resetPassword(5, "new-pass");
+        verify(tokenRevocationService).revoke("CINEMA", 5);
     }
 
     private static Account account(String role, String username) {

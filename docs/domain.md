@@ -7,7 +7,7 @@
 三个账号表各自独立、互不 JOIN：`admin`（角色 ADMIN）、`cinema`（CINEMA）、`user`（USER，有余额与支付密码）。
 `entity/Account` 是三者的父类（**无对应表**），`token` / `newPassword` 挂在它上面（BL-19）。
 
-管理员重置他人登录密码只走 `PUT /auth/password/reset`，只允许 ADMIN，不校验旧密码，新密码 6–64 位并一律 BCrypt 入库；重置不会主动吊销旧 JWT（token 吊销仍未做）。管理端订单的取消/退票复用同一状态机，管理员也不能绕过映前 60 分钟退款截止。
+管理员重置他人登录密码只走 `PUT /auth/password/reset`，只允许 ADMIN，不校验旧密码，新密码 6–64 位并一律 BCrypt 入库；重置会吊销该账号已签发的 JWT（`TokenRevocationService` 按 `iat` 截断，本人改密同样生效），旧令牌在下一次请求即被视为失效。管理端订单的取消/退票复用同一状态机，管理员也不能绕过映前 60 分钟退款截止。
 
 关键：**影院的 `id` 同时也是它的「用户 id」**。`ordered.cinema_id` 与 token 里的 `userId` 在 CINEMA 语境下是同一 id 空间，所以 `ensureOrderAccess` 能直接比。
 
@@ -221,6 +221,7 @@ if (!RecordService.isPurchasable(recordItem)) → 409「该场次已开场或已
 - **在 `payOrder` 内与扣款同事务生成**，不重试（重试须拆事务）；`uk_ordered_pickup_code` 唯一索引兜底。
 - 归一：输入放宽到 `[A-Z0-9]`，去除非字母数字、转大写、长度必须 8 —— 兼容存量含 0/1 的十六进制码。
 - 核销：`markPickedUpByCode` 是**条件更新**（`WHERE pickup_code=? AND status='待取票'`），受影响行数即"是否真出票"；不加悲观锁。
+- 限流：匿名核销按来源 IP 计失败（`RedeemRateLimiter`），10 分钟 30 次后 429；成功清零，窗口到期自动放行。
 
 ## 4 资金账本
 

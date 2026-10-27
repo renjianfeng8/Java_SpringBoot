@@ -43,7 +43,7 @@ ANONYMOUS_WRITE_EXACT = { /api/v1/tickets/redeem }
 
 1. OPTIONS 直接放行。
 2. 无 `Authorization` 头 → 匿名判定（GET+公开前缀，或 POST+精确白名单），否则 401。
-3. 有 `Bearer`：解析 JWT → 写 `userId`/`role` 到 request attribute → `hasAccess()`：ADMIN 全通；非 ADMIN 撞 `ADMIN_ONLY` 即 403；写方法撞 `ADMIN_WRITE` 即 403。
+3. 有 `Bearer`：解析 JWT（签名/过期/吊销点）→ 写 `userId`/`role` 到 request attribute → `hasAccess()`：ADMIN 全通；非 ADMIN 撞 `ADMIN_ONLY` 即 403；写方法撞 `ADMIN_WRITE` 即 403。
 4. 令牌解析失败 → 降级为匿名判定（过期令牌仍可匿名读公开内容、仍可核销取票码）。
 
 `matchesPrefix(path, p)` = `path.equals(p) || path.startsWith(p + "/")`。**禁止**改回裸 `startsWith`（历史缺陷，见 BL-28 段）。
@@ -75,12 +75,12 @@ ANONYMOUS_WRITE_EXACT = { /api/v1/tickets/redeem }
 
 ## 6 测试
 
-70 个测试文件 / 9,112 行，共 535 条执行（2026-10-27），分三类：
+72 个测试文件 / 9,321 行，共 547 条执行（2026-10-27），分三类：
 
 | 类型 | 数量 | 依赖数据库 | 说明 |
 | --- | --- | --- | --- |
 | Mockito 单测 | 21 个类 | 否 | `@ExtendWith(MockitoExtension.class)` + `@InjectMocks` |
-| `@SpringBootTest` 绑定层守卫 | 16 个类（含 `*LoadTest`、`OrderedSeatConflictTest`、`OrderedServiceTest`、并发/事务边界测试） | **是，走 `xm_film_test`** | 证明 mapper XML 能被 MyBatis 解析并执行 |
+| `@SpringBootTest` 绑定层守卫 | 17 个类（含 `*LoadTest`、`OrderedSeatConflictTest`、`OrderedServiceTest`、并发/事务边界测试） | **是，走 `xm_film_test`** | 证明 mapper XML 能被 MyBatis 解析并执行 |
 | `@WebMvcTest` 控制器切片 | 13 个类（覆盖全部 23 个 Controller） | 否 | 鉴权前缀、角色范围、空请求体、业务码透传 |
 
 **硬规则**：任何新增 `@SpringBootTest` 必须同时加 `@ActiveProfiles("ci")`；会写库的再加 `@Transactional`。缺前者 = 写开发库，缺后者 = 失败即留脏行。

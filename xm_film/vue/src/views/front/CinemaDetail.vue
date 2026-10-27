@@ -337,34 +337,40 @@ const fetchFilms = async () => {
   }
 };
 
-// 13. 每部影片的场次：一次取回该片全部场次
+// 13. 本影院全部场次：一次取回后按影片分组
 //
-// 取全量而不是「按日期逐次查」的理由：日期条切换要 0 请求。若按日期查，
-// 每切一天就要对每部影片各发一次请求（10 部片 = 10 次），切日期变成有延迟的操作。
-// 代价是 SESSION_PAGE_SIZE 这个硬上限：某片场次多于此数会被静默截断，日期条相应缺天。
-// 排片在 `record` 表里按影院+影片+日期分布，单片单影院远达不到这个量级，故取 200 留足余量
-const SESSION_PAGE_SIZE = 200;
+// 此前是每部影片各发一次 /records/page（影院 35 部片 = 35 个并发请求），同一份
+// 「影院 + 时间窗」数据被拆成几十次往返。场次本来就按影院分布，一次取回再分组即可。
+// 取全量而不是「按日期查」的理由不变：日期条切换要 0 请求。
+// 代价是整院共享一个 pageSize 上限：单片 200 的旧上限换成整院 5000（7 天量级远低于此）。
+const CINEMA_SESSION_PAGE_SIZE = 5000;
 
-const fetchFilmSessions = async (filmIdValue) => {
+const fetchCinemaSessions = async () => {
   try {
     const res = await request.get(apiPage(API_PATHS.RECORDS), {
       params: {
         cinemaId: Number(cinemaId.value),
-        filmId: filmIdValue,
         pageNum: 1,
-        pageSize: SESSION_PAGE_SIZE,
+        pageSize: CINEMA_SESSION_PAGE_SIZE,
       },
     });
     if (isSuccess(res) && res.data) {
-      sessionsByFilm[filmIdValue] = res.data.list || [];
-      delete sessionError[filmIdValue];
+      (res.data.list || []).forEach(record => {
+        if (!sessionsByFilm[record.filmId]) sessionsByFilm[record.filmId] = [];
+        sessionsByFilm[record.filmId].push(record);
+      });
     } else {
-      // 业务码非 200 不经响应拦截器，但这里也不弹提示：一屏十部片失败就是十个弹窗
-      sessionError[filmIdValue] = true;
+      // 业务码非 200 不经响应拦截器，但这里也不弹提示：一屏失败就是一次加载失败
+      markAllSessionsFailed();
     }
   } catch {
-    sessionError[filmIdValue] = true;
+    markAllSessionsFailed();
   }
+};
+
+/** 整院请求失败等于每部影片都没有可售数据；不能落成「一部片都没有场次」 */
+const markAllSessionsFailed = () => {
+  films.value.forEach(film => { sessionError[film.id] = true; });
 };
 
 // 14. 深链：?filmId= 指向的影片
@@ -419,8 +425,8 @@ const load = async () => {
     if (!errorMsg.value) {
       await fetchFilms();
       if (!filmsError.value && films.value.length) {
-        // 等齐再渲染：逐行落位会让行数反复跳
-        await Promise.all(films.value.map(film => fetchFilmSessions(film.id)));
+        // 一次请求取回整院场次，再按影片分组；等齐再渲染，逐行落位会让行数反复跳
+        await fetchCinemaSessions();
         await applyFilmDeepLink();
       }
     }
