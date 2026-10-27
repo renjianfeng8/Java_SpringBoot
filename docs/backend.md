@@ -10,7 +10,7 @@
 | `UserController` | `/api/v1/users` | 读登录态 / 写 ADMIN | 管理端用户 CRUD |
 | `CinemaController` | `/api/v1/cinemas` | 读公开 / 写 ADMIN | 含 `regions`、`from-directory`、`covers/backfill`（返回一次性初始口令） |
 | `CinemaDirectoryController` | `/api/v1/cinema-directory` | ADMIN_ONLY（不限方法） | |
-| `FilmController` | `/api/v1/films` | 读公开 / 写 ADMIN | 含 box-office、mark-top、search、by-cinema |
+| `FilmController` | `/api/v1/films` | 读公开 / 写 ADMIN | 含 box-office、mark-top、search、by-cinema、options（下拉只回 id/title） |
 | `ActorController` | `/api/v1/actors` | 读公开 / 写 ADMIN | |
 | `AreaController` | `/api/v1/areas` | 读公开 / 写 ADMIN | |
 | `TypeController` | `/api/v1/types` | 读公开 / 写 ADMIN | |
@@ -75,7 +75,7 @@ ANONYMOUS_WRITE_EXACT = { /api/v1/tickets/redeem }
 
 ## 6 测试
 
-72 个测试文件 / 9,321 行，共 547 条执行（2026-10-27），分三类：
+72 个测试文件 / 9,321 行，共 548 条执行（2026-10-27），分三类：
 
 | 类型 | 数量 | 依赖数据库 | 说明 |
 | --- | --- | --- | --- |

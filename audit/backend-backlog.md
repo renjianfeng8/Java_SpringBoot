@@ -8,9 +8,9 @@
 
 维护口径：一处事实一处归属；每条给出 `文件` 与符号，行号随改动可能漂移、以符号为准。状态分三档：待办、有意不整改（与既定政策一致，非债务）、已核验非缺陷；修复完成的条目从表中移出，在该节以「本轮修复并移出本表」一句登记。
 
-更新日期：2026-10-27。当前代码基线：`master` @ `165ce32b`（工作区干净）；历史清单基线 `bfdd1c07`、`a2144fc4`，复核基线 `3112f8b7`，Sonar 扫描基线 `0ff8331c`。
+更新日期：2026-10-27。当前代码基线：`master` @ `e502811f`（工作区干净）；历史清单基线 `bfdd1c07`、`a2144fc4`，复核基线 `3112f8b7`，Sonar 扫描基线 `0ff8331c`。
 
-**当前实测基线**：`mvn test` = **547/547 通过，72 个测试文件**（2026-10-27）。历史记录：2026-10-26 428/428、2026-10-25 414/414、2026-10-22 403/403、2026-10-20 398/398、2026-10-19 343/343、2026-10-18 309/309。开发库 `xm-film` 已由 `springboot/demo-data.sql` 补入演示影厅、排片与账号，购票主链已实测跑通。
+**当前实测基线**：`mvn test` = **548/548 通过，72 个测试文件**（2026-10-27）。历史记录：2026-10-26 428/428、2026-10-25 414/414、2026-10-22 403/403、2026-10-20 398/398、2026-10-19 343/343、2026-10-18 309/309。开发库 `xm-film` 已由 `springboot/demo-data.sql` 补入演示影厅、排片与账号，购票主链已实测跑通。
 
 **状态口径**：SEC-01/02/03 已于 2026-10-25 修复（见 §安全 的修复记录），历史证据保留；不再作为未修漏洞跟踪。
 
@@ -86,7 +86,7 @@
 - **SEC-01**：`RechargeService.handleCallback` 改为仅接受 ADMIN；用户端「模拟支付回调」按钮移除，管理员在「充值流水」页通过/拒绝。真实网关接入时再加签名/查单，当前不再存在“任意用户给自己充值”的路径。
 - **SEC-02**：`jwt.signing-key` 改为从 `.env` 的 `JWT_SIGNING_KEY` 读取，`JwtUtils` 启动时校验长度 ≥ 32 字节；TMDB token、Amap key、DB 口令也一并移入 `.env`（模板见 `.env.example`，`.env` 不入库）。
 - **SEC-03**：删除 `PasswordMatcher` 的 `raw.equals(stored)` 回退；新增 `PlaintextPasswordMigration`，启动时把 user/admin/cinema 的登录口令与 user.pay_password 中的明文统一转成 BCrypt。
-- 守卫：新增 `PlaintextPasswordMigrationTest`、`FileUploadControllerTest`；`mvn test` = **547/547 通过，72 个测试文件**（2026-10-27）。
+- 守卫：新增 `PlaintextPasswordMigrationTest`、`FileUploadControllerTest`；`mvn test` = **548/548 通过，72 个测试文件**（2026-10-27）。
 
 **连带发现（中危，未逐条实测）**：
 
@@ -225,15 +225,12 @@
 
 | 编号 | 位置 | 问题 | 处置建议 |
 | --- | --- | --- | --- |
-| BL-09 | service/RecordService/RoomService/UserService.deleteBatchScoped | 批量删除逐个 id 查存在性与引用计数，N 个选中 = 2~3N 次查询（RoomService 最重）。 | 增加按 IN 批量的 selectByIds 与 countByXxxIds，单批降至 1~2 次查询。 |
-| BL-12 | service/TmdbService.resolveTypes | 逐类型 selectByTitleExact 并按需 insert（≤4 次）。 | 批量 selectByTitleExact(IN ...) 一次取回。管理员低频，优先级低。 |
-| BL-56 | common/config/WebMvcConfig.java:24-27 | `/files/**` 只返回 `Last-Modified`，**没有 `Cache-Control` / `ETag`**。上传文件名是 UUID、内容不变，重复访问仍会条件请求。 | `setCachePeriod(86400)` 或 `CacheControl.maxAge(...)`；文件名唯一，可放心长缓存。 |
-| BL-57 | application.yml（server 段） | 未开启 HTTP 压缩；`/films` 的 42,681B JSON 响应没有 `content-encoding`。 | 开 `server.compression.enabled: true`，`mime-types` 含 `application/json`。 |
+| BL-09 | service/RecordService/RoomService/UserService.deleteBatchScoped | 批量删除逐个 id 查存在性与引用计数，N 个选中 = 2~3N 次查询（RoomService 最重）。 | 增加按 IN 批量的 selectByIds 与 countByXxxIds，单批降至 1~2 次查询。**未做**：逐条 `selectByIdForUpdate` 是 BL-02/BL-44 的锁语义本体，改成 IN 批量锁会改变加锁顺序与间隙锁范围，须连同守卫测试另立一轮。 |
 | BL-58 | resources/logback-spring.xml:7-9 | `com.example.springboot.mapper` 固定 **DEBUG**，所有 SQL 与结果集都写控制台，开发/生产同样生效。 | **2026-10-25 已修复**：默认 INFO；需要看 SQL 时在 `.env` 里设 `logging.level.com.example.springboot.mapper=DEBUG`。 |
 | BL-59 | mapper/FilmMapper.xml:12-19、65-84 | 所有影片列表/详情/榜单/搜索都 `LEFT JOIN` 一个**全表 `ordered` 聚合子查询**；首页一次加载触发 3 次（`/films`、票房 Top、评分 Top）。EXPLAIN 当前扫 243 行。 | 数据量上来后考虑 `(status, film_id, total)` 覆盖索引；或把 `film.box_office` 恢复为支付/退票时维护的派生列；或只对需要票房的接口带聚合。 |
-| BL-62 | common/BaseController.list；mapper/FilmMapper.selectAll | 集合根原本无分页上限，且全列返回（含 `content` 长文本）；后台下拉也全量拉。首页的消费方问题见 FE-69。 | `MAX_LIST_SIZE = 500` 已加；剩余：列表改投影/分页，下拉只取 id/title 等轻量字段。 |
+| BL-62 | common/BaseController.list；mapper/FilmMapper.selectAll | 集合根的分页上限已由 `MAX_LIST_SIZE = 500` 兜住，但列表仍全列返回（含 `content` 长文本）；首页的消费方问题见 FE-69。 | 列表改投影/分页（详情仍走 `/{id}`）。 |
 
-**2026-10-26 修复并移出本表**：BL-08（选座改 `selectActiveByRecordId` 一次取回）、BL-10（`summary` 复用 `countGroupByStatus()`）、BL-11（改用 `selectMissingVideo`）、BL-55（`idx_ordered_pay_time` / `idx_ordered_status_film_total` 已入 schema）、BL-60（年份/日期改半开区间）、BL-61（点赞改 `mark_like` 聚合 JOIN）。仍成立：BL-09 / BL-12 / BL-56 / BL-57。
+**2026-10-27 修复并移出本表**：BL-12（类型判重改为 `TypeMapper.selectByTitles(IN ...)` 一次取回，导入从 ≤4 次查询降到 1 次）、BL-56（`/files/**` 加 `setCachePeriod(86400)`）、BL-57（`server.compression.enabled=true`，Tomcat 默认 mime-types 已含 `application/json`）、BL-62 的下拉部分（新增 `GET /films/options` 只回 id/title，后台两个下拉由 42,681B 降到 2,379B）。仍成立：BL-09 与 BL-62 的列表投影。
 
 ## 重复代码与可维护性（2026-10-20 专项：BL-13/14/15/16 已修复）
 
