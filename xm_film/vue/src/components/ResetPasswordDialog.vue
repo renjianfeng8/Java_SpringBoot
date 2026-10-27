@@ -29,7 +29,7 @@ import { AUTH_API, isSuccess } from '@/constants'
 const props = defineProps({
   modelValue: { type: Boolean, default: false },
   account: { type: Object, default: null },
-  role: { type: String, required: true },
+  accountRole: { type: String, required: true },
 })
 const emit = defineEmits(['update:modelValue'])
 
@@ -55,7 +55,7 @@ function submit() {
     try {
       const res = await request.put(AUTH_API.RESET_PASSWORD, {
         id: props.account.id,
-        role: props.role,
+        role: props.accountRole,
         newPassword: form.newPassword,
       })
       if (isSuccess(res)) {

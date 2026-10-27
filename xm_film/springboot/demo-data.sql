@@ -565,7 +565,7 @@ UNION ALL SELECT '有点评的用户', COUNT(DISTINCT user_id) FROM mark
 UNION ALL SELECT '有评分的影片', COUNT(DISTINCT film_id) FROM mark
 UNION ALL SELECT '点赞', COUNT(*) FROM mark_like
 UNION ALL SELECT '公告', COUNT(*) FROM notice
-UNION ALL SELECT '预告片', COUNT(*) FROM film WHERE video IS NOT NULL AND video <> '';
+UNION ALL SELECT '预告片', COUNT(*) FROM film WHERE LENGTH(video) > 0;
 
 SELECT DATE_FORMAT(pay_time, '%Y-%m-%d') AS 日期, COUNT(*) AS 订单数, SUM(total) AS 票房
 FROM ordered

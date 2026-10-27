@@ -300,7 +300,7 @@ onMounted(() => {
   initUserInfo();
 
   // 第二步：参数校验（与影院页逻辑一致）
-  if (!cinemaId || !filmId || !recordId || isNaN(Number(cinemaId)) || isNaN(Number(filmId)) || isNaN(Number(recordId))) {
+  if (!cinemaId || !filmId || !recordId || Number.isNaN(Number(cinemaId)) || Number.isNaN(Number(filmId)) || Number.isNaN(Number(recordId))) {
     seatError.value = '参数无效，无法加载购票信息';
     loading.value = false;
     ElMessage.error(seatError.value);
@@ -336,11 +336,11 @@ onMounted(() => {
  */
 const markSeatInMatrix = (matrix, rawSeat, rows, cols, value) => {
   const seat = rawSeat.trim();
-  const rowMatch = seat.match(/(\d+)排/);
-  const colMatch = seat.match(/排(\d+)座/);
-  if (!rowMatch || !colMatch) return;
-  const row = parseInt(rowMatch[1]);
-  const col = parseInt(colMatch[1]);
+  // 锚定整串，避免 \d+ 在长数字串上回溯；后端只会给出「N排M座」
+  const match = seat.match(/^(\d+)排(\d+)座$/);
+  if (!match) return;
+  const row = Number.parseInt(match[1], 10);
+  const col = Number.parseInt(match[2], 10);
   if (row < 1 || row > rows || col < 1 || col > cols) return;
   matrix[row - 1][col - 1] = value;
 };
@@ -500,12 +500,11 @@ const selectSeat = (row, col) => {
 };
 
 const removeSeat = (seatLabel) => {
-  const rowMatch = seatLabel.match(/(\d+)排/);
-  const colMatch = seatLabel.match(/排(\d+)座/);
-  if (!rowMatch || !colMatch) return;
+  const match = seatLabel.match(/^(\d+)排(\d+)座$/);
+  if (!match) return;
 
-  const row = parseInt(rowMatch[1]);
-  const col = parseInt(colMatch[1]);
+  const row = Number.parseInt(match[1], 10);
+  const col = Number.parseInt(match[2], 10);
   const r = row - 1;
   const c = col - 1;
 

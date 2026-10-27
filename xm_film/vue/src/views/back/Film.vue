@@ -21,7 +21,9 @@
               <el-descriptions-item label="上映日期">{{props.row.start}}</el-descriptions-item>
               <el-descriptions-item label="电影时长">{{props.row.time}}分钟</el-descriptions-item>
               <el-descriptions-item label="电影类型">
-                <el-tag v-for="item in props.row.typeList" :key="item.id" class="tag-gap" type="info">{{item.title}}</el-tag>
+                <template v-for="item in props.row.typeList" :key="item.id">
+                  <el-tag class="tag-gap" type="info">{{item.title}}</el-tag>
+                </template>
               </el-descriptions-item>
               <el-descriptions-item label="电影语言">{{props.row.language}}</el-descriptions-item>
               <el-descriptions-item label="电影简介">
@@ -67,7 +69,9 @@
         <el-table-column label="电影时长" prop="time" />
         <el-table-column label="电影类型" prop="typeList" width="180">
           <template v-slot="scope">
-            <el-tag v-for="item in scope.row.typeList" :key="item.id" class="tag-gap" type="info">{{item.title}}</el-tag>
+            <template v-for="item in scope.row.typeList" :key="item.id">
+              <el-tag class="tag-gap" type="info">{{item.title}}</el-tag>
+            </template>
           </template>
         </el-table-column>
         <el-table-column label="语言" prop="language" />

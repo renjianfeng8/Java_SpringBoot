@@ -98,7 +98,7 @@
       </template>
     </el-dialog>
 
-    <ResetPasswordDialog v-model="resetVisible" role="ADMIN" :account="resetTarget" />
+    <ResetPasswordDialog v-model="resetVisible" account-role="ADMIN" :account="resetTarget" />
   </div>
 </template>
 

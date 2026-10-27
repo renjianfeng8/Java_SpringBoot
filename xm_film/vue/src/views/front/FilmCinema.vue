@@ -194,7 +194,7 @@ const cinemaData = reactive({
 // 4. 路由跳转函数
 // 跳转到电影详情页
 const goToFilmDetail = (filmId) => {
-  if (!filmId || isNaN(Number(filmId))) {
+  if (!filmId || Number.isNaN(Number(filmId))) {
     ElMessage.warning('电影ID无效，无法查看详情');
     return;
   }
@@ -217,7 +217,7 @@ const goCinemaDetail = (cinemaId, filmId) => {
 // 5. 加载电影完整信息（补充所有字段，与后端返回对齐）
 const fetchFilmFullInfo = () => {
   // 前置校验：电影ID无效直接提示
-  if (!filmId || isNaN(Number(filmId))) {
+  if (!filmId || Number.isNaN(Number(filmId))) {
     errorMsg.value = '电影ID无效，请返回电影列表重试';
     return Promise.reject('电影ID无效');
   }
@@ -265,7 +265,7 @@ let loadSeq = 0;
 // 6. 核心功能：加载“当前电影上映的影院”（与后端接口参数严格对齐）
 const loadCinemaList = () => {
   // 前置校验：电影ID无效不发起请求
-  if (!filmId || isNaN(Number(filmId))) {
+  if (!filmId || Number.isNaN(Number(filmId))) {
     loading.value = false;
     errorMsg.value = '电影ID无效，无法筛选影院';
     return;

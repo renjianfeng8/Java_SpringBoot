@@ -64,7 +64,7 @@ const formatTime = (time: string | number | undefined) => {
     date = new Date(time.replace("T", " "));
   }
 
-  if (isNaN(date.getTime())) return "无效时间";
+  if (Number.isNaN(date.getTime())) return "无效时间";
 
   const year = date.getFullYear();
   const month = (date.getMonth() + 1).toString().padStart(2, "0");

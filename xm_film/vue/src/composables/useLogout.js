@@ -18,7 +18,7 @@ export function useLogout() {
     })
       .then(() => {
         logout()
-        router.push('/login')
+        void router.push('/login')
         ElMessage.success('退出成功')
       })
       .catch(() => {

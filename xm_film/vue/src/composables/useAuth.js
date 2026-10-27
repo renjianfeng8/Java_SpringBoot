@@ -46,7 +46,8 @@ export function useAuth() {
     user.value = getStoredUser()
     if (verified) return
     verified = true
-    verifyToken()
+    // verifyToken 内部已 try/catch，调用方无需等待
+    void verifyToken()
   }
 
   async function verifyToken() {

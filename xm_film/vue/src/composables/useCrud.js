@@ -154,10 +154,11 @@ export function useCrud(apiBase) {
       .catch(() => {})
   }
 
-  function onSearch() { clearSelection(); pageNum.value = 1; load() }
-  function onReset() { Object.keys(searchForm).forEach(k => { searchForm[k] = undefined }); clearSelection(); pageNum.value = 1; load() }
-  function onPageChange(p) { pageNum.value = p; load() }
-  function onSizeChange(s) { pageSize.value = s; pageNum.value = 1; load() }
+  // load 自身已捕获所有异常，这里不需要 await；void 只是显式忽略返回的 Promise
+  function onSearch() { clearSelection(); pageNum.value = 1; void load() }
+  function onReset() { Object.keys(searchForm).forEach(k => { searchForm[k] = undefined }); clearSelection(); pageNum.value = 1; void load() }
+  function onPageChange(p) { pageNum.value = p; void load() }
+  function onSizeChange(s) { pageSize.value = s; pageNum.value = 1; void load() }
   function onSelectionChange(rows) { selectedIds.value = rows.map(r => r.id) }
 
   return { dataList, loading, error, pageNum, pageSize, total, searchForm, selectedIds,

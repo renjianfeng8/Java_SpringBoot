@@ -158,7 +158,7 @@
       </template>
     </el-dialog>
 
-    <ResetPasswordDialog v-model="resetVisible" role="CINEMA" :account="resetTarget" />
+    <ResetPasswordDialog v-model="resetVisible" account-role="CINEMA" :account="resetTarget" />
   </div>
 </template>
 
