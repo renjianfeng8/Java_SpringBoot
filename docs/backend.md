@@ -75,13 +75,13 @@ ANONYMOUS_WRITE_EXACT = { /api/v1/tickets/redeem }
 
 ## 6 测试
 
-52 个测试类 / 8,456 行，共 428 条执行（2026-10-26），分三类：
+70 个测试文件 / 9,112 行，共 535 条执行（2026-10-27），分三类：
 
 | 类型 | 数量 | 依赖数据库 | 说明 |
 | --- | --- | --- | --- |
-| Mockito 单测 | 大多数 | 否 | `@ExtendWith(MockitoExtension.class)` + `@InjectMocks` |
+| Mockito 单测 | 21 个类 | 否 | `@ExtendWith(MockitoExtension.class)` + `@InjectMocks` |
 | `@SpringBootTest` 绑定层守卫 | 16 个类（含 `*LoadTest`、`OrderedSeatConflictTest`、`OrderedServiceTest`、并发/事务边界测试） | **是，走 `xm_film_test`** | 证明 mapper XML 能被 MyBatis 解析并执行 |
-| `@WebMvcTest` 控制器切片 | 5 个类 | 否 | Ordered / Recharge / Ticket / Auth+GlobalExceptionHandler / Health |
+| `@WebMvcTest` 控制器切片 | 13 个类（覆盖全部 23 个 Controller） | 否 | 鉴权前缀、角色范围、空请求体、业务码透传 |
 
 **硬规则**：任何新增 `@SpringBootTest` 必须同时加 `@ActiveProfiles("ci")`；会写库的再加 `@Transactional`。缺前者 = 写开发库，缺后者 = 失败即留脏行。
 

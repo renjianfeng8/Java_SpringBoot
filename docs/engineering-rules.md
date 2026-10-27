@@ -30,7 +30,7 @@ npm run build      # 产物到 dist/
 
 ```bash
 cd xm_film/springboot
-mvn test                                      # 52 个测试类 / 428 条用例（2026-10-26）
+mvn test                                      # 70 个测试文件 / 535 条用例（2026-10-27）
 mvn -o test -Dtest=OrderedServiceTest         # 单类
 mvn -o clean test -Dtest=XxxTest              # 改了 mapper XML / 改了 main 代码后，用这个
 ```
@@ -54,8 +54,8 @@ python dump-schema.py --target xm_film_test   # 见 §2
 
 ### 1.4 验证清单（改完必须主动提议跑）
 
-- 后端：`mvn test` 全绿（52 类 / 428 条）。
-- 前端：`npm run build` 成功（无 TS/模板报错）。
+- 后端：`mvn test` 全绿（70 文件 / 535 条）。
+- 前端：`npm test` 全绿（Vitest，5 文件 / 33 条）且 `npm run build` 成功（无 TS/模板报错）。
 - 涉及页面：`npm run dev` 起 5173 目视；涉及数据链路时先确保库里有 `room` + `record`。当前开发库已由 `demo-data.sql` 建好演示影厅/排片；若刚重置或换库，按 `项目索引.md` §3.3 重新导入。
 
 ---
@@ -170,6 +170,6 @@ python dump-schema.py --target xm_film_test   # 用来初始化测试库
 ## 6 当前已知边界（2026-10-26）
 
 - 开发库已由 `demo-data.sql` 建好演示影厅、排片与账号，购票主链已用真实数据跑通；重置数据后需重新导入。
-- 前端无单元测试框架；`npm run build` 与无头 Chrome 冒烟脚本是自动验证手段。
-- 集成测试验证"XML 能被解析并执行"；业务语义由 Mockito 单测覆盖，二者合并为 52 类 / 428 条。
+- 前端已接入 Vitest（`npm test`），覆盖 `utils/`、`constants/` 与 `composables/` 的纯逻辑；`npm run build` 与无头 Chrome 冒烟脚本仍是组件与端到端的验证手段。
+- 集成测试验证"XML 能被解析并执行"；业务语义由 Mockito 单测覆盖，二者合并为 70 个文件 / 535 条。
 - SEC-01 / SEC-02 / SEC-03 已于 2026-10-25 修复：充值回调改为仅 ADMIN 可审核（用户在账户页只能提交申请，管理员在「充值流水」页通过/拒绝）；JWT 密钥移入 `.env` 的 `JWT_SIGNING_KEY` 并在启动时校验长度；删除明文密码回退，新增 `PlaintextPasswordMigration` 在启动时把存量明文转成 BCrypt。

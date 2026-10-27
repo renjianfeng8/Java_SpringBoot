@@ -136,4 +136,4 @@ src/                       80 文件 / 17,387 行（vue+js+scss）
 - **FE-49**：`front/Orders`、`front/Cinema` 已用 `usePagedList`；`front/Movie`、`back/*` 仍手写分页（已补 `loadSeq`）。
 - **FE-60**：`App.vue` / `request.js` 的裸前缀匹配残余两处，当前路由不可达，未做。
 - **Sonar 前端**：2 条 `S3776` 复杂度（`front/FilmDetail.vue`、`manage/Film.vue`）未处理；8 条 `S6819` ARIA 已于 2026-10-22 修复。
-- 仍无前端自动化测试框架；验证靠 `npm run build` + 无头 Chrome 脚本。
+- 前端自动化测试：**已接入 Vitest**（`npm test`），当前 5 个测试文件覆盖 `utils/`（navigation / format / avatar）、`constants/` 与 `composables/`（usePagedList / useCrud）的纯逻辑；组件渲染与端到端仍靠 `npm run build` + 无头 Chrome 脚本。

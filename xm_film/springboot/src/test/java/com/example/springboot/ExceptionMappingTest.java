@@ -4,6 +4,7 @@ import com.example.springboot.common.Result;
 import com.example.springboot.exception.CustomException;
 import com.example.springboot.exception.GlobalExceptionHandler;
 import org.junit.jupiter.api.Test;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.PessimisticLockingFailureException;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.mock.http.MockHttpInputMessage;
@@ -137,6 +138,44 @@ class ExceptionMappingTest {
 
         assertThat(r.getCode()).isEqualTo("409");
         assertThat(r.getMsg()).contains("重试");
+    }
+
+    /**
+     * 外键拒绝删除 → 409 + 可操作提示，不能落成「系统错误」。
+     * 典型场景：删排片时该场次已有订单（BL-02）。
+     */
+    @Test
+    void foreignKeyViolationBecomesActionableConflict() {
+        DataIntegrityViolationException e = new DataIntegrityViolationException(
+                "delete failed", new RuntimeException("Cannot delete or update a parent row: a foreign key constraint fails"));
+
+        Result<Void> r = handler.dataIntegrityError(e);
+
+        assertThat(r.getCode()).isEqualTo("409");
+        assertThat(r.getMsg()).contains("无法删除").contains("停售");
+        assertThat(r.getMsg()).doesNotContain("foreign key").doesNotContain("ordered_ibfk");
+    }
+
+    /** 非外键的完整性冲突同样给 409，并保持通用文案 */
+    @Test
+    void otherIntegrityViolationIsStillConflict() {
+        DataIntegrityViolationException e = new DataIntegrityViolationException(
+                "duplicate", new RuntimeException("Duplicate entry '1' for key 'uk_user_film'"));
+
+        Result<Void> r = handler.dataIntegrityError(e);
+
+        assertThat(r.getCode()).isEqualTo("409");
+        assertThat(r.getMsg()).contains("唯一性");
+    }
+
+    /** TMDB/代理不可达：提示管理员检查代理，而不是抛 500 空白 */
+    @Test
+    void restClientFailureBecomesActionableMessage() {
+        Result<Void> r = handler.restClientError(
+                new org.springframework.web.client.RestClientException("Connection refused"));
+
+        assertThat(r.getCode()).isEqualTo("500");
+        assertThat(r.getMsg()).contains("TMDB").contains("代理");
     }
 
     /** 业务异常仍原样透传自己的 code/msg */
