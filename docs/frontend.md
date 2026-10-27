@@ -3,11 +3,11 @@
 ## 1 目录与规模
 
 ```
-src/                       80 文件 / 17,387 行（vue+js+scss）
-├── views/                 48 个 .vue / 13,559 行
-│   ├── 根目录 7 篇：Front / Back / Manage / AdminShell / Login / Register / 404
-│   ├── front/  16 篇 / 7,585 行
-│   ├── back/    7 篇 / 1,337 行
+src/                       85 文件 / 17,889 行（vue+js+scss）
+├── views/                 48 个 .vue / 13,572 行
+│   ├── 根目录 7 篇：Front / Back / Manage / AdminShell / Login / Register / 404（989 行）
+│   ├── front/  16 篇 / 7,594 行
+│   ├── back/    7 篇 / 1,341 行
 │   └── manage/ 18 篇 / 3,648 行
 ├── components/  6 个 / 1,199 行
 ├── composables/ 6 个（useAuth / useCrud / useFormDialog / usePagedList / useLoginPrompt / useLogout）
@@ -15,7 +15,7 @@ src/                       80 文件 / 17,387 行（vue+js+scss）
 └── assets/css/  tokens.scss + global.css + index.scss + 4 个布局 scss
 ```
 
-三个最大的单文件：`manage/Home.vue` 974、`front/BuyTicket.vue` 945、`front/Home.vue` 910 行。
+三个最大的单文件：`manage/Home.vue` 974、`front/BuyTicket.vue` 944、`front/Home.vue` 914 行。
 
 ## 2 路由表（`router/index.js`，单文件 142 行）
 
@@ -53,7 +53,7 @@ src/                       80 文件 / 17,387 行（vue+js+scss）
 `utils/request.js`：
 
 - `axios.create({ baseURL: API_BASE_URL, timeout: 30000 })`，`API_BASE_URL` 来自 `constants/index.js`（唯一读取点）。
-- 响应拦截器**直接返回 `res.data`**；业务码 `code !== '200'` **不在这里处理**，由各页面自行 `ElMessage.error(res.msg)`（FE-19 仍未改）。当前业务码判断已收敛到 `isSuccess()`：**116 处调用 / 39 个文件，业务码字面量 0 处**。
+- 响应拦截器**直接返回 `res.data`**；业务码 `code !== '200'` **不在这里处理**，由各页面自行 `ElMessage.error(res.msg)`（FE-19 仍未改）。当前业务码判断已收敛到 `isSuccess()`：**124 处调用 / 40 个文件，业务码字面量 0 处**。
 - HTTP 401 → 清存储 + 跳登录（防重入）；网络/超时单独中文提示。
 
 `utils/authStorage.js`：localStorage 键 `xm-film-user`；解析失败自动清空。
@@ -62,7 +62,7 @@ src/                       80 文件 / 17,387 行（vue+js+scss）
 
 `constants/index.js`：
 
-- `API_PATHS`（23 条）+ 各组业务路径（`ORDER_API` / `FILM_API` / `MARK_API` / `ACCOUNT_API` / `RECHARGE_API` / `FUND_FLOW_API` / `STATISTICS_API` / `TMDB_API` / `CINEMA_DIRECTORY_API` / `CINEMA_API` / `AUTH_API` / `TICKET_API`）。
+- `API_PATHS`（24 条）+ 各组业务路径（`ORDER_API` / `FILM_API` / `MARK_API` / `ACCOUNT_API` / `RECHARGE_API` / `FUND_FLOW_API` / `STATISTICS_API` / `TMDB_API` / `CINEMA_DIRECTORY_API` / `CINEMA_API` / `AUTH_API` / `TICKET_API`）。
 - `apiById` / `apiPage` / `apiBatch` 三个路径助手。
 - 状态映射：`ORDER_STATUS_MAP`、`CINEMA_STATUS(_MAP)`、`FILM_STATUS_MAP`、`RECORD_STATUS_MAP`、`RECHARGE_STATUS_MAP`、`ROLE_TAG_MAP`、`ACTOR_ROLE_TYPE_MAP` + 各自的 `get*Type` 兜底。
 - `ORDER_DELETABLE_STATUSES` 与后端 `OrderedService.DELETABLE_STATUSES` 靠注释同步。

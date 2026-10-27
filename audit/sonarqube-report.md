@@ -7,7 +7,7 @@
 > 范围：`xm_film/springboot/src/main/java`、`src/test/java`、`xm_film/vue/src`；排除 `node_modules/`、`dist/`
 > **状态**：基线 **74** 条 → P0 修复后 **69** 条 → 本轮清理后 **32** 条（漏洞 0，安全评级 A）。
 >
-> **这是 2026-10-20 的扫描快照，不是当前问题数。** 2026-10-22 已修复 8 条 `Web:S6819`（ARIA）；**2026-10-26 的后端复查与整改见文末 §9**（整改后主代码与测试代码均为 0 条）。本节其余计数仅用于复盘当轮，勿直接当现值引用。
+> **这是 2026-10-20 的扫描快照，不是当前问题数。** 2026-10-22 已修复 8 条 `Web:S6819`（ARIA）；**2026-10-26 的后端复查与整改见文末 §9**（整改后主代码与测试代码均为 0 条）；2026-10-27 又提交了 `ee37ac54`（SonarCloud 清零）。本机未复扫，前端 `S3776` 两条仍按 §5 登记。本节其余计数仅用于复盘当轮，勿直接当现值引用。
 >
 > **“漏洞 0 / 安全评级 A”只是 Sonar 静态规则结果**；SEC-01/02/03 已于 2026-10-25 修复（见 `backend-backlog.md` §安全），本快照未重新扫描。
 
@@ -339,6 +339,6 @@ docker stop sonarqube && docker rm sonarqube
 
 - 8.2（10.7 基线）：`files=242 indexed=242 issues=0 failed=0`。
 - 8.45（最新规则）：`files=242 indexed=242 issues=0 failed=0`。
-- `mvn -o test`：547 tests, 0 failures / 0 errors / 0 skipped（2026-10-27；扫描时为 431）。
+- `mvn -o test`：547 tests（快照时点；当前 548），0 failures / 0 errors / 0 skipped（2026-10-27；扫描时为 431）。
 - SonarLint standalone 与 SonarQube 服务端仍有口径差（无污点分析、无覆盖率/重复率）；正式门禁仍建议按 §8 的 Docker 流程在 10.7 上复扫一次，预期新增 0 条。
 

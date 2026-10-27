@@ -8,7 +8,7 @@
 
 维护口径：一处事实一处归属；每条给出 `文件` 与符号，行号随改动可能漂移、以符号为准。状态分三档：待办、有意不整改（与既定政策一致，非债务）、已核验非缺陷；修复完成的条目从表中移出，在该节以「本轮修复并移出本表」一句登记。
 
-更新日期：2026-10-27。当前代码基线：`master` @ `e502811f`（工作区干净）；历史清单基线 `bfdd1c07`、`a2144fc4`，复核基线 `3112f8b7`，Sonar 扫描基线 `0ff8331c`。
+更新日期：2026-10-27。当前代码基线：`master` @ `e502811f`；历史清单基线 `bfdd1c07`、`a2144fc4`，复核基线 `3112f8b7`，Sonar 扫描基线 `0ff8331c`。
 
 **当前实测基线**：`mvn test` = **548/548 通过，72 个测试文件**（2026-10-27）。历史记录：2026-10-26 428/428、2026-10-25 414/414、2026-10-22 403/403、2026-10-20 398/398、2026-10-19 343/343、2026-10-18 309/309。开发库 `xm-film` 已由 `springboot/demo-data.sql` 补入演示影厅、排片与账号，购票主链已实测跑通。
 
@@ -54,22 +54,13 @@
 
 | 编号 | 位置 | 问题 | 影响 | 建议 |
 | --- | --- | --- | --- | --- |
-| **BL-49** | `common/BaseController.getById` | 对**不存在**的 id 返回 `HTTP 200 + code "200" + data null`，而不是 404。实测 `GET /api/v1/films/99999999` → `{"code":"200","msg":"操作成功","data":null}`。 | 前端调用方只要写成 `if (isSuccess(res)) { res.data.xxx }` 就会在"记录刚被删除"时抛错。当前 117 处 `isSuccess()` 调用里大部分已判 `res.data` 或走列表接口，**未发现实际崩溃**，但这是一个易踩的坑。分页/列表接口不受影响。 | 覆写了 `getById` 的 5 个控制器：`Ordered`/`Record`/`Room`/`User` 走 `selectByIdScoped`，**不存在时抛 404**；`Cinema` 是**有意**返回 null（注释写明"未审核影院不对外展示"，返回 404 会泄露该 id 存在）。其余继承基类的 Film/Type/Area/Actor/Notice/Video 返回 200+null。不宜在基类统一改：改基类会让"有意返回 null"的 Cinema 也变 404，且所有实体的前端分支都要跟着改。建议逐实体判断后覆写。 |
+| **BL-49** | `common/BaseController.getById` | 对**不存在**的 id 返回 `HTTP 200 + code "200" + data null`，而不是 404。实测 `GET /api/v1/films/99999999` → `{"code":"200","msg":"操作成功","data":null}`。 | 前端调用方只要写成 `if (isSuccess(res)) { res.data.xxx }` 就会在"记录刚被删除"时抛错。当时 117 处 `isSuccess()` 调用（现 124 处）里大部分已判 `res.data` 或走列表接口，**未发现实际崩溃**，但这是一个易踩的坑。分页/列表接口不受影响。 | 覆写了 `getById` 的 5 个控制器：`Ordered`/`Record`/`Room`/`User` 走 `selectByIdScoped`，**不存在时抛 404**；`Cinema` 是**有意**返回 null（注释写明"未审核影院不对外展示"，返回 404 会泄露该 id 存在）。其余继承基类的 Film/Type/Area/Actor/Notice/Video 返回 200+null。不宜在基类统一改：改基类会让"有意返回 null"的 Cinema 也变 404，且所有实体的前端分支都要跟着改。建议逐实体判断后覆写。 |
 
-## 控制器层测试（2026-10-19 专项，为安全攻坚铺路）
-**背景**：测试维度原 62 分，扣分项之一是「23 个 Controller 里 18 个零覆盖」。安全三条（SEC-01/02/03）全在控制器/服务交界处，没有控制器测试就每次都得手工 curl 复现。本轮先覆盖**主链与安全面**三个代表，而不是把所有控制器机械铺一遍。
+## 控制器层测试（2026-10-19 起）
 
-| 测试类 | 条数 | 钉住什么 |
-| --- | --- | --- |
-| `controller/OrderedControllerTest` | 9 | ① 支付超时 `TIMEOUT_CANCELLED` 必须翻译成 **409**，不能返回 200 让前端显示"支付成功"；② 选座查询对**非 USER 必须传 `viewerId=null`**（否则同号用户订单被误标 mine、泄露他人订单号与金额）；③ 通用 `POST /orders` 必须拒绝并引导到 `/create`；④ 缺参是 400 不是 500 |
-| `controller/RechargeControllerTest` | 6 | 建单/回调的身份**取自 token 而非请求体**（请求体里塞 `userId:999` 无效）；归属越权 403 与重复回调 409 原样透出 |
-| `controller/TicketControllerTest` | 7 | 唯一匿名写入口：匿名 POST 放行、**同前缀其它路径仍 401**（精确匹配不是 startsWith）、请求体多余 `orderId` 被忽略、响应不含订单号/金额/用户 id、异常不泄露内部信息 |
+为安全攻坚补的三个控制器切片（`OrderedControllerTest` 9 条、`RechargeControllerTest` 6 条、`TicketControllerTest` 7 条）钉住了：支付超时 `TIMEOUT_CANCELLED` 必须翻译成 409、选座查询对非 USER 必须传 `viewerId=null`、回调身份取自 token 而非请求体、唯一匿名写入口的路径边界。2026-10-27 起 23 个 Controller 已全部有直接测试，覆盖率缺口关闭。
 
-**反证**：把 `OrderedController` 的 `viewerId` 改回无条件传 `userId` → 「非 USER 传 null」那条立刻红（`Argument(s) are different! Wanted: (42, isNull())`）。
-
-**关于 SEC-01 的测试策略（2026-10-25 更新）**：修复前本类刻意不把"任意用户给自己回调充值成功"写进断言，避免把缺陷固化成期望行为；修复后新增 `userCallbackSurfacesForbidden`，钉住 USER 即使操作自己的单据也得到 403。当前本类还钉"归属"与"幂等"两条规则。
-
-**一个测不出来的点（诚实记录）**：`TicketController` 的「GET 同路径必须 401」在 `@WebMvcTest` 里验证不了 —— 该控制器只有 `@PostMapping`，GET 在 HandlerMapping 阶段就 405，到不了拦截器。这条改由 `AuthInterceptorAccessTest` 在拦截器层覆盖，没有造一个假通过的用例。
+`TicketController` 的「GET 同路径必须 401」在 `@WebMvcTest` 里验不了（该控制器只有 `@PostMapping`，GET 在 HandlerMapping 阶段就 405），由 `AuthInterceptorAccessTest` 在拦截器层覆盖 —— 详见 `docs/backend.md` §6。
 
 ## 安全（2026-10-19 独立审计，三条已实测触发）
 
@@ -186,36 +177,17 @@
 - **BL-04（名录导入并发）**：实测**推翻两处工单描述** —— 报的是死锁（非唯一键冲突）；库端 `cinema.directory_id` 原本**没有**唯一索引，同一名录可串行关联两次。修复三层：加 `uk_cinema_directory_id`、逐行捕获 `DuplicateKeyException` 按幂等跳过、`DeadlockLoserDataAccessException` 转 409 提示重试。2 线程 × 7 轮零 500、零重复。详见 `docs/domain.md` §2.4。
 - **BL-05（JVM/DB 时钟混用）**：`pending_timeout_at` 改为 SQL `NOW() + INTERVAL 5 MINUTE` 写入（哨兵 `pendingTimeoutFromDb`），支付路径的超时判定改为 `countExpiredById` 并与清理任务共用 `pendingExpiredCondition` 片段。实测两会话 `NOW()` 相差 8 小时；修复后建单超时点距 DB `NOW()` 恰为 300 秒。守卫 `PendingTimeoutClockTest`（4 条，做过反证）。详见 `docs/domain.md` §3.4。
 
-**⚠️ 并发结论的可回归性缺口（2026-10-19 审计）**：上面的并发结论**全部来自 CI 之外的手工实测**，`mvn test` 拦不住回归。实测 grep：test 目录里 `Thread` / `ExecutorService` / `CountDownLatch` / `CompletableFuture` **0 次命中** —— 全仓没有一条真实并发测试。
+**并发结论的可回归性（2026-10-19 后已关闭）**：BL-48 补了双连接锁测试（`RowLockMutualExclusionTest`，4 张表）与业务级并发测试（`RecordConcurrentOverlapTest`，6 轮），均做过反证。其余并发结论仍为手工实测。
 
-| 测试类 | 实际证明的 | **不能**证明的 |
-| --- | --- | --- |
-| `RecordDeleteGuardTest` | 删除路径调的是 `selectByIdForUpdate`（方法名） | 锁真的与 `insertOrder` 争同一把锁；并发下不再 500；(且 `deleteBatchScoped` 未断言 `deleteBatch` 被调用) |
-| `PayOrderPurchasableGuardTest` | 拒绝分支没调钱包/密码服务 | **"先复核后扣款"的顺序** —— 注释写着"用 InOrder"，代码里根本没有 `InOrder` |
-| `DuplicateUsernameGuardTest` | `catch (DuplicateKeyException)` 存在 | 唯一索引真的存在；两个线程真的会撞键 |
-| `RecordOverlapLockTest` | SQL 文本含 `FOR UPDATE`、语句可执行 | 双连接竞争下是否真的串行 |
-| `CinemaServiceTest#import…SkipsConcurrentDuplicate` | 逐行 try/catch 存在 | 并发下真的撞键（桩是单线程 `thenThrow→thenReturn`） |
+## 测试覆盖缺口（2026-10-27 已关闭）
 
-**处置建议**：需要至少两条**双连接**测试（各自开事务、先 `SELECT … FOR UPDATE`、断言第二个阻塞或返回 1）：一条排片重叠（BL-01），一条下单 vs 删排片（BL-02）。没有它们，这一节的所有"已修复"都是**手工证据**，不是**可回归证据**。
+23 个 Controller 全部有直接测试；Service、定时任务与异常分支已补齐；mapper XML 参数名有静态守卫（`MapperXmlParameterGuardTest`）与真库执行测试（`MarkEligibilityMapperLoadTest`）。当前 72 文件 / 548 条；前端已接入 Vitest（33 条），组件渲染与端到端仍靠构建 + 无头 Chrome。
 
-## 测试覆盖缺口（2026-10-22 更新）
-
-| 项 | 现状 | 说明 |
-| --- | --- | --- |
-| Controller | **23 个中 18 个零直接测试** | 已覆盖 `Health`、`Auth`（login/reset）、`Ordered`、`Recharge`、`Ticket`；其余 18 个仍无控制器切片。`MarkController.requireUser`、`UserController/CinemaController.requireAdmin` 等**方法级鉴权第二层**仍无直接覆盖。 |
-| Service | **8 个零测试** | `RoomService`、`RecordService`（仅被锁测试间接触及）、`AuthService`、`CinemaDirectoryService`、`AreaService`、`ActorService`、`TypeService`、`VideoService`、`NoticeService`。`RoomService.validateSeatLayout`、`RecordService.validateSchedule` 未测。 |
-| 定时任务 | **零覆盖** | `OrderCleanupTask` 及 `OrderedService.cancelExpiredPendingOrders` 无直接测试。 |
-| 异常处理器 | 2 个分支未覆盖 | `DataIntegrityViolationException`（BL-02 修复引入的 409 路径）、`RestClientException`。 |
-| 空表恒真断言 | 多处 | `CinemaDirectoryMapperLoadTest`、`StatisticsMapperLoadTest` 在空库上 `allSatisfy` / `>= 0` 恒真，只证明 SQL 语法合法。 |
-| **mapper XML 参数名漂移** | **2026-10-23 已修并补守卫** | `OrderedMapper.countPickedUpByUserAndFilm` 的 XML 写 `#{pickedUp}`，方法签名只有 `userId/filmId` → 评论区与发评价在真库上恒抛 `BindingException`（500）。Mockito 单测不碰 XML，故 403 条测试全绿却漏掉。**修复**：改走 `@Param("s") OrderStatusCriteria`（与「状态取值唯一来源」同口径）+ `MarkEligibilityMapperLoadTest` 钉住，已做故障注入反证（改回 `#{pickedUp}` 该测试变红）。同类风险：其余「XML 引用了签名里没有的参数」暂无通用守卫，新增语句时请配一条真库执行测试。 |
-| **演示脚本重跑的余额漂移** | **2026-10-23 修复** | `demo-data.sql` 里既有账号 `111` 的余额会被 `§8` 按流水末条回写，重跑时若直接拿当前余额当起点，`100 → 174 → 248 → …` 一路漂。**修复**：`§1` 先 `UPDATE user SET balance = 100.00` 还原起点；自检补「流水首尾未接续」「近 7 日有 0 票房的日期」两项，首跑与重跑各 9 项全 0。 |
-| 前端 | **零测试** | `package.json` 无 test 脚本。 |
+历史备忘：`OrderedMapper.countPickedUpByUserAndFilm` 曾因 XML 写 `#{pickedUp}` 而方法签名只有 `userId/filmId`，评论区与发评价在真库上恒抛 `BindingException`；已改走 `@Param("s") OrderStatusCriteria` 并用真库测试钉住。`demo-data.sql` 重跑的余额漂移已由 §1 重置起点修复，末尾 7 项自检全 0。
 
 ## 状态机与契约
 
-| 编号 | 位置 | 问题 | 处置建议 |
-| --- | --- | --- | --- |
-| BL-06a | db/record.status | `record.status` 是自由字符串（`"正常"`/`"停售"`），库端无 `CHECK`。2026-10-19 验证脚本误写 `"已停售"` 时 `UPDATE` 不报错、`isPurchasable` 也认不出来，导致「停售场次仍可支付」被误判为通过 —— 同样的错误若发生在手工改库或导入里，会静默变成「永远可售」。 | 加 `CHECK (status IN ('正常','停售'))` 或改为枚举列。 |
+**BL-06a（状态列是自由字符串）2026-10-27 已修复**：film / record / ordered / recharge_order / cinema 的 status 与三张账号表的 role 均加库级 `CHECK`，`StatusConstraintLoadTest` 钉住非法值被库拒绝。此前误写 `"已停售"` 不报错、`isPurchasable` 也认不出来，会让停售场次静默变成「永远可售」。
 
 本节原登记 **BL-06（支付不复核场次可购性）**，2026-10-19 已修复并移出：`payOrder` 在验密与扣款之前，用 `recordMapper.selectByIdForUpdate` 锁排片行复核 `isPurchasable`；不可购时报 409 且一分钱不动。实测复现与修复细节见 `docs/domain.md` §3.3，守卫 `PayOrderPurchasableGuardTest`（5 条，做过禁用复核的反证）。
 
@@ -226,9 +198,10 @@
 | 编号 | 位置 | 问题 | 处置建议 |
 | --- | --- | --- | --- |
 | BL-09 | service/RecordService/RoomService/UserService.deleteBatchScoped | 批量删除逐个 id 查存在性与引用计数，N 个选中 = 2~3N 次查询（RoomService 最重）。 | 增加按 IN 批量的 selectByIds 与 countByXxxIds，单批降至 1~2 次查询。**未做**：逐条 `selectByIdForUpdate` 是 BL-02/BL-44 的锁语义本体，改成 IN 批量锁会改变加锁顺序与间隙锁范围，须连同守卫测试另立一轮。 |
-| BL-58 | resources/logback-spring.xml:7-9 | `com.example.springboot.mapper` 固定 **DEBUG**，所有 SQL 与结果集都写控制台，开发/生产同样生效。 | **2026-10-25 已修复**：默认 INFO；需要看 SQL 时在 `.env` 里设 `logging.level.com.example.springboot.mapper=DEBUG`。 |
 | BL-59 | mapper/FilmMapper.xml:12-19、65-84 | 所有影片列表/详情/榜单/搜索都 `LEFT JOIN` 一个**全表 `ordered` 聚合子查询**；首页一次加载触发 3 次（`/films`、票房 Top、评分 Top）。EXPLAIN 当前扫 243 行。 | 数据量上来后考虑 `(status, film_id, total)` 覆盖索引；或把 `film.box_office` 恢复为支付/退票时维护的派生列；或只对需要票房的接口带聚合。 |
-| BL-62 | common/BaseController.list；mapper/FilmMapper.selectAll | 集合根的分页上限已由 `MAX_LIST_SIZE = 500` 兜住，但列表仍全列返回（含 `content` 长文本）；首页的消费方问题见 FE-69。 | 列表改投影/分页（详情仍走 `/{id}`）。 |
+| BL-62 | common/BaseController.list；mapper/FilmMapper.selectAll | 集合根的分页上限已由 `MAX_LIST_SIZE = 500` 兜住，但列表仍全列返回（含 `content` 长文本）。首页的浪费已由 FE-69 改走 `/films/page` 解决；后台影片表仍需全列（气泡与编辑表单），故列表投影暂不动。 | 列表改投影/分页（详情仍走 `/{id}`）。 |
+
+**2026-10-25 已修复并移出本表**：BL-58（mapper 日志默认 INFO，需要 SQL 时在 `.env` 设 `logging.level.com.example.springboot.mapper=DEBUG`）。
 
 **2026-10-27 修复并移出本表**：BL-12（类型判重改为 `TypeMapper.selectByTitles(IN ...)` 一次取回，导入从 ≤4 次查询降到 1 次）、BL-56（`/files/**` 加 `setCachePeriod(86400)`）、BL-57（`server.compression.enabled=true`，Tomcat 默认 mime-types 已含 `application/json`）、BL-62 的下拉部分（新增 `GET /films/options` 只回 id/title，后台两个下拉由 42,681B 降到 2,379B）。仍成立：BL-09 与 BL-62 的列表投影。
 

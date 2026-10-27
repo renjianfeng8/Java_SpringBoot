@@ -5,7 +5,7 @@
 
 | 文件 | 内容 | 性质 |
 | --- | --- | --- |
-| `schema.sql` | 18 张表的 `SHOW CREATE TABLE` 原样输出（含列注释、索引、外键） | 只读快照 |
+| `schema.sql` | 18 张业务表的 `SHOW CREATE TABLE` 原样输出（含列注释、索引、外键），另有演示脚本残留的 `tmp_user_tx` | 只读快照 |
 | `inventory.tsv` | 列 / 索引 / 表三合一的逐行清单，便于 grep | 只读快照 |
 
 ## 口径
@@ -28,6 +28,7 @@ python dump-schema.py          # MYSQL_EXE 可用环境变量覆盖 mysql 客户
 
 ## 已知的库表侧事实（供审查引用）
 
+- `schema.sql` 共 19 张表 = 18 张业务表 + `tmp_user_tx`。后者是 `demo-data.sql` 早期版本把临时表落成了普通表的残留（现行脚本用 `CREATE TEMPORARY TABLE`），不属于业务模型；重建开发库时可直接 `DROP TABLE tmp_user_tx`。
 - `record` 表**没有任何防止时段重叠的约束**（只有 `idx_record_cinema_id/room_id/film_id/start`），
   这是 `audit/backend-backlog.md` BL-01「先查后插」在数据库侧的证据。
 - `ordered` 表有 `uk_ordered_orders`（订单号）与 `uk_ordered_pickup_code`（取票码），

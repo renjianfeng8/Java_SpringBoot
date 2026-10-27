@@ -66,7 +66,7 @@ python dump-schema.py --target xm_film_test   # 见 §2
 
 | 文件 | 内容 |
 | --- | --- |
-| `schema.sql` | 18 张表的 `SHOW CREATE TABLE`（含列注释、索引、外键） |
+| `schema.sql` | 18 张业务表的 `SHOW CREATE TABLE`（含列注释、索引、外键；另有演示残留的 `tmp_user_tx`） |
 | `inventory.tsv` | 列 / 索引 / 表三合一的逐行清单 |
 | `README.md` | 口径与库表侧已确认的事实 |
 
@@ -97,7 +97,6 @@ python dump-schema.py --target xm_film_test   # 用来初始化测试库
 | `docs/backend.md` / `docs/frontend.md` | 新增控制器前缀、新增页面、新增 composable |
 | `docs/demo-script.md` | 演示账号、演示数据、操作步骤变化 |
 | `audit/backend-backlog.md` / `audit/frontend-audit.md` | 新增或关闭债务条目 |
-| `audit/frontend-progress.md` | 前端收尾/功能项进度与验证结果变化 |
 | `audit/sonarqube-report.md` | 重新扫描后更新快照；不重扫时明确标注历史快照 |
 | `audit/table-spec.md` | 表格规范变化 |
 | `xm_film/.../db/README.md` | 库表事实变化 |
@@ -136,7 +135,7 @@ python dump-schema.py --target xm_film_test   # 用来初始化测试库
 | **SQL 里不写状态中文字面量**，一律 `#{s.xxx}` 由 `OrderStatusCriteria` 传入；新增例外必须配守卫测试 | `backend-backlog.md` §数据库设计 BL-31 |
 | **金额字段一律 `BigDecimal`**，不用 `Double`；库列用 `decimal(10,2)` | `backend-backlog.md` §数据库设计 BL-24 |
 | **并发测试必须用两条物理连接**，且连接在"执行它的那个线程"上创建；只断言 SQL 文本含 `FOR UPDATE` 不算数 | `backend-backlog.md` §并发 BL-48 |
-| 状态是中文字面量，改动须跨 Java/XML/JS 同步 | `domain.md` §1 |
+| 状态是中文枚举值，改动须同步 Java 枚举 / 前端常量 / 两处 SQL 字面量 | `domain.md` §1 |
 
 ### 4.2 前端
 
@@ -148,6 +147,7 @@ python dump-schema.py --target xm_film_test   # 用来初始化测试库
 | 提交按钮必须有 in-flight 守卫 + loading | FE-46 |
 | 前缀匹配一律「相等或 `prefix + '/'`」 | FE-34 / FE-60 |
 | 颜色/字号/间距只用令牌；字重只有 400/500/700 | `frontend.md` §6 |
+| 改大文件用精确文本替换，不按行号拼接（实测删掉过 `<script setup>` 头） | 2026-10-21 前端攻坚 |
 
 ### 4.3 表格（动表格前必读 `audit/table-spec.md`）
 
@@ -167,9 +167,10 @@ python dump-schema.py --target xm_film_test   # 用来初始化测试库
 
 ---
 
-## 6 当前已知边界（2026-10-26）
+## 6 当前已知边界（2026-10-27）
 
 - 开发库已由 `demo-data.sql` 建好演示影厅、排片与账号，购票主链已用真实数据跑通；重置数据后需重新导入。
 - 前端已接入 Vitest（`npm test`），覆盖 `utils/`、`constants/` 与 `composables/` 的纯逻辑；`npm run build` 与无头 Chrome 冒烟脚本仍是组件与端到端的验证手段。
 - 集成测试验证"XML 能被解析并执行"；业务语义由 Mockito 单测覆盖，二者合并为 72 个文件 / 548 条。
+- 性能/配置：JSON 已开 gzip（`server.compression`）、`/files/**` 有 24h `Cache-Control`、后台影片下拉走 `GET /films/options`（只回 id/title）。
 - SEC-01 / SEC-02 / SEC-03 已于 2026-10-25 修复：充值回调改为仅 ADMIN 可审核（用户在账户页只能提交申请，管理员在「充值流水」页通过/拒绝）；JWT 密钥移入 `.env` 的 `JWT_SIGNING_KEY` 并在启动时校验长度；删除明文密码回退，新增 `PlaintextPasswordMigration` 在启动时把存量明文转成 BCrypt。

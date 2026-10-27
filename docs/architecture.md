@@ -19,7 +19,7 @@
 | | Vite | 6.4 |
 | | Sass | 1.89 |
 
-前端**无** ESLint / Prettier / 单元测试框架；后端无 H2 / Testcontainers。
+前端已接入 **ESLint**（`npm run lint`）与 **Vitest**（`npm test`），未用 Prettier；组件与端到端仍靠 `npm run build` + 无头 Chrome。后端无 H2 / Testcontainers，集成测试直连 `xm_film_test`。
 
 ## 2 进程与端口
 
@@ -29,7 +29,7 @@
 | 前端 dev | 5173 | `vite.config.js` **只代理 `/files`**，`/api` 走 `.env.development` 的绝对地址 |
 | 测试（ci profile） | 0 | 随机端口，库 `xm_film_test` |
 
-`application.yml` 的关键配置项（均为字面量，不经环境变量）：
+`application.yml` 的关键配置项（密钥/口令/TMDB token/高德 Key 走 `.env`；代理、上传目录等本机参数仍直写）：
 
 | 键 | 值 | 说明 |
 | --- | --- | --- |
@@ -47,16 +47,16 @@ DB 口令、TMDB token、高德 Key、JWT 密钥均从 `.env` 读取（SEC-02 �
 ```
 controller/  (23)  ── 只做 请求→实体→视图 映射，统一返回 Result<T>
    │
-service/     (25)  ── 业务规则与事务边界，BaseService<T> 兜底 CRUD
+service/     (26)  ── 业务规则与事务边界，BaseService<T> 兜底 CRUD
    │
 mapper/      (17)  ── BaseMapper<T> 六个语句；XML 在 resources/mapper/
    │
 entity/      (17)  ── 与表一一对应（Account 例外：三账号的父类，无表）
    │
-dto/request (32) dto/response (33) ── HTTP 边界只用 DTO，实体不出 controller
+dto/request (32) dto/response (34) ── HTTP 边界只用 DTO，实体不出 controller
 ```
 
-每层文件数（2026-10-26 实测）：controller 23 / 2,016 行，service 25 / 4,044 行，mapper 接口 17 / 463 行，mapper XML 17 / 1,875 行，entity 17 / 564 行，dto 65 / 1,454 行。
+每层文件数（2026-10-27 实测）：controller 23 / 2,046 行，service 26 / 4,176 行，mapper 接口 17 / 467 行，mapper XML 17 / 1,885 行，entity 17 / 564 行，dto 66 / 1,471 行。
 
 **核心基类**（`common/`）：
 
@@ -109,14 +109,14 @@ dto/request (32) dto/response (33) ── HTTP 边界只用 DTO，实体不出 c
 2. **业务层**：`AuthContext.role()` / `userId()` 从拦截器写入的 request attribute 读；service 内做归属判定（`ensureOrderAccess`、`applyCinemaScope`、`ensureRecordAccess`）。
 3. **前端层**：路由守卫（`router/index.js` 的 `beforeEach`）+ `useAuth` 单例。
 
-**已知不对称**：`OrderedService.applyScope` 对未知角色不加过滤（列表放行），而 `ensureOrderAccess` 未知角色默认拒绝。见 `audit/backend-backlog.md`。
+**已知不对称**：`OrderedService.applyScope` 对未知角色不加过滤（列表放行），而 `ensureOrderAccess` 未知角色默认拒绝。token 里的角色受库级 `CHECK` 与 `RoleEnum` 约束，实际不可达；见 `audit/backend-backlog.md`。
 
 ## 6 数据边界
 
 - 实体与表一一对应，**join 派生字段**（`Film.areaName/typeList`、`Ordered.filmName` 等）直接挂在实体上（BL-18）。
 - 金额：`unitPrice` / `ordered.total/payAmount/refundAmount` / `recharge_order.amount` / `fund_flow.*` 均为 `BigDecimal`；唯一例外是已废弃、恒为 0 的 `film.box_office`（BL-24 已完成）。
 - 时间：绝大多数是 `String`（`yyyy-MM-dd HH:mm:ss`），唯一例外 `CinemaDirectory.createTime` 是 `LocalDateTime`（BL-22）。
-- 状态：中文字面量字符串，无枚举、无库约束（`ordered.status` 可空 VARCHAR）。
+- 状态：中文枚举值（`common/enums/OrderStatus` 等），库端已加 `CHECK`（film/record/ordered/recharge_order/cinema 的 status 与三张账号表的 role），非法值由数据库拒绝（2026-10-27，`StatusConstraintLoadTest`）。
 
 ## 7 前端结构
 
