@@ -6,12 +6,14 @@
 | 文件 | 内容 | 性质 |
 | --- | --- | --- |
 | `schema.sql` | 18 张业务表的 `SHOW CREATE TABLE` 原样输出（含列注释、索引、外键），另有演示脚本残留的 `tmp_user_tx` | 只读快照 |
+| `token_revocation.sql` | `ALTER TABLE`：给 `admin` / `user` / `cinema` 补 `token_revoked_before` 列 | 可重复执行，重建空库后由 README 里的流程执行 |
 | `inventory.tsv` | 列 / 索引 / 表三合一的逐行清单，便于 grep | 只读快照 |
 
 ## 口径
 
-- **这不是迁移脚本**。没有版本号、没有顺序保证、不含数据。`schema.sql` 每条前有
+- 这不是迁移脚本**。没有版本号、没有顺序保证、不含数据。`schema.sql` 每条前有
   `DROP TABLE IF EXISTS`，只用于还原一套空结构，不要对着有数据的库执行。
+  **例外**：`token_revocation.sql` 是可重复执行的 `ALTER TABLE`，开发库也要手动跑一次。
 - 不含任何业务数据行，因此可以直接入库（无个人数据）。
 - `inventory.tsv` 的 `TBL` 行里 `TABLE_ROWS` 是 InnoDB 的**估算值**，不是精确计数；
   需要精确数时直接 `SELECT COUNT(*)`。

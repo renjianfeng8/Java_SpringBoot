@@ -13,6 +13,12 @@ public interface UserMapper extends BaseMapper<User> {
 
     void updatePassword(User user);
 
+    /** 吊销点：改密时写入最新令牌的 iat，早于它的令牌一律拒绝 */
+    int updateRevokedBefore(@Param("id") Integer id, @Param("epochSecond") long epochSecond);
+
+    /** 该账号的吊销点（epoch 秒）；从未吊销时为 null */
+    Long selectRevokedBefore(Integer id);
+
     /** 大盘：注册用户总数 */
     int countAll();
 

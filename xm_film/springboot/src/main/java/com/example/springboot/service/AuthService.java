@@ -127,7 +127,6 @@ public class AuthService {
         }
         tokenRevocationService.revoke(account.getRole(), account.getId());
     }
-
     /**
      * 管理员重置他人密码：按目标角色路由到对应账号表。
      *

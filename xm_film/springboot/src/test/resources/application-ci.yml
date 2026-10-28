@@ -15,7 +15,8 @@ server:
 spring:
   datasource:
     username: root
-    password: ""
+    # 空默认值＝本机无口令的 MySQL；CI 由 workflow 注入 DB_PASSWORD
+    password: "${DB_PASSWORD:}"
     driver-class-name: com.mysql.cj.jdbc.Driver
     url: jdbc:mysql://localhost:3306/xm_film_test?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&characterEncoding=UTF-8
 

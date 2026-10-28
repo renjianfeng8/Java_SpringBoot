@@ -39,7 +39,12 @@ jobs:
             "CREATE DATABASE \`xm_film_test\` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
           mysql -h127.0.0.1 -uroot -p123456 xm_film_test \
             < xm_film/springboot/src/test/resources/db/schema.sql
+          mysql -h127.0.0.1 -uroot -p123456 xm_film_test \
+            < xm_film/springboot/src/test/resources/db/token_revocation.sql
+      # 口令不写进仓库：application-ci.yml 读 DB_PASSWORD，CI 里由 workflow 注入
       - name: mvn test
+        env:
+          DB_PASSWORD: "123456"
         run: mvn -B -f xm_film/springboot/pom.xml test
       - uses: actions/upload-artifact@v4
         if: failure()

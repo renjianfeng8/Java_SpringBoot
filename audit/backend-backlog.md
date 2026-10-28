@@ -69,7 +69,7 @@
 | 编号 | 位置 | 问题 | 实测证据 | 处置建议 |
 | --- | --- | --- | --- | --- |
 | **SEC-01** | controller/RechargeController.callback；service/RechargeService.handleCallback（归属判定分支） | **任意 USER 可无限给自己充值**。归属校验允许 USER 操作*自己的*单据，而 `success` 完全取自请求体，没有任何验签。 | `POST /recharges {amount:50000}` → `POST /recharges/{id}/callback {success:true}` → **余额 500 → 50500**。纯 HTTP，无需任何伪造。 | 回调加服务端密钥/签名校验；或干脆下线 USER 可达的 callback，改为 ADMIN 审核入账。**演示环境与生产必须分开**，不能靠"注释里说是演示"约束。 |
-| **SEC-02** | resources/application.yml `jwt.signing-key` | **JWT 密钥硬编码在源码，可自签 ADMIN 令牌**。51 字节够长，但密钥本身随仓库公开，长度不构成保护。 | 用 `REDACTED_JWT_SECRET-2024-…` 自签 `{"sub":"1","role":"ADMIN"}`：无令牌 `DELETE /areas/999999` → **401**；同一请求带伪造令牌 → **200 成功**。伪造 USER 令牌读 `/admins/page` → 403（**角色校验本身正确**）。 | 密钥移入环境变量并在启动时校验强度；**当前密钥必须视为已泄露并更换**；考虑加 `jti` 黑名单以支持吊销。 |
+| **SEC-02** | resources/application.yml `jwt.signing-key` | **JWT 密钥硬编码在源码，可自签 ADMIN 令牌**。51 字节够长，但密钥本身随仓库公开，长度不构成保护。 | 用 `…-2024-…` 自签（原密钥已于 2026-10-28 轮换并从 git 历史移除，不再记录） `{"sub":"1","role":"ADMIN"}`：无令牌 `DELETE /areas/999999` → **401**；同一请求带伪造令牌 → **200 成功**。伪造 USER 令牌读 `/admins/page` → 403（**角色校验本身正确**）。 | 密钥移入环境变量并在启动时校验强度；**当前密钥必须视为已泄露并更换**；考虑加 `jti` 黑名单以支持吊销。 |
 | **SEC-03** | service/UserService.login:95-96；AdminService:78-80；CinemaService:201-203；PayPasswordService:136 | **明文回退让哈希可当密码用**。`!matches(pwd, stored) && !pwd.equals(stored)` —— 当 `stored` 是 BCrypt 串时，把该串原样当密码提交即可通过。 | 用库中 `password` 列原文登录 `u1`、`999` 均 **code=200 成功**。叠加 mapper DEBUG 日志（`logback-spring.xml:7` 会打印绑定参数），**日志即凭证**。 | 删除回退分支；存量明文账号一次性迁移为 BCrypt 后删除该分支。演示数据 `demo-data.sql` 不应依赖明文回退。 |
 
 **2026-10-25 修复并移出本表**：
@@ -85,7 +85,7 @@
 - `FileUtil` 只信客户端 `Content-Type`，不嗅探文件头 —— 可上传伪装成 png 的任意内容（**不构成 XSS**：扩展名由服务端白名单决定，且不含 svg）。
 - ~~`CinemaService.importFromDirectory` 批量影院共用默认密码 `cinema123` 且直接 `APPROVED`，用户名规则 `amap_+poiId` 可推导。~~ **2026-10-20 已修复**：每个账号独立随机初始口令（12 位，`SecureRandom`），明文只在导入响应中返回一次；`insertCinema` 不再回退默认口令。见 §SonarQube 静态扫描。
 - ~~登录**无失败锁定**（只有支付密码有 5 次/15 分钟锁定），可暴力撞库。~~ **2026-10-25 已修复**：`AuthService` 统一接入 `LoginAttemptService`，同一角色 + 账号连续失败 5 次锁 15 分钟；2026-10-26 起计数按库中解析出的账号 id，大小写/重音/全角拼写变体不能各拿一份 5 次。仍是单进程内存计数，重启清零、多实例不共享。
-- ~~无令牌吊销：删号/改密后旧令牌 24h 内仍有效。~~ **2026-10-27 已修复**：`TokenRevocationService` 按「role + 账号 id」记吊销点，`JwtUtils.parseToken` 比较 `iat` 后拒绝旧令牌；本人改密与管理员重置密码两条路径都已接入。仍是单进程内存记录，重启后失效（JWT 自身 `exp` 仍兜底）。删号仍未单独接入。
+- ~~无令牌吊销：删号/改密后旧令牌 24h 内仍有效。~~ **2026-10-27 已修复**：`TokenRevocationService` 按「role + 账号 id」记吊销点，`JwtUtils.parseToken` 比较 `iat` 后拒绝旧令牌；本人改密与管理员重置密码两条路径都已接入。吊销点自 2026-10-28 起存 `admin/user/cinema.token_revoked_before` 列（每账号一次主键查），**重启与多实例不再丢**。删号仍未单独接入（账号不存在时按未吊销处理，令牌留到 `exp`）。
 - ~~匿名核销端点 `POST /tickets/redeem` **无速率限制**（码空间 31⁸ 不可猜，但可被刷接口）。~~ **2026-10-27 已修复**：`RedeemRateLimiter` 按来源 IP 计失败，10 分钟 30 次后 429；成功清零、窗口到期自动放行。单进程内存计数，反向代理后按代理 IP 计。
 
 **这一节的由来**：修完 BL-01…06 之后的自评是 93，但那一轮只验证了"数据库层会不会出问题"，没有验证"**谁能调这些接口**"。SEC-01 从归属校验看完全"正确"（USER 只能动自己的单），从资金流看却是灾难 —— **归属正确不等于授权正确**。
