@@ -3,8 +3,8 @@
 
     <div class="front-header">
       <div class="front-header-left">
-        <img src="@/assets/imgs/xm_logo.jpg" alt="电影购票系统" class="logo">
-        <h1 class="title">电影购票网站</h1>
+        <img src="@/assets/imgs/xm_logo.jpg" :alt="SITE_NAME" class="logo">
+        <h1 class="title">{{ SITE_NAME }}</h1>
       </div>
 
       <div class="front-header-center">
@@ -108,7 +108,7 @@
           <div class="footer-column contact-column">
             <h3 class="footer-title">版权信息</h3>
             <div class="footer-copyright">
-              <p class="contact-item">© 2024-2026 电影购票网站</p>
+              <p class="contact-item">© 2024-2026 {{ SITE_NAME }}</p>
               <p class="contact-item">个人学习项目 保留所有权利</p>
               <p class="contact-item">本系统仅用于技术学习与交流</p>
               <p class="contact-item">联系方式: 2145345678@qq.com</p>
@@ -136,6 +136,7 @@ import { CaretBottom } from '@element-plus/icons-vue'
 import { useAuth } from '@/composables/useAuth'
 import { useLogout } from '@/composables/useLogout'
 import { navItemsOf, isNavActive } from '@/constants/nav'
+import { SITE_NAME } from '@/utils/navigation'
 import { avatarSrc, onAvatarError } from '@/utils/avatar'
 
 const router = useRouter()

@@ -7,6 +7,9 @@ export const USER_KEY = 'xm-film-user'
  */
 export const AUTH_CHANGE_EVENT = 'xm-film-auth-change'
 
+/** 401 整页跳登录会丢掉 ElMessage（页面已重载），改存一条提示给 Login.vue 落地后弹 */
+export const LOGIN_NOTICE_KEY = 'xm-film-login-notice'
+
 function notify(user) {
   if (typeof window !== 'undefined') {
     window.dispatchEvent(new CustomEvent(AUTH_CHANGE_EVENT, { detail: user }))

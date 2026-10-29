@@ -1,6 +1,6 @@
 import axios from 'axios'
 import { ElMessage } from 'element-plus'
-import { getStoredUser, clearStoredUser } from '@/utils/authStorage'
+import { getStoredUser, clearStoredUser, LOGIN_NOTICE_KEY } from '@/utils/authStorage'
 import { API_BASE_URL } from '@/constants'
 import { isPathWithin, loginPath } from '@/utils/navigation'
 
@@ -22,6 +22,8 @@ function redirectToLogin() {
   const { pathname, search } = window.location
   if (isPathWithin(pathname, '/login')) return
   redirectingToLogin = true
+  // 整页跳转会丢弃 ElMessage，提示落到登录页再弹（见 Login.vue）
+  sessionStorage.setItem(LOGIN_NOTICE_KEY, '登录状态已过期，请重新登录')
   window.location.href = loginPath(pathname + search)
 }
 

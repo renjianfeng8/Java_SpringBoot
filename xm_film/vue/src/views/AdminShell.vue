@@ -3,7 +3,7 @@
     <!-- 头部导航栏 -->
     <div class="manage-header">
       <div class="manage-header-left">
-        <img src="@/assets/imgs/xm_logo.jpg" alt="电影购票系统" class="logo">
+        <img src="@/assets/imgs/xm_logo.jpg" :alt="SITE_NAME" class="logo">
         <h1 class="title">{{ menu.title }}</h1>
       </div>
 
@@ -92,6 +92,7 @@ import { CaretBottom, Lock, SwitchButton, User } from '@element-plus/icons-vue'
 import { useAuth } from '@/composables/useAuth'
 import { useLogout } from '@/composables/useLogout'
 import { avatarSrc, onAvatarError } from '@/utils/avatar'
+import { SITE_NAME } from '@/utils/navigation'
 
 const props = defineProps({
   // ADMIN_MENU / CINEMA_MENU：两份外壳只差菜单数据，布局与行为共用这一个组件

@@ -29,7 +29,7 @@ e2e/                       3 个 spec + helpers / README（Playwright 冒烟）
 
 守卫逻辑（唯一一个 `beforeEach`）：
 
-1. `document.title = to.meta.title || '电影购票网站'`。
+1. `document.title = to.meta.title || 'CineBook'`。
 2. `if (to.meta.requiresAuth || to.meta.roles)` —— **roles 本身蕴含需登录**，不再有 guest 早退（FE-02）。
 3. 无 token/role → 清存储 → 确认框 →「去登录」带 `redirect`；「取消」时若 `from === START_LOCATION` 落首页（否则白屏，FE-01），否则 `next(false)`。
 4. 角色不匹配 → 提示 + 回**该角色自己的主页**（不再踢到 `/login`；FE-03 已修）。

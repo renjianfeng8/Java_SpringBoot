@@ -60,6 +60,15 @@
         UPDATE user SET password = #{password} WHERE id = #{id}
     </update>
 
+    <!-- 令牌吊销点（epoch 秒）：改密时写入，iat 早于该值的令牌在 JwtUtils 里被拒 -->
+    <update id="updateRevokedBefore">
+        UPDATE user SET token_revoked_before = #{epochSecond} WHERE id = #{id}
+    </update>
+
+    <select id="selectRevokedBefore" resultType="java.lang.Long">
+        SELECT token_revoked_before FROM user WHERE id = #{id}
+    </select>
+
     <!-- 账户余额：行锁读 + 原子增减，是「变更余额并记账」的唯一 SQL 出处 -->
     <select id="selectBalanceForUpdate" resultType="java.math.BigDecimal">
         SELECT balance FROM user WHERE id = #{id} FOR UPDATE

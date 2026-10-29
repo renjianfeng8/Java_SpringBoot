@@ -23,6 +23,7 @@ import {
   VideoCamera,
   VideoPlay,
 } from '@element-plus/icons-vue'
+import { SITE_NAME } from '@/utils/navigation'
 
 const HOME_ITEM = { label: '系统首页', path: 'home', icon: House }
 
@@ -32,7 +33,7 @@ function withPrefix(items, prefix) {
 
 /** 管理员后台侧边栏（路径为 /manage 下的绝对路径） */
 export const ADMIN_MENU = {
-  title: '电影购票网站 - 管理员后台',
+  title: `${SITE_NAME} - 管理员后台`,
   home: '/manage/home',
   homeItem: { ...HOME_ITEM, path: '/manage/home' },
   groups: [
@@ -72,7 +73,7 @@ export const ADMIN_MENU = {
 
 /** 影院后台侧边栏（路径为 /back 下的绝对路径） */
 export const CINEMA_MENU = {
-  title: '电影购票网站 - 影院后台',
+  title: `${SITE_NAME} - 影院后台`,
   home: '/back/home',
   homeItem: { ...HOME_ITEM, path: '/back/home' },
   groups: [

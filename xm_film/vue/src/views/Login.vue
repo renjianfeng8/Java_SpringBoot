@@ -1,7 +1,7 @@
 <template>
   <div class="auth-container">
     <div class="auth-card">
-      <h1 class="auth-title">欢迎登录电影购票系统</h1>
+      <h1 class="auth-title">欢迎登录 {{ SITE_NAME }}</h1>
       <el-form
         ref="formRef"
         :rules="data.rules"
@@ -48,8 +48,9 @@ import { onMounted, reactive, ref } from "vue"
 import { useRoute, useRouter } from 'vue-router'
 import { User, Lock } from '@element-plus/icons-vue'
 import { useAuth } from "@/composables/useAuth"
-import { ElMessageBox } from "element-plus"
-import { isInternalPath, isPathWithin, pathForRole } from '@/utils/navigation'
+import { ElMessage, ElMessageBox } from "element-plus"
+import { isInternalPath, isPathWithin, pathForRole, SITE_NAME } from '@/utils/navigation'
+import { LOGIN_NOTICE_KEY } from '@/utils/authStorage'
 
 const route = useRoute()
 const router = useRouter()
@@ -85,6 +86,11 @@ const landingPath = () => {
 }
 
 onMounted(() => {
+  const notice = sessionStorage.getItem(LOGIN_NOTICE_KEY)
+  if (notice) {
+    sessionStorage.removeItem(LOGIN_NOTICE_KEY)
+    ElMessage.warning(notice)
+  }
   if (user.value?.token) router.replace(landingPath())
 })
 

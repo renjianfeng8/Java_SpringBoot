@@ -16,7 +16,7 @@
 	<artifactId>cinebook</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 	<name>cinebook</name>
-	<description>影院管理系统后端</description>
+	<description>CineBook 后端：多角色在线电影购票平台</description>
 
 	<!-- 环境属性配置 -->
 	<properties>

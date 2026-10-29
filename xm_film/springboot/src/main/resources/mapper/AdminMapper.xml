@@ -51,6 +51,15 @@
         UPDATE admin SET password = #{password} WHERE id = #{id}
     </update>
 
+    <!-- 令牌吊销点（epoch 秒）：改密时写入，iat 早于该值的令牌在 JwtUtils 里被拒 -->
+    <update id="updateRevokedBefore">
+        UPDATE admin SET token_revoked_before = #{epochSecond} WHERE id = #{id}
+    </update>
+
+    <select id="selectRevokedBefore" resultType="java.lang.Long">
+        SELECT token_revoked_before FROM admin WHERE id = #{id}
+    </select>
+
     <!-- 删除操作 -->
     <delete id="deleteById" parameterType="com.example.springboot.entity.Admin">
         DELETE FROM admin WHERE id = #{id}

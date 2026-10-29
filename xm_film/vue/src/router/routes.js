@@ -74,7 +74,7 @@ export const routes = [
       ],
     },
     { path: '/404', meta: { name: '404', title: '404页面', guest: true }, component: () => import('../views/404.vue') },
-    { path: '/login', meta: { name: '登录', title: '欢迎登录电影购票系统', guest: true }, component: () => import('../views/Login.vue') },
-    { path: '/register', meta: { name: '注册', title: '欢迎注册电影购票系统', guest: true }, component: () => import('../views/Register.vue') },
+    { path: '/login', meta: { name: '登录', title: `欢迎登录 ${SITE_NAME}`, guest: true }, component: () => import('../views/Login.vue') },
+    { path: '/register', meta: { name: '注册', title: `欢迎注册 ${SITE_NAME}`, guest: true }, component: () => import('../views/Register.vue') },
     { path: '/:pathMatch(.*)*', redirect: '/404' },
 ]

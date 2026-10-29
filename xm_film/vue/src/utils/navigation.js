@@ -5,7 +5,7 @@
  * 改一处忘一处就会出现「登录后落错主页」「退出后回跳丢参数」「/loginx 被当成登录页」。
  */
 
-export const SITE_NAME = '电影购票网站'
+export const SITE_NAME = 'CineBook'
 export const DEFAULT_HOME = '/front/home'
 
 const ROLE_HOME = Object.freeze({

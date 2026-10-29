@@ -44,7 +44,7 @@ describe('navigation', () => {
   })
 
   it('keeps the public constants stable', () => {
-    expect(SITE_NAME).toBe('电影购票网站')
+    expect(SITE_NAME).toBe('CineBook')
     expect(LOGIN_PROMPT_MESSAGE).toBe('请先登录后再进行此操作')
   })
 })

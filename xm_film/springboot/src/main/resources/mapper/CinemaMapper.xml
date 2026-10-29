@@ -111,6 +111,15 @@
         UPDATE cinema SET password = #{password} WHERE id = #{id}
     </update>
 
+    <!-- 令牌吊销点（epoch 秒）：改密时写入，iat 早于该值的令牌在 JwtUtils 里被拒 -->
+    <update id="updateRevokedBefore">
+        UPDATE cinema SET token_revoked_before = #{epochSecond} WHERE id = #{id}
+    </update>
+
+    <select id="selectRevokedBefore" resultType="java.lang.Long">
+        SELECT token_revoked_before FROM cinema WHERE id = #{id}
+    </select>
+
     <insert id="insert" parameterType="com.example.springboot.entity.Cinema" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO cinema
         <trim prefix="(" suffix=")" suffixOverrides=",">
