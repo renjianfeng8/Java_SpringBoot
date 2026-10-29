@@ -13,9 +13,9 @@
 
 	<!-- 项目基本信息 -->
 	<groupId>com.example</groupId>
-	<artifactId>springboot</artifactId>
+	<artifactId>cinebook</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<name>cinema-management-system</name>
+	<name>cinebook</name>
 	<description>影院管理系统后端</description>
 
 	<!-- 环境属性配置 -->

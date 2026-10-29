@@ -1,7 +1,8 @@
 <div align="center">
-  <img src="docs/assets/banner.svg" width="100%" alt="多角色在线电影购票平台" />
+  <h1>CineBook</h1>
+  <img src="docs/assets/banner.svg" width="100%" alt="CineBook — 多角色在线电影购票平台" />
   <p>
-    <a href="https://github.com/renjianfeng8/Java_SpringBoot/actions/workflows/ci.yml"><img src="https://github.com/renjianfeng8/Java_SpringBoot/actions/workflows/ci.yml/badge.svg?branch=master" alt="CI" /></a>
+    <a href="https://github.com/renjianfeng8/cinebook/actions/workflows/ci.yml"><img src="https://github.com/renjianfeng8/cinebook/actions/workflows/ci.yml/badge.svg?branch=master" alt="CI" /></a>
     <img src="https://img.shields.io/badge/Spring%20Boot-3.3.13-6DB33F?logo=springboot&logoColor=white" alt="Spring Boot" />
     <img src="https://img.shields.io/badge/Java-17-ED8B00?logo=openjdk&logoColor=white" alt="Java 17" />
     <img src="https://img.shields.io/badge/Vue-3.5-4FC08D?logo=vuedotjs&logoColor=white" alt="Vue 3.5" />
@@ -126,7 +127,7 @@ npm run dev
 ## 目录结构
 
 ```
-project_02/
+cinebook/
 ├── xm_film/
 │   ├── springboot/            # Spring Boot 后端
 │   │   ├── src/main/java/     # controller / service / mapper / entity / dto
