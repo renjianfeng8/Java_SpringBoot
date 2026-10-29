@@ -8,17 +8,26 @@ import Components from 'unplugin-vue-components/vite'
 import ElementPlus from 'unplugin-element-plus/vite'
 import { ElementPlusResolver } from 'unplugin-vue-components/resolvers'
 
-// 组件样式是 unplugin 在 transform 阶段才注入的，Vite 启动扫描看不到：
+// 组件样式与 `element-plus/es` 都是 resolver 在 transform 阶段才注入的，Vite 启动扫描看不到：
 // 首次点进用到新组件的页面时才发现新依赖 → 重新预打包 → 整页 reload，
 // 正在进行的路由跳转被丢掉（表现为「点了几下没反应，然后页面刷一下还是原页」）。
-// 这里把所有组件样式在启动时一次性登记，运行期不再出现「新依赖」。
-const elementPlusStyleDeps = readdirSync(
-  fileURLToPath(new URL('./node_modules/element-plus/es/components', import.meta.url))
+// 这里在启动时把它们一次性登记，运行期不再出现「新依赖」。
+//
+// 只登记扫描不到的这一类；axios / echarts 等源码里的静态 import 由 Vite 自己扫到，
+// 换库不用改这里。清单从 node_modules 现读，Element Plus 被移除时自动退化为空（不报错）。
+const elementPlusComponentsDir = fileURLToPath(
+  new URL('./node_modules/element-plus/es/components', import.meta.url)
 )
-  .map((name) => `element-plus/es/components/${name}/style/index`)
-  .filter((id) =>
-    existsSync(fileURLToPath(new URL(`./node_modules/${id}.mjs`, import.meta.url)))
-  )
+const elementPlusStyleDeps = existsSync(elementPlusComponentsDir)
+  ? [
+      'element-plus/es',
+      ...readdirSync(elementPlusComponentsDir)
+        .map((name) => `element-plus/es/components/${name}/style/index`)
+        .filter((id) =>
+          existsSync(fileURLToPath(new URL(`./node_modules/${id}.mjs`, import.meta.url)))
+        ),
+    ]
+  : []
 
 export default defineConfig({
   plugins: [
@@ -54,19 +63,9 @@ export default defineConfig({
       }
     }
   },
-  // 见文件顶部 elementPlusStyleDeps：预登记组件样式，避免运行期重新预打包触发整页 reload
+  // 见文件顶部 elementPlusStyleDeps：只登记扫描不到的那类依赖
   optimizeDeps: {
-    include: [
-      'axios',
-      '@element-plus/icons-vue',
-      'element-plus',
-      'element-plus/es',
-      'echarts/core',
-      'echarts/charts',
-      'echarts/components',
-      'echarts/renderers',
-      ...elementPlusStyleDeps,
-    ],
+    include: elementPlusStyleDeps,
   },
   build: {
     rollupOptions: {
