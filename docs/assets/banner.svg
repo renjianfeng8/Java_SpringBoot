@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="300" viewBox="0 0 1200 300" role="img" aria-label="多角色在线电影购票平台">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#070b18"/>
+      <stop offset="0.55" stop-color="#12245c"/>
+      <stop offset="1" stop-color="#070b18"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0" stop-color="#165DFF" stop-opacity="0.45"/>
+      <stop offset="1" stop-color="#165DFF" stop-opacity="0"/>
+    </radialGradient>
+    <pattern id="holes" width="40" height="28" patternUnits="userSpaceOnUse">
+      <rect x="11" y="8" width="18" height="12" rx="3" fill="#26365f"/>
+    </pattern>
+    <linearGradient id="line" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#22d3ee"/>
+      <stop offset="1" stop-color="#165DFF"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="300" fill="url(#bg)"/>
+  <circle cx="1010" cy="60" r="260" fill="url(#glow)"/>
+  <circle cx="120" cy="280" r="200" fill="url(#glow)" opacity="0.35"/>
+
+  <rect width="1200" height="28" fill="#0a0f1f"/>
+  <rect width="1200" height="28" fill="url(#holes)"/>
+  <rect y="272" width="1200" height="28" fill="#0a0f1f"/>
+  <rect y="272" width="1200" height="28" fill="url(#holes)"/>
+
+  <g fill="none" stroke="#2b4ba8" opacity="0.55">
+    <circle cx="1000" cy="150" r="80" stroke-width="16"/>
+    <circle cx="1000" cy="150" r="20" fill="#22d3ee" stroke="none" opacity="0.9"/>
+    <circle cx="1000" cy="102" r="13" fill="#22d3ee" stroke="none"/>
+    <circle cx="1000" cy="198" r="13" fill="#22d3ee" stroke="none"/>
+    <circle cx="952" cy="150" r="13" fill="#22d3ee" stroke="none"/>
+    <circle cx="1048" cy="150" r="13" fill="#22d3ee" stroke="none"/>
+  </g>
+
+  <text x="80" y="112" font-family="'Segoe UI',system-ui,sans-serif" font-size="15" font-weight="600" letter-spacing="6" fill="#22d3ee">FILM TICKETING PLATFORM</text>
+  <text x="78" y="180" font-family="'Microsoft YaHei','PingFang SC','Noto Sans SC',system-ui,sans-serif" font-size="58" font-weight="700" fill="#ffffff">多角色在线电影购票平台</text>
+  <text x="80" y="220" font-family="'Microsoft YaHei','PingFang SC','Noto Sans SC',system-ui,sans-serif" font-size="20" fill="#9fb0d6">前台购票 · 影院排片 · 平台运营 ｜ Spring Boot 3 + Vue 3 + MySQL 8</text>
+
+  <rect x="80" y="242" width="86" height="4" rx="2" fill="url(#line)"/>
+</svg>
