@@ -16,6 +16,10 @@ springboot-jar/
 # === Node.js ===
 node_modules/
 dist/
+# 根目录没有 package.json，任何根级锁文件都是误在仓库根跑 npm 的产物（真正的锁文件在 xm_film/vue/）
+/package-lock.json
+/yarn.lock
+/pnpm-lock.yaml
 
 # === Python（验证脚本的字节码缓存）===
 __pycache__/
